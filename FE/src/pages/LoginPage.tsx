@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { Button } from "../components/ui/button";
+import { Logo } from "../components/ui/Logo";
 import { 
   FiMail, 
   FiLock, 
@@ -178,13 +179,8 @@ const LoginPage: React.FC = () => {
         <div className="absolute inset-0 z-10 bg-gradient-to-br from-slate-950/95 to-indigo-900/85" />
         
         {/* Brand Logo/Header */}
-        <div className="relative z-20 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-white shadow-lg">
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-              <path d="M42.4379 44C42.4379 44 36.0744 33.9038 41.1692 24C46.8624 12.9336 42.2078 4 42.2078 4L7.01134 4C7.01134 4 11.6577 12.932 5.96912 23.9969C0.876273 33.9029 7.27094 44 7.27094 44L42.4379 44Z" fill="currentColor"></path>
-            </svg>
-          </div>
-          <span className="text-2xl font-bold tracking-tight text-white">CoSpace</span>
+        <div className="relative z-20">
+          <Logo isDarkBackground={true} textClassName="text-2xl font-bold tracking-tight" />
         </div>
 
         {/* Dynamic Value Prop */}
@@ -241,13 +237,8 @@ const LoginPage: React.FC = () => {
       <div className="flex flex-1 flex-col justify-between bg-card px-6 py-8 sm:px-12 lg:w-1/2 xl:w-5/12 items-center min-h-screen lg:min-h-0 lg:h-screen lg:overflow-y-auto">
         <div className="mx-auto w-full max-w-md my-auto space-y-6">
           {/* Mobile Logo */}
-          <div className="flex lg:hidden items-center justify-center gap-3 mb-6">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-white shadow-lg">
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-                <path d="M42.4379 44C42.4379 44 36.0744 33.9038 41.1692 24C46.8624 12.9336 42.2078 4 42.2078 4L7.01134 4C7.01134 4 11.6577 12.932 5.96912 23.9969C0.876273 33.9029 7.27094 44 7.27094 44L42.4379 44Z" fill="currentColor"></path>
-              </svg>
-            </div>
-            <span className="text-xl font-bold tracking-tight text-foreground">CoSpace</span>
+          <div className="flex lg:hidden justify-center mb-6">
+            <Logo textClassName="text-xl font-bold tracking-tight" />
           </div>
 
           {/* View Headers */}

@@ -3,36 +3,35 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { Button } from "../components/ui/button";
 import PublicNavbar from "../components/PublicNavbar";
+import { Logo } from "../components/ui/Logo";
 import { 
-  FiMapPin, 
-  FiCalendar, 
-  FiUsers, 
-  FiPhone, 
-  FiCheckCircle, 
   FiGlobe, 
   FiHeart, 
-  FiChevronLeft, 
-  FiChevronRight,
-  FiSend,
-  FiMap,
-  FiAward,
   FiMail,
   FiX
 } from "react-icons/fi";
+
+interface Feature {
+  text: string;
+  icon: string;
+}
 
 interface BranchCard {
   id: string;
   name: string;
   tag: string;
   address: string;
+  description: string;
+  badges: string[];
   image: string;
-  features: string[];
+  features: Feature[];
 }
 
 const LocationsPage: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const [isTourModalOpen, setIsTourModalOpen] = useState(false);
+  const [selectedBranchForDetail, setSelectedBranchForDetail] = useState<BranchCard | null>(null);
   const [tourForm, setTourForm] = useState({
     name: user?.fullName || "",
     email: user?.email || "",
@@ -66,35 +65,59 @@ const LocationsPage: React.FC = () => {
   const branches: BranchCard[] = [
     {
       id: "branch-1",
-      name: "Quận 1 - Trái Tim Thành Phố",
-      tag: "TRUNG TÂM",
+      name: "Chi nhánh Quận 1",
+      tag: "TRUNG TÂM QUẬN 1",
       address: "63A Nam Kỳ Khởi Nghĩa, Bến Thành, Quận 1",
-      image: "https://lh3.googleusercontent.com/aida-public/AB6AXuBkB1q3caQrd-1L76qR-uELGT_zFGIG00--SpVFIU75PM-0b-xJXhI9fHQHPJ1JhU9PawaCir580R_6xgkBRkjKJ0LKMCkn4eVRqVRVig77r5Aa1Hn0jk1xhJElkTOiNeW0y4TpyTMeCV3vQej3x_VAJox06Th6ofOCakIowlOdmWc1fumVL1RfzrOyzSgRUPse17XPvBZLN8j0YDNFtr6TPqpTNFBOi86GU141jdo-O7aBHpVE48M_5NY0BAimNCQeXRDuXbNeiZ5w",
-      features: ["Vị trí đắc địa nhất", "Giao thông thuận tiện", "Khu vực sầm uất"]
+      description: "63A Nam Kỳ Khởi Nghĩa, Bến Thành. Trái tim tài chính của thành phố.",
+      badges: ["Trái tim thành phố", "Sang trọng"],
+      image: "https://lh3.googleusercontent.com/aida-public/AB6AXuBvIBcN1nan22Rc3S3a8yfr1bf2RnqPlvG-lwgYWbWFxKKmuVMYxwaJY3uGTITkBTXlHAGYmBG-0UBxPi_9Q-WK3k7Cga1Vl1jvNkVFeHRxeJLuiiPphsncYxT2Ssu6SeO8BYXzj2YZm8tal1Npj8oOkyXcSnT6-N59-ZYkC9qpwoDLO7EnNXUpUpTyLXvTf_YZtIcjyS7XBwb3hS1ms2jmAtuHT4Q2jISkUv17hP8EJxoSpmyanpqwRRicOr49_DKDUzkhuiaHFIjl",
+      features: [
+        { text: "Vị trí đắc địa nhất", icon: "verified" },
+        { text: "Giao thông thuận tiện", icon: "commute" },
+        { text: "Khu vực sầm uất", icon: "coffee" }
+      ]
     },
     {
       id: "branch-2",
-      name: "Quận 3 - Không Gian Sáng Tạo",
-      tag: "SÁNG TẠO",
+      name: "Chi nhánh Quận 3",
+      tag: "KẾT NỐI QUẬN 3",
       address: "222 Điện Biên Phủ, Phường Võ Thị Sáu, Quận 3",
-      image: "https://lh3.googleusercontent.com/aida-public/AB6AXuBagoEuMqV4-6BiWQ5kP0-0hbuYzsNZZ8O6Yem4oXxmEbdTk1ScIsTFGgWgS-oYC2jdulcs7cV7fDPCeEBRSTv4u3G9H151HJRzFX4uW9UQPaGnNkjRF6tXy4Avaue_M9rzLC6iihJLQSF3TAGAkrSai0OEeR3VFvm93IH4_4PMdzekCbQHrn0HKyX9wIcKPH_bFncb0M69AsdRkqiYdlBO1niPlhFBBdTDFKX40cn3xsaKi1P2VY6MpEdbQLAGyJYW_i5b7ynvop5Q",
-      features: ["Khu biệt thự yên tĩnh", "Phòng họp hiện đại", "Cộng đồng năng động"]
+      description: "222 Điện Biên Phủ, Võ Thị Sáu. Không gian biệt thự cổ kiến trúc Pháp.",
+      badges: ["Giao thông thuận tiện", "Yên tĩnh"],
+      image: "https://lh3.googleusercontent.com/aida-public/AB6AXuDqmf-wvL3IcfcRREJJpPNJ5YyacWGeQ0SJc1XL_nOH8c2-9GYk85MD3C4KFkMPkZF3p_pVw9UTfvSfM_acDrjfen9SvxApeuQv_T8lVDrqscyAO6cZHLGmSwRMUd_QrOxxIR3uA4cvqVS9sCwe7Y2TM_PVZ0C3-1tH2AOE35J-QHTppH7ieOiQNjAFqpLSpfunsJh275Ut9tWyhGQWvBR1yDaM8azoQuLG132tUR6-o07dkW5kSrYW9x9vZ1bQ2n0baLg7cpOlTASq",
+      features: [
+        { text: "Khu biệt thự yên tĩnh", icon: "verified" },
+        { text: "Phòng họp hiện đại", icon: "lightbulb" },
+        { text: "Cộng đồng năng động", icon: "group" }
+      ]
     },
     {
       id: "branch-3",
-      name: "Quận 4 - Kết Nối Đa Chiều",
-      tag: "KẾT NỐI",
+      name: "Chi nhánh Quận 4",
+      tag: "SÁNG TẠO QUẬN 4",
       address: "384 Hoàng Diệu, Phường 6, Quận 4",
-      image: "https://lh3.googleusercontent.com/aida-public/AB6AXuB9pNef20HZXlPQGDLUTw8uK_8WAxZorT-N6rk0sfSjK3O7hCl4GFeJIpMZBv58OzXV8r3MjMzy1nY8PL_oAO7VXzW6CSArcxGrt4Jq9kzpP1TFxi75vx829Hm939NtC694heTkdG_gBGSr3fzxYQMRk15SvSYiRv7tOgU_bO3nX7b2EGgeVrD0tN-9ezIDykor5HFm6l6aRl58GMvl7qHz0CI8rbRp2mNx_AghWMT8mlGA-yQI2cm_24kvK48AQHmSAI8EGgT5Igqa",
-      features: ["Cận kề trung tâm tài chính", "Chi phí tối ưu", "Tòa nhà chuyên nghiệp"]
+      description: "384 Hoàng Diệu, Phường 6. Trụ sở chính sôi động và hiện đại.",
+      badges: ["Không gian sáng tạo", "Sôi động"],
+      image: "https://lh3.googleusercontent.com/aida-public/AB6AXuDp7pUAlonebgYsnycl2l08mpfERB5P1-OpjG9wwt06sE81Rq83L53uROocj7Y56PPOqUwi-T7iNHPxfJ53B_jFLmQUhOiLWwKE4_dcP2pkhn7h_fy4LTWJjI1v2QsTGYejLDtJhT423LjZzMCbw3VKdpfvwJ1QDKqz5hHH1FxWVaIiwolpaTJlwQrm0PTvkHhlP2XFOGC3f9Ci48e7HDil4DKnUjGBEgmzXWyFczWYlxJeVQAHakJP4LR3pItWr7KEfoZEj1-4Fgo2",
+      features: [
+        { text: "Cận kề trung tâm tài chính", icon: "verified" },
+        { text: "Chi phí tối ưu", icon: "payments" },
+        { text: "Tòa nhà chuyên nghiệp", icon: "apartment" }
+      ]
     },
     {
       id: "branch-4",
-      name: "Đà Nẵng - Thành Phố Đáng Sống",
-      tag: "MỚI",
+      name: "Chi nhánh Đà Nẵng",
+      tag: "TRUNG TÂM ĐÀ NẴNG",
       address: "17 Quang Trung, Quận Hải Châu, Đà Nẵng",
-      image: "https://lh3.googleusercontent.com/aida-public/AB6AXuAFrwr4AU7yMds9lmlUKVKBODPHIHkJJtNyJc32MvR_TnsTZZtEvpbGTkv8L3LaSNm9JZmjmfw_EOhmycON3gmBPlvhijW2OLeHayc1pNXqGMkBEaYn00Z5FuwC9DU0YvB6169hoE6r5wUGEswr7CGUfioqLApd8SISO6qsb-V2kaCCqWVGJE2BWLpzOQA79kaOWNvVJWLT9ncquUE0fTTZI8mg6jNLOXkolZ0nlhffVzUEvQ1uWnA1zM6OWuAVz-NRY6rm7Bj9tL2P",
-      features: ["Tầm nhìn hướng sông Hàn", "Môi trường xanh sạch", "Hỗ trợ startup địa phương"]
+      description: "17 Quang Trung, Hải Châu. Vị trí đắc địa ven sông Hàn thơ mộng.",
+      badges: ["View sông Hàn", "Tiện nghi cao cấp"],
+      image: "https://lh3.googleusercontent.com/aida-public/AB6AXuAeHA8VSRr1HibZ1LdFZNZQzaZOYFAARecp3pQpChRVYfbjkryedf9fFMMlVp2od4V8hH1jQPKvbI7OV0aUUUiX5F6xxNJdvMuELRF-ZulCfAfAFAaCQnV-opgFEQsrw7av3dukHMahgjg_LuaMURogA3kJutKSI6DiOppsuQVIQFWg_s59cW_RdKd_NUpuXaRFP7q1lXi1-yZz1-IDrpOpG3b85ndpOovuNWMTvtWdaYuERt-TR9l139FNQD3G3sqcu3QKSfFa1hGk",
+      features: [
+        { text: "Tầm nhìn hướng sông Hàn", icon: "verified" },
+        { text: "Môi trường xanh sạch", icon: "park" },
+        { text: "Hỗ trợ startup địa phương", icon: "rocket_launch" }
+      ]
     }
   ];
 
@@ -141,201 +164,193 @@ const LocationsPage: React.FC = () => {
 
       {/* ── Hero Section ── */}
       <main className="pt-20">
-        <section className="relative h-[600px] min-h-[400px] flex items-center overflow-hidden">
-          <div className="absolute inset-0 z-0">
-            <div 
-              className="w-full h-full bg-cover bg-center" 
-              style={{ 
-                backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuCTNC6Z-ScgFg3oay_u69Cq2lhxc34VpswrBeMbMQUIZTAaSzTaMMPURikfk45IO785aUuPAOVm0k-5wdL-gocwklSRAuAHhbmPY26FVDinc3zOMwBT3KMynoioK1JhUL8tBKXMadkd-z9Qm3DAEJMYbed9T0LF3qccdOliy773pMfPDmXVG0qVIUGIkw7UskyMgE5z7G3rSlVMaQVtzPO6zKG9TPdH4h5isSBbHLnpx5EugE-N_yIEZcnCUQQYPNvBJ5wz72oxzTLh')" 
-              }}
-            />
-            <div className="absolute inset-0 bg-primary/20 backdrop-blur-[2px]" />
-          </div>
-          <div className="relative z-10 max-w-7xl mx-auto px-6 w-full">
-            <div className="max-w-2xl bg-background/80 backdrop-blur-md p-8 md:p-10 rounded-2xl border border-border shadow-2xl">
-              <h1 className="text-4xl md:text-5xl font-extrabold leading-tight mb-4 text-primary">
-                Vị Trí Chiến Lược Cho Doanh Nghiệp Của Bạn
-              </h1>
-              <p className="text-sm md:text-base text-muted-foreground mb-6 leading-relaxed">
-                Tọa lạc ngay tại các trung tâm tài chính và thương mại sầm uất bậc nhất. CoSpace mang đến không gian làm việc chuyên nghiệp, giúp doanh nghiệp nâng tầm vị thế và kết nối không giới hạn.
-              </p>
-              <div className="flex gap-4">
-                <a href="#branches-list">
-                  <Button className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-5 rounded-xl font-bold shadow-lg shadow-primary/25 hover:scale-105 transition-all">
-                    Khám phá ngay
-                  </Button>
-                </a>
-                <Button 
-                  variant="outline" 
-                  onClick={() => setIsTourModalOpen(true)}
-                  className="border-primary text-primary hover:bg-primary/5 px-6 py-5 rounded-xl font-semibold transition-all"
-                >
-                  Liên hệ tư vấn
+        <section className="relative w-full h-[500px] flex items-center justify-center overflow-hidden">
+          <div 
+            className="absolute inset-0 z-0 bg-cover bg-center" 
+            style={{ 
+              backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuAFAhwogOkAXVV46JmdWGmQM0TfHy2ivaHBnGQnp1yhiI6kMHQr36Zk6leoueUmGqUEqub7qz7Tl5wJGJNusC8jw5lug2kr-Caj6yrz6vwyN4YIDML1WdQl28_xb28riOw_ryzST4ZHNuQwD9qbBb8Mx23nX9-3FWDHuvQcwqFcNFgVxaRg9J2MbAzyViF89K3kvxbPWJhELqTocm8b3FWM4ZgrRHh9tEePyL_asu34Mz_Ojnm2cvNBwMgNMcELWfKu-iQiitOsJE7l')" 
+            }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#0f0e1b]/60 to-[#0f0e1b]/80 z-10" />
+          
+          <div className="relative z-20 text-center px-6 max-w-4xl">
+            <h1 className="text-white text-4xl md:text-6xl font-black mb-6 leading-tight">
+              Địa điểm Chiến lược của Chúng tôi
+            </h1>
+            <p className="text-white/90 text-lg md:text-xl font-normal leading-relaxed">
+              Tọa lạc ngay các quận trung tâm như Quận 1, Quận 3 và Quận 4, các chi nhánh của CoSpace nằm liền kề những khu vực sôi động bậc nhất, giúp doanh nghiệp nâng tầm vị thế và kết nối không giới hạn.
+            </p>
+            <div className="mt-10 flex flex-wrap justify-center gap-4">
+              <a href="#branches-list">
+                <Button className="bg-primary text-primary-foreground px-8 py-4 rounded-xl font-bold text-lg hover:translate-y-[-2px] transition-all">
+                  Khám phá ngay
                 </Button>
-              </div>
+              </a>
+              <Button 
+                onClick={() => setIsTourModalOpen(true)}
+                className="bg-white/10 backdrop-blur-md text-white border border-white/30 px-8 py-4 rounded-xl font-bold text-lg hover:bg-white/20 transition-all"
+              >
+                Đặt lịch tham quan
+              </Button>
             </div>
           </div>
         </section>
 
         {/* ── Location Cards Grid ── */}
-        <section id="branches-list" className="py-20 bg-muted/30 border-y border-border">
-          <div className="max-w-7xl mx-auto px-6">
-            <div className="flex justify-between items-end mb-12">
-              <div>
-                <span className="text-primary font-bold tracking-widest text-xs uppercase">Mạng lưới của chúng tôi</span>
-                <h2 className="text-3xl font-bold mt-1">Các Chi Nhánh Tại Việt Nam</h2>
-              </div>
-            </div>
+        <section id="branches-list" className="max-w-[1280px] mx-auto px-6 py-20 w-full">
+          <div className="mb-12 text-center">
+            <span className="text-primary font-bold tracking-widest uppercase text-sm">Hệ thống mạng lưới</span>
+            <h2 className="text-foreground text-3xl font-bold mt-2">Các chi nhánh CoSpace</h2>
+          </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-              {branches.map((branch, index) => (
-                <div 
-                  key={branch.id}
-                  ref={(el) => (cardRefs.current[index] = el)}
-                  className="group bg-card rounded-2xl overflow-hidden border border-border hover:border-primary/50 transition-all duration-300 hover:shadow-xl flex flex-col justify-between"
-                >
-                  <div className="relative h-56 overflow-hidden bg-muted">
-                    <img 
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-                      src={branch.image} 
-                      alt={branch.name}
-                    />
-                    <div className="absolute top-4 right-4 bg-background/90 backdrop-blur-md px-3 py-1 rounded-lg text-xs font-bold text-primary shadow-sm">
-                      {branch.tag}
-                    </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {branches.map((branch, index) => (
+              <div 
+                key={branch.id}
+                ref={(el) => (cardRefs.current[index] = el)}
+                className="group flex flex-col bg-card rounded-2xl overflow-hidden border border-border hover:shadow-xl transition-all duration-300"
+              >
+                <div className="h-56 overflow-hidden relative bg-muted">
+                  <div className="absolute top-4 left-4 z-10 bg-primary/90 text-primary-foreground text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                    {branch.tag}
                   </div>
-                  
-                  <div className="p-6 flex-grow flex flex-col justify-between">
-                    <div>
-                      <h3 className="text-lg font-bold mb-2 text-foreground group-hover:text-primary transition-colors">
-                        {branch.name}
-                      </h3>
-                      <p className="text-xs text-muted-foreground mb-4 flex items-center gap-1.5">
-                        <FiMapPin className="text-primary shrink-0" />
-                        <span>{branch.address}</span>
-                      </p>
-                      
-                      <ul className="space-y-2 mb-6">
-                        {branch.features.map((feat, idx) => (
-                          <li key={idx} className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <FiCheckCircle className="text-primary w-4.5 h-4.5 shrink-0" />
-                            <span>{feat}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div className="flex flex-col gap-2 mt-4">
-                      <Button 
-                        onClick={() => handleBookingRedirect(branch.id)}
-                        className="w-full py-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm transition-all"
-                      >
-                        Đặt chỗ ngay
-                      </Button>
-                      <Button 
-                        variant="outline"
-                        onClick={() => openTourModal(branch.id)}
-                        className="w-full py-2 border-primary text-primary hover:bg-primary/5 transition-all text-xs"
-                      >
-                        Đặt lịch tham quan
-                      </Button>
-                    </div>
-                  </div>
+                  <img 
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                    src={branch.image} 
+                    alt={branch.name}
+                  />
                 </div>
-              ))}
-            </div>
+                <div className="p-6 flex flex-col flex-1">
+                  <h3 className="text-foreground text-xl font-bold mb-2">{branch.name}</h3>
+                  <p className="text-muted-foreground text-sm mb-4 line-clamp-2">{branch.description}</p>
+                  <div className="flex flex-wrap gap-2 mb-6">
+                    {branch.badges.map((badge, idx) => (
+                      <span key={idx} className="bg-muted text-primary text-[11px] font-bold px-2 py-1 rounded">
+                        {badge}
+                      </span>
+                    ))}
+                  </div>
+                  <button 
+                    onClick={() => setSelectedBranchForDetail(branch)}
+                    className="mt-auto w-full py-3 border border-primary text-primary font-bold rounded-lg hover:bg-primary hover:text-primary-foreground transition-colors"
+                  >
+                    Xem chi tiết
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         </section>
 
         {/* ── Why Choose Section ── */}
-        <section className="py-24 bg-card relative overflow-hidden">
-          <div className="absolute -right-24 top-24 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
-          <div className="absolute -left-24 bottom-24 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl" />
-          
-          <div className="max-w-7xl mx-auto px-6 relative z-10">
-            <div className="text-center mb-16 space-y-2">
-              <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground">
-                Tại sao nên chọn vị trí CoSpace?
+        <section className="bg-muted/40 py-24 px-6">
+          <div className="max-w-[1280px] mx-auto">
+            <div className="text-center mb-16">
+              <h2 className="text-foreground text-3xl md:text-4xl font-bold mb-4">
+                Tại sao chọn địa điểm CoSpace?
               </h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto text-base">
-                Chúng tôi không chỉ cung cấp chỗ ngồi, chúng tôi mang đến một nền tảng để doanh nghiệp phát triển bền vững và hiệu quả.
+              <p className="text-muted-foreground max-w-2xl mx-auto">
+                Chúng tôi không chỉ cung cấp chỗ ngồi, chúng tôi mang đến một hệ sinh thái hỗ trợ tối đa sự phát triển doanh nghiệp.
               </p>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="p-8 rounded-2xl bg-muted/40 border border-border hover:translate-y-[-8px] transition-all duration-300 flex flex-col justify-between">
-                <div>
-                  <div className="w-14 h-14 bg-primary rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-primary/20">
-                    <FiMap className="text-primary-foreground text-2xl" />
-                  </div>
-                  <h3 className="text-xl font-bold mb-4">Vị Trí Chiến Lược</h3>
-                  <p className="text-muted-foreground text-sm leading-relaxed">
-                    Tọa lạc tại các quận trung tâm nhộn nhịp, thuận tiện cho mọi giao dịch với khách hàng và đối tác, nâng tầm uy tín thương hiệu.
-                  </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+              <div className="flex flex-col items-center text-center p-8 bg-card rounded-2xl shadow-sm hover:translate-y-[-8px] transition-transform duration-300">
+                <div className="size-16 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mb-6">
+                  <span className="material-symbols-outlined text-3xl">location_on</span>
                 </div>
+                <h3 className="text-foreground text-xl font-bold mb-3">Vị trí Chiến lược</h3>
+                <p className="text-muted-foreground text-sm leading-relaxed">
+                  Toàn bộ các chi nhánh đều nằm tại các tuyến đường huyết mạch, trung tâm kinh tế của thành phố, giúp doanh nghiệp dễ dàng giao dịch và tuyển dụng.
+                </p>
               </div>
 
-              <div className="p-8 rounded-2xl bg-muted/40 border border-border hover:translate-y-[-8px] transition-all duration-300 flex flex-col justify-between">
-                <div>
-                  <div className="w-14 h-14 bg-primary rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-primary/20">
-                    <FiUsers className="text-primary-foreground text-2xl" />
-                  </div>
-                  <h3 className="text-xl font-bold mb-4">Kết Nối Cộng Đồng</h3>
-                  <p className="text-muted-foreground text-sm leading-relaxed">
-                    Tiếp cận mạng lưới hơn 200 doanh nghiệp startup và tập đoàn lớn, mở ra vô vàn cơ hội hợp tác và phát triển kinh doanh.
-                  </p>
+              <div className="flex flex-col items-center text-center p-8 bg-card rounded-2xl shadow-sm hover:translate-y-[-8px] transition-transform duration-300">
+                <div className="size-16 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mb-6">
+                  <span className="material-symbols-outlined text-3xl">hub</span>
                 </div>
+                <h3 className="text-foreground text-xl font-bold mb-3">Kết nối Cộng đồng</h3>
+                <p className="text-muted-foreground text-sm leading-relaxed">
+                  Gia nhập mạng lưới hơn 200 startup và doanh nghiệp hàng đầu. Cơ hội networking và tìm kiếm đối tác ngay tại không gian làm việc.
+                </p>
               </div>
 
-              <div className="p-8 rounded-2xl bg-muted/40 border border-border hover:translate-y-[-8px] transition-all duration-300 flex flex-col justify-between">
-                <div>
-                  <div className="w-14 h-14 bg-primary rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-primary/20">
-                    <FiAward className="text-primary-foreground text-2xl" />
-                  </div>
-                  <h3 className="text-xl font-bold mb-4">Tiện Ích Cao Cấp</h3>
-                  <p className="text-muted-foreground text-sm leading-relaxed">
-                    Tận hưởng dịch vụ lễ tân chuyên nghiệp, phòng họp hiện đại, trà cafe miễn phí và không gian thư giãn đẳng cấp quốc tế.
-                  </p>
+              <div className="flex flex-col items-center text-center p-8 bg-card rounded-2xl shadow-sm hover:translate-y-[-8px] transition-transform duration-300">
+                <div className="size-16 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mb-6">
+                  <span className="material-symbols-outlined text-3xl">high_quality</span>
                 </div>
+                <h3 className="text-foreground text-xl font-bold mb-3">Tiện ích Cao cấp</h3>
+                <p className="text-muted-foreground text-sm leading-relaxed">
+                  Trang bị hiện đại từ phòng họp, khu vực giải trí, quầy bar, đến hệ thống internet tốc độ cao và dịch vụ lễ tân chuyên nghiệp.
+                </p>
               </div>
             </div>
           </div>
         </section>
 
         {/* ── CTA Section ── */}
-        <section className="py-20 max-w-7xl mx-auto px-6">
-          <div className="bg-primary rounded-[32px] p-8 md:p-20 relative overflow-hidden text-center text-primary-foreground shadow-2xl">
+        <section className="relative py-24 px-6 overflow-hidden">
+          {/* Decorative Glowing Orbs in Background */}
+          <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-[350px] h-[350px] bg-primary/20 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute top-1/2 right-1/4 -translate-y-1/2 w-[300px] h-[300px] bg-secondary/20 rounded-full blur-3xl pointer-events-none" />
+          
+          <div className="relative max-w-[1100px] mx-auto bg-gradient-to-br from-primary via-[#4F46E5] to-secondary border border-white/10 rounded-[32px] p-10 md:p-20 text-center shadow-2xl overflow-hidden">
+            {/* Ambient overlay */}
+            <div className="absolute inset-0 bg-black/10 mix-blend-overlay pointer-events-none" />
+            
+            {/* Radial Dot Pattern Overlay */}
             <div 
-              className="absolute inset-0 opacity-10" 
+              className="absolute inset-0 opacity-[0.05] mix-blend-overlay pointer-events-none" 
               style={{ 
-                backgroundImage: "radial-gradient(circle, white 2px, transparent 2px)", 
-                backgroundSize: "32px 32px" 
+                backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", 
+                backgroundSize: "24px 24px" 
               }} 
             />
-            <div className="relative z-10 max-w-3xl mx-auto space-y-6">
-              <h2 className="text-3xl md:text-5xl font-bold leading-tight">
-                Sẵn Sàng Trải Nghiệm Không Gian Mới?
-              </h2>
-              <p className="text-primary-foreground/80 text-base md:text-lg">
-                Hãy để đội ngũ của chúng tôi dẫn bạn tham quan và tìm ra giải pháp văn phòng phù hợp nhất cho nhu cầu của bạn.
-              </p>
+
+            {/* Glowing Brand Tag */}
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-white text-xs font-bold mb-8 uppercase tracking-widest">
+              <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+              Khởi đầu thành công cùng CoSpace
+            </div>
+
+            <h2 className="text-3xl md:text-5xl font-extrabold text-white leading-tight mb-6">
+              Bạn đã sẵn sàng để <br className="hidden sm:inline" />
+              <span className="text-yellow-300">nâng cấp không gian làm việc?</span>
+            </h2>
+            
+            <p className="text-white/90 text-sm md:text-base mb-10 max-w-2xl mx-auto leading-relaxed font-medium">
+              Hãy liên hệ với đội ngũ chuyên gia của chúng tôi để nhận tư vấn và thiết kế giải pháp văn phòng linh hoạt, tối ưu chi phí nhất cho doanh nghiệp của bạn.
+            </p>
+
+            <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
+              <Button 
+                onClick={() => openTourModal()}
+                className="w-full sm:w-auto bg-white text-primary hover:bg-white/95 px-8 py-6 rounded-xl font-bold text-base shadow-xl hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center gap-2"
+              >
+                <span className="material-symbols-outlined text-[20px] text-primary">calendar_today</span>
+                Đặt lịch tham quan
+              </Button>
               
-              <div className="flex flex-col sm:flex-row justify-center gap-4 pt-4">
+              <a href="tel:19003384" className="w-full sm:w-auto">
                 <Button 
-                  onClick={() => openTourModal()}
-                  className="bg-background text-primary hover:bg-background/90 px-8 py-6 rounded-xl font-bold text-base shadow-lg hover:scale-105 transition-all flex items-center justify-center gap-2"
+                  variant="ghost"
+                  className="w-full sm:w-auto border border-white/30 text-white hover:bg-white/10 hover:border-white px-8 py-6 rounded-xl font-bold text-base hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center gap-2"
                 >
-                  <FiCalendar className="w-5 h-5" />
-                  Đặt Lịch Tham Quan
+                  <span className="material-symbols-outlined text-[20px]">call</span>
+                  Nhận báo giá ngay
                 </Button>
-                <a href="tel:19003384" className="w-full sm:w-auto">
-                  <Button 
-                    variant="outline" 
-                    className="border-2 border-primary-foreground hover:bg-primary-foreground hover:text-primary text-primary-foreground px-8 py-6 rounded-xl font-bold text-base transition-all flex items-center justify-center gap-2 w-full"
-                  >
-                    <FiPhone className="w-5 h-5" />
-                    Liên Hệ Ngay
-                  </Button>
-                </a>
+              </a>
+            </div>
+
+            {/* Credibility / Trust Indicators */}
+            <div className="mt-12 pt-8 border-t border-white/10 flex flex-wrap justify-center gap-x-8 gap-y-4 text-xs text-white/80">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-white/95 text-[18px]">verified</span>
+                <span>Hơn 500+ doanh nghiệp đã tin tưởng</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-white/95 text-[18px]">support_agent</span>
+                <span>Tư vấn giải pháp miễn phí 24/7</span>
               </div>
             </div>
           </div>
@@ -346,31 +361,41 @@ const LocationsPage: React.FC = () => {
       <footer className="bg-card border-t border-border py-16">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 px-6 max-w-7xl mx-auto">
           <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 shadow-sm shadow-blue-500/25">
-                <FiMapPin className="h-4.5 w-4.5 text-white" />
-              </div>
-              <span className="text-lg font-bold tracking-tight bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent">
-                CoSpace
-              </span>
-            </div>
+            <Logo iconClassName="h-8 w-8" textClassName="text-lg font-bold tracking-tight" />
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Hệ thống quản lý không gian làm việc thông minh và hiện đại cho doanh nghiệp Việt.
+              Hệ thống văn phòng chia sẻ hàng đầu Việt Nam, cung cấp giải pháp không gian linh hoạt cho sự phát triển của mọi doanh nghiệp.
             </p>
             <div className="flex gap-4 pt-2">
-              <a href="#" className="text-muted-foreground hover:text-primary transition-colors"><FiGlobe className="h-5 w-5" /></a>
-              <a href="#" className="text-muted-foreground hover:text-primary transition-colors"><FiHeart className="h-5 w-5" /></a>
-              <a href="#" className="text-muted-foreground hover:text-primary transition-colors"><FiMail className="h-5 w-5" /></a>
+              <a href="#" className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-primary hover:bg-primary hover:text-white transition-all">
+                <span className="material-symbols-outlined text-[20px]">public</span>
+              </a>
+              <a href="#" className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-primary hover:bg-primary hover:text-white transition-all">
+                <span className="material-symbols-outlined text-[20px]">mail</span>
+              </a>
+              <a href="tel:19003384" className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-primary hover:bg-primary hover:text-white transition-all">
+                <span className="material-symbols-outlined text-[20px]">call</span>
+              </a>
             </div>
           </div>
           
           <div className="space-y-3">
-            <h5 className="font-semibold text-sm">Dịch vụ</h5>
+            <h5 className="font-semibold text-sm">Giải pháp</h5>
             <ul className="space-y-2">
               <li><a className="text-xs text-muted-foreground hover:text-primary transition-colors" href="/#services">Văn phòng ảo</a></li>
               <li><a className="text-xs text-muted-foreground hover:text-primary transition-colors" href="/#services">Văn phòng riêng</a></li>
+              <li><a className="text-xs text-muted-foreground hover:text-primary transition-colors" href="/#services">Ghế ngồi linh hoạt</a></li>
               <li><a className="text-xs text-muted-foreground hover:text-primary transition-colors" href="/#services">Phòng họp</a></li>
-              <li><a className="text-xs text-muted-foreground hover:text-primary transition-colors" href="#">Sảnh sự kiện</a></li>
+              <li><a className="text-xs text-muted-foreground hover:text-primary transition-colors" href="#">Không gian sự kiện</a></li>
+            </ul>
+          </div>
+          
+          <div className="space-y-3">
+            <h5 className="font-semibold text-sm">Chi nhánh</h5>
+            <ul className="space-y-2">
+              <li><a className="text-xs text-muted-foreground hover:text-primary transition-colors" href="#branches-list">CoSpace Quận 1</a></li>
+              <li><a className="text-xs text-muted-foreground hover:text-primary transition-colors" href="#branches-list">CoSpace Quận 3</a></li>
+              <li><a className="text-xs text-muted-foreground hover:text-primary transition-colors" href="#branches-list">CoSpace Quận 4</a></li>
+              <li><a className="text-xs text-muted-foreground hover:text-primary transition-colors" href="#branches-list">CoSpace Đà Nẵng</a></li>
             </ul>
           </div>
           
@@ -378,34 +403,18 @@ const LocationsPage: React.FC = () => {
             <h5 className="font-semibold text-sm">Kết nối</h5>
             <ul className="space-y-2">
               <li><a className="text-xs text-muted-foreground hover:text-primary transition-colors" href="/#about">Về CoSpace</a></li>
-              <li><a className="text-xs text-muted-foreground hover:text-primary transition-colors" href="/#community">Sự kiện cộng đồng</a></li>
               <li><a className="text-xs text-muted-foreground hover:text-primary transition-colors" href="#">Tuyển dụng</a></li>
-              <li><a className="text-xs text-muted-foreground hover:text-primary transition-colors" href="#">Liên hệ</a></li>
+              <li><a className="text-xs text-muted-foreground hover:text-primary transition-colors" href="#">Sự kiện</a></li>
+              <li><a className="text-xs text-muted-foreground hover:text-primary transition-colors" href="#">Chính sách bảo mật</a></li>
             </ul>
-          </div>
-          
-          <div className="space-y-3">
-            <h5 className="font-semibold text-sm">Bản tin</h5>
-            <p className="text-xs text-muted-foreground">Đăng ký để nhận thông tin ưu đãi mới nhất.</p>
-            <div className="flex gap-2 pt-2">
-              <input 
-                className="w-full bg-muted px-4 py-2 rounded-lg border border-border focus:ring-2 focus:ring-primary text-xs" 
-                placeholder="Email của bạn" 
-                type="email"
-              />
-              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground p-2 rounded-lg shrink-0">
-                <FiSend className="w-4.5 h-4.5" />
-              </Button>
-            </div>
           </div>
         </div>
         
         <div className="max-w-7xl mx-auto px-6 mt-12 pt-8 border-t border-border flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-xs text-muted-foreground">© 2026 CoSpace Management System. All rights reserved.</p>
+          <p className="text-xs text-muted-foreground">© 2026 CoSpace. All rights reserved.</p>
           <div className="flex gap-4 text-xs text-muted-foreground">
-            <a className="hover:text-primary" href="#">Privacy Policy</a>
-            <a className="hover:text-primary" href="#">Terms of Service</a>
-            <a className="hover:text-primary" href="#">Cookie Policy</a>
+            <a className="hover:text-primary" href="#">Điều khoản sử dụng</a>
+            <a className="hover:text-primary" href="#">Chính sách Cookies</a>
           </div>
         </div>
       </footer>
@@ -422,7 +431,7 @@ const LocationsPage: React.FC = () => {
             </button>
             
             <h3 className="text-xl font-bold mb-2 text-primary flex items-center gap-2">
-              <FiCalendar className="w-5 h-5" />
+              <span className="material-symbols-outlined text-[20px] text-primary">calendar_today</span>
               Đặt Lịch Tham Quan
             </h3>
             <p className="text-xs text-muted-foreground mb-6">
@@ -432,7 +441,7 @@ const LocationsPage: React.FC = () => {
             {submitted ? (
               <div className="py-8 text-center space-y-3">
                 <div className="w-12 h-12 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center mx-auto">
-                  <FiCheckCircle className="w-6 h-6" />
+                  <span className="material-symbols-outlined text-green-500 text-[24px]">check_circle</span>
                 </div>
                 <h4 className="font-bold text-foreground">Đăng ký thành công!</h4>
                 <p className="text-xs text-muted-foreground">Chúng tôi sẽ liên hệ xác nhận lịch hẹn trong vòng 15 phút.</p>
@@ -509,6 +518,80 @@ const LocationsPage: React.FC = () => {
                 </Button>
               </form>
             )}
+          </div>
+        </div>
+      )}
+      {/* ── Branch Details Modal ── */}
+      {selectedBranchForDetail && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="relative bg-card border border-border w-full max-w-2xl overflow-hidden rounded-2xl shadow-2xl animate-scale-in">
+            <button 
+              onClick={() => setSelectedBranchForDetail(null)}
+              className="absolute top-4 right-4 z-10 p-2 rounded-full bg-black/40 text-white hover:bg-black/60 transition-all"
+            >
+              <FiX className="w-5 h-5" />
+            </button>
+            
+            <div className="relative h-64 w-full bg-muted">
+              <img 
+                src={selectedBranchForDetail.image} 
+                alt={selectedBranchForDetail.name} 
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+              <div className="absolute bottom-6 left-6 text-white">
+                <span className="bg-primary/95 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                  {selectedBranchForDetail.tag}
+                </span>
+                <h3 className="text-2xl md:text-3xl font-bold mt-3">
+                  {selectedBranchForDetail.name}
+                </h3>
+              </div>
+            </div>
+
+            <div className="p-6 md:p-8 space-y-6">
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Địa chỉ chi nhánh</h4>
+                <p className="text-sm text-foreground flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary text-[20px]">location_on</span>
+                  {selectedBranchForDetail.address}
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Tiện ích đi kèm</h4>
+                <ul className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {selectedBranchForDetail.features.map((feat, idx) => (
+                    <li key={idx} className="flex items-center gap-2 p-3 bg-muted/40 rounded-xl border border-border text-xs text-foreground">
+                      <span className="material-symbols-outlined text-primary text-[20px] shrink-0">{feat.icon}</span>
+                      <span className="font-semibold">{feat.text}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-border">
+                <Button 
+                  onClick={() => {
+                    handleBookingRedirect(selectedBranchForDetail.id);
+                    setSelectedBranchForDetail(null);
+                  }}
+                  className="flex-1 py-3 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl shadow-lg shadow-primary/25 hover:scale-[1.01] transition-all"
+                >
+                  Đặt chỗ ngay
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => {
+                    openTourModal(selectedBranchForDetail.id);
+                    setSelectedBranchForDetail(null);
+                  }}
+                  className="flex-1 py-3 border-primary text-primary hover:bg-primary/5 font-bold rounded-xl hover:scale-[1.01] transition-all"
+                >
+                  Đặt lịch tham quan
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       )}

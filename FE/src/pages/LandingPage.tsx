@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { Button } from "../components/ui/button";
 import PublicNavbar from "../components/PublicNavbar";
+import { Logo } from "../components/ui/Logo";
 import { 
   FiMapPin,
   FiCalendar, 
@@ -474,14 +475,7 @@ const LandingPage: React.FC = () => {
       <footer className="bg-card border-t border-border py-16">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 px-6 max-w-7xl mx-auto">
           <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 shadow-sm shadow-blue-500/25">
-                <FiMapPin className="h-4.5 w-4.5 text-white" />
-              </div>
-              <span className="text-lg font-bold tracking-tight bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent">
-                CoSpace
-              </span>
-            </div>
+            <Logo iconClassName="h-8 w-8" textClassName="text-lg font-bold tracking-tight" />
             <p className="text-xs text-muted-foreground leading-relaxed max-w-xs">
               Hệ thống quản lý không gian làm việc thông minh hàng đầu, cung cấp trải nghiệm làm việc chuyên nghiệp, linh hoạt và tiện nghi.
             </p>

@@ -14,6 +14,7 @@ import { ToastProvider } from "./components/Toast";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { MockDataProvider } from "./context/MockDataContext";
 import { Button } from "./components/ui/button";
+import { Logo } from "./components/ui/Logo";
 import {
   FiMapPin,
   FiCalendar,
@@ -149,9 +150,7 @@ const AppShell: React.FC = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background px-6">
         <div className="flex flex-col items-center gap-4">
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center animate-float">
-            <FiMapPin className="h-5 w-5 text-white" />
-          </div>
+          <Logo showText={false} iconClassName="h-10 w-10 animate-float" />
           <div className="rounded-xl border border-border bg-card px-6 py-4 text-sm text-muted-foreground shadow-sm">
             Đang kiểm tra phiên đăng nhập...
           </div>
@@ -245,14 +244,11 @@ const AppShell: React.FC = () => {
         <div
           className={`flex items-center gap-3 px-5 h-16 border-b border-sidebar-border shrink-0 ${collapsed ? "justify-center px-3" : ""}`}
         >
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shrink-0 shadow-md shadow-blue-500/25">
-            <FiMapPin className="h-4.5 w-4.5 text-white" />
-          </div>
-          {!collapsed && (
-            <span className="text-lg font-bold tracking-tight font-heading bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent">
-              WorkHub
-            </span>
-          )}
+          <Logo
+            showText={!collapsed}
+            iconClassName="h-9 w-9"
+            textClassName="text-lg font-bold tracking-tight"
+          />
         </div>
 
         {/* Nav links */}
