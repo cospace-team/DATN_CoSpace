@@ -44,3 +44,20 @@ Thumbs.db
 **/yarn-debug.log*
 **/yarn-error.log*
 **/pnpm-debug.log*
+
+# LaTeX temporary files
+report/*.aux
+report/*.fdb_latexmk
+report/*.fls
+report/*.lof
+report/*.lot
+report/*.out
+report/*.toc
+report/*.synctex.gz
+report/*.pdfsync
+report/*.alg
+report/*.acr
+report/*.acn
+report/*.glg
+report/*.glo
+report/*.ist
