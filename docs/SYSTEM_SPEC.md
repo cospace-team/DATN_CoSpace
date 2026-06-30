@@ -241,7 +241,36 @@ pending → paid (Staff xác nhận cash)
 - Contact chỉ hiển thị nếu `contact_public = true`
 - MVP: Chỉ gợi ý, không chat (V2+)
 
-### 3.9 Audit
+**Tags — Predefined System (MVP):**
+- Admin tạo & quản lý danh sách tags (user KHÔNG tự tạo)
+- User chọn tags từ danh sách có sẵn (multi-select)
+- V2+: AI-Powered Matching dùng embedding + cosine similarity
+
+**Matching Formula (MVP):**
+```
+score = (skill_overlap × 0.6) + (interest_overlap × 0.25) + (same_branch_bonus × 0.15)
+```
+- `skill_overlap` = số skill tags trùng / tổng skill tags (Jaccard)
+- `interest_overlap` = số interest tags trùng / tổng interest tags (Jaccard)
+- `same_branch_bonus` = 1.0 nếu cùng `primary_branch_id`, 0.0 nếu khác
+- Scope: **Toàn hệ thống** (cross-branch), cùng branch = bonus
+
+### 3.9 Notification (In-app)
+
+| Bảng | Mô tả | Cột chính |
+|------|-------|-----------|
+| **notifications** | Thông báo trong app | user_id, type, title, message, data_json, is_read |
+
+**Notification triggers:**
+- Booking confirmed → gửi booking_code cho customer
+- Payment timeout (15 min) → thông báo customer
+- Checkout trễ → thông báo staff
+- Cancel + Refund → thông báo kết quả cho customer
+
+- MVP: In-app notification only (bảng `notifications` + API đọc/đánh dấu đã đọc)
+- V2+: Email notification, push notification
+
+### 3.10 Audit
 
 | Bảng | Mô tả | Cột chính |
 |------|-------|-----------|
@@ -319,10 +348,12 @@ Customer gửi yêu cầu hủy
 ### 4.6 Tìm Đối Tác (Matching)
 
 ```
-Customer cập nhật profile (skills, interests, contact_public)
-→ Batch job tính match_scores (skill overlap × 0.7 + interest overlap × 0.3)
+Customer cập nhật profile → chọn skills/interests từ danh sách tags có sẵn
+→ Batch job tính match_scores:
+    score = (skill_overlap × 0.6) + (interest_overlap × 0.25) + (same_branch × 0.15)
 → API /suggested-partners → danh sách partner + score + reasons
 → Contact chỉ hiển thị nếu contact_public = true
+→ Scope: toàn hệ thống, cùng branch = bonus score
 ```
 
 ### 4.7 Cấu Hình (Admin / Branch Admin)
@@ -441,6 +472,7 @@ Customer cập nhật profile (skills, interests, contact_public)
 | Add-on | `extra_services`, `booking_services` |
 | Cancellation | `cancellation_policies`, `booking_cancellations` |
 | Matching | `tags`, `profile_skills`, `profile_interests`, `profile_match_scores` |
+| Notification | `notifications` |
 | Audit | `audit_logs` |
 
 ### 6.2 Enum Types
@@ -497,6 +529,16 @@ Customer cập nhật profile (skills, interests, contact_public)
 11. **Pricing fallback**: Branch-specific → Global default
 12. **Tiền tệ**: VND
 13. **Phương thức thanh toán**: Customer chỉ được dùng MoMo. Chỉ Staff/Admin mới được tạo đơn bằng Tiền mặt tại quầy.
+14. **1 booking = 1 workspace**: Nếu cần nhiều workspace → tạo nhiều booking riêng biệt.
+15. **Pricing đơn giản**: `subtotal = price × unit_count`. Giá bậc thang → V2+ (thêm bảng `price_tiers`).
+16. **Workspace type lock**: KHÔNG cho đổi workspace type khi còn booking active (pending_payment/confirmed/checked_in).
+17. **Tags predefined**: Admin quản lý danh sách tags. User chỉ chọn, không tự tạo.
+18. **Matching scope**: Toàn hệ thống, cùng `primary_branch_id` = bonus score (+0.15).
+19. **Membership tier**: V2+ — không implement business rules ở MVP, tất cả user = `standard`.
+20. **Notification**: In-app notification qua bảng `notifications`. Email → V2+.
+21. **Timezone**: API trả UTC. FE convert theo `branch.timezone`.
+22. **SVG Storage**: Upload qua Supabase Storage. Map `svg_element_id` thủ công.
+23. **Cancel rule snapshot**: `applied_rule_json` format: `{ "rule_type", "refund_percent", "policy_name", "min_value", "max_value" }`.
 
 ---
 
@@ -508,14 +550,19 @@ Customer cập nhật profile (skills, interests, contact_public)
 | User Role | 4 roles trong `users.role` + `branch_id` | Không cần bảng user_roles riêng |
 | Auth | Email/Password + Google SSO | Hỗ trợ cả 2 phương thức |
 | Floorplan | svg_url bắt buộc + svg_element_id mapping | Render trực quan tầng |
-| Pricing | Global default + Branch override | Linh hoạt, đơn giản |
+| Pricing | `subtotal = price × unit_count`, V2+ giá bậc thang | Đơn giản MVP, dễ mở rộng |
 | Add-on | Global default + Branch override | Nhất quán với pricing |
 | Overlap check | App-layer (SELECT FOR UPDATE) + INDEX | Linh hoạt, dễ debug hơn DB EXCLUDE |
 | Cancellation | Tự động theo policy, không cần admin duyệt | Trải nghiệm khách tốt hơn |
-| Matching | Tags + Score, batch job | Đơn giản, hiệu quả |
+| Matching MVP | Predefined Tags + Weighted Score, batch job | Đơn giản, chuẩn hóa tags |
+| Matching V2+ | AI-Powered (embedding + cosine similarity) | Giảng viên thích AI features |
 | Refund | Ghi nhận nội bộ, không payout MoMo | MVP scope |
 | Contract | `is_contract` boolean, auto-set khi week/month | Cùng bảng bookings, không cần bảng riêng |
-| Reports | Query trực tiếp từ bookings/payments, không bảng riêng | Đơn giản, real-time |
-| Export | CSV only (MVP), PDF export V2+ | CSV dễ implement (~10 dòng JS) |
+| Booking scope | 1 booking = 1 workspace | Đơn giản, V2+ nhóm booking_group_id |
+| Notification | In-app (bảng `notifications`), Email V2+ | Đủ cho MVP |
+| Reports | Query trực tiếp, materialized view nếu chậm | Đơn giản, real-time |
+| Export | CSV only (MVP), PDF export V2+ | CSV dễ implement |
+| Membership | V2+ — giữ cột placeholder, không có rules MVP | Tập trung core |
+| Workspace type | Khóa type change khi có booking active | Tránh conflict giá |
 
 ---

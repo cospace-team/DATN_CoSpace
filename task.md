@@ -1,0 +1,38 @@
+# Danh Sách Nhiệm Vụ (Task Checklist) - Đồ Án CoSpace
+
+Sử dụng ký hiệu: `[ ]` Chưa làm | `[/]` Đang làm | `[x]` Đã xong.
+
+---
+
+## 🔑 1. Identity & Auth (Supabase Link Backend)
+- [ ] [/] Tích hợp Custom JwtAuthenticationConverter ở Backend (`SecurityConfig.java`) để chuyển đổi Role từ token
+- [ ] Cập nhật API `/api/auth/me` để trả về thông tin user chi tiết
+- [ ] FE kết nối API login/register thực tế từ Supabase
+
+## 🗺️ 2. Space Management & SVG Floorplan
+- [ ] Sửa đổi nghiệp vụ và Database cho thực thể Workspace (thêm `capacity`, `status`, `description`...)
+- [ ] Viết API lấy thông tin tầng, workspace trống/bận theo giờ `/workspaces/available`
+- [ ] FE kết nối API và tô màu tương tác bản đồ SVG (`SVGFloorPlanEditor.tsx`)
+- [ ] Viết API và giao diện quản lý lịch bảo trì phòng (Maintenance)
+
+## 🛒 3. Booking Engine & Pricing
+- [ ] Viết logic API tạo Đặt chỗ mới `/bookings` (chống trùng lịch Overlap check)
+- [ ] Hoàn thiện Service tính tiền tự động theo giờ/ngày/tuần/tháng (Pricing Service)
+- [ ] Làm API và Giao diện quản lý dịch vụ bổ sung (Add-on extra services)
+- [ ] Giao diện lịch sử đặt chỗ & hợp đồng cho Khách hàng + Quản trị viên
+
+## 💳 4. Payment & Check-in
+- [ ] Tích hợp MoMo Sandbox (Tạo link thanh toán + Webhook IPN xử lý kết quả)
+- [ ] Viết Worker tự động hủy đơn sau 15 phút nếu không thanh toán (Payment Timeout)
+- [ ] API xác nhận thanh toán tiền mặt tại quầy (dành cho Staff)
+- [ ] API và Giao diện check-in/check-out bằng mã QR / Booking Code
+
+## 📊 5. Cancellation & Reports & Matching
+- [ ] Viết logic tự động hủy phòng và tính toán % hoàn tiền theo chính sách
+- [ ] Làm API gợi ý đối tác theo kỹ năng (Matching Engine)
+- [ ] Dashboard biểu đồ doanh thu và công suất phòng cho Admin/Branch Admin (Recharts/Chart.js)
+- [ ] Export dữ liệu báo cáo ra file CSV
+
+## 🧪 6. Testing & Hardening
+- [ ] Viết script SQL test tự động chạy thử toàn bộ luồng nghiệp vụ
+- [ ] Fix bug, tối ưu giao diện Responsive, chuẩn bị demo bảo vệ

@@ -9,7 +9,8 @@ Enum user_status {
 }
 
 Enum user_role {
-  admin
+  super_admin
+  branch_admin
   staff
   customer
 }
@@ -119,7 +120,7 @@ Table users {
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
 
-  Note: "admin/customer usually branch_id is null; staff must have branch_id"
+  Note: "super_admin/customer → branch_id NULL; branch_admin/staff → branch_id NOT NULL"
 }
 
 Table auth_accounts {
