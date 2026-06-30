@@ -1,0 +1,60 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+spring:
+  config:
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:BE/.env[.properties]
+  application:
+    name: momo-sandbox
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+  datasource:
+    url: ${SUPABASE_DB_URL}
+    username: ${SUPABASE_DB_USERNAME}
+    password: ${SUPABASE_DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      data-source-properties:
+        sslmode: ${SUPABASE_DB_SSL_MODE:require}
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update # For dev: create-drop or update. For prod: validate.
+    show-sql: true
+    defer-datasource-initialization: true
+    properties:
+      hibernate:
+        format_sql: true
+  sql:
+    init:
+      mode: always
+      encoding: UTF-8
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${SUPABASE_JWT_ISSUER:https://ozaiknomajljfqiepels.supabase.co/auth/v1}
+
+momo:
+  endpoint: "https://test-payment.momo.vn/v2/gateway/api/create"
+  partner-code: "MOMO"
+  access-key: "F8BBA842ECF85"
+  secret-key: "K951B6PE1waDMi640xX08PD3vg6EkVlz"
+  return-url: "http://localhost:8080/api/payments/momo/return"
+  notify-url: "http://localhost:8080/api/payments/momo/ipn"
+
+app:
+  cors:
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  frontend:
+    base-url: ${APP_FRONTEND_BASE_URL:http://localhost:5173}
+
+logging:
+  level:
+    root: INFO
+    com.example.momosandbox: DEBUG

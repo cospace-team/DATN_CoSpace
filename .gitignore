@@ -1,0 +1,46 @@
+# ==========================================
+# Unified .gitignore for Monorepo (DA)
+# ==========================================
+
+# Zip files
+*.zip
+*.rar
+
+# Dependencies
+**/node_modules/
+
+# BE / Java / Maven output
+**/target/
+**/*.jar
+**/*.war
+**/bin/
+**/.classpath
+**/.project
+**/.settings/
+
+# FE Build Output
+**/dist/
+
+# Local Environment files
+**/.env
+**/.env.*
+!**/.env.example
+
+# IDE & Editor files
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+
+# OS temporary files
+.DS_Store
+Thumbs.db
+
+# Logs
+**/logs/
+**/*.log
+**/npm-debug.log*
+**/yarn-debug.log*
+**/yarn-error.log*
+**/pnpm-debug.log*

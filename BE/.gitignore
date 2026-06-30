@@ -1,0 +1,30 @@
+# Ignore Maven
+target/
+*.jar
+*.war
+
+# Ignore IDE
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+
+# Ignore system
+.DS_Store
+Thumbs.db
+
+# Ignore logs
+logs/
+*.log
+
+# Ignore local environment files
+.env
+.env.*
+!.env.example
+
+# Ignore temp
+.classpath
+.project
+.settings/
+bin/

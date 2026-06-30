@@ -1,0 +1,246 @@
+<!DOCTYPE html><html lang="vi" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<!-- Tailwind Configuration -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "border-subtle": "#E2E8F0",
+                    "status-success": "#10B981",
+                    "secondary": "#505f76",
+                    "on-secondary": "#ffffff",
+                    "on-tertiary-container": "#ffd2be",
+                    "surface-dim": "#dcd8e5",
+                    "tertiary-fixed": "#ffdbcc",
+                    "secondary-container": "#d0e1fb",
+                    "surface-container-highest": "#e4e1ee",
+                    "status-success-bg": "#D1FAE5",
+                    "surface": "#fcf8ff",
+                    "status-info-bg": "#DBEAFE",
+                    "on-surface-muted": "#475569",
+                    "inverse-on-surface": "#f3effc",
+                    "on-surface": "#0F172A",
+                    "status-error-bg": "#FEE2E2",
+                    "on-tertiary": "#ffffff",
+                    "on-secondary-container": "#54647a",
+                    "inverse-primary": "#c3c0ff",
+                    "status-warning": "#F59E0B",
+                    "background": "#fcf8ff",
+                    "surface-variant": "#F8FAFC",
+                    "on-secondary-fixed-variant": "#38485d",
+                    "error-container": "#ffdad6",
+                    "on-surface-variant": "#464555",
+                    "on-tertiary-fixed": "#351000",
+                    "surface-bright": "#fcf8ff",
+                    "surface-tint": "#4d44e3",
+                    "primary": "#3525cd",
+                    "tertiary-fixed-dim": "#ffb695",
+                    "secondary-fixed-dim": "#b7c8e1",
+                    "primary-hover": "#4338CA",
+                    "status-error": "#EF4444",
+                    "on-primary-fixed-variant": "#3323cc",
+                    "on-error-container": "#93000a",
+                    "inverse-surface": "#302f39",
+                    "status-info": "#3B82F6",
+                    "on-error": "#ffffff",
+                    "primary-fixed": "#e2dfff",
+                    "surface-container-high": "#eae6f4",
+                    "primary-fixed-dim": "#c3c0ff",
+                    "on-background": "#1b1b24",
+                    "tertiary": "#7e3000",
+                    "on-secondary-fixed": "#0b1c30",
+                    "primary-container": "#4f46e5",
+                    "on-tertiary-fixed-variant": "#7b2f00",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-container-low": "#f5f2ff",
+                    "surface-container": "#f0ecf9",
+                    "outline": "#777587",
+                    "secondary-fixed": "#d3e4fe",
+                    "on-primary-fixed": "#0f0069",
+                    "on-primary-container": "#dad7ff",
+                    "outline-variant": "#c7c4d8",
+                    "tertiary-container": "#a44100",
+                    "status-warning-bg": "#FEF3C7",
+                    "on-primary": "#ffffff",
+                    "error": "#ba1a1a"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "xl": "32px",
+                    "lg": "24px",
+                    "sm": "8px",
+                    "md": "16px",
+                    "xs": "4px"
+            },
+            "fontFamily": {
+                    "body-default": ["Inter"],
+                    "body-emphasis": ["Inter"],
+                    "label-caps": ["Inter"],
+                    "h1": ["Inter"],
+                    "caption": ["Inter"],
+                    "h2": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .dark-brand-overlay {
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(53, 37, 205, 0.8) 100%);
+      }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-default antialiased">
+<div class="flex min-h-screen w-full flex-col lg:flex-row overflow-hidden">
+<!-- Left Column: Visual Brand Section -->
+<div class="relative hidden w-full lg:flex lg:w-1/2 xl:w-7/12 flex-col justify-between p-12 overflow-hidden">
+<!-- Background Image with Dark Brand Overlay -->
+<div class="absolute inset-0 z-0" data-alt="A professional architectural photograph of a modern high-tech workspace with clean glass partitions and minimalist furniture. The image is captured in a high-contrast style, then layered beneath a sophisticated dark indigo and deep navy blue gradient overlay that creates a moody, premium corporate aesthetic. Subdued atmospheric lighting highlights the textures of concrete and polished steel." style="background-image: url(&quot;https://lh3.googleusercontent.com/aida-public/AB6AXuDEy9LrJ4k0aCV_Lr27vCrOSfPtfvvIsfHof9I-Q6gjv2EoAqDT-zfWmeQRpFEcw84A20Eu-TXTp0GLzrg9TDWR5-5DA9vZ-z3y_PQMxC0E7gMgQNPm7oqVMgUfw_jo7Hc0O6kUAHz25bFTovX37C4bbd699ku6W_Wm2C3_BJlRLd13jUQ8WhpkXbL5AS2DKXFh1VtOOx3yoKKPQRSGIb59PtTjrwnsMHidsLCaP5W0gS2SPGUiQhUL-odG8TzeXC1LaA2m4yIDf06n&quot;);"></div>
+<div class="absolute inset-0 z-10 dark-brand-overlay"></div>
+<!-- Brand Logo/Header -->
+<div class="relative z-20 flex items-center gap-3">
+<div class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-white shadow-lg">
+<svg class="h-6 w-6" fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path d="M42.4379 44C42.4379 44 36.0744 33.9038 41.1692 24C46.8624 12.9336 42.2078 4 42.2078 4L7.01134 4C7.01134 4 11.6577 12.932 5.96912 23.9969C0.876273 33.9029 7.27094 44 7.27094 44L42.4379 44Z" fill="currentColor"></path>
+</svg>
+</div>
+<span class="text-2xl font-bold tracking-tight text-white">Thương hiệu</span>
+</div>
+<!-- Featured Quote or Value Prop -->
+<div class="relative z-20 mt-auto max-w-lg">
+<h1 class="text-4xl font-bold leading-tight text-white mb-6">Giải pháp công nghệ tối ưu cho doanh nghiệp của bạn.</h1>
+<p class="text-lg text-white/80 font-medium">Hàng ngàn doanh nghiệp đã tin tưởng sử dụng nền tảng của chúng tôi để số hóa quy trình và tăng trưởng bền vững.</p>
+<div class="mt-10 flex items-center gap-4">
+<div class="flex -space-x-3">
+<div class="h-10 w-10 rounded-full border-2 border-primary bg-white overflow-hidden">
+<img class="h-full w-full object-cover" data-alt="A professional headshot of a middle-aged Asian businesswoman with a warm, confident smile, wearing a professional charcoal blazer. The background is a softly blurred modern office interior with warm ambient lighting. The overall mood is approachable, successful, and highly professional." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDQjjGTsi9DxSykN6jXCVhFIyxAvZI_BuWDkEQbKwFKcrelpwMyqM4_blADd9LRq22xMD0B1iGtD4Pg6HguKv_qj_PTHSpVoL5ke1xXy1j_9O1HsI4pe-HSGYj0PmocmP-61TWISx6M96ut3Kl_rrWG63EJ7Fi7t-jTvWX_ree5RSvAWoW_izQmKG7hovtbsmg_LR3J1DWyx_TgpyhHG1AjLQR4eG9-wdKdlK4LBcwECqwtJviT2Nig9esi-wrWgRQUe64wZwxCXefL">
+</div>
+<div class="h-10 w-10 rounded-full border-2 border-primary bg-white overflow-hidden">
+<img class="h-full w-full object-cover" data-alt="A portrait of a young male software engineer with glasses, looking thoughtfully into the camera. He is in a brightly lit startup environment with plants and sleek monitors in the background. The aesthetic is clean, modern, and tech-focused with natural daylighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDsupOKSJbwMvblpxoHKMeyNQrwEICCOj8eeF1OI0wSPQWzLoN1I76m9Lxmb8i3Aq3RsTkP-ytQCu8jwSxfcY44XnWz79AkC0b1isZljxTFGPPdNfLovsPOeeOy1GdmjfuVsxAo4F0NMpo0NMN0CTwsd84RH6jNZnsy9iyFjplm6VUMmiNZmmoqQYGUTfSQ6KwvGabQAcmMixMMTk7_WgasKAcuk-Naa_U95cVs3HQaB72Cqq-LkQ24PXWwpINVJVCyPETRcINJdvb1">
+</div>
+<div class="h-10 w-10 rounded-full border-2 border-primary bg-white overflow-hidden">
+<img class="h-full w-full object-cover" data-alt="Close-up portrait of a female creative director with vibrant energy, smiling broadly. She is positioned in a sunlit art studio with colorful abstract paintings in the background. The lighting is soft and artistic, conveying a sense of innovation and creativity." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD8tHGYvERFrf-4AC0ad5q7TLrK7Wb3Ugh6PhfODP3xh-Z0Bxr7Wx-wUGUPdLSwnF4FeHVXYIusJ6MfCn8ZXv9WDU8pZK2gDsEZ_zt9Mbbco9bF7LmjLCxt_xChbp78fLdzK3hJQcOwkw0c-J9M5rKdXZXj_ARA5A76anVa6h96t76dvFwRh6mGg2LrqevVa-PF_HWbcRp4RfsBTYLsjBIS6nUMErKGUjt_RRNiLg4-SNBrdjYaJr63nBNbUlco-wxvULsW-VfphGbJ">
+</div>
+</div>
+<span class="text-sm font-semibold text-white">Tham gia cùng hơn 10,000+ người dùng</span>
+</div>
+</div>
+</div>
+<!-- Right Column: Login Form Section -->
+<div class="flex flex-1 flex-col justify-center bg-surface px-6 py-12 sm:px-12 lg:w-1/2 xl:w-5/12 items-center">
+<div class="mx-auto w-full max-w-md">
+<!-- Mobile Logo -->
+<div class="mb-10 flex lg:hidden items-center gap-3">
+<div class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-white">
+<svg class="h-5 w-5" fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path d="M42.4379 44C42.4379 44 36.0744 33.9038 41.1692 24C46.8624 12.9336 42.2078 4 42.2078 4L7.01134 4C7.01134 4 11.6577 12.932 5.96912 23.9969C0.876273 33.9029 7.27094 44 7.27094 44L42.4379 44Z" fill="currentColor"></path>
+</svg>
+</div>
+<span class="text-xl font-bold tracking-tight text-on-surface">Thương hiệu</span>
+</div>
+<div class="text-left mb-10">
+<h2 class="text-3xl font-bold tracking-tight text-on-surface">Chào mừng bạn trở lại</h2>
+<p class="mt-2 text-on-surface-variant font-medium">Vui lòng nhập thông tin để truy cập vào tài khoản của bạn.</p>
+</div>
+<!-- Google SSO - Moved to top as requested -->
+
+<!-- Separator -->
+
+<!-- Email/Password Form -->
+<form action="#" class="space-y-6" method="POST">
+<div>
+<label class="block text-sm font-bold text-on-surface mb-2" for="email">Địa chỉ Email</label>
+<input autocomplete="email" class="block w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-3.5 text-on-surface placeholder:text-on-surface-variant/50 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none" id="email" name="email" placeholder="ten@congty.com" required="" type="email">
+</div>
+<div>
+<div class="flex items-center justify-between mb-2">
+<label class="block text-sm font-bold text-on-surface" for="password">Mật khẩu</label>
+<a class="text-sm font-bold text-primary hover:underline" href="#">Quên mật khẩu?</a>
+</div>
+<div class="relative">
+<input autocomplete="current-password" class="block w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-3.5 pr-12 text-on-surface placeholder:text-on-surface-variant/50 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none" id="password" name="password" placeholder="••••••••" required="" type="password">
+<button class="absolute inset-y-0 right-0 flex items-center pr-4 text-on-surface-variant hover:text-on-surface" id="togglePassword" type="button">
+<span class="material-symbols-outlined text-xl" data-icon="visibility">visibility</span>
+</button>
+</div>
+</div>
+<div class="flex items-center">
+<input class="h-4 w-4 rounded border-outline-variant text-primary focus:ring-primary/20" id="remember-me" name="remember-me" type="checkbox">
+<label class="ml-3 block text-sm font-medium text-on-surface-variant" for="remember-me">Ghi nhớ đăng nhập</label>
+</div>
+<div>
+<button class="flex w-full justify-center rounded-xl bg-primary px-4 py-4 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-all hover:bg-primary-hover active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-primary/40" type="submit">
+                        Đăng nhập
+                    </button>
+</div>
+</form><div class="relative my-8"><div aria-hidden="true" class="absolute inset-0 flex items-center"><div class="w-full border-t border-outline-variant"></div></div><div class="relative flex justify-center text-sm font-bold uppercase tracking-wider"><span class="bg-surface px-4 text-on-surface-variant">HOẶC</span></div></div><button class="flex w-full items-center justify-center gap-3 rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-3.5 text-on-surface transition-all hover:bg-surface-container-low active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-primary/20"><svg height="20" viewBox="0 0 24 24" width="20" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"></path><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"></path><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"></path><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 12-5.38z" fill="#EA4335"></path></svg><span class="text-sm font-bold">Tiếp tục với Google</span></button>
+<p class="mt-10 text-center text-sm font-medium text-on-surface-variant">
+                Chưa có tài khoản?
+                <a class="font-bold text-primary hover:underline ml-1" href="#">Đăng ký ngay</a>
+</p>
+</div>
+<!-- Footer Links -->
+<div class="mt-auto pt-10 text-center lg:text-left">
+<div class="flex flex-wrap justify-center lg:justify-start gap-x-6 gap-y-2 text-xs font-medium text-on-surface-variant">
+<a class="hover:text-primary transition-colors" href="#">Điều khoản dịch vụ</a>
+<a class="hover:text-primary transition-colors" href="#">Chính sách bảo mật</a>
+<a class="hover:text-primary transition-colors" href="#">Trợ giúp</a>
+<span class="text-outline-variant/30 hidden sm:inline">•</span>
+<span class="w-full sm:w-auto mt-2 sm:mt-0">© 2024 Thương hiệu Inc.</span>
+</div>
+</div>
+</div>
+</div>
+<script>
+    // Simple micro-interaction for password visibility toggle
+    const toggleBtn = document.getElementById('togglePassword');
+    const passwordInput = document.getElementById('password');
+    let isVisible = false;
+
+    toggleBtn.addEventListener('click', () => {
+        isVisible = !isVisible;
+        passwordInput.type = isVisible ? 'text' : 'password';
+        const iconSpan = toggleBtn.querySelector('.material-symbols-outlined');
+        iconSpan.textContent = isVisible ? 'visibility_off' : 'visibility';
+    });
+
+    // Form submission simulation
+    const form = document.querySelector('form');
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const btn = form.querySelector('button[type="submit"]');
+        const originalText = btn.textContent;
+        btn.disabled = true;
+        btn.innerHTML = `
+            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Đang xử lý...
+        `;
+        
+        setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            alert('Thông tin đăng nhập đã được gửi (Giả lập)');
+        }, 1500);
+    });
+</script>
+
+
+</body></html>

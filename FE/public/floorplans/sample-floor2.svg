@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500">
+  <defs>
+    <style>
+      text { font-family: 'Outfit', 'Inter', sans-serif; }
+      .wall { fill: none; stroke: #1e1b4b; stroke-width: 2.5; }
+      .label { font-size: 9px; font-weight: 700; fill: #a5b4fc; text-anchor: middle; letter-spacing: 0.05em; }
+      .zone-label { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.15em; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="500" fill="#0f0f1d" rx="8"/>
+
+  <!-- Outer boundary -->
+  <rect x="20" y="20" width="760" height="460" rx="10" class="wall" stroke-dasharray="none"/>
+
+  <!-- Divider Wall -->
+  <line x1="400" y1="20" x2="400" y2="480" stroke="#1e1b4b" stroke-width="2.5" stroke-dasharray="6,6"/>
+
+  <!-- ═══ ZONE: Creative Team Spaces (Left) ═══ -->
+  <rect x="40" y="40" width="330" height="420" rx="8" fill="rgba(99, 102, 241, 0.05)" stroke="rgba(99, 102, 241, 0.15)" stroke-width="1"/>
+  <text x="205" y="70" class="zone-label" fill="#818cf8" text-anchor="middle">CREATIVE TEAM DESKS</text>
+
+  <!-- Large collaborative table 1 -->
+  <rect id="team_desk_01" x="70" y="100" width="110" height="80" rx="8" fill="#1e1b4b" stroke="#4f46e5" stroke-width="1.5"/>
+  <text x="125" y="145" class="label">TEAM DESK A1</text>
+
+  <!-- Large collaborative table 2 -->
+  <rect id="team_desk_02" x="210" y="100" width="110" height="80" rx="8" fill="#1e1b4b" stroke="#4f46e5" stroke-width="1.5"/>
+  <text x="265" y="145" class="label">TEAM DESK A2</text>
+
+  <!-- Large collaborative table 3 -->
+  <rect id="team_desk_03" x="70" y="210" width="110" height="80" rx="8" fill="#1e1b4b" stroke="#4f46e5" stroke-width="1.5"/>
+  <text x="125" y="255" class="label">TEAM DESK B1</text>
+
+  <!-- Large collaborative table 4 -->
+  <rect id="team_desk_04" x="210" y="210" width="110" height="80" rx="8" fill="#1e1b4b" stroke="#4f46e5" stroke-width="1.5"/>
+  <text x="265" y="255" class="label">TEAM DESK B2</text>
+
+  <!-- Podcast & Media Labs at the bottom-left -->
+  <rect id="podcast_A" x="70" y="320" width="110" height="110" rx="12" fill="#311042" stroke="#d946ef" stroke-width="1.5"/>
+  <text x="125" y="370" font-size="12" font-weight="700" fill="#f472b6" text-anchor="middle">Studio Pink</text>
+  <text x="125" y="390" class="label" fill="#f472b6">PODCAST A</text>
+
+  <rect id="podcast_B" x="210" y="320" width="110" height="110" rx="12" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
+  <text x="265" y="370" font-size="12" font-weight="700" fill="#38bdf8" text-anchor="middle">Studio Blue</text>
+  <text x="265" y="390" class="label" fill="#38bdf8">PODCAST B</text>
+
+
+  <!-- ═══ ZONE: Workshop & Lounge (Right) ═══ -->
+  <rect x="430" y="40" width="330" height="420" rx="8" fill="rgba(236, 72, 153, 0.03)" stroke="rgba(236, 72, 153, 0.1)" stroke-width="1"/>
+  <text x="595" y="70" class="zone-label" fill="#f472b6" text-anchor="middle">COLLAB &amp; WORKSHOPS</text>
+
+  <!-- Workshop A -->
+  <rect id="workshop_A" x="460" y="100" width="270" height="100" rx="8" fill="#1e293b" stroke="#f43f5e" stroke-width="1.5"/>
+  <text x="595" y="145" font-size="13" font-weight="800" fill="#fda4af" text-anchor="middle">Phòng Đổi Mới (Innovation Lab)</text>
+  <text x="595" y="165" class="label" fill="#fda4af">WORKSHOP ROOM A</text>
+
+  <!-- Workshop B -->
+  <rect id="workshop_B" x="460" y="220" width="270" height="100" rx="8" fill="#1e293b" stroke="#eab308" stroke-width="1.5"/>
+  <text x="595" y="265" font-size="13" font-weight="800" fill="#fef08a" text-anchor="middle">Phòng Kiến Tạo (Maker Space)</text>
+  <text x="595" y="285" class="label" fill="#fef08a">WORKSHOP ROOM B</text>
+
+  <!-- Brainstorm Area -->
+  <rect id="brainstorm_zone" x="460" y="340" width="270" height="90" rx="8" fill="#0f172a" stroke="#10b981" stroke-width="1.5"/>
+  <text x="595" y="380" font-size="12" font-weight="800" fill="#34d399" text-anchor="middle">Khu vực Ý Tưởng (Brainstorm Zone)</text>
+  <text x="595" y="400" class="label" fill="#34d399">BRAINSTORM C</text>
+
+</svg>

@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CoSpace - Secure Login</title>
+<!-- Google Fonts: Inter -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "primary": "#3525cd",
+                    "secondary": "#505f76",
+                    "surface-variant": "#e4e1ee",
+                    "surface-container-low": "#f5f2ff",
+                    "status-error-bg": "#FEE2E2",
+                    "status-success": "#10B981",
+                    "secondary-container": "#d0e1fb",
+                    "secondary-fixed-dim": "#b7c8e1",
+                    "status-success-bg": "#D1FAE5",
+                    "tertiary-fixed-dim": "#ffb695",
+                    "on-tertiary-fixed-variant": "#7b2f00",
+                    "error-container": "#ffdad6",
+                    "primary-fixed-dim": "#c3c0ff",
+                    "on-tertiary-fixed": "#351000",
+                    "on-primary-fixed": "#0f0069",
+                    "surface-tint": "#4d44e3",
+                    "outline-variant": "#c7c4d8",
+                    "surface-container-lowest": "#ffffff",
+                    "status-error": "#EF4444",
+                    "secondary-fixed": "#d3e4fe",
+                    "background": "#fcf8ff",
+                    "surface": "#fcf8ff",
+                    "status-warning-bg": "#FEF3C7",
+                    "primary-container": "#4f46e5",
+                    "inverse-primary": "#c3c0ff",
+                    "on-primary": "#ffffff",
+                    "status-warning": "#F59E0B",
+                    "on-secondary": "#ffffff",
+                    "tertiary-fixed": "#ffdbcc",
+                    "surface-bright": "#fcf8ff",
+                    "tertiary": "#7e3000",
+                    "on-tertiary": "#ffffff",
+                    "status-info": "#3B82F6",
+                    "surface-container": "#f0ecf9",
+                    "error": "#ba1a1a",
+                    "on-surface-variant": "#464555",
+                    "on-error-container": "#93000a",
+                    "inverse-on-surface": "#f3effc",
+                    "inverse-surface": "#302f39",
+                    "on-surface": "#0F172A",
+                    "on-secondary-fixed-variant": "#38485d",
+                    "tertiary-container": "#a44100",
+                    "on-tertiary-container": "#ffd2be",
+                    "primary-fixed": "#e2dfff",
+                    "on-error": "#ffffff",
+                    "primary-hover": "#4338CA",
+                    "surface-container-highest": "#e4e1ee",
+                    "on-secondary-fixed": "#0b1c30",
+                    "status-info-bg": "#DBEAFE",
+                    "surface-dim": "#dcd8e5",
+                    "on-primary-fixed-variant": "#3323cc",
+                    "outline": "#777587",
+                    "on-surface-muted": "#475569",
+                    "on-secondary-container": "#54647a",
+                    "on-primary-container": "#dad7ff",
+                    "on-background": "#1b1b24",
+                    "border-subtle": "#E2E8F0",
+                    "surface-container-high": "#eae6f4"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "xl": "32px",
+                    "lg": "24px",
+                    "md": "16px",
+                    "xs": "4px",
+                    "sm": "8px"
+            },
+            "fontFamily": {
+                    "h2": ["Inter"],
+                    "caption": ["Inter"],
+                    "label-caps": ["Inter"],
+                    "body-default": ["Inter"],
+                    "body-emphasis": ["Inter"],
+                    "h1": ["Inter"]
+            },
+            "fontSize": {
+                    "h2": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "caption": ["12px", {"lineHeight": "16px", "fontWeight": "400"}],
+                    "label-caps": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                    "body-default": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "label": ["12px", {"fontWeight": "500"}],
+                    "body-emphasis": ["14px", {"lineHeight": "20px", "fontWeight": "600"}],
+                    "h1": ["24px", {"lineHeight": "32px", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .login-card {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .animate-subtle-glow {
+            animation: pulse-glow 4s ease-in-out infinite;
+        }
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 0.8; }
+        }
+    </style>
+</head>
+<body class="bg-surface-variant min-h-screen flex flex-col selection:bg-primary-container selection:text-white">
+<!-- Top Navigation (Shell Implementation - Non-Interactive for Login) -->
+<header class="fixed top-0 w-full z-50 bg-surface/90 backdrop-blur-md border-b border-border-subtle">
+<div class="flex justify-between items-center h-20 px-lg md:px-xl max-w-7xl mx-auto w-full">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary text-3xl" style="font-variation-settings: 'FILL' 1;">hub</span>
+<span class="font-h1 text-h1 text-primary tracking-tight">CoSpace</span>
+</div>
+<div class="hidden md:flex items-center gap-lg">
+<a class="font-body-emphasis text-body-emphasis text-on-surface-variant hover:text-primary transition-colors" href="#">Help</a>
+<a class="font-body-emphasis text-body-emphasis text-on-surface-variant hover:text-primary transition-colors" href="#">Contact</a>
+</div>
+</div>
+</header>
+<main class="flex-grow flex items-center justify-center px-lg pt-24 pb-12 relative overflow-hidden">
+<!-- Abstract Background Decorative Elements -->
+<div class="absolute top-1/4 -left-20 w-96 h-96 bg-primary/5 rounded-full blur-3xl animate-subtle-glow"></div>
+<div class="absolute bottom-1/4 -right-20 w-96 h-96 bg-primary-container/5 rounded-full blur-3xl animate-subtle-glow" style="animation-delay: 2s;"></div>
+<!-- Login Card Container -->
+<div class="w-full max-w-[440px] z-10">
+<div class="bg-surface-container-lowest rounded-xl border border-border-subtle login-card overflow-hidden">
+<div class="p-lg md:p-xl space-y-xl">
+<!-- Header Section -->
+<div class="text-center space-y-sm">
+<h2 class="font-h1 text-h1 text-on-surface">Welcome Back</h2>
+<p class="font-body-default text-body-default text-on-surface-muted">Sign in to manage your workspace environment.</p>
+</div>
+<!-- Social Integration -->
+<div class="space-y-md">
+<button class="w-full flex items-center justify-center gap-md py-md px-lg border border-outline-variant rounded-lg hover:bg-surface-container transition-all duration-200 group">
+<svg class="w-5 h-5" viewbox="0 0 24 24">
+<path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"></path>
+<path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"></path>
+<path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"></path>
+<path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"></path>
+</svg>
+<span class="font-body-emphasis text-body-emphasis text-on-surface-variant group-hover:text-on-surface">Continue with Google</span>
+</button>
+<div class="relative flex items-center py-sm">
+<div class="flex-grow border-t border-outline-variant"></div>
+<span class="flex-shrink mx-md font-caption text-caption text-on-surface-muted uppercase tracking-wider">or email</span>
+<div class="flex-grow border-t border-outline-variant"></div>
+</div>
+</div>
+<!-- Form Section -->
+<form class="space-y-lg" onsubmit="return false;">
+<div class="space-y-xs">
+<label class="font-label text-label text-on-surface-variant" for="email">Email Address</label>
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-md top-1/2 -translate-y-1/2 text-outline group-focus-within:text-primary transition-colors">mail</span>
+<input class="w-full pl-xl pr-md py-md bg-surface-container-low border border-outline-variant rounded-lg font-body-default text-on-surface placeholder:text-on-surface-muted focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" id="email" placeholder="name@company.com" type="email"/>
+</div>
+</div>
+<div class="space-y-xs">
+<div class="flex justify-between items-center">
+<label class="font-label text-label text-on-surface-variant" for="password">Password</label>
+<a class="font-label text-label text-primary hover:underline transition-all" href="#">Forgot Password?</a>
+</div>
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-md top-1/2 -translate-y-1/2 text-outline group-focus-within:text-primary transition-colors">lock</span>
+<input class="w-full pl-xl pr-12 py-md bg-surface-container-low border border-outline-variant rounded-lg font-body-default text-on-surface placeholder:text-on-surface-muted focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" id="password" placeholder="••••••••" type="password"/>
+<button class="absolute right-md top-1/2 -translate-y-1/2 text-outline hover:text-on-surface-variant transition-colors" onclick="togglePassword()" type="button">
+<span class="material-symbols-outlined" id="pw-icon">visibility</span>
+</button>
+</div>
+</div>
+<div class="flex items-center gap-md">
+<input class="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary" id="remember" type="checkbox"/>
+<label class="font-body-default text-body-default text-on-surface-variant select-none" for="remember">Remember this device</label>
+</div>
+<button class="w-full bg-primary py-md rounded-lg font-body-emphasis text-body-emphasis text-white hover:bg-primary-hover active:scale-[0.98] transition-all shadow-md shadow-primary/20" type="submit">
+                            Sign In
+                        </button>
+</form>
+<!-- Footer Link -->
+<div class="text-center pt-md">
+<p class="font-body-default text-body-default text-on-surface-muted">
+                            Don't have an account? 
+                            <a class="text-primary font-body-emphasis hover:underline" href="#">Sign Up</a>
+</p>
+</div>
+</div>
+<!-- Bottom Status Bar Decor -->
+<div class="h-1.5 w-full bg-gradient-to-r from-primary via-primary-container to-secondary-container"></div>
+</div>
+<!-- Contextual Information -->
+<div class="mt-xl grid grid-cols-2 gap-md opacity-60">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-sm">verified_user</span>
+<span class="font-caption text-caption">End-to-end Encrypted</span>
+</div>
+<div class="flex items-center gap-sm justify-end">
+<span class="material-symbols-outlined text-sm">language</span>
+<span class="font-caption text-caption">Multi-region Support</span>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer Component -->
+<footer class="w-full py-xl bg-surface-container-lowest border-t border-border-subtle mt-auto">
+<div class="grid grid-cols-1 md:grid-cols-4 gap-lg px-lg max-w-7xl mx-auto items-start">
+<div class="col-span-1 md:col-span-1">
+<div class="flex items-center gap-xs mb-md">
+<span class="material-symbols-outlined text-primary text-xl" style="font-variation-settings: 'FILL' 1;">hub</span>
+<span class="text-h2 font-h2 text-primary">CoSpace</span>
+</div>
+<p class="font-body-default text-body-default text-on-surface-muted max-w-xs">
+                    The ultimate platform for managing high-density professional co-working environments.
+                </p>
+</div>
+<div class="grid grid-cols-2 col-span-1 md:col-span-3 gap-lg">
+<div class="space-y-sm">
+<h4 class="font-label-caps text-label-caps text-on-surface uppercase tracking-widest">Platform</h4>
+<nav class="flex flex-col gap-xs">
+<a class="font-body-default text-body-default text-on-surface-variant hover:text-primary transition-colors" href="#">Services</a>
+<a class="font-body-default text-body-default text-on-surface-variant hover:text-primary transition-colors" href="#">Locations</a>
+</nav>
+</div>
+<div class="space-y-sm">
+<h4 class="font-label-caps text-label-caps text-on-surface uppercase tracking-widest">Legal</h4>
+<nav class="flex flex-col gap-xs">
+<a class="font-body-default text-body-default text-on-surface-variant hover:text-primary transition-colors" href="#">Privacy Policy</a>
+<a class="font-body-default text-body-default text-on-surface-variant hover:text-primary transition-colors" href="#">Terms of Service</a>
+</nav>
+</div>
+</div>
+</div>
+<div class="max-w-7xl mx-auto px-lg mt-xl pt-lg border-t border-outline-variant/30 text-center md:text-left">
+<p class="font-caption text-caption text-on-surface-muted">© 2024 CoSpace Management System. All rights reserved.</p>
+</div>
+</footer>
+<script>
+        function togglePassword() {
+            const pwInput = document.getElementById('password');
+            const pwIcon = document.getElementById('pw-icon');
+            if (pwInput.type === 'password') {
+                pwInput.type = 'text';
+                pw</script></body></html>

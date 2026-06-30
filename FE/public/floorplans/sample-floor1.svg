@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500">
+  <defs>
+    <style>
+      text { font-family: 'Inter', 'Segoe UI', sans-serif; }
+      .wall { fill: none; stroke: #334155; stroke-width: 2; }
+      .label { font-size: 9px; font-weight: 700; fill: #64748B; text-anchor: middle; letter-spacing: 0.05em; }
+      .zone-label { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="500" fill="#f8fafc" rx="8"/>
+
+  <!-- Outer walls -->
+  <rect x="20" y="20" width="760" height="460" rx="6" class="wall" stroke-dasharray="none"/>
+
+  <!-- ═══ ZONE: Hot Desks (left area) ═══ -->
+  <rect x="30" y="50" width="320" height="200" rx="6" fill="rgba(34,197,94,0.06)" stroke="rgba(34,197,94,0.2)" stroke-width="1"/>
+  <text x="190" y="70" class="zone-label" fill="#16a34a" text-anchor="middle">KHU VỰC BÀN LÀM VIỆC</text>
+
+  <!-- Row 1: desk_01 to desk_04 -->
+  <rect id="desk_01" x="45" y="85" width="65" height="50" rx="4" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1"/>
+  <text x="77" y="115" class="label">D-01</text>
+
+  <rect id="desk_02" x="120" y="85" width="65" height="50" rx="4" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1"/>
+  <text x="152" y="115" class="label">D-02</text>
+
+  <rect id="desk_03" x="195" y="85" width="65" height="50" rx="4" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1"/>
+  <text x="227" y="115" class="label">D-03</text>
+
+  <rect id="desk_04" x="270" y="85" width="65" height="50" rx="4" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1"/>
+  <text x="302" y="115" class="label">D-04</text>
+
+  <!-- Row 2: desk_05 to desk_08 -->
+  <rect id="desk_05" x="45" y="150" width="65" height="50" rx="4" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1"/>
+  <text x="77" y="180" class="label">D-05</text>
+
+  <rect id="desk_06" x="120" y="150" width="65" height="50" rx="4" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1"/>
+  <text x="152" y="180" class="label">D-06</text>
+
+  <rect id="desk_07" x="195" y="150" width="65" height="50" rx="4" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1"/>
+  <text x="227" y="180" class="label">D-07</text>
+
+  <rect id="desk_08" x="270" y="150" width="65" height="50" rx="4" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1"/>
+  <text x="302" y="180" class="label">D-08</text>
+
+  <!-- Row 3: standing desks desk_09, desk_10 -->
+  <rect id="desk_09" x="45" y="215" width="140" height="25" rx="3" fill="#dbeafe" stroke="#93c5fd" stroke-width="1"/>
+  <text x="115" y="232" class="label" fill="#3b82f6">STANDING D-09</text>
+
+  <rect id="desk_10" x="195" y="215" width="140" height="25" rx="3" fill="#dbeafe" stroke="#93c5fd" stroke-width="1"/>
+  <text x="265" y="232" class="label" fill="#3b82f6">STANDING D-10</text>
+
+  <!-- ═══ ZONE: Meeting Rooms (right area) ═══ -->
+  <rect x="370" y="50" width="400" height="200" rx="6" fill="rgba(59,130,246,0.06)" stroke="rgba(59,130,246,0.2)" stroke-width="1"/>
+  <text x="570" y="70" class="zone-label" fill="#2563eb" text-anchor="middle">KHU VỰC PHÒNG HỌP</text>
+
+  <rect id="room_A" x="385" y="85" width="180" height="70" rx="6" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1"/>
+  <text x="475" y="115" font-size="11" font-weight="700" fill="#334155" text-anchor="middle">Phòng Lotus</text>
+  <text x="475" y="130" class="label">ROOM A · 8 CHỖ</text>
+
+  <rect id="room_B" x="580" y="85" width="180" height="70" rx="6" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1"/>
+  <text x="670" y="115" font-size="11" font-weight="700" fill="#334155" text-anchor="middle">Phòng Orchid</text>
+  <text x="670" y="130" class="label">ROOM B · 12 CHỖ</text>
+
+  <rect id="room_C" x="385" y="170" width="375" height="70" rx="6" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1"/>
+  <text x="572" y="200" font-size="11" font-weight="700" fill="#334155" text-anchor="middle">Phòng Saigon</text>
+  <text x="572" y="215" class="label">ROOM C · HỘI TRƯỜNG 30 CHỖ</text>
+
+  <!-- ═══ ZONE: Private Offices (bottom-left) ═══ -->
+  <rect x="30" y="270" width="320" height="200" rx="6" fill="rgba(239,68,68,0.06)" stroke="rgba(239,68,68,0.2)" stroke-width="1"/>
+  <text x="190" y="290" class="zone-label" fill="#dc2626" text-anchor="middle">VĂN PHÒNG RIÊNG</text>
+
+  <rect id="office_01" x="45" y="305" width="145" height="70" rx="6" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1"/>
+  <text x="117" y="335" font-size="11" font-weight="700" fill="#334155" text-anchor="middle">Bamboo</text>
+  <text x="117" y="350" class="label">OFFICE 01 · 4 CHỖ</text>
+
+  <rect id="office_02" x="200" y="305" width="145" height="70" rx="6" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1"/>
+  <text x="272" y="335" font-size="11" font-weight="700" fill="#334155" text-anchor="middle">Jasmine</text>
+  <text x="272" y="350" class="label">OFFICE 02 · 6 CHỖ</text>
+
+  <rect id="office_03" x="45" y="390" width="300" height="70" rx="6" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1"/>
+  <text x="195" y="420" font-size="11" font-weight="700" fill="#334155" text-anchor="middle">Sunflower Suite</text>
+  <text x="195" y="435" class="label">OFFICE 03 · PREMIUM 10 CHỖ</text>
+
+  <!-- ═══ ZONE: Lounge & Amenities (bottom-right) ═══ -->
+  <rect x="370" y="270" width="400" height="200" rx="6" fill="rgba(245,158,11,0.06)" stroke="rgba(245,158,11,0.2)" stroke-width="1"/>
+  <text x="570" y="290" class="zone-label" fill="#d97706" text-anchor="middle">TIỆN ÍCH &amp; LOUNGE</text>
+
+  <rect id="lounge_01" x="385" y="305" width="180" height="70" rx="6" fill="#fef3c7" stroke="#fcd34d" stroke-width="1"/>
+  <text x="475" y="335" font-size="11" font-weight="700" fill="#92400e" text-anchor="middle">☕ Quầy Café</text>
+  <text x="475" y="350" class="label" fill="#a16207">LOUNGE 01</text>
+
+  <rect id="lounge_02" x="580" y="305" width="180" height="70" rx="6" fill="#fef3c7" stroke="#fcd34d" stroke-width="1"/>
+  <text x="670" y="335" font-size="11" font-weight="700" fill="#92400e" text-anchor="middle">📞 Phone Booth</text>
+  <text x="670" y="350" class="label" fill="#a16207">LOUNGE 02</text>
+
+  <rect id="printer_area" x="385" y="390" width="375" height="70" rx="6" fill="#fef3c7" stroke="#fcd34d" stroke-width="1"/>
+  <text x="572" y="420" font-size="11" font-weight="700" fill="#92400e" text-anchor="middle">🖨️ Khu vực in ấn</text>
+  <text x="572" y="435" class="label" fill="#a16207">PRINTER AREA</text>
+
+  <!-- Decorations: Entry -->
+  <rect x="350" y="20" width="100" height="25" rx="4" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="400" y="37" font-size="9" font-weight="700" fill="#64748b" text-anchor="middle">LỐI VÀO</text>
+
+  <!-- Decorative plants -->
+  <text x="25" y="490" font-size="14">🌿</text>
+  <text x="770" y="490" font-size="14">🌿</text>
+  <text x="25" y="40" font-size="14">🌿</text>
+  <text x="770" y="40" font-size="14">🌿</text>
+</svg>

@@ -1,0 +1,61 @@
+\section{Tổng kết}
+
+Báo cáo đã trình bày chi tiết kết quả của đề tài "Phát triển Hệ thống Quản lý Không gian làm việc chung (Co-Working Space)". Trải qua quá trình nghiên cứu và thực thi, nhóm đã thiết kế các yêu cầu nghiệp vụ quản lý phức tạp thành một sản phẩm công nghệ thử nghiệm, hỗ trợ cho ban quản lý trong việc vận hành và tối ưu hóa trải nghiệm sử dụng dịch vụ của khách hàng.
+
+\subsection{Các kết quả đã đạt được trong giai đoạn hiện tại}
+
+Trong giai đoạn Đồ án chuyên ngành, đề tài đã hoàn thành các nội dung cốt lõi phục vụ cho việc triển khai ở giai đoạn Đồ án tốt nghiệp (ĐATN). Các kết quả chính bao gồm:
+
+\begin{itemize}
+    \item Đề xuất và xây dựng thành công kiến trúc hệ thống Client-Server vững chắc. Trong đó, Backend (Spring Boot) đảm nhiệm tốt các luồng logic nghiệp vụ phức tạp (chống trùng lịch, xử lý giao dịch) và Database (PostgreSQL) được chuẩn hóa để quản lý dữ liệu đa cấp từ Chi nhánh đến từng Không gian làm việc (Workspace).
+    
+    \item Thiết kế hệ thống tính năng Đặt chỗ (Booking Engine) linh hoạt, hỗ trợ đặt phòng theo nhiều khung thời gian (giờ/ngày/tuần/tháng) và tích hợp luồng xử lý bảo trì (Maintenance) thông minh nhằm tối đa hóa công suất khai thác.
+    
+    \item Xây dựng luồng thanh toán và giao dịch toàn diện, bao gồm thanh toán trực tuyến qua MoMo có sử dụng Webhook xác nhận tự động, xử lý thanh toán tiền mặt tại quầy, cũng như cơ chế Chính sách hủy và Hoàn tiền (Cancellation \& Refund) tự động hóa dựa trên hệ thống luật (Rules).
+    
+    \item Triển khai cơ chế xác thực an toàn thông qua Supabase Auth (hỗ trợ Email/Password và Google SSO) và thiết lập mô hình kiểm soát truy cập (RBAC) chặt chẽ, đảm bảo phân quyền rành mạch cho 4 vai trò: Super Admin, Branch Admin, Staff và Customer.
+    
+    \item Hiện thực ứng dụng Frontend (React/TypeScript) với độ hoàn thiện cao, giao diện hiện đại và đáp ứng (Responsive). Điểm nhấn là việc tích hợp thành công bản đồ không gian trực quan (SVG Floorplan) kết hợp với các thao tác tương tác thời gian thực.
+    
+    \item Thiết kế và xây dựng module Gợi ý đối tác (Partner Matching), ứng dụng thuật toán tính điểm tương đồng dựa trên kỹ năng và sở thích nhằm kết nối cộng đồng người sử dụng không gian làm việc.
+\end{itemize}
+
+Nhìn chung, giai đoạn hiện tại đã hoàn thiện nền tảng phân tích -- thiết kế ở mức hệ thống, hoàn thành ``khung xương'' của hệ thống (core services) và chứng minh tính khả thi về mặt kỹ thuật đối với bài toán quản lý và vận hành Không gian làm việc chung (Co-Working Space).
+
+\subsection{Kế hoạch triển khai giai đoạn Đồ án Tốt nghiệp}
+
+Trong giai đoạn Đồ án Tốt nghiệp (kéo dài 15 tuần), đề tài sẽ tập trung vào việc hiện thực hóa các chức năng nâng cao, bao gồm hệ sinh thái tương tác, tích hợp thanh toán thực tế, ứng dụng di động và các tính năng hỗ trợ bằng Trí tuệ nhân tạo (AI). Chi tiết kế hoạch được thể hiện trong Bảng \ref{tab:plan_15_weeks_datn}.
+
+\begin{table}[hbt!]
+\centering
+\small
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{c p{8.5cm} p{4.5cm}}
+\hline
+\textbf{Tuần} & \textbf{Nội dung công việc} & \textbf{Sản phẩm/Đầu ra} \\
+\hline
+1 - 2  & Khảo sát yêu cầu bổ sung; thiết kế lại CSDL và kiến trúc API cho các tính năng mới (Chat, AI, Payment); thiết lập môi trường dự án Mobile. & Đặc tả yêu cầu, bản vẽ ERD \& API cập nhật \\
+\hline
+3 - 4  & Hiện thực tính năng Nhắn tin trực tiếp (Real-time Chat) và hệ thống Thông báo (Push Notification) trên Backend và Web Frontend. & Module Chat \& Notification \\
+\hline
+5 - 6  & Tích hợp sâu cổng thanh toán (MoMo, ZaloPay, VNPay) cho luồng Hoàn tiền tự động (Auto-Payout); phát triển cơ chế lưu trữ lịch sử bảng giá (Pricing History). & Module thanh toán \& hoàn tiền \\
+\hline
+7 - 8  & Xây dựng ứng dụng di động (Mobile App) ở mức cơ bản (MVP): Giao diện người dùng, xác thực đăng nhập, xem danh sách không gian và đặt chỗ. & Mobile App (MVP) \\
+\hline
+9 - 10 & Tích hợp tính năng Check-in/Check-out tự động bằng mã QR trên Mobile App và đồng bộ dữ liệu thời gian thực với hệ thống Backend. & Tính năng QR Check-in/out \\
+\hline
+11 & Nghiên cứu và ứng dụng Machine Learning để tối ưu hóa thuật toán Gợi ý đối tác (Matching Algorithm) dựa trên hồ sơ khách hàng. & Thuật toán Matching tối ưu \\
+\hline
+12 & Tích hợp Chatbot AI hỗ trợ giải đáp thắc mắc và hướng dẫn khách hàng sử dụng dịch vụ trên nền tảng Web và Mobile. & Chatbot AI hoạt động \\
+\hline
+13 & Nâng cấp Dashboard Thống kê cho Ban quản lý, hỗ trợ xuất báo cáo định kỳ (PDF/Excel) với biểu đồ phân tích chuyên sâu. & Dashboard nâng cao \\
+\hline
+14 & Kiểm thử toàn diện (Integration Test, UAT), sửa lỗi (Bug fixing), tối ưu hóa hiệu năng và trải nghiệm người dùng (UX/UI). & Phiên bản ổn định (RC) \\
+\hline
+15 & Đóng gói ứng dụng, triển khai hệ thống lên môi trường thực tế (Deployment); hoàn thiện báo cáo Đồ án Tốt nghiệp và chuẩn bị demo. & Báo cáo ĐATN, sản phẩm hoàn thiện \\
+\hline
+\end{tabular}
+\caption{Kế hoạch triển khai 15 tuần trong giai đoạn Đồ án Tốt nghiệp.}
+\label{tab:plan_15_weeks_datn}
+\end{table}

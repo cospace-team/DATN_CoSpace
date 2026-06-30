@@ -1,0 +1,471 @@
+Project coworking_mvp_final_clean {
+  database_type: "PostgreSQL"
+  Note: "UUID only, simplified MVP schema with Google SSO, SVG floorplan, booking/payment/checkin, cancellation, add-on, matching"
+}
+
+Enum user_status {
+  active
+  suspended
+}
+
+Enum user_role {
+  admin
+  staff
+  customer
+}
+
+Enum membership_tier {
+  standard
+  premium
+}
+
+Enum branch_status {
+  active
+  inactive
+}
+
+Enum workspace_status {
+  active
+  maintenance
+  inactive
+}
+
+Enum maintenance_status {
+  scheduled
+  active
+  done
+  canceled
+}
+
+Enum duration_unit {
+  hour
+  day
+  week
+  month
+}
+
+Enum booking_status {
+  pending_payment
+  confirmed
+  checked_in
+  completed
+  canceled
+  expired
+}
+
+Enum booking_source {
+  web
+  mobile
+  counter
+  admin
+}
+
+Enum payment_provider {
+  momo
+  cash
+}
+
+Enum payment_method {
+  ewallet
+  qr
+  cash
+}
+
+Enum payment_status {
+  initiated
+  pending
+  paid
+  failed
+  expired
+  canceled
+  refunded
+}
+
+Enum cancel_rule_type {
+  GRACE_HOURS
+  BEFORE_START_DAYS
+}
+
+Enum refund_status {
+  none
+  pending
+  confirmed
+  rejected
+}
+
+Enum tag_category {
+  skill
+  interest
+  industry
+}
+
+Enum service_type {
+  drink
+  meal
+  printing
+  other
+}
+
+Table users {
+  id uuid [pk]
+  email varchar(255) [not null, unique]
+  full_name varchar(150) [not null]
+  phone varchar(20)
+  avatar_url varchar(2048)
+  status user_status [not null, default: "active"]
+  role user_role [not null]
+  branch_id uuid
+  membership_tier membership_tier [not null, default: "standard"]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+
+  Note: "admin/customer usually branch_id is null; staff must have branch_id"
+}
+
+Table auth_accounts {
+  id uuid [pk]
+  user_id uuid [not null]
+  provider varchar(20) [not null, note: "google"]
+  provider_user_id varchar(120) [not null]
+  created_at timestamptz [not null]
+
+  indexes {
+    (provider, provider_user_id) [unique]
+  }
+}
+
+Table profiles {
+  user_id uuid [pk]
+  bio text
+  profession varchar(120)
+  company varchar(120)
+  contact_email varchar(255)
+  contact_phone varchar(20)
+  contact_link varchar(2048)
+  contact_public boolean [not null, default: false]
+  primary_branch_id uuid
+  updated_at timestamptz [not null]
+}
+
+Table branches {
+  id uuid [pk]
+  code varchar(20) [not null, unique]
+  name varchar(150) [not null]
+  address text [not null]
+  city varchar(80)
+  timezone varchar(50) [not null, default: "Asia/Ho_Chi_Minh"]
+  status branch_status [not null, default: "active"]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table tags {
+  id uuid [pk]
+  name varchar(80) [not null, unique]
+  category tag_category [not null, default: "skill"]
+  is_active boolean [not null, default: true]
+}
+
+Table profile_skills {
+  profile_user_id uuid [not null]
+  tag_id uuid [not null]
+  level smallint
+
+  indexes {
+    (profile_user_id, tag_id) [pk]
+  }
+}
+
+Table profile_interests {
+  profile_user_id uuid [not null]
+  tag_id uuid [not null]
+  priority smallint
+
+  indexes {
+    (profile_user_id, tag_id) [pk]
+  }
+}
+
+Table profile_match_scores {
+  profile_user_id uuid [not null]
+  matched_user_id uuid [not null]
+  score numeric(6,4) [not null]
+  reasons_json jsonb
+  computed_at timestamptz [not null]
+
+  indexes {
+    (profile_user_id, matched_user_id) [pk]
+  }
+
+  Note: "profile_user_id <> matched_user_id should be enforced in SQL"
+}
+
+Table floors {
+  id uuid [pk]
+  branch_id uuid [not null]
+  floor_no int [not null]
+  name varchar(100) [not null]
+  svg_url varchar(2048) [not null]
+  map_version int [not null, default: 1]
+  is_published boolean [not null, default: true]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+
+  indexes {
+    (branch_id, floor_no) [unique]
+  }
+}
+
+Table workspace_types {
+  id uuid [pk]
+  code varchar(30) [not null, unique, note: "desk, meeting_room, private_office"]
+  name varchar(100) [not null]
+  capacity_default int [not null, default: 1]
+}
+
+Table workspaces {
+  id uuid [pk]
+  floor_id uuid [not null]
+  workspace_type_id uuid [not null]
+  code varchar(30) [not null]
+  name varchar(120) [not null]
+  capacity int [not null, default: 1]
+  svg_element_id varchar(100) [not null]
+  status workspace_status [not null, default: "active"]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+
+  indexes {
+    (floor_id, code) [unique]
+    (floor_id, svg_element_id) [unique]
+  }
+}
+
+Table workspace_maintenance {
+  id uuid [pk]
+  workspace_id uuid [not null]
+  start_at timestamptz [not null]
+  end_at timestamptz [not null]
+  reason varchar(255)
+  status maintenance_status [not null, default: "scheduled"]
+  created_by uuid [not null]
+  created_at timestamptz [not null]
+}
+
+Table price_policies {
+  id uuid [pk]
+  branch_id uuid
+  workspace_type_id uuid [not null]
+  duration_unit duration_unit [not null]
+  price numeric(12,2) [not null]
+  currency char(3) [not null, default: "VND"]
+  is_active boolean [not null, default: true]
+  created_by uuid
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+
+  Note: "Simplified pricing: current active price only, no history/effective dates in V1"
+}
+
+Table bookings {
+  id uuid [pk]
+  booking_code varchar(20) [not null, unique]
+  user_id uuid [not null]
+  workspace_id uuid [not null]
+  branch_id uuid [not null]
+  start_at timestamptz [not null]
+  end_at timestamptz [not null]
+  unit duration_unit [not null]
+  unit_count int [not null, default: 1]
+  is_contract boolean [not null, default: false]
+  status booking_status [not null]
+  subtotal_amount numeric(12,2) [not null, default: 0]
+  discount_amount numeric(12,2) [not null, default: 0]
+  addon_amount numeric(12,2) [not null, default: 0]
+  total_amount numeric(12,2) [not null, default: 0]
+  payment_deadline_at timestamptz
+  source booking_source [not null, default: "web"]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+
+  Note: "SQL should enforce no-overlap for same workspace when status is pending_payment/confirmed/checked_in"
+}
+
+Table checkin_logs {
+  id uuid [pk]
+  booking_id uuid [not null]
+  staff_user_id uuid [not null]
+  checkin_at timestamptz [not null]
+  checkout_at timestamptz
+  note varchar(255)
+  created_at timestamptz [not null]
+
+  Note: "SQL should enforce only one active checkin per booking"
+}
+
+Table payments {
+  id uuid [pk]
+  booking_id uuid [not null]
+  provider payment_provider [not null]
+  method payment_method [not null]
+  order_id varchar(100) [not null, unique]
+  request_id varchar(100)
+  amount numeric(12,2) [not null]
+  status payment_status [not null]
+  provider_trans_id varchar(120)
+  pay_url varchar(2048)
+  signature_valid boolean
+  raw_response jsonb
+  paid_at timestamptz
+  created_by_staff_id uuid
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+
+  indexes {
+    (provider, provider_trans_id) [unique]
+  }
+}
+
+Table payment_events {
+  id uuid [pk]
+  payment_id uuid [not null]
+  event_type varchar(50) [not null]
+  idempotency_key varchar(120) [not null, unique]
+  provider_event_id varchar(120)
+  signature varchar(500)
+  signature_valid boolean
+  payload_json jsonb [not null]
+  processed boolean [not null, default: false]
+  processed_at timestamptz
+  created_at timestamptz [not null]
+}
+
+Table cancellation_policies {
+  id uuid [pk]
+  name varchar(120) [not null]
+  rule_type cancel_rule_type [not null]
+  min_value int
+  max_value int
+  refund_percent numeric(5,2) [not null]
+  priority int [not null, default: 100]
+  branch_id uuid
+  workspace_type_id uuid
+  is_active boolean [not null, default: true]
+  effective_from timestamptz [not null]
+  effective_to timestamptz
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table booking_cancellations {
+  id uuid [pk]
+  booking_id uuid [not null, unique]
+  policy_id uuid
+  refund_percent numeric(5,2) [not null]
+  refund_amount numeric(12,2) [not null, default: 0]
+  penalty_amount numeric(12,2) [not null, default: 0]
+  reason varchar(255)
+  cancelled_by uuid [not null]
+  cancelled_at timestamptz [not null]
+  refund_status refund_status [not null, default: "none"]
+  refund_confirmed_by uuid
+  refund_confirmed_at timestamptz
+  note text
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table extra_services {
+  id uuid [pk]
+  // branch_id uuid           -- NEW: nullable để support per-branch'
+  branch_id uuid
+  code varchar(40) [not null, unique]
+  name varchar(120) [not null]
+  service_type service_type [not null]
+  unit varchar(20) [not null]
+  price numeric(12,2) [not null]
+  is_active boolean [not null, default: true]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+
+  // indexes {
+  //   (branch_id, code) [unique]  -- nếu muốn tránh duplicate code per branch
+  // }
+}
+
+Table booking_services {
+  id uuid [pk]
+  booking_id uuid [not null]
+  extra_service_id uuid [not null]
+  quantity numeric(10,2) [not null]
+  unit_price numeric(12,2) [not null]
+  line_total numeric(12,2) [not null]
+  note varchar(255)
+  created_at timestamptz [not null]
+
+  Note: "Snapshot price at booking time"
+}
+
+Table audit_logs {
+  id uuid [pk]
+  actor_user_id uuid
+  actor_role varchar(20)
+  action varchar(100) [not null]
+  target_table varchar(60) [not null]
+  target_id uuid
+  metadata jsonb
+  created_at timestamptz [not null]
+}
+
+/* Relationships */
+Ref: auth_accounts.user_id > users.id
+
+Ref: users.branch_id > branches.id
+Ref: profiles.user_id > users.id
+Ref: profiles.primary_branch_id > branches.id
+
+Ref: profile_skills.profile_user_id > profiles.user_id
+Ref: profile_skills.tag_id > tags.id
+
+Ref: profile_interests.profile_user_id > profiles.user_id
+Ref: profile_interests.tag_id > tags.id
+
+Ref: profile_match_scores.profile_user_id > profiles.user_id
+Ref: profile_match_scores.matched_user_id > profiles.user_id
+
+Ref: floors.branch_id > branches.id
+
+Ref: workspaces.floor_id > floors.id
+Ref: workspaces.workspace_type_id > workspace_types.id
+
+Ref: workspace_maintenance.workspace_id > workspaces.id
+Ref: workspace_maintenance.created_by > users.id
+
+Ref: price_policies.branch_id > branches.id
+Ref: price_policies.workspace_type_id > workspace_types.id
+Ref: price_policies.created_by > users.id
+
+Ref: bookings.user_id > users.id
+Ref: bookings.workspace_id > workspaces.id
+Ref: bookings.branch_id > branches.id
+
+Ref: checkin_logs.booking_id > bookings.id
+Ref: checkin_logs.staff_user_id > users.id
+
+Ref: payments.booking_id > bookings.id
+Ref: payments.created_by_staff_id > users.id
+
+Ref: payment_events.payment_id > payments.id
+
+Ref: cancellation_policies.branch_id > branches.id
+Ref: cancellation_policies.workspace_type_id > workspace_types.id
+
+Ref: booking_cancellations.booking_id > bookings.id
+Ref: booking_cancellations.policy_id > cancellation_policies.id
+Ref: booking_cancellations.cancelled_by > users.id
+Ref: booking_cancellations.refund_confirmed_by > users.id
+
+Ref: booking_services.booking_id > bookings.id
+Ref: booking_services.extra_service_id > extra_services.id
+
+Ref: audit_logs.actor_user_id > users.id

@@ -1,0 +1,521 @@
+# Hệ Thống Quản Lý Co-Working Space — Đặc Tả Hệ Thống
+
+**Ngày cập nhật**: 18/05/2026  
+**Giai đoạn**: MVP  
+**Stack**: Spring Boot Backend + React/TypeScript Frontend + PostgreSQL
+
+---
+
+## 1. Tổng Quan
+
+### 1.1 Mô Tả
+
+Hệ thống hỗ trợ ban quản lý và khách hàng trong việc quản lý và sử dụng hiệu quả các dịch vụ của văn phòng chia sẻ (co-working space). Bao gồm quản lý thông tin không gian làm việc, phòng họp, chỗ ngồi, gói dịch vụ, khách hàng và các hợp đồng thuê.
+
+Hệ thống cung cấp chức năng đặt chỗ và đăng ký sử dụng dịch vụ theo giờ/ngày/tuần/tháng, theo dõi tình trạng sử dụng không gian, quản lý lịch sử đặt chỗ và thanh toán. Hệ thống hỗ trợ thống kê và báo cáo tình hình khai thác không gian, doanh thu và mức độ sử dụng dịch vụ.
+
+Ngoài ra, hệ thống hỗ trợ kết nối và tìm kiếm đối tác (partner) giữa các thành viên trong không gian làm việc chung. Người dùng có thể khai báo thông tin cá nhân, lĩnh vực chuyên môn, kỹ năng, nhu cầu hợp tác và từ khóa quan tâm. Dựa trên các thông tin này, hệ thống gợi ý các thành viên phù hợp.
+
+Hệ thống cung cấp cổng thông tin trên nền tảng web (responsive, tương thích mobile), cho phép người dùng đặt chỗ, quản lý lịch sử sử dụng dịch vụ, tìm kiếm đối tác phù hợp và tương tác với cộng đồng.
+
+### 1.2 Phạm Vi MVP
+
+| Trạng thái | Chức năng |
+|------------|-----------|
+| ✅ | Quản lý không gian (branch → floor → workspace) |
+| ✅ | Đặt chỗ chống trùng lịch + bảo trì |
+| ✅ | Thanh toán (MoMo + tiền mặt) |
+| ✅ | Hủy tự động theo chính sách + hoàn tiền nội bộ |
+| ✅ | Check-in / Check-out bằng booking code |
+| ✅ | Giá cơ bản (global default + branch override) |
+| ✅ | Dịch vụ bổ sung (global + branch override) |
+| ✅ | Gợi ý đối tác (matching partner) |
+| ✅ | Đăng ký/Đăng nhập (Email+Password & Google SSO) |
+| ✅ | 4 vai trò phân quyền |
+| ✅ | Lịch sử hành động (audit logs) |
+| ✅ | Hợp đồng thuê dài hạn (tuần/tháng) |
+| ✅ | Thống kê & báo cáo cơ bản (dashboard + biểu đồ + filter + CSV export) |
+| ❌ | Chat/messaging (V2+) |
+| ❌ | Lịch sử giá/chính sách (V2+) |
+| ❌ | PDF export báo cáo (V2+) |
+
+---
+
+## 2. Vai Trò & Phân Quyền (4 Roles)
+
+| Vai trò | DB Enum | branch_id | Phạm vi |
+|---------|---------|-----------|---------|
+| **Quản trị hệ thống** | `super_admin` | NULL | Toàn bộ hệ thống |
+| **Quản lý chi nhánh** | `branch_admin` | required | Chi nhánh được gán |
+| **Nhân viên** | `staff` | required | Chi nhánh được gán |
+| **Khách hàng** | `customer` | NULL | Sử dụng dịch vụ |
+
+### 2.1 Khách Hàng (Customer)
+
+**Tài khoản:**
+- Đăng ký bằng email/số điện thoại + mật khẩu, hoặc Google SSO
+- Đăng nhập bằng tài khoản đã tạo hoặc Google SSO
+- Xem và chỉnh sửa hồ sơ cá nhân (bio, kỹ năng, sở thích, liên hệ)
+
+**Tìm kiếm & đặt chỗ:**
+- Xem danh sách chi nhánh, tầng, sơ đồ mặt bằng (SVG floorplan)
+- Tìm kiếm và lọc không gian theo loại, thời gian, sức chứa
+- Kiểm tra tình trạng còn trống và đặt chỗ
+
+**Thanh toán & quản lý:**
+- Thanh toán trực tuyến qua MoMo hoặc tiền mặt tại quầy (nhân viên xác nhận)
+- Xem lịch sử đặt chỗ và giao dịch thanh toán
+- Gửi yêu cầu hủy đặt chỗ (hệ thống tự động tính refund theo chính sách, thông báo kết quả)
+
+**Dịch vụ & tương tác:**
+- Chọn thêm dịch vụ bổ sung (đồ uống, in ấn, v.v.) vào đơn đặt chỗ
+- Xem danh sách đối tác gợi ý dựa trên kỹ năng/sở thích
+
+### 2.2 Nhân Viên (Staff)
+
+**Hỗ trợ khách hàng:**
+- Tạo booking thay mặt khách hàng (source = counter)
+- Xác nhận booking đã thanh toán tiền mặt
+
+**Vận hành tại chi nhánh:**
+- Check-in/check-out cho khách bằng mã đặt chỗ
+- Nhận thông báo nếu khách không checkout đúng giờ
+- Tạo lịch bảo trì cho workspace
+- Xem dashboard vận hành trong ngày
+
+### 2.3 Quản Lý Chi Nhánh (Branch Admin)
+
+**Quản lý kinh doanh:**
+- Thiết lập bảng giá cho chi nhánh (override global defaults)
+- Thiết lập giá dịch vụ bổ sung cho chi nhánh
+- Xem dashboard chi nhánh: occupancy rate, doanh thu, top services
+- Xem báo cáo dạng bảng + biểu đồ, filter theo thời gian
+- Export dữ liệu CSV
+- Xem lịch sử hoạt động chi nhánh
+
+**Quản lý nội bộ:**
+- Tạo, chỉnh sửa, khóa tài khoản staff thuộc chi nhánh
+- Cấu hình thông tin chi nhánh, tầng, workspace
+
+### 2.4 Quản Trị Hệ Thống (System Admin)
+
+**Cấu hình & giám sát:**
+- Quản lý danh mục dùng chung: chi nhánh, workspace types, chính sách mặc định, loại dịch vụ
+- Xem dashboard tổng hợp toàn hệ thống: tổng booking, doanh thu, occupancy, so sánh chi nhánh
+- Xem báo cáo dạng bảng + biểu đồ, filter theo chi nhánh/thời gian, export CSV
+- Xem Audit Log toàn hệ thống (ai, làm gì, khi nào, ở chi nhánh nào)
+- Quản lý tất cả tài khoản người dùng và phân quyền
+
+---
+
+## 3. Kiến Trúc & Module
+
+### 3.1 Identity & Access
+
+| Bảng | Mô tả | Cột chính |
+|------|-------|-----------|
+| **users** | Tài khoản người dùng | email (citext), role, branch_id, status |
+| **auth_accounts** | OAuth providers | user_id (NOT UNIQUE), provider, provider_user_id |
+| **profiles** | Hồ sơ cá nhân | bio, profession, company, contact_public, primary_branch_id |
+
+**Authentication (Supabase Auth):**
+- Supabase quản lý toàn bộ auth: password hashing, Google OAuth, JWT token
+- `password_hash` trong bảng `users` **KHÔNG DÙNG** ở MVP (Supabase tự lưu password)
+- FE dùng `@supabase/supabase-js` để login → nhận JWT → gửi cho BE
+- BE verify JWT với `issuer-uri` của Supabase → tìm user trong bảng `users`
+- `auth_accounts.user_id` không UNIQUE → 1 user có thể link nhiều provider
+
+**Role mapping (BE → FE):**
+- DB lưu 4 roles: `super_admin`, `branch_admin`, `staff`, `customer`
+- BE endpoint `/api/auth/me` map: `super_admin` → `admin`, `branch_admin` → `admin`
+- FE nhận 3 roles: `admin`, `staff`, `customer` — phân biệt admin/branch_admin bằng `branchId`
+- `CHECK (role IN ('super_admin','customer') AND branch_id IS NULL) OR (role IN ('branch_admin','staff') AND branch_id IS NOT NULL)`
+
+### 3.2 Space Management
+
+| Bảng | Mô tả | Cột chính |
+|------|-------|-----------|
+| **branches** | Chi nhánh | code (unique), name, address, timezone, status |
+| **floors** | Tầng | branch_id, floor_no, svg_url (bắt buộc), is_published |
+| **workspace_types** | Loại không gian | code (desk/meeting_room/private_office), name, capacity_default |
+| **workspaces** | Không gian làm việc | floor_id, type_id, code, svg_element_id, capacity, status |
+| **workspace_maintenance** | Lịch bảo trì | workspace_id, [start_at, end_at), reason, status |
+
+- `(branch_id, floor_no)` UNIQUE — mỗi tầng duy nhất trong chi nhánh
+- `(floor_id, code)` UNIQUE + `(floor_id, svg_element_id)` UNIQUE
+
+### 3.3 Booking Engine
+
+| Bảng | Mô tả | Cột chính |
+|------|-------|-----------|
+| **bookings** | Đơn đặt chỗ / hợp đồng thuê | booking_code, user_id, workspace_id, branch_id, [start_at, end_at), duration_unit, is_contract, status, price breakdown |
+| **checkin_logs** | Check-in/out | booking_id, staff_user_id, checkin_at, checkout_at |
+
+**Đặt chỗ vs Hợp đồng thuê:**
+- `duration_unit` = hour/day → **Đặt chỗ ngắn hạn** (`is_contract = false`)
+- `duration_unit` = week/month → **Hợp đồng thuê dài hạn** (`is_contract = true`, tự động set)
+- Cùng bảng `bookings`, cùng API, cùng flow — chỉ khác duration và có thể áp cancellation policy riêng
+- Giao diện: tab "Đặt chỗ" (giờ/ngày) và tab "Thuê dài hạn" (tuần/tháng)
+
+**Booking status flow:**
+```
+pending_payment → confirmed → checked_in → completed
+                                         ↘ canceled
+pending_payment → expired (15 min timeout)
+```
+
+**Constraints:**
+- `total_amount = subtotal_amount - discount_amount + addon_amount`
+- `end_at > start_at`
+- Mỗi booking chỉ 1 checkin mở (`checkout_at IS NULL`) — partial unique index
+
+### 3.4 Payment
+
+| Bảng | Mô tả | Cột chính |
+|------|-------|-----------|
+| **payments** | Giao dịch thanh toán | booking_id, provider (momo/cash), method, amount, status, order_id |
+| **payment_events** | Webhook events | payment_id, idempotency_key (unique), payload_json, processed |
+
+**Payment status flow:**
+```
+initiated → paid (MoMo webhook success)
+initiated → failed / expired
+pending → paid (Staff xác nhận cash)
+```
+
+- `idempotency_key` unique — chống webhook lặp
+- `created_by_staff_id` — ghi nhận staff nào xác nhận cash
+- 1 booking có thể có nhiều payment attempts
+
+### 3.5 Pricing
+
+| Bảng | Mô tả | Cột chính |
+|------|-------|-----------|
+| **price_policies** | Bảng giá | branch_id (nullable), workspace_type_id, duration_unit, price, is_active |
+
+- `branch_id = NULL` → global default
+- `branch_id = <id>` → branch-specific (override)
+- Query: ưu tiên branch-specific, fallback global
+- MVP: Chỉ giá hiện tại, không lịch sử/effective_dates
+
+### 3.6 Add-on Services
+
+| Bảng | Mô tả | Cột chính |
+|------|-------|-----------|
+| **extra_services** | Dịch vụ bổ sung | branch_id (nullable), code, name, service_type, unit, price |
+| **booking_services** | Dịch vụ trong booking | booking_id, extra_service_id, quantity, unit_price (snapshot), line_total |
+
+- Scope giống pricing: `branch_id = NULL` → global, khác → branch-specific
+- `(booking_id, extra_service_id)` UNIQUE — mỗi dịch vụ chỉ 1 dòng per booking
+
+### 3.7 Cancellation & Refund (Tự Động)
+
+| Bảng | Mô tả | Cột chính |
+|------|-------|-----------|
+| **cancellation_policies** | Chính sách hủy | rule_type, min/max_value, refund_percent, priority, branch_id, workspace_type_id |
+| **booking_cancellations** | Ghi nhận hủy | booking_id, policy_id, refund_amount, penalty_amount, applied_rule_json |
+
+**Rule types:**
+- `GRACE_HOURS`: Hủy trong N giờ đầu sau khi đặt → refund %
+- `BEFORE_START_DAYS`: Hủy N ngày trước start_at → refund %
+
+**Luồng tự động:**
+1. Khách gửi yêu cầu hủy
+2. Hệ thống tìm policy phù hợp (ưu tiên branch → global, priority DESC)
+3. Tính refund_amount = total_amount × refund_percent / 100
+4. Ghi nhận `refund_status = confirmed` ngay (không cần admin xét duyệt)
+5. Thông báo khách: chính sách áp dụng + số tiền hoàn
+6. MVP: Chỉ ghi nhận nội bộ, không payout MoMo thực tế
+
+### 3.8 Partner Matching
+
+| Bảng | Mô tả | Cột chính |
+|------|-------|-----------|
+| **tags** | Thẻ kỹ năng/sở thích | name (unique), category (skill/interest/industry) |
+| **profile_skills** | Kỹ năng user | profile_user_id, tag_id, level (1-5) |
+| **profile_interests** | Sở thích user | profile_user_id, tag_id, priority (1-5) |
+| **profile_match_scores** | Điểm matching | profile_user_id, matched_user_id, score, reasons_json |
+
+- `profile_user_id <> matched_user_id` — không tự match
+- Batch job tính score → API `/suggested-partners`
+- Contact chỉ hiển thị nếu `contact_public = true`
+- MVP: Chỉ gợi ý, không chat (V2+)
+
+### 3.9 Audit
+
+| Bảng | Mô tả | Cột chính |
+|------|-------|-----------|
+| **audit_logs** | Lịch sử hành động | actor_user_id, branch_id, action, target_table, target_id, request_id, action_result, metadata |
+
+- Ghi lại: ai, làm gì, khi nào, ở chi nhánh nào, kết quả
+- Index: `(branch_id, created_at DESC)` cho query theo chi nhánh
+
+---
+
+## 4. Luồng Nghiệp Vụ
+
+### 4.1 Đăng Ký / Đăng Nhập
+
+```
+[Email+Password]
+  Khách nhập email + password → tạo user (role=customer, branch_id=null)
+  → tạo profile mặc định → đăng nhập thành công
+
+[Google SSO]
+  Khách click Google → OAuth callback
+  → tìm/tạo user + auth_account → đăng nhập thành công
+
+[Redirect theo role]
+  customer → /bookings
+  staff → /staff/dashboard
+  branch_admin → /branch/dashboard
+  super_admin → /admin/dashboard
+```
+
+### 4.2 Đặt Chỗ + Thanh Toán MoMo (Dành cho Customer)
+
+```
+Customer chọn workspace (kiểm tra overlap + maintenance)
+→ Booking (pending_payment) + Payment (initiated)
+→ MoMo pay_url (15 min timeout)
+→ Khách thanh toán → MoMo webhook callback (idempotency check)
+→ Payment (paid) + Booking (confirmed)
+→ Gửi booking_code cho customer
+```
+
+### 4.3 Đặt Chỗ + Thanh Toán Tiền Mặt (Chỉ dành cho Staff)
+
+```
+Staff tạo booking cho khách tại quầy (source=counter)
+→ Booking (pending) + Payment (pending)
+→ Staff nhận tiền mặt và xác nhận thu tiền trên hệ thống
+→ Payment (paid) + Booking (confirmed) + booking_code gửi cho khách
+* Lưu ý: Customer tự đặt chỗ qua web/app KHÔNG ĐƯỢC phép chọn thanh toán Tiền mặt.
+```
+
+### 4.4 Check-in / Check-out
+
+```
+Staff nhập booking_code
+→ Validate: confirmed, đúng thời gian, chưa check-in
+→ Tạo checkin_logs (checkin_at) + Booking (checked_in)
+→ Customer làm việc
+→ Staff checkout → checkin_logs.checkout_at + Booking (completed)
+→ Nếu khách không checkout đúng giờ → thông báo staff
+```
+
+### 4.5 Hủy & Hoàn Tiền (Tự Động)
+
+```
+Customer gửi yêu cầu hủy
+→ Hệ thống tìm cancellation_policy (ưu tiên branch → global, priority DESC)
+→ Tính refund% và refund_amount
+→ Ghi booking_cancellations (refund_status = confirmed ngay)
+→ Thông báo khách: chính sách áp dụng + số tiền hoàn
+→ Booking (canceled)
+→ Ghi nhận nội bộ (không payout MoMo thực tế ở MVP)
+```
+
+### 4.6 Tìm Đối Tác (Matching)
+
+```
+Customer cập nhật profile (skills, interests, contact_public)
+→ Batch job tính match_scores (skill overlap × 0.7 + interest overlap × 0.3)
+→ API /suggested-partners → danh sách partner + score + reasons
+→ Contact chỉ hiển thị nếu contact_public = true
+```
+
+### 4.7 Cấu Hình (Admin / Branch Admin)
+
+```
+[System Admin]
+  Tạo branch → Tạo workspace_types → Tạo cancellation_policies (global)
+  → Tạo extra_services (global) → Tạo price_policies (global default)
+  → Tạo Branch Admin (gán branch_id)
+
+[Branch Admin]  
+  Cấu hình branch info → Tạo floors (+ SVG) → Tạo workspaces
+  → Override price_policies (branch-specific)
+  → Override extra_services (branch-specific)
+  → Tạo staff (gán branch_id cùng chi nhánh)
+```
+
+---
+
+## 5. API Endpoints
+
+### Auth
+| Method | Endpoint | Mô tả | Role |
+|--------|----------|-------|------|
+| POST | /auth/register | Đăng ký (email+password) | Public |
+| POST | /auth/login | Đăng nhập (email+password) | Public |
+| POST | /auth/login/google | Đăng nhập Google SSO | Public |
+| GET | /auth/me | Thông tin user hiện tại | All |
+
+### Space
+| Method | Endpoint | Mô tả | Role |
+|--------|----------|-------|------|
+| GET | /branches | Danh sách chi nhánh | All |
+| GET | /branches/{id}/floors | Danh sách tầng | All |
+| GET | /floors/{id}/workspaces | Danh sách workspace | All |
+| GET | /workspaces/available | Tìm workspace trống | Customer |
+| POST | /workspaces/{id}/maintenance | Tạo bảo trì | Staff |
+
+### Booking
+| Method | Endpoint | Mô tả | Role |
+|--------|----------|-------|------|
+| POST | /bookings | Tạo booking | Customer, Staff |
+| GET | /bookings/{id} | Chi tiết booking | Owner, Staff, Admin |
+| GET | /bookings/history | Lịch sử đặt chỗ | Customer, Branch Admin |
+| POST | /bookings/{id}/cancel | Hủy booking (tự động) | Customer |
+| POST | /bookings/{id}/services | Thêm dịch vụ vào booking | Customer |
+
+### Payment
+| Method | Endpoint | Mô tả | Role |
+|--------|----------|-------|------|
+| POST | /payments/momo/create | Tạo thanh toán MoMo | Customer |
+| POST | /payments/momo/webhook | MoMo webhook callback | System |
+| POST | /payments/cash/confirm | Xác nhận tiền mặt | Staff |
+| GET | /payments/history | Lịch sử thanh toán | Customer |
+
+### Check-in
+| Method | Endpoint | Mô tả | Role |
+|--------|----------|-------|------|
+| POST | /checkin | Check-in (booking_code) | Staff |
+| POST | /checkout | Check-out | Staff |
+
+### Add-on & Matching
+| Method | Endpoint | Mô tả | Role |
+|--------|----------|-------|------|
+| GET | /extra-services | Danh sách dịch vụ phụ | All |
+| GET/PUT | /profiles/{id} | Hồ sơ cá nhân | Owner |
+| GET | /suggested-partners | Gợi ý đối tác | Customer |
+
+### Branch Admin
+| Method | Endpoint | Mô tả | Role |
+|--------|----------|-------|------|
+| PUT | /branch/config | Cấu hình chi nhánh | Branch Admin |
+| POST/PUT | /branch/staff | Quản lý staff | Branch Admin |
+| POST/PUT | /branch/price-policies | Giá chi nhánh | Branch Admin |
+| POST/PUT | /branch/extra-services | Dịch vụ chi nhánh | Branch Admin |
+| POST/PUT | /branch/floors | Tầng chi nhánh | Branch Admin |
+| POST/PUT | /branch/workspaces | Workspace chi nhánh | Branch Admin |
+
+### System Admin
+| Method | Endpoint | Mô tả | Role |
+|--------|----------|-------|------|
+| POST/PUT | /admin/branches | Quản lý chi nhánh | System Admin |
+| POST/PUT | /admin/workspace-types | Loại workspace | System Admin |
+| POST/PUT | /admin/cancellation-policies | Chính sách hủy | System Admin |
+| GET/POST/PUT | /admin/users | Quản lý tài khoản | System Admin |
+| GET | /admin/audit-logs | Audit log toàn hệ thống | System Admin |
+
+### Staff
+| Method | Endpoint | Mô tả | Role |
+|--------|----------|-------|------|
+| GET | /staff/dashboard | Dashboard vận hành | Staff |
+
+### Reports & Statistics
+| Method | Endpoint | Mô tả | Role |
+|--------|----------|-------|------|
+| GET | /reports/overview | Tổng hợp: tổng booking, doanh thu, occupancy | Branch Admin, System Admin |
+| GET | /reports/revenue | Doanh thu theo thời gian (filter: branch, date range) | Branch Admin, System Admin |
+| GET | /reports/occupancy | Tỷ lệ sử dụng workspace (filter: branch, workspace type) | Branch Admin, System Admin |
+| GET | /reports/services | Top dịch vụ bổ sung (filter: branch, date range) | Branch Admin, System Admin |
+| GET | /reports/bookings | Thống kê booking (ngắn hạn vs dài hạn, filter) | Branch Admin, System Admin |
+| GET | /reports/export/csv | Export dữ liệu báo cáo ra CSV | Branch Admin, System Admin |
+
+---
+
+## 6. Database Schema
+
+### 6.1 Tổng Quan (17+ bảng)
+
+| Module | Bảng |
+|--------|------|
+| Identity | `users`, `auth_accounts`, `profiles` |
+| Space | `branches`, `floors`, `workspace_types`, `workspaces`, `workspace_maintenance` |
+| Booking | `bookings`, `checkin_logs` |
+| Payment | `payments`, `payment_events` |
+| Pricing | `price_policies` |
+| Add-on | `extra_services`, `booking_services` |
+| Cancellation | `cancellation_policies`, `booking_cancellations` |
+| Matching | `tags`, `profile_skills`, `profile_interests`, `profile_match_scores` |
+| Audit | `audit_logs` |
+
+### 6.2 Enum Types
+
+| Enum | Values |
+|------|--------|
+| `user_role` | super_admin, branch_admin, staff, customer |
+| `user_status` | active, suspended |
+| `branch_status` | active, inactive |
+| `workspace_status` | active, maintenance, inactive |
+| `maintenance_status` | scheduled, active, done, canceled |
+| `booking_status` | pending_payment, confirmed, checked_in, completed, canceled, expired |
+| `booking_source` | web, mobile, counter, admin |
+| `payment_provider` | momo, cash |
+| `payment_method` | ewallet, qr, cash |
+| `payment_status` | initiated, pending, paid, failed, expired, canceled, refunded |
+| `duration_unit` | hour, day, week, month |
+| `cancel_rule_type` | GRACE_HOURS, BEFORE_START_DAYS |
+| `refund_status` | none, pending, confirmed, rejected |
+| `tag_category` | skill, interest, industry |
+| `service_type` | drink, meal, printing, other |
+| `membership_tier` | standard, premium |
+
+### 6.3 Key Constraints & Indexes
+
+| Constraint | Mô tả |
+|-----------|-------|
+| `check_branch_by_role` | super_admin/customer → branch_id NULL; staff/branch_admin → NOT NULL |
+| `check_booking_time` | end_at > start_at |
+| `check_booking_amounts` | total = subtotal - discount + addon |
+| `check_maintenance_time` | end_at > start_at |
+| `check_payment_amount` | amount >= 0 |
+| `check_policy_percent` | refund_percent [0, 100] |
+| `check_skill_level` | level [1, 5] |
+| `check_no_self_match` | profile_user_id <> matched_user_id |
+| `uq_checkin_open` | Partial unique: 1 checkin mở per booking |
+| `idempotency_key` UNIQUE | Webhook chống lặp |
+| `idx_bookings_workspace_time` | Query overlap nhanh |
+
+---
+
+## 7. Quy Tắc & Ràng Buộc
+
+1. **Chống trùng lịch**: INDEX + SELECT FOR UPDATE (app-layer), không DB EXCLUDE constraint
+2. **Branch consistency**: booking.branch_id = workspace.floor.branch_id
+3. **Maintenance block**: Booking không overlap maintenance (status ∈ {scheduled, active})
+4. **Payment timeout**: pending_payment auto-expire sau 15 phút
+5. **Hủy tự động**: Tính refund% theo policy, confirmed ngay, thông báo khách
+6. **Idempotency**: payment_events.idempotency_key unique (webhook chống lặp)
+7. **Staff scope**: Staff chỉ thao tác chi nhánh của mình
+8. **Branch Admin scope**: Branch Admin chỉ quản lý chi nhánh được gán
+9. **Một check-in mở**: Mỗi booking tối đa 1 checkin_logs với checkout_at = null
+10. **Giá hiện tại**: Không lịch sử/effective_dates ở MVP
+11. **Pricing fallback**: Branch-specific → Global default
+12. **Tiền tệ**: VND
+13. **Phương thức thanh toán**: Customer chỉ được dùng MoMo. Chỉ Staff/Admin mới được tạo đơn bằng Tiền mặt tại quầy.
+
+---
+
+## 8. Quyết Định Thiết Kế
+
+| Quyết định | Lựa chọn | Lý do |
+|-----------|---------|-------|
+| ID | UUID only | Đơn giản, không cần public_id |
+| User Role | 4 roles trong `users.role` + `branch_id` | Không cần bảng user_roles riêng |
+| Auth | Email/Password + Google SSO | Hỗ trợ cả 2 phương thức |
+| Floorplan | svg_url bắt buộc + svg_element_id mapping | Render trực quan tầng |
+| Pricing | Global default + Branch override | Linh hoạt, đơn giản |
+| Add-on | Global default + Branch override | Nhất quán với pricing |
+| Overlap check | App-layer (SELECT FOR UPDATE) + INDEX | Linh hoạt, dễ debug hơn DB EXCLUDE |
+| Cancellation | Tự động theo policy, không cần admin duyệt | Trải nghiệm khách tốt hơn |
+| Matching | Tags + Score, batch job | Đơn giản, hiệu quả |
+| Refund | Ghi nhận nội bộ, không payout MoMo | MVP scope |
+| Contract | `is_contract` boolean, auto-set khi week/month | Cùng bảng bookings, không cần bảng riêng |
+| Reports | Query trực tiếp từ bookings/payments, không bảng riêng | Đơn giản, real-time |
+| Export | CSV only (MVP), PDF export V2+ | CSV dễ implement (~10 dòng JS) |
+
+---

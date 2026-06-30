@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CoSpace Community Feed</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "outline": "#777587",
+                    "surface-tint": "#4d44e3",
+                    "surface-variant": "#e4e1ee",
+                    "border-subtle": "#E2E8F0",
+                    "on-surface": "#1b1b24",
+                    "background": "#fcf8ff",
+                    "status-info": "#3B82F6",
+                    "on-secondary-container": "#54647a",
+                    "on-surface-muted": "#475569",
+                    "status-success": "#10B981",
+                    "on-secondary-fixed": "#0b1c30",
+                    "primary-fixed": "#e2dfff",
+                    "on-primary": "#ffffff",
+                    "tertiary-fixed-dim": "#ffb695",
+                    "tertiary": "#7e3000",
+                    "inverse-surface": "#302f39",
+                    "on-primary-fixed": "#0f0069",
+                    "surface-bright": "#fcf8ff",
+                    "tertiary-fixed": "#ffdbcc",
+                    "status-info-bg": "#DBEAFE",
+                    "secondary": "#505f76",
+                    "inverse-on-surface": "#f3effc",
+                    "surface-container-highest": "#e4e1ee",
+                    "secondary-container": "#d0e1fb",
+                    "tertiary-container": "#a44100",
+                    "on-tertiary-fixed": "#351000",
+                    "status-warning-bg": "#FEF3C7",
+                    "primary": "#3525cd",
+                    "outline-variant": "#c7c4d8",
+                    "status-warning": "#F59E0B",
+                    "surface": "#fcf8ff",
+                    "secondary-fixed": "#d3e4fe",
+                    "on-tertiary": "#ffffff",
+                    "on-error": "#ffffff",
+                    "on-primary-container": "#dad7ff",
+                    "status-error-bg": "#FEE2E2",
+                    "status-success-bg": "#D1FAE5",
+                    "on-primary-fixed-variant": "#3323cc",
+                    "surface-dim": "#dcd8e5",
+                    "status-error": "#EF4444",
+                    "on-secondary": "#ffffff",
+                    "on-background": "#1b1b24",
+                    "primary-container": "#4f46e5",
+                    "inverse-primary": "#c3c0ff",
+                    "surface-container": "#f0ecf9",
+                    "surface-container-high": "#eae6f4",
+                    "on-secondary-fixed-variant": "#38485d",
+                    "error": "#ba1a1a",
+                    "primary-fixed-dim": "#c3c0ff",
+                    "secondary-fixed-dim": "#b7c8e1",
+                    "on-tertiary-container": "#ffd2be",
+                    "on-surface-variant": "#464555",
+                    "on-error-container": "#93000a",
+                    "on-tertiary-fixed-variant": "#7b2f00",
+                    "surface-container-low": "#f5f2ff",
+                    "primary-hover": "#4338CA",
+                    "error-container": "#ffdad6",
+                    "surface-container-lowest": "#ffffff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "xs": "4px",
+                    "lg": "24px",
+                    "xl": "32px",
+                    "md": "16px",
+                    "sm": "8px"
+            },
+            "fontFamily": {
+                    "caption": ["Inter"],
+                    "h1": ["Inter"],
+                    "body-default": ["Inter"],
+                    "label-caps": ["Inter"],
+                    "h2": ["Inter"],
+                    "body-emphasis": ["Inter"]
+            },
+            "fontSize": {
+                    "caption": ["12px", {"lineHeight": "16px", "fontWeight": "400"}],
+                    "label": ["12px", {"fontWeight": "500"}],
+                    "h1": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "body-default": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "label-caps": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                    "h2": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "body-emphasis": ["14px", {"lineHeight": "20px", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .feed-card-hover {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .feed-card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface">
+<!-- TopNavBar -->
+<nav class="fixed top-0 w-full z-50 bg-surface/90 dark:bg-surface-dim/90 backdrop-blur-md border-b border-border-subtle dark:border-outline-variant">
+<div class="flex justify-between items-center h-20 px-lg md:px-xl max-w-7xl mx-auto">
+<div class="flex items-center gap-xl">
+<span class="text-h1 font-h1 text-primary dark:text-primary-fixed-dim tracking-tight">CoSpace</span>
+<div class="hidden md:flex items-center gap-lg">
+<a class="text-on-surface-variant dark:text-on-surface-muted hover:text-primary transition-colors duration-200 font-body-emphasis text-body-emphasis" href="#">Services</a>
+<a class="text-on-surface-variant dark:text-on-surface-muted hover:text-primary transition-colors duration-200 font-body-emphasis text-body-emphasis" href="#">Locations</a>
+<a class="text-on-surface-variant dark:text-on-surface-muted hover:text-primary transition-colors duration-200 font-body-emphasis text-body-emphasis" href="#">About</a>
+<a class="text-primary dark:text-primary-fixed-dim font-bold border-b-2 border-primary font-body-emphasis text-body-emphasis" href="#">Community</a>
+</div>
+</div>
+<div class="flex items-center gap-md">
+<button class="p-sm text-on-surface-variant hover:bg-surface-container rounded-full transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<div class="flex items-center gap-sm pl-md border-l border-border-subtle">
+<div class="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center overflow-hidden">
+<img alt="User Profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida/AP1WRLulFmX1H2PwhhLGHgxV31UOewJv-_xA2VFiFu4k3o0FGpVV_6Km-7GX-bCz8nf_LW0tz3zLs1gIJ3YPu_a2tLb5KDGxqggQ21ehrdrfZnKCfNlDhXewz3J7R2BcyWXK9hUkOt6mxIgnooQp7rCXTAVwou3ZWcRI8IrNhASv-bA1GV8y0wQ4OrqmhovOq-Nyoj2lyk1eguIEgHU7HCUY9e3f6pslK2ONNnRRcrzRny6SqdyV5xpI5awPYdju"/>
+</div>
+<div class="hidden sm:block">
+<p class="text-body-emphasis font-body-emphasis leading-tight">Alex Rivera</p>
+<p class="text-caption font-caption text-on-surface-muted">Branch Admin</p>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant">expand_more</span>
+</div>
+</div>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="pt-24 pb-xl max-w-7xl mx-auto px-lg md:px-xl">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-xl">
+<!-- Left Sidebar (Desktop Only) - Navigation Shortcuts -->
+<aside class="hidden lg:block lg:col-span-3 space-y-lg">
+<div class="bg-surface-container-lowest border border-border-subtle rounded-xl p-lg sticky top-24">
+<div class="space-y-sm">
+<a class="flex items-center gap-md p-md rounded-lg bg-primary-fixed text-on-primary-fixed-variant font-body-emphasis" href="#">
+<span class="material-symbols-outlined">feed</span>
+                            Community Feed
+                        </a>
+<a class="flex items-center gap-md p-md rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors" href="#">
+<span class="material-symbols-outlined">groups</span>
+                            Circles
+                        </a>
+<a class="flex items-center gap-md p-md rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors" href="#">
+<span class="material-symbols-outlined">event</span>
+                            Events
+                        </a>
+<a class="flex items-center gap-md p-md rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors" href="#">
+<span class="material-symbols-outlined">bookmark</span>
+                            Saved Posts
+                        </a>
+</div>
+<div class="mt-xl pt-lg border-t border-border-subtle">
+<h3 class="text-label font-label text-on-surface-muted uppercase tracking-wider mb-md">My Branches</h3>
+<div class="space-y-sm">
+<div class="flex items-center gap-sm">
+<span class="w-2 h-2 rounded-full bg-status-success"></span>
+<span class="text-body-default font-body-default">Downtown Hub</span>
+</div>
+<div class="flex items-center gap-sm">
+<span class="w-2 h-2 rounded-full bg-status-info"></span>
+<span class="text-body-default font-body-default">Riverside Tech Park</span>
+</div>
+</div>
+</div>
+</div>
+</aside>
+<!-- Center Feed -->
+<section class="lg:col-span-6 space-y-lg">
+<!-- Create Post Card -->
+<div class="bg-surface-container-lowest border border-border-subtle rounded-xl p-lg shadow-sm">
+<div class="flex gap-md">
+<img alt="User" class="w-12 h-12 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida/AP1WRLulFmX1H2PwhhLGHgxV31UOewJv-_xA2VFiFu4k3o0FGpVV_6Km-7GX-bCz8nf_LW0tz3zLs1gIJ3YPu_a2tLb5KDGxqggQ21ehrdrfZnKCfNlDhXewz3J7R2BcyWXK9hUkOt6mxIgnooQp7rCXTAVwou3ZWcRI8IrNhASv-bA1GV8y0wQ4OrqmhovOq-Nyoj2lyk1eguIEgHU7HCUY9e3f6pslK2ONNnRRcrzRny6SqdyV5xpI5awPYdju"/>
+<button class="flex-grow text-left px-lg py-md bg-surface-container rounded-full text-on-surface-muted hover:bg-surface-variant transition-colors">
+                            Share something with the community...
+                        </button>
+</div>
+<div class="flex justify-between items-center mt-lg pt-md border-t border-border-subtle">
+<div class="flex gap-md">
+<button class="flex items-center gap-sm text-secondary hover:text-primary transition-colors text-body-emphasis">
+<span class="material-symbols-outlined text-primary">image</span>
+                                Media
+                            </button>
+<button class="flex items-center gap-sm text-secondary hover:text-primary transition-colors text-body-emphasis">
+<span class="material-symbols-outlined text-status-success">article</span>
+                                Article
+                            </button>
+</div>
+<button class="bg-primary hover:bg-primary-hover text-on-primary px-xl py-sm rounded-full font-body-emphasis transition-all">
+                            Create Post
+                        </button>
+</div>
+</div>
+<!-- Feed Post 1 -->
+<article class="bg-surface-container-lowest border border-border-subtle rounded-xl overflow-hidden feed-card-hover">
+<div class="p-lg">
+<div class="flex justify-between items-start mb-md">
+<div class="flex items-center gap-md">
+<img alt="Author" class="w-10 h-10 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida/AP1WRLv8uJLtnFTF1hOJy5FRWkDjToDCBAAUmbwQiDy-ILsfvuyXZ794PjuB8SZegiiSL6D-2VhMXdl7sKcoav8q78FIeYXb_QFH8TuLyTNmvSZ1_05W5CA8ePVLYCwLUEgvqmaOktgExnezZkbVD0hm1KvanKdi29BH0FH7jfZchbEihOCTqeCqJ8AUHph7vHK6SAOd_1gV1FfJ5RkYUhUk9gIisnwwV5HfMDi0ocvd5Qw1ocvgyx3Pr3mg26Q"/>
+<div>
+<h4 class="text-body-emphasis font-body-emphasis">Jordan Smith</h4>
+<p class="text-caption font-caption text-on-surface-muted">Shared an article • 2 hours ago</p>
+</div>
+</div>
+<button class="text-on-surface-muted hover:text-on-surface">
+<span class="material-symbols-outlined">more_horiz</span>
+</button>
+</div>
+<h2 class="text-h2 font-h2 mb-sm text-on-surface">The Future of Hybrid Work: Why Physical Spaces Still Matter</h2>
+<p class="text-body-default font-body-default text-on-surface-variant line-clamp-3 mb-md">
+                            In an era of remote work, the value of intentional co-working environments has never been higher. From spontaneous collaboration to structured professional growth, here's how physical hubs are evolving to meet modern demands...
+                        </p>
+</div>
+<div class="h-64 w-full bg-surface-container overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A professional, modern co-working space interior with bright natural lighting and high ceilings. The space features minimalist wooden desks, ergonomic chairs, and large windows looking out onto a modern city skyline. The color palette is clean, dominated by soft grays and warm wood tones, with subtle indigo accents in the decor to match a corporate SaaS aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC2Xfoc2KoTLmdCAk-hP1F0oKJomABptUuHoROC2u-0K1RSP1WhOB6qJw6Qu1J47IFrFCQl3i0ILT-_Ovwwk3pb1lZnV9R1dBhom-vuzbWfUxiNNyHeElekuT0_1wp_pdPLRPHzhfpttAtTRc26FKbGP0SyQDD9Z172bzgDcRxmCTZjp3lHRrZXRqaEi4qBH1T3IheVRnpZZpslk5CVzfv65VnKx0H5FA2VzAPlurm3m5usY2WhksG0f_qx-FAK4KrfVwKAIDNzeUeU"/>
+</div>
+<div class="p-lg">
+<div class="flex items-center justify-between pt-md border-t border-border-subtle">
+<div class="flex gap-lg">
+<button class="flex items-center gap-sm text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">favorite</span>
+<span class="text-body-default">24</span>
+</button>
+<button class="flex items-center gap-sm text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">chat_bubble</span>
+<span class="text-body-default">8</span>
+</button>
+<button class="flex items-center gap-sm text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">share</span>
+<span class="text-body-default">Share</span>
+</button>
+</div>
+<span class="text-caption font-caption text-on-surface-muted">#workculture #innovation</span>
+</div>
+</div>
+</article>
+<!-- Feed Post 2 -->
+<article class="bg-surface-container-lowest border border-border-subtle rounded-xl overflow-hidden feed-card-hover">
+<div class="p-lg">
+<div class="flex justify-between items-start mb-md">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-full bg-secondary-fixed flex items-center justify-center text-on-secondary-fixed font-bold">
+                                    MS
+                                </div>
+<div>
+<h4 class="text-body-emphasis font-body-emphasis">Morgan Silver</h4>
+<p class="text-caption font-caption text-on-surface-muted">Posted a status • 5 hours ago</p>
+</div>
+</div>
+</div>
+<p class="text-body-default font-body-default text-on-surface mb-md">
+                            Just finished a great networking session in the Downtown lounge! If anyone is looking for a UI/UX mentor, I'm opening up two spots for coffee chats next week. Drop a comment if interested! ☕✨
+                        </p>
+<div class="flex items-center justify-between pt-md border-t border-border-subtle">
+<div class="flex gap-lg">
+<button class="flex items-center gap-sm text-primary font-bold">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">favorite</span>
+<span class="text-body-default">12</span>
+</button>
+<button class="flex items-center gap-sm text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">chat_bubble</span>
+<span class="text-body-default">15</span>
+</button>
+<button class="flex items-center gap-sm text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">share</span>
+</button>
+</div>
+</div>
+</div>
+</article>
+<!-- Loading / More Posts -->
+<div class="flex justify-center py-lg">
+<button class="flex items-center gap-sm text-primary hover:underline font-body-emphasis">
+<span class="material-symbols-outlined animate-spin">refresh</span>
+                        Load more stories
+                    </button>
+</div>
+</section>
+<!-- Right Sidebar -->
+<aside class="lg:col-span-3 space-y-lg">
+<!-- Trending Topics -->
+<div class="bg-surface-container-lowest border border-border-subtle rounded-xl p-lg shadow-sm">
+<h3 class="text-h2 font-h2 mb-lg flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary">trending_up</span>
+                        Trending
+                    </h3>
+<div class="space-y-md">
+<a class="block group" href="#">
+<p class="text-caption font-caption text-on-surface-muted">Business • Trending</p>
+<p class="text-body-emphasis font-body-emphasis group-hover:text-primary transition-colors">#SaaSgrowth2024</p>
+<p class="text-caption font-caption text-on-surface-muted">1.2k posts</p>
+</a>
+<a class="block group" href="#">
+<p class="text-caption font-caption text-on-surface-muted">Lifestyle • Trending</p>
+<p class="text-body-emphasis font-body-emphasis group-hover:text-primary transition-colors">#MindfulMondays</p>
+<p class="text-caption font-caption text-on-surface-muted">856 posts</p>
+</a>
+<a class="block group" href="#">
+<p class="text-caption font-caption text-on-surface-muted">Technology • Trending</p>
+<p class="text-body-emphasis font-body-emphasis group-hover:text-primary transition-colors">#AIWorkflows</p>
+<p class="text-caption font-caption text-on-surface-muted">2.4k posts</p>
+</a>
+</div>
+<button class="w-full mt-lg text-primary text-body-default font-body-emphasis hover:bg-primary-fixed p-sm rounded-lg transition-colors">
+                        Show more
+                    </button>
+</div>
+<!-- Suggested Members (Partner Matching) -->
+<div class="bg-surface-container-lowest border border-border-subtle rounded-xl p-lg shadow-sm">
+<h3 class="text-h2 font-h2 mb-lg flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary">handshake</span>
+                        Suggested
+                    </h3>
+<div class="space-y-lg">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-sm">
+<img class="w-10 h-10 rounded-full object-cover" data-alt="A professional studio portrait of a woman in her early 30s with a friendly expression. She is wearing a modern blazer and has clean, professional styling. The lighting is soft and flattering against a neutral, high-key studio background. The overall aesthetic is corporate, modern, and trustworthy." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDKdSOCtEOrv5yv0LHykf7k_eWu4w6fEemp_iBk5MD_7UyldOUVCRxmsqBXXmOzGi8ZR4qhiOpBkk11AMvcLjSbu_HXpg-KHysHU_tsNwIKisBJf4qETc7bv34Lj_by0ZiU4_zoLE5aeq9nLDmmM5y1mQFD9ilzUS-3kjBTAUxty1aC73jRJlzW2U9DhGSK30ID1CnIX2dMeV46VCNDWJ52qa1oSG0j4YeGsJjceaLDiXLDDA2ZXJpecnX1DG60Iu8Z8ejyNRYL9vbS"/>
+<div>
+<p class="text-body-emphasis font-body-emphasis">Sarah Chen</p>
+<p class="text-caption font-caption text-on-surface-muted">Product Manager</p>
+</div>
+</div>
+<button class="p-sm text-primary hover:bg-primary-fixed rounded-full transition-colors">
+<span class="material-symbols-outlined">person_add</span>
+</button>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-sm">
+<img class="w-10 h-10 rounded-full object-cover" data-alt="A professional studio portrait of a man in his late 20s with a confident, modern look. He has short groomed hair and is wearing a stylish button-down shirt. The setting is a bright, minimalist office environment with blurred greenery in the background. The mood is creative yet professional, fitting for a modern SaaS ecosystem." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDOkP-9SqlKjR4K8fIkMWmSxGqCfjY2S-R_1-y7fNne_TwfUm6nBalnNh_gjBgIWqrg1WJ9ON_In2tj5-n_VVvm8KB4WZTFOC97PMbEnXbDgUAOOn-oSoik0KmR6vJnKv_1I8NGRRgxFJ6ncFwGE_Gjp3UhskSBpa6tIPtzsxv-EtSVlk_xYH2rW_rQRv62Obs6IlSSra-GltedzkMbgTMAE5qkRzDkcwCNkA2nkLnMPifn1wt0G6RDl_i8Sj2S2BHH8RF1icNbvEVJ"/>
+<div>
+<p class="text-body-emphasis font-body-emphasis">Liam Vance</p>
+<p class="text-caption font-caption text-on-surface-muted">DevOps Engineer</p>
+</div>
+</div>
+<button class="p-sm text-primary hover:bg-primary-fixed rounded-full transition-colors">
+<span class="material-symbols-outlined">person_add</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Community Guidelines -->
+<div class="bg-surface-container-low border border-border-subtle rounded-xl p-lg">
+<div class="flex items-center gap-sm mb-md text-on-tertiary-fixed-variant">
+<span class="material-symbols-outlined">gavel</span>
+<span class="text-label font-label uppercase tracking-widest">Rules</span>
+</div>
+<ul class="space-y-sm text-caption font-caption text-on-surface-muted">
+<li>• Be professional and respectful.</li>
+<li>• No spam or unauthorized ads.</li>
+<li>• Protect member privacy.</li>
+</ul>
+<a class="mt-md inline-block text-primary hover:underline text-caption" href="#">Full Community Guidelines</a>
+</div>
+</aside>
+</div>
+</main>
+<!-- Footer -->
+<footer class="w-full py-xl bg-surface-container-lowest dark:bg-surface-dim border-t border-border-subtle dark:border-outline-variant">
+<div class="grid grid-cols-1 md:grid-cols-4 gap-lg px-lg max-w-7xl mx-auto">
+<div class="col-span-1 md:col-span-1">
+<span class="text-h2 font-h2 text-primary dark:text-primary-fixed-dim">CoSpace</span>
+<p class="mt-md text-body-default font-body-default text-on-surface-muted">
+                    Empowering the future of professional collaboration and community-driven work.
+                </p>
+</div>
+<div class="space-y-sm">
+<h4 class="text-body-emphasis font-body-emphasis">Resources</h4>
+<div class="flex flex-col gap-xs">
+<a class="text-on-surface-variant dark:text-on-surface-muted hover:text-primary transition-colors text-body-default" href="#">Community Guidelines</a>
+<a class="text-on-surface-variant dark:text-on-surface-muted hover:text-primary transition-colors text-body-default" href="#">Member Benefits</a>
+<a class="text-on-surface-variant dark:text-on-surface-muted hover:text-primary transition-colors text-body-default" href="#">Events Calendar</a>
+</div>
+</div>
+<div class="space-y-sm">
+<h4 class="text-body-emphasis font-body-emphasis">Company</h4>
+<div class="flex flex-col gap-xs">
+<a class="text-on-surface-variant dark:text-on-surface-muted hover:text-primary transition-colors text-body-default" href="#">About Us</a>
+<a class="text-on-surface-variant dark:text-on-surface-muted hover:text-primary transition-colors text-body-default" href="#">Locations</a>
+<a class="text-on-surface-variant dark:text-on-surface-muted hover:text-primary transition-colors text-body-default" href="#">Careers</a>
+</div>
+</div>
+<div class="space-y-sm">
+<h4 class="text-body-emphasis font-body-emphasis">Legal</h4>
+<div class="flex flex-col gap-xs">
+<a class="text-on-surface-variant dark:text-on-surface-muted hover:text-primary transition-colors text-body-default" href="#">Privacy Policy</a>
+<a class="text-on-surface-variant dark:text-on-surface-muted hover:text-primary transition-colors text-body-default" href="#">Terms of Service</a>
+<a class="text-on-surface-variant dark:text-on-surface-muted hover:text-primary transition-colors text-body-default" href="#">Cookie Policy</a>
+</div>
+</div>
+</div>
+<div class="max-w-7xl mx-auto px-lg mt-xl pt-lg border-t border-border-subtle text-center md:text-left">
+<p class="text-body-default font-body-default text-on-surface-muted">© 2024 CoSpace Management System. All rights reserved.</p>
+</div>
+</footer>
+<!-- Mobile Bottom Nav -->
+<nav class="md:hidden fixed bottom-0 left-0 right-0 bg-surface/90 backdrop-blur-md border-t border-border-subtle h-16 flex items-center justify-around z-50">
+<button class="flex flex-col items-center gap-xs text-primary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="text-[10px] font-bold">Home</span>
+</button>
+<button class="flex flex-col items-center gap-xs text-on-surface-variant">
+<span class="material-symbols-outlined">explore</span>
+<span class="text-[10px]">Explore</span>
+</button>
+<button class="flex flex-col items-center gap-xs text-on-surface-variant">
+<span class="material-symbols-outlined">add_circle</span>
+<span class="text-[10px]">Post</span>
+</button>
+<button class="flex flex-col items-center gap-xs text-on-surface-variant">
+<span class="material-symbols-outlined">notifications</span>
+<span class="text-[10px]">Alerts</span>
+</button>
+<button class="flex flex-col items-center gap-xs text-on-surface-variant">
+<span class="material-symbols-outlined">person</span>
+<span class="text-[10px]">Profile</span>
+</button>
+</nav>
+</body></html>
