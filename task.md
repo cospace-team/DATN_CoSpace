@@ -4,6 +4,13 @@ Sử dụng ký hiệu: `[ ]` Chưa làm | `[/]` Đang làm | `[x]` Đã xong.
 
 ---
 
+## 🏗️ 0. Project Foundation & Setup
+- [x] Định hình cấu trúc thư mục (BE Package-by-Feature, FE Feature-Based)
+- [ ] Khởi tạo & Config Database Schema trên Supabase (chạy migration V1)
+- [ ] Cấu hình Base Backend (Spring Boot: Security, Exception Handler, Swagger, CORS, Cấu trúc `com.cospace`)
+- [ ] Cấu hình Base Frontend (Vite, Tailwind, React Router, Axios/Fetch Interceptor)
+- [ ] Thiết lập file `.env` chuẩn cho cả FE và BE
+
 ## 🔑 1. Identity & Auth (Supabase Link Backend)
 - [ ] [/] Tích hợp Custom JwtAuthenticationConverter ở Backend (`SecurityConfig.java`) để chuyển đổi Role từ token
 - [ ] Cập nhật API `/api/auth/me` để trả về thông tin user chi tiết
@@ -33,6 +40,6 @@ Sử dụng ký hiệu: `[ ]` Chưa làm | `[/]` Đang làm | `[x]` Đã xong.
 - [ ] Dashboard biểu đồ doanh thu và công suất phòng cho Admin/Branch Admin (Recharts/Chart.js)
 - [ ] Export dữ liệu báo cáo ra file CSV
 
-## 🧪 6. Testing & Hardening
+## 🧪 6. Quality & Release (Testing & Hardening)
 - [ ] Viết script SQL test tự động chạy thử toàn bộ luồng nghiệp vụ
 - [ ] Fix bug, tối ưu giao diện Responsive, chuẩn bị demo bảo vệ
