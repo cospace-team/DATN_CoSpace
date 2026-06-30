@@ -7,14 +7,15 @@ Sử dụng ký hiệu: `[ ]` Chưa làm | `[/]` Đang làm | `[x]` Đã xong.
 ## 🏗️ 0. Project Foundation & Setup
 - [x] Định hình cấu trúc thư mục (BE Package-by-Feature, FE Feature-Based)
 - [ ] Khởi tạo & Config Database Schema trên Supabase (chạy migration V1)
-- [ ] Cấu hình Base Backend (Spring Boot: Security, Exception Handler, Swagger, CORS, Cấu trúc `com.cospace`)
-- [ ] Cấu hình Base Frontend (Vite, Tailwind, React Router, Axios/Fetch Interceptor)
-- [ ] Thiết lập file `.env` chuẩn cho cả FE và BE
+- [x] Cấu hình Base Backend (Spring Boot: Security, CORS đã thiết lập) -> *Cần chuyển code từ `momosandbox` sang `com.cospace`*
+- [x] Cấu hình Base Frontend (Vite, Tailwind, React Router, Context API đã hoàn thiện)
+- [x] Thiết lập file `.env` chuẩn cho cả FE và BE
 
 ## 🔑 1. Identity & Auth (Supabase Link Backend)
-- [ ] [/] Tích hợp Custom JwtAuthenticationConverter ở Backend (`SecurityConfig.java`) để chuyển đổi Role từ token
+- [x] Tích hợp JwtDecoder ở Backend (`SecurityConfig.java`) để đọc token Supabase
+- [ ] [/] Tích hợp Custom JwtAuthenticationConverter để phân quyền Role (nếu chưa có)
 - [ ] Cập nhật API `/api/auth/me` để trả về thông tin user chi tiết
-- [ ] FE kết nối API login/register thực tế từ Supabase
+- [ ] FE kết nối API login/register thực tế từ Supabase (hiện đang dùng MockData)
 
 ## 🗺️ 2. Space Management & SVG Floorplan
 - [ ] Sửa đổi nghiệp vụ và Database cho thực thể Workspace (thêm `capacity`, `status`, `description`...)
