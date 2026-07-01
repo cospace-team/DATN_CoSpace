@@ -54,7 +54,9 @@
 1. Validate `booking.branch_id == current_user.branch_id`
 2. Validate `status == 'checked_in'`
 3. Update `checkin_logs.checkout_at = now()` (tìm record checkout_at = null)
-4. Update `bookings.status = 'completed'`
+4. Nếu hợp đồng dài hạn và chưa tới `end_at`: Giữ nguyên `bookings.status = 'checked_in'`. Ngược lại: Update `bookings.status = 'completed'`.
+
+> **Note**: API list khách đang ở quán (Active in-store) phải filter thêm `EXISTS (SELECT 1 FROM checkin_logs WHERE checkout_at IS NULL)`.
 
 **Response — 200 OK**:
 ```json

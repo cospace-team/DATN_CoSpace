@@ -65,7 +65,9 @@
 ### Luồng Ngoại Lệ
 | # | Điều kiện | Xử lý |
 |---|----------|-------|
-| E1 | Tạo maintenance đè lên booking đã có | Hệ thống vẫn cho tạo nhưng cảnh báo (Warning). Admin phải xử lý manual với khách (gọi điện, dời chỗ). |
+| E1 | Không tìm thấy workspace | Báo lỗi `WORKSPACE_NOT_FOUND` |
+| E2 | Thời gian không hợp lệ | `end_at` phải lớn hơn `start_at` |
+| E3 | Có booking bị trùng thời gian bảo trì (Auto-Cancel) | Hệ thống tự động tìm các booking đang `pending_payment`, `confirmed` hoặc `checked_in` bị TRÙNG LỊCH: <br> - **`pending_payment`**: Đổi sang `canceled`, từ chối thanh toán. <br> - **`confirmed`**: Đổi sang `canceled`, tạo refund tự động (100%) và bắn Noti. <br> - **`checked_in`**: Đổi sang `completed` (ép checkout sớm), refund % thời gian còn lại và bắn Noti. |
 
 ---
 

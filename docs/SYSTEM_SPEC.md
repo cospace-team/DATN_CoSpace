@@ -135,12 +135,15 @@ Hệ thống cung cấp cổng thông tin trên nền tảng web (responsive, t�
 
 | Bảng | Mô tả | Cột chính |
 |------|-------|-----------|
-| **branches** | Chi nhánh | code (unique), name, address, timezone, status |
+| **branches** | Chi nhánh | code (unique), name, address, timezone, open_time, close_time, status |
 | **floors** | Tầng | branch_id, floor_no, svg_url (bắt buộc), is_published |
 | **workspace_types** | Loại không gian | code (desk/meeting_room/private_office), name, capacity_default |
+| **amenities** | Tiện ích phòng | name, icon_name, is_active |
+| **workspace_type_amenities** | Tiện ích của Loại phòng | workspace_type_id, amenity_id, quantity |
 | **workspaces** | Không gian làm việc | floor_id, type_id, code, svg_element_id, capacity, status |
 | **workspace_maintenance** | Lịch bảo trì | workspace_id, [start_at, end_at), reason, status |
 
+- **Template/Variant Pattern**: Tiện ích (Amenities) được gán ở mức `workspace_types`. Mọi phòng (`workspaces`) thuộc loại đó sẽ tự động thừa hưởng các tiện ích chung, giúp tối ưu thao tác nhập liệu.
 - `(branch_id, floor_no)` UNIQUE — mỗi tầng duy nhất trong chi nhánh
 - `(floor_id, code)` UNIQUE + `(floor_id, svg_element_id)` UNIQUE
 
@@ -159,9 +162,10 @@ Hệ thống cung cấp cổng thông tin trên nền tảng web (responsive, t�
 
 **Booking status flow:**
 ```
-pending_payment → confirmed → checked_in → completed
-                                         ↘ canceled
+pending_payment → confirmed → checked_in → completed (Staff checkout hoặc Auto EOD)
+                                         ↘ canceled (Khách yêu cầu hoàn tiền sớm)
 pending_payment → expired (15 min timeout)
+pending_payment → canceled (Khách tự hủy / Auto-cancel bảo trì)
 ```
 
 **Constraints:**
@@ -206,7 +210,7 @@ pending → paid (Staff xác nhận cash)
 | **booking_services** | Dịch vụ trong booking | booking_id, extra_service_id, quantity, unit_price (snapshot), line_total |
 
 - Scope giống pricing: `branch_id = NULL` → global, khác → branch-specific
-- `(booking_id, extra_service_id)` UNIQUE — mỗi dịch vụ chỉ 1 dòng per booking
+- Cho phép nhiều dòng cùng service per booking (Running Tab model). Mỗi lần gọi thêm = 1 dòng mới, kèm `added_by_staff_id` để truy vết
 
 ### 3.7 Cancellation & Refund (Tự Động)
 
@@ -516,7 +520,7 @@ Customer cập nhật profile → chọn skills/interests từ danh sách tags c
 
 ## 7. Quy Tắc & Ràng Buộc
 
-1. **Chống trùng lịch**: INDEX + SELECT FOR UPDATE (app-layer), không DB EXCLUDE constraint
+1. **Chống trùng lịch**: Advisory Lock + kiểm tra overlap ở app-layer, không DB EXCLUDE constraint. Quy trình: (1) `pg_advisory_xact_lock(hashtext('booking:' || workspace_id))` → (2) kiểm tra overlap booking + maintenance → (3) INSERT booking. Advisory lock ngăn race condition khi 2 request đồng thời đặt workspace trống (chưa có booking row để lock)
 2. **Branch consistency**: booking.branch_id = workspace.floor.branch_id
 3. **Maintenance block**: Booking không overlap maintenance (status ∈ {scheduled, active})
 4. **Payment timeout**: pending_payment auto-expire sau 15 phút
@@ -531,14 +535,38 @@ Customer cập nhật profile → chọn skills/interests từ danh sách tags c
 13. **Phương thức thanh toán**: Customer chỉ được dùng MoMo. Chỉ Staff/Admin mới được tạo đơn bằng Tiền mặt tại quầy.
 14. **1 booking = 1 workspace**: Nếu cần nhiều workspace → tạo nhiều booking riêng biệt.
 15. **Pricing đơn giản**: `subtotal = price × unit_count`. Giá bậc thang → V2+ (thêm bảng `price_tiers`).
-16. **Workspace type lock**: KHÔNG cho đổi workspace type khi còn booking active (pending_payment/confirmed/checked_in).
+16. **Workspace type lock**: KHÔNG cho đổi workspace type khi còn booking active (pending_payment/confirmed/checked_in). Phải được thực thi ở App Layer khi gọi API `PUT /workspaces/{id}` bằng cách kiểm tra bảng `bookings`.
 17. **Tags predefined**: Admin quản lý danh sách tags. User chỉ chọn, không tự tạo.
 18. **Matching scope**: Toàn hệ thống, cùng `primary_branch_id` = bonus score (+0.15).
-19. **Membership tier**: V2+ — không implement business rules ở MVP, tất cả user = `standard`.
+19. **Membership tier**: V2+ — không implement business rules ở MVP, tất cả user = `standard`. (Placeholder cho việc mở rộng).
 20. **Notification**: In-app notification qua bảng `notifications`. Email → V2+.
 21. **Timezone**: API trả UTC. FE convert theo `branch.timezone`.
-22. **SVG Storage**: Upload qua Supabase Storage. Map `svg_element_id` thủ công.
+22. **SVG Storage**: Upload qua Supabase Storage. Khi cập nhật bản đồ (tăng `map_version`), CHỈ cho phép thêm mới hoặc giữ nguyên SVG ID cũ. Nếu một không gian vật lý bị xóa, phải đánh dấu `workspace.status = 'inactive'` thay vì xóa cứng để tránh mồ côi dữ liệu lịch sử.
 23. **Cancel rule snapshot**: `applied_rule_json` format: `{ "rule_type", "refund_percent", "policy_name", "min_value", "max_value" }`.
+24. **Kiểm tra Overlap (Trùng lịch)**: App Layer và DB Script không nên dùng hàm `OVERLAPS` vì dễ dính biên, phải dùng logic rõ ràng: `(new.start_at < existing.end_at AND new.end_at > existing.start_at)`.
+25. **Identity Auth Sync**: Bất kỳ thay đổi Auth nào (như đổi email) phải thực hiện qua API của CoSpace Backend. BE sẽ đồng thời gọi Admin API của Supabase và update DB nội bộ để đảm bảo đồng bộ.
+26. **Late Webhook (Ghost Payment)**: Khách lỡ chuyển tiền muộn, hoặc khách bấm Hủy đúng lúc webhook đang bay về. Nếu Webhook MoMo trả Success nhưng booking đã `expired` hoặc `canceled`, hệ thống sẽ cập nhật `payments.status = 'paid'`, giữ nguyên `bookings.status` (`expired`/`canceled`), và TỰ ĐỘNG tạo một bản ghi Refund (đưa vào `booking_cancellations` với `refund_status = pending`) để hoàn tiền lại cho khách. **Race condition prevention**: Cả webhook handler và timer/cancel handler PHẢI `SELECT ... FROM bookings WHERE id = ? FOR UPDATE` trước khi đọc/sửa status.
+27. **Giờ Hoạt Động (Operating Hours)**: Bảng `branches` có `open_time` và `close_time`. Hệ thống kiểm tra giờ mở cửa khi đặt chỗ. Nếu `NULL`, mặc định là 24/7.
+28. **Bỏ Cọc (No-Show)**: Nếu khách đã thanh toán (`confirmed`) nhưng không đến check-in và qua giờ `end_at`, hệ thống tự động coi như `completed`. Khách mất phí, nhân viên không cần xử lý đóng ca thủ công.
+29. **Sức Chứa (Capacity)**: Cột `capacity` mang tính chất tham khảo. Nếu khách đi quá số người, nhân viên linh động tạo thêm phiếu Add-on để thu phụ phí. Không block cứng ở DB.
+30. **Gọi Thêm Dịch Vụ (Running Tab — Cyber-cafe model)**: Booking row là "hóa đơn chạy" (running tab). Khi khách đã check-in, Staff INSERT dòng mới vào `booking_services` (cho phép nhiều dòng cùng service — không UNIQUE) và UPDATE `bookings.addon_amount += line_total`, `bookings.total_amount += line_total` trong cùng 1 transaction. Sau đó tạo Payment mới (tiền mặt) cho phần add-on. Invariant: `SUM(payments.amount WHERE status='paid') = booking.total_amount`. Giao dịch bán lẻ độc lập (POS) → V2+.
+31. **Check-in/out Hợp Đồng Dài Hạn**: Khách thuê theo tuần/tháng (`is_contract = true`) vẫn phải thực hiện quét mã check-in khi đến và check-out khi về **MỖI NGÀY** để xác thực danh tính và kiểm soát an ninh. Bảng `checkin_logs` hỗ trợ nhiều lần check-in trên cùng 1 booking.
+32. **Quyền Quản Lý Dịch Vụ**: Branch Admin được phép TẠO MỚI, SỬA, XÓA các dịch vụ phụ (Extra Services) dành riêng cho chi nhánh của mình (`branch_id` NOT NULL). System Admin có quyền quản lý cả dịch vụ chung (Global) lẫn dịch vụ riêng của bất kỳ chi nhánh nào.
+33. **Chống Spam Đặt Chỗ (Concurrent Rate Limit)**: Mỗi user chỉ được có tối đa **3 booking đang ở trạng thái `pending_payment`**. Để chống Race Condition (script bắn spam request), App Layer BẮT BUỘC phải dùng `pg_advisory_xact_lock(hashtext('rate_limit:' || user_id))` để xin khóa độc quyền của user trước khi thực hiện lệnh `COUNT(*)`.
+34. **Gia Hạn Thời Gian (Extending Duration)**: Cập nhật `end_at` của booking hiện tại (khách muốn ngồi thêm). Điều kiện: khoảng thời gian gia hạn không Overlap (dùng Advisory Lock kiểm tra). Khi gia hạn, UPDATE `bookings.end_at`, `bookings.subtotal_amount += delta_price`, `bookings.total_amount += delta_price` trong cùng transaction, tạo Payment mới cho số tiền chênh lệch. CHECK constraint `total = subtotal - discount + addon` luôn đúng vì UPDATE atomic.
+35. **Bảo Trì Tự Động Hủy (Maintenance Auto-Cancel)**: Khi Admin tạo lịch bảo trì (`workspace_maintenance`), hệ thống quét TẤT CẢ booking (`pending_payment`, `confirmed`, `checked_in`) bị TRÙNG LỊCH:
+    - `pending_payment`: Chuyển sang `canceled` (từ chối thanh toán).
+    - `confirmed`: Chuyển sang `canceled`, hoàn tiền 100%, báo Noti.
+    - `checked_in`: Ép buộc checkout sớm (sang `completed`), hoàn tiền % thời gian chưa sử dụng, báo Noti.
+36. **Cách Ly Chi Nhánh (Branch Isolation)**: Tài khoản Staff chỉ được phép xem sơ đồ (floorplan), danh sách booking và thao tác trong phạm vi chi nhánh (`branch_id`) của mình. Không được quyền xem chéo chi nhánh khác.
+37. **Bảo Lưu Giá (Price Immutability)**: Khi Admin thay đổi hoặc vô hiệu hóa Bảng giá (`price_policies`), giá của các Booking ĐÃ ĐẶT (lưu trong `bookings.subtotal_amount`) sẽ không bị thay đổi.
+38. **Webhook Transaction Atomicity**: Toàn bộ xử lý webhook (cập nhật `payments.status`, `bookings.status`, đánh dấu `payment_events.processed`) PHẢI chạy trong 1 DB transaction (`@Transactional`). Nếu bất kỳ bước nào fail → rollback toàn bộ. Webhook retry + idempotency_key ngăn xử lý lặp.
+39. **Cancellation Policy Default**: Nếu không tìm được cancellation policy phù hợp khi hủy booking → refund = 0% (no refund). App layer phải handle edge case này và thông báo rõ cho khách.
+40. **Cancellation Amount Invariant**: `refund_amount + penalty_amount` PHẢI bằng `booking.total_amount`. App layer enforce invariant này, viết unit test verify.
+41. **No Hard Delete (Space)**: KHÔNG xóa cứng floor/workspace nếu còn booking liên quan (FK sẽ block). Admin set `status = 'inactive'` thay vì DELETE.
+42. **Branch ID Computed**: `bookings.branch_id` được compute từ `workspace → floor → branch` ở app layer, KHÔNG cho client truyền trực tiếp. Đảm bảo branch consistency.
+43. **Maintenance Overlap Check & Race Condition**: App layer kiểm tra overlap trước khi tạo lịch bảo trì (`workspace_maintenance`). BẮT BUỘC API tạo bảo trì phải dùng chung cơ chế Advisory Lock (`pg_advisory_xact_lock(hashtext('booking:' || workspace_id))`) y hệt như API tạo Booking. Nếu không, luồng tạo Booking và luồng tạo Bảo trì sẽ lọt qua check overlap của nhau khi gọi đồng thời (Race Condition).
+44. **Pessimistic Lock Ordering (Chống Deadlock)**: Vì DB có Trigger tự động cộng/trừ tiền từ `booking_services` lên `bookings`, App Layer BẮT BUỘC tuân thủ chuẩn Lock Ordering: Bất kỳ transaction nào thao tác (INSERT/UPDATE/DELETE) trên bảng con (`booking_services`, `checkin_logs`, `payments`) đều phải gọi `SELECT * FROM bookings WHERE id = ? FOR UPDATE` ĐẦU TIÊN để lấy khóa của Booking cha. Tránh Deadlock chéo.
 
 ---
 
@@ -552,7 +580,7 @@ Customer cập nhật profile → chọn skills/interests từ danh sách tags c
 | Floorplan | svg_url bắt buộc + svg_element_id mapping | Render trực quan tầng |
 | Pricing | `subtotal = price × unit_count`, V2+ giá bậc thang | Đơn giản MVP, dễ mở rộng |
 | Add-on | Global default + Branch override | Nhất quán với pricing |
-| Overlap check | App-layer (SELECT FOR UPDATE) + INDEX | Linh hoạt, dễ debug hơn DB EXCLUDE |
+| Overlap check | App-layer (Advisory Lock + overlap check) | Advisory Lock ngăn race condition, dễ debug hơn DB EXCLUDE |
 | Cancellation | Tự động theo policy, không cần admin duyệt | Trải nghiệm khách tốt hơn |
 | Matching MVP | Predefined Tags + Weighted Score, batch job | Đơn giản, chuẩn hóa tags |
 | Matching V2+ | AI-Powered (embedding + cosine similarity) | Giảng viên thích AI features |

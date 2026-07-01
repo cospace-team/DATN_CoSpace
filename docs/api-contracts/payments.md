@@ -64,12 +64,13 @@
 **Logic Xử Lý (Idempotent)**:
 1. Xác thực `signature` (MomoService).
 2. Tách `booking_id` từ `orderId`.
-3. Kiểm tra Idempotency: `SELECT id FROM payment_events WHERE idempotency_key = :transId`. Nếu có → Bỏ qua, trả 204.
+3. Kiểm tra Idempotency: Khởi tạo DB Transaction, dùng `SELECT ... FOR UPDATE` để lock row payment theo `orderId`. Nếu `status == 'paid'` → Bỏ qua, trả 204.
 4. Nếu `resultCode == 0`:
-   - `UPDATE payments SET status = 'paid', transaction_id = :transId, paid_at = now()`
-   - `UPDATE bookings SET status = 'confirmed'`
+   - `UPDATE payments SET status = 'paid', provider_trans_id = :transId, paid_at = now()`
+   - Kiểm tra `bookings.status`:
+     + Nếu `pending_payment`: `UPDATE bookings SET status = 'confirmed'` và Insert `notifications` (booking confirmed)
+     + Nếu `expired` (khách chuyển tiền muộn sau khi timeout): Giữ nguyên status `expired`, Insert vào `booking_cancellations` với `refund_status = 'pending'` (để nhân viên xử lý hoàn tiền thủ công).
    - Insert `payment_events`
-   - Insert `notifications` (booking confirmed)
 
 **Response — 204 No Content**: (Quy chuẩn Webhook, không body)
 

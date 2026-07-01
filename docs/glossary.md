@@ -55,7 +55,7 @@
 | Thuật ngữ | Tiếng Anh | Định nghĩa |
 |-----------|-----------|-------------|
 | Thẻ kỹ năng/sở thích | Tag | Nhãn phân loại: skill, interest, industry. Dùng để matching. |
-| Điểm tương thích | Match Score | Điểm số tính bằng batch job: skill overlap × 0.7 + interest overlap × 0.3 |
+| Điểm tương thích | Match Score | Điểm số tính bằng batch job: (skill_overlap × 0.6) + (interest_overlap × 0.25) + (same_branch_bonus × 0.15) |
 | Gợi ý đối tác | Suggested Partner | Danh sách user có match score cao, contact chỉ hiện khi `contact_public = true`. |
 
 ## Vai trò & Phân quyền

@@ -41,10 +41,14 @@
 7. MoMo gọi webhook (IPN) về endpoint `/momo/notify` của hệ thống:
    - Hệ thống verify signature HMAC SHA256 (đã implement trong MomoService)
    - Nếu resultCode = 0 (Thành công):
-     a. Update `payments.status = 'paid'`, ghi nhận `paid_at = now()`
-     b. Update `bookings.status = 'confirmed'`
-     c. Log vào `payment_events`
-     d. Tạo `notifications` (booking_confirmed)
+     a. Bắt đầu DB Transaction. Thực hiện `SELECT * FROM bookings WHERE id = ? FOR UPDATE` (Bắt buộc Lock booking trước để chống Deadlock).
+     b. Thực hiện `SELECT * FROM payments WHERE transaction_id = ? FOR UPDATE`. Nếu trạng thái đã là `paid` (Idempotency) thì bỏ qua xử lý tiếp.
+     c. Update `payments.status = 'paid'`, ghi nhận `paid_at = now()`
+     d. Kiểm tra trạng thái Booking:
+        + Nếu `pending_payment`: Update `bookings.status = 'confirmed'` và tạo `notifications` (booking_confirmed).
+        + Nếu `expired` (timeout 15p): Giữ nguyên `expired`, tạo 1 record MỚI trong `booking_cancellations` với `refund_status = 'pending'` để nhân viên hoàn tiền thủ công.
+        + Nếu `canceled` (khách tự hủy trước đó): Giữ nguyên `canceled`. KHÔNG ĐƯỢC INSERT thêm vào `booking_cancellations` (sẽ lỗi UNIQUE constraint). Bắt buộc phải `UPSERT` hoặc `UPDATE` record hiện có để cập nhật `refund_amount` bằng số tiền trả về, và chuyển `refund_status = 'pending'`.
+     e. Log vào `payment_events`
 8. Customer được redirect về trang Return URL của FE hiển thị thành công.
 ```
 
@@ -54,7 +58,7 @@
 |---|----------|-------|
 | E1 | Quá hạn 15 phút (timeout) | Background job quét và update booking thành `expired`. Trả lỗi `BOOKING_EXPIRED` nếu Customer cố thanh toán. |
 | E2 | Thanh toán thất bại trên MoMo | Webhook trả resultCode != 0 → Update payment status = `failed`. Booking vẫn giữ `pending_payment` cho đến khi hết hạn. |
-| E3 | Webhook gọi 2 lần (Network retry) | Dùng Idempotency: Kiểm tra transaction_id trong payment_events, nếu đã xử lý thì trả 200 OK ngay (không làm lại logic c+d). |
+| E3 | Webhook gọi 2 lần (Network retry) | Dùng Idempotency: Kiểm tra `payments.status` dựa vào `orderId`, nếu đã là `paid` thì trả 200/204 OK ngay (bỏ qua xử lý logic). |
 | E4 | Chữ ký HMAC không khớp | Từ chối request (400 Bad Request), log cảnh báo bảo mật. |
 
 ---

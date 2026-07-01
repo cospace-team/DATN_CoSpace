@@ -10,6 +10,7 @@ BEGIN;
 -- Khởi tạo extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "citext";
+CREATE EXTENSION IF NOT EXISTS "btree_gist"; -- Support EXCLUDE constraint on UUID
 
 -- ============================================
 -- ENUM Types
@@ -31,6 +32,16 @@ CREATE TYPE cancel_rule_type AS ENUM ('GRACE_HOURS', 'BEFORE_START_DAYS');
 CREATE TYPE refund_status AS ENUM ('none', 'pending', 'confirmed', 'rejected');
 CREATE TYPE tag_category AS ENUM ('skill', 'interest', 'industry');
 CREATE TYPE service_type AS ENUM ('drink', 'meal', 'printing', 'other');
+CREATE TYPE notification_type AS ENUM (
+  'booking_confirmed',
+  'booking_expired',
+  'booking_canceled',
+  'payment_timeout',
+  'checkout_overdue',
+  'refund_processed',
+  'matching_update',
+  'system_announcement'
+);
 
 -- ============================================
 -- Identity & Access Tables
@@ -56,7 +67,7 @@ CREATE TABLE users (
   )
 );
 
-CREATE INDEX idx_users_email_lower ON users (lower(email));
+-- L-1: idx_users_email_lower removed — redundant with citext UNIQUE constraint
 CREATE INDEX idx_users_role_branch ON users (role, branch_id);
 
 CREATE TABLE auth_accounts (
@@ -96,6 +107,8 @@ CREATE TABLE branches (
   address text NOT NULL,
   city varchar(80),
   timezone varchar(50) NOT NULL DEFAULT 'Asia/Ho_Chi_Minh',
+  open_time time,
+  close_time time,
   status branch_status NOT NULL DEFAULT 'active',
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
@@ -118,7 +131,7 @@ CREATE TABLE tags (
 CREATE TABLE profile_skills (
   profile_user_id uuid NOT NULL,
   tag_id uuid NOT NULL,
-  level smallint,
+  level smallint NOT NULL DEFAULT 3,
   
   PRIMARY KEY (profile_user_id, tag_id),
   CONSTRAINT fk_profile_skills_user FOREIGN KEY (profile_user_id) REFERENCES profiles(user_id) ON DELETE CASCADE,
@@ -129,7 +142,7 @@ CREATE TABLE profile_skills (
 CREATE TABLE profile_interests (
   profile_user_id uuid NOT NULL,
   tag_id uuid NOT NULL,
-  priority smallint,
+  priority smallint NOT NULL DEFAULT 3,
   
   PRIMARY KEY (profile_user_id, tag_id),
   CONSTRAINT fk_profile_interests_user FOREIGN KEY (profile_user_id) REFERENCES profiles(user_id) ON DELETE CASCADE,
@@ -142,12 +155,13 @@ CREATE TABLE profile_match_scores (
   matched_user_id uuid NOT NULL,
   score numeric(6,4) NOT NULL,
   reasons_json jsonb,
-  computed_at timestamptz NOT NULL,
+  computed_at timestamptz NOT NULL DEFAULT now(),
   
   PRIMARY KEY (profile_user_id, matched_user_id),
   CONSTRAINT fk_match_scores_user FOREIGN KEY (profile_user_id) REFERENCES profiles(user_id) ON DELETE CASCADE,
   CONSTRAINT fk_match_scores_matched FOREIGN KEY (matched_user_id) REFERENCES profiles(user_id) ON DELETE CASCADE,
-  CONSTRAINT check_no_self_match CHECK (profile_user_id <> matched_user_id)
+  CONSTRAINT check_match_direction CHECK (profile_user_id < matched_user_id),
+  CONSTRAINT check_score_range CHECK (score >= 0 AND score <= 1.0)
 );
 
 CREATE INDEX idx_match_scores_ranking ON profile_match_scores (profile_user_id, score DESC);
@@ -182,6 +196,23 @@ VALUES
   ('private_office', 'Private Office', 4)
 ON CONFLICT DO NOTHING;
 
+CREATE TABLE amenities (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name varchar(100) UNIQUE NOT NULL,
+  icon_name varchar(50),
+  is_active boolean NOT NULL DEFAULT true
+);
+
+CREATE TABLE workspace_type_amenities (
+  workspace_type_id uuid NOT NULL,
+  amenity_id uuid NOT NULL,
+  quantity int NOT NULL DEFAULT 1,
+  
+  PRIMARY KEY (workspace_type_id, amenity_id),
+  CONSTRAINT fk_wta_type FOREIGN KEY (workspace_type_id) REFERENCES workspace_types(id) ON DELETE CASCADE,
+  CONSTRAINT fk_wta_amenity FOREIGN KEY (amenity_id) REFERENCES amenities(id) ON DELETE CASCADE
+);
+
 CREATE TABLE workspaces (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   floor_id uuid NOT NULL,
@@ -194,7 +225,7 @@ CREATE TABLE workspaces (
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   
-  CONSTRAINT fk_workspaces_floor FOREIGN KEY (floor_id) REFERENCES floors(id) ON DELETE CASCADE,
+  CONSTRAINT fk_workspaces_floor FOREIGN KEY (floor_id) REFERENCES floors(id) ON DELETE RESTRICT,
   CONSTRAINT fk_workspaces_type FOREIGN KEY (workspace_type_id) REFERENCES workspace_types(id),
   CONSTRAINT uq_floor_code UNIQUE (floor_id, code),
   CONSTRAINT uq_floor_svg_element UNIQUE (floor_id, svg_element_id)
@@ -212,7 +243,8 @@ CREATE TABLE workspace_maintenance (
   
   CONSTRAINT fk_maintenance_workspace FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE,
   CONSTRAINT fk_maintenance_creator FOREIGN KEY (created_by) REFERENCES users(id),
-  CONSTRAINT check_maintenance_time CHECK (end_at > start_at)
+  CONSTRAINT check_maintenance_time CHECK (end_at > start_at),
+  CONSTRAINT no_overlapping_maintenance EXCLUDE USING gist (workspace_id WITH =, tstzrange(start_at, end_at) WITH &&)
 );
 
 CREATE INDEX idx_maintenance_workspace_time ON workspace_maintenance (workspace_id, start_at, end_at);
@@ -227,7 +259,6 @@ CREATE TABLE price_policies (
   workspace_type_id uuid NOT NULL,
   duration_unit duration_unit NOT NULL,
   price numeric(12,2) NOT NULL,
-  currency char(3) NOT NULL DEFAULT 'VND',
   is_active boolean NOT NULL DEFAULT true,
   created_by uuid,
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -240,6 +271,7 @@ CREATE TABLE price_policies (
 );
 
 CREATE INDEX idx_price_lookup ON price_policies (workspace_type_id, duration_unit, branch_id, is_active);
+CREATE UNIQUE INDEX uq_price_active ON price_policies (COALESCE(branch_id, '00000000-0000-0000-0000-000000000000'::uuid), workspace_type_id, duration_unit) WHERE is_active = true;
 
 CREATE TABLE bookings (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -269,12 +301,14 @@ CREATE TABLE bookings (
   CONSTRAINT check_booking_amounts CHECK (
     subtotal_amount >= 0 AND discount_amount >= 0 AND addon_amount >= 0 AND
     total_amount = subtotal_amount - discount_amount + addon_amount
-  )
+  ),
+  CONSTRAINT check_payment_deadline CHECK (status != 'pending_payment' OR payment_deadline_at IS NOT NULL)
 );
 
 CREATE INDEX idx_bookings_workspace_time ON bookings (workspace_id, start_at, end_at, status);
 CREATE INDEX idx_bookings_user_status ON bookings (user_id, status);
-CREATE INDEX idx_bookings_code ON bookings (booking_code);
+-- L-2: idx_bookings_code removed — redundant with UNIQUE constraint on booking_code
+CREATE INDEX idx_bookings_branch_time ON bookings (branch_id, start_at DESC);
 
 CREATE TABLE checkin_logs (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -287,8 +321,11 @@ CREATE TABLE checkin_logs (
   
   CONSTRAINT fk_checkin_booking FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE,
   CONSTRAINT fk_checkin_staff FOREIGN KEY (staff_user_id) REFERENCES users(id),
-  CONSTRAINT uq_checkin_open UNIQUE (booking_id) WHERE (checkout_at IS NULL)
+  CONSTRAINT check_checkout_time CHECK (checkout_at >= checkin_at)
 );
+
+CREATE UNIQUE INDEX uq_checkin_open ON checkin_logs (booking_id) WHERE checkout_at IS NULL;
+CREATE INDEX idx_checkin_logs_staff ON checkin_logs (staff_user_id);
 
 -- ============================================
 -- Payment Tables
@@ -337,7 +374,7 @@ CREATE TABLE payment_events (
   CONSTRAINT fk_payment_events FOREIGN KEY (payment_id) REFERENCES payments(id) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_payment_events_idempotency ON payment_events (idempotency_key);
+-- L-7: idx_payment_events_idempotency removed — redundant with UNIQUE constraint on idempotency_key
 CREATE INDEX idx_payment_events_processed ON payment_events (processed);
 
 -- ============================================
@@ -348,8 +385,8 @@ CREATE TABLE cancellation_policies (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name varchar(120) NOT NULL,
   rule_type cancel_rule_type NOT NULL,
-  min_value int,
-  max_value int,
+  min_value int NOT NULL,
+  max_value int NOT NULL,
   refund_percent numeric(5,2) NOT NULL,
   priority int NOT NULL DEFAULT 100,
   branch_id uuid,
@@ -389,8 +426,31 @@ CREATE TABLE booking_cancellations (
   CONSTRAINT fk_cancellation_booking FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE,
   CONSTRAINT fk_cancellation_policy FOREIGN KEY (policy_id) REFERENCES cancellation_policies(id) ON DELETE SET NULL,
   CONSTRAINT fk_cancellation_by FOREIGN KEY (cancelled_by) REFERENCES users(id),
-  CONSTRAINT fk_cancellation_confirmed FOREIGN KEY (refund_confirmed_by) REFERENCES users(id) ON DELETE SET NULL
+  CONSTRAINT fk_cancellation_confirmed FOREIGN KEY (refund_confirmed_by) REFERENCES users(id) ON DELETE SET NULL,
+  CONSTRAINT check_refund_status_logic CHECK (
+    (refund_amount = 0 AND refund_status = 'none') OR 
+    (refund_amount > 0 AND refund_status != 'none')
+  )
 );
+
+-- Bổ sung Trigger kiểm tra Invariant: refund_amount + penalty_amount = booking.total_amount
+CREATE OR REPLACE FUNCTION check_cancellation_amounts_invariant()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_total_amount numeric(12,2);
+BEGIN
+    SELECT total_amount INTO v_total_amount FROM bookings WHERE id = NEW.booking_id;
+    IF (NEW.refund_amount + NEW.penalty_amount != v_total_amount) THEN
+        RAISE EXCEPTION 'Cancellation Invariant Violation: refund_amount (%) + penalty_amount (%) != booking.total_amount (%)', 
+            NEW.refund_amount, NEW.penalty_amount, v_total_amount;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_check_cancellation_amounts_invariant
+BEFORE INSERT OR UPDATE ON booking_cancellations
+FOR EACH ROW EXECUTE FUNCTION check_cancellation_amounts_invariant();
 
 -- ============================================
 -- Add-on Service Tables
@@ -414,6 +474,7 @@ CREATE TABLE extra_services (
 );
 
 CREATE INDEX idx_service_lookup ON extra_services (branch_id, service_type, is_active);
+CREATE UNIQUE INDEX uq_service_global_code ON extra_services (code) WHERE branch_id IS NULL;
 
 CREATE TABLE booking_services (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -423,14 +484,52 @@ CREATE TABLE booking_services (
   unit_price numeric(12,2) NOT NULL,
   line_total numeric(12,2) NOT NULL,
   note varchar(255),
+  added_by_staff_id uuid,            -- H-3: Track staff who added the service (Running Tab model)
   created_at timestamptz NOT NULL DEFAULT now(),
   
   CONSTRAINT fk_booking_services_booking FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE,
   CONSTRAINT fk_booking_services_service FOREIGN KEY (extra_service_id) REFERENCES extra_services(id),
-  CONSTRAINT uq_booking_service UNIQUE (booking_id, extra_service_id),
+  CONSTRAINT fk_booking_services_staff FOREIGN KEY (added_by_staff_id) REFERENCES users(id) ON DELETE SET NULL,
+  -- M-3/H-3: UNIQUE (booking_id, extra_service_id) REMOVED — Running Tab allows multiple rows per service
   CONSTRAINT check_service_qty CHECK (quantity > 0),
   CONSTRAINT check_service_price CHECK (unit_price >= 0 AND line_total >= 0)
 );
+
+CREATE INDEX idx_booking_services_staff ON booking_services (added_by_staff_id);
+
+-- ============================================
+-- DB Triggers cho tính toán Add-on tự động
+-- ============================================
+
+CREATE OR REPLACE FUNCTION update_booking_addon_amount()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF (TG_OP = 'INSERT') THEN
+        UPDATE bookings 
+        SET addon_amount = addon_amount + NEW.line_total,
+            total_amount = total_amount + NEW.line_total,
+            updated_at = now()
+        WHERE id = NEW.booking_id;
+    ELSIF (TG_OP = 'DELETE') THEN
+        UPDATE bookings 
+        SET addon_amount = addon_amount - OLD.line_total,
+            total_amount = total_amount - OLD.line_total,
+            updated_at = now()
+        WHERE id = OLD.booking_id;
+    ELSIF (TG_OP = 'UPDATE') THEN
+        UPDATE bookings 
+        SET addon_amount = addon_amount - OLD.line_total + NEW.line_total,
+            total_amount = total_amount - OLD.line_total + NEW.line_total,
+            updated_at = now()
+        WHERE id = NEW.booking_id;
+    END IF;
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_update_booking_addon_amount
+AFTER INSERT OR UPDATE OR DELETE ON booking_services
+FOR EACH ROW EXECUTE FUNCTION update_booking_addon_amount();
 
 -- ============================================
 -- Audit Logging Table
@@ -462,7 +561,7 @@ CREATE INDEX idx_audit_target ON audit_logs (target_table, target_id);
 -- ============================================
 
 ALTER TABLE users 
-ADD CONSTRAINT fk_users_branch FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE SET NULL;
+ADD CONSTRAINT fk_users_branch FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE RESTRICT;
 
 -- ============================================
 -- Add Foreign Keys for profiles
@@ -471,6 +570,27 @@ ADD CONSTRAINT fk_users_branch FOREIGN KEY (branch_id) REFERENCES branches(id) O
 -- ALTER TABLE profiles 
 -- ADD CONSTRAINT fk_profiles_branch FOREIGN KEY (primary_branch_id) REFERENCES branches(id) ON DELETE SET NULL;
 -- (already done above)
+
+-- ============================================
+-- Notifications Table
+-- ============================================
+
+CREATE TABLE notifications (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  type notification_type NOT NULL,
+  title varchar(200) NOT NULL,
+  message text NOT NULL,
+  data_json jsonb,               -- Metadata liên quan (booking_id, amount, etc.)
+  is_read boolean NOT NULL DEFAULT false,
+  read_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  
+  CONSTRAINT fk_notifications_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_notifications_user_unread ON notifications (user_id, is_read, created_at DESC);
+CREATE INDEX idx_notifications_created ON notifications (created_at);
 
 -- ============================================
 -- Migration Complete

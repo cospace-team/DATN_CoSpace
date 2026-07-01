@@ -68,6 +68,7 @@
 | E3 | Không tìm thấy price_policy | Trả lỗi `PRICE_NOT_CONFIGURED`, thông báo admin cấu hình giá |
 | E4 | start_at < now() | Trả lỗi `INVALID_TIME_RANGE`, không cho đặt quá khứ |
 | E5 | Workspace status ≠ active | Trả lỗi `WORKSPACE_INACTIVE` |
+| E6 | Chống Spam (Rate Limit) | App Layer BẮT BUỘC dùng `pg_advisory_xact_lock` trên user_id trước khi đếm. Nếu có ≥ 3 booking ở trạng thái `pending_payment`, trả lỗi `RATE_LIMIT_EXCEEDED`. |
 
 ### Quy Tắc Nghiệp Vụ
 
@@ -186,16 +187,17 @@ Giống UC-BOOK-01, ngoại trừ:
 5. Hệ thống cập nhật booking:
    - addon_amount = SUM(line_total) từ tất cả booking_services
    - total_amount = subtotal_amount - discount_amount + addon_amount
-6. Nếu booking đang pending_payment → giá trên payment page cập nhật
-   Nếu booking đã confirmed → tạo payment bổ sung? (TBD)
+6. Xử lý thanh toán:
+   - Nếu booking đang `pending_payment`: Giá trên trang thanh toán tự động cập nhật.
+   - Nếu booking đã `checked_in` (Cyber-cafe model): Tạo một bản ghi `payments` MỚI (amount = tiền dịch vụ phát sinh, method = cash/momo). Staff thu tiền và update payment này thành `paid`. Không thay đổi trạng thái booking.
 ```
 
 ### Luồng Ngoại Lệ
 
 | # | Điều kiện | Xử lý |
 |---|----------|-------|
-| E1 | Dịch vụ đã tồn tại trong booking | Cập nhật quantity (UPSERT), tính lại line_total |
-| E2 | Booking đã completed/canceled/expired | Trả lỗi `BOOKING_NOT_MODIFIABLE` |
+| E1 | Dịch vụ đã tồn tại trong booking | Cập nhật quantity (UPSERT), tính lại line_total. |
+| E2 | Booking đã completed/canceled/expired | Trả lỗi `BOOKING_NOT_MODIFIABLE`. (Chỉ cho phép thêm khi `pending_payment`, `confirmed` hoặc `checked_in`). |
 | E3 | quantity ≤ 0 | Trả lỗi `INVALID_QUANTITY` |
 
 ### Quy Tắc Nghiệp Vụ
@@ -208,6 +210,40 @@ Giống UC-BOOK-01, ngoại trừ:
 
 ---
 
+## UC-BOOK-05: Gia Hạn Thời Gian Đặt Chỗ (Extending Duration)
+
+### Tổng quan
+| Thuộc tính | Giá trị |
+|-----------|--------|
+| **Actor chính** | Customer, Staff |
+| **Trigger** | Khách muốn ngồi thêm giờ và yêu cầu gia hạn |
+| **Precondition** | Booking đang ở trạng thái `checked_in` |
+| **Postcondition** | `end_at` được cập nhật, sinh ra bản ghi `payments` mới |
+
+### Luồng Chính
+```
+1. Customer/Staff chọn chức năng "Gia hạn" trên booking hiện tại.
+2. Nhập số lượng thời gian muốn thêm (VD: thêm 1 giờ).
+3. Hệ thống tính toán thời gian `end_at` mới.
+4. Hệ thống kiểm tra Overlap:
+   - Đảm bảo khoảng thời gian mới thêm không bị trùng với booking của người khác.
+5. Hệ thống tính toán số tiền chênh lệch (dựa vào price_policy hiện hành).
+6. Hệ thống cập nhật booking:
+   - end_at = end_at_new
+   - unit_count = unit_count_new
+   - subtotal_amount và total_amount tăng lên.
+7. Hệ thống tạo một bản ghi `payments` MỚI cho phần tiền chênh lệch.
+8. Staff thu tiền mặt (hoặc khách thanh toán MoMo) cho bản ghi payment mới này.
+```
+
+### Luồng Ngoại Lệ
+| # | Điều kiện | Xử lý |
+|---|----------|-------|
+| E1 | Overlap với booking khác | Báo lỗi `WORKSPACE_NOT_AVAILABLE`, gợi ý khách tạo booking mới ở phòng khác. |
+| E2 | Booking không hợp lệ | Chỉ cho phép gia hạn khi đang `checked_in`. Nếu trạng thái khác, báo lỗi `BOOKING_NOT_MODIFIABLE`. |
+
+---
+
 ## Bảng Tổng Hợp Status Transition
 
 ```mermaid
@@ -216,9 +252,10 @@ stateDiagram-v2
     pending_payment --> confirmed : Thanh toán thành công
     pending_payment --> expired : Hết 15 phút (timeout)
     confirmed --> checked_in : Staff check-in
-    confirmed --> canceled : Customer hủy
-    checked_in --> completed : Staff check-out
-    pending_payment --> canceled : Customer hủy trước khi thanh toán
+    confirmed --> canceled : Customer hủy / Auto bảo trì
+    checked_in --> completed : Staff check-out / Auto EOD
+    checked_in --> canceled : Hủy sớm lấy refund / Auto bảo trì
+    pending_payment --> canceled : Customer hủy / Auto bảo trì
     expired --> [*]
     completed --> [*]
     canceled --> [*]
@@ -228,12 +265,14 @@ stateDiagram-v2
 
 | Từ \ Sang | pending_payment | confirmed | checked_in | completed | canceled | expired |
 |-----------|:-:|:-:|:-:|:-:|:-:|:-:|
-| pending_payment | - | ✅ (payment success) | ❌ | ❌ | ✅ (customer hủy) | ✅ (timeout) |
-| confirmed | ❌ | - | ✅ (check-in) | ❌ | ✅ (customer hủy) | ❌ |
-| checked_in | ❌ | ❌ | - | ✅ (check-out) | ❌ | ❌ |
+| pending_payment | - | ✅ (payment success) | ❌ | ❌ | ✅ (khách hủy/bảo trì) | ✅ (timeout) |
+| confirmed | ❌ | - | ✅ (check-in) | ❌ | ✅ (khách hủy/bảo trì) | ❌ |
+| checked_in | ❌ | ❌ | - | ✅ (check-out/Auto EOD) | ✅ (abort sớm/bảo trì) | ❌ |
 | completed | ❌ | ❌ | ❌ | - | ❌ | ❌ |
-| canceled | ❌ | ❌ | ❌ | ❌ | - | ❌ |
-| expired | ❌ | ❌ | ❌ | ❌ | ❌ | - |
+| canceled | ❌ | ✅ (Late webhook tạo refund) | ❌ | ❌ | - | ❌ |
+| expired | ❌ | ✅ (Late webhook tạo refund) | ❌ | ❌ | ❌ | - |
+
+> **Note**: Ở luồng Late Webhook (`canceled` hoặc `expired` chuyển sang `confirmed`), việc chuyển đổi này chỉ mang ý nghĩa mặt Logic Payment (để thanh toán chuyển sang `paid` và trigger sinh Refund), còn bản thân giá trị `bookings.status` ở Database vẫn GIỮ NGUYÊN là `canceled` hoặc `expired`.
 
 ---
 

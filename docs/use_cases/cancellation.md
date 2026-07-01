@@ -52,11 +52,12 @@
    - Nếu `confirmed` -> Đã thanh toán -> Tiếp tục Bước 3.
 3. Cancellation Engine tìm Policy:
    a. Lọc ra các policies MATCH (cùng branch/global, cùng type/global, có hiệu lực).
-   b. Sắp xếp theo ưu tiên: Branch-specific > Global, Priority cao > thấp.
+   b. Sắp xếp theo ưu tiên: Branch-specific > Global, Priority cao > thấp, Created_at mới > cũ (ORDER BY branch_id NULLS LAST, priority DESC, created_at DESC LIMIT 1).
    c. Tính khoảng cách `start_at - now()`. Dựa vào `rule_type` (HOURS/DAYS) check xem lọt vào khung nào (min_value -> max_value).
    d. Chọn ra policy đầu tiên match khung giờ.
 4. Tính toán tiền hoàn:
-   - refund_amount = booking.total_amount * (refund_percent / 100)
+   - refund_base = booking.subtotal_amount - booking.discount_amount
+   - refund_amount = FLOOR(refund_base * (refund_percent / 100)) + booking.addon_amount -- (MVP: Phạt trên tiền thuê, hoàn 100% tiền add-on)
    - penalty_amount = booking.total_amount - refund_amount
 5. Ghi nhận `booking_cancellations`:
    - Lưu trữ snapshot policy dưới dạng JSON (`applied_rule_json`) để sau này đổi luật thì lịch sử không bị ảnh hưởng.
@@ -69,4 +70,4 @@
 | # | Điều kiện | Xử lý |
 |---|----------|-------|
 | E1 | Không tìm thấy policy match | Mặc định refund_percent = 0% (Penalty 100%). Hoặc hệ thống tự set 1 policy Default Global "Hủy muộn 0%". |
-| E2 | Đã check-in | Không cho hủy. Trả lỗi `400 BOOKING_NOT_CANCELLABLE`. |
+| E2 | Trạng thái không hợp lệ | Chỉ cho phép hủy khi `pending_payment` hoặc `confirmed`. Nếu trạng thái là `checked_in`, `completed`, `canceled`, `expired` -> Trả lỗi `400 BOOKING_NOT_CANCELLABLE`. |

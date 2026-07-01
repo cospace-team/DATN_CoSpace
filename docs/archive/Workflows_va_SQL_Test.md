@@ -230,7 +230,7 @@ Admin (super hoặc branch) vào cấu hình
 ### Bước 1: Admin tổng tạo branch
 ```sql
 INSERT INTO branches (
-  id, code, name, address, city, timezone, status, created_at, updated_at
+  id, code, name, address, city, timezone, open_time, close_time, status, created_at, updated_at
 ) VALUES (
   gen_random_uuid(),
   'HN-001',
@@ -238,6 +238,8 @@ INSERT INTO branches (
   '123 Cau Giay, Hanoi',
   'Hanoi',
   'Asia/Ho_Chi_Minh',
+  '08:00:00'::time,
+  '22:00:00'::time,
   'active'::branch_status,
   now(),
   now()
@@ -578,13 +580,13 @@ WHERE f.branch_id = 'branch-001'
     WHERE b.workspace_id = w.id
       AND b.branch_id = 'branch-001'
       AND b.status IN ('pending_payment', 'confirmed', 'checked_in')
-      AND (b.start_at, b.end_at) OVERLAPS ('2026-04-16 09:00:00+07'::timestamptz, '2026-04-16 17:00:00+07'::timestamptz)
+      AND (b.start_at < '2026-04-16 17:00:00+07'::timestamptz AND b.end_at > '2026-04-16 09:00:00+07'::timestamptz)
   )
   AND NOT EXISTS (
     SELECT 1 FROM workspace_maintenance wm
     WHERE wm.workspace_id = w.id
       AND wm.status IN ('scheduled', 'active')
-      AND (wm.start_at, wm.end_at) OVERLAPS ('2026-04-16 09:00:00+07'::timestamptz, '2026-04-16 17:00:00+07'::timestamptz)
+      AND (wm.start_at < '2026-04-16 17:00:00+07'::timestamptz AND wm.end_at > '2026-04-16 09:00:00+07'::timestamptz)
   );
 
 -- Tạo booking (status = pending_payment, payment_deadline_at = now + 15 phút)
@@ -732,7 +734,7 @@ INSERT INTO bookings (
   id, booking_code, user_id, workspace_id, branch_id,
   start_at, end_at, unit, unit_count, status,
   subtotal_amount, discount_amount, addon_amount, total_amount,
-  source, created_at, updated_at
+  payment_deadline_at, source, created_at, updated_at
 ) VALUES (
   gen_random_uuid(),
   'BK20260416-COUNTER-001',
@@ -743,15 +745,16 @@ INSERT INTO bookings (
   '2026-04-16 11:00:00+07'::timestamptz,
   'hour'::duration_unit,
   1,
-  'pending'::booking_status,      -- pending, chưa thanh toán
+  'pending_payment'::booking_status, -- pending_payment, chờ staff xác nhận tiền mặt
   500000,    -- giá meeting room 1h
   0,
   0,
   500000,
+  now() + interval '2 hours', -- Hạn chót thanh toán tại quầy
   'counter'::booking_source,
   now(),
   now()
-) RETURNING id, booking_code, total_amount;
+) RETURNING id, booking_code, total_amount, payment_deadline_at;
 ```
 
 **Vấn đề cần kiểm tra:**
@@ -794,6 +797,45 @@ WHERE id = 'booking-id-from-step-1';
 - ✓ Tạo payment với provider = cash được không?
 - ✓ created_by_staff_id có ghi được ai tạo không?
 - ✓ Staff scope: chỉ staff cùng branch mới confirm được không?
+
+---
+
+## Luồng 2b: Gọi thêm dịch vụ (Add-on Running Tab)
+
+**Sơ đồ:**
+Khách đang sử dụng phòng (checked_in) gọi thêm nước
+→ Staff chọn dịch vụ và số lượng
+→ INSERT vào `booking_services`
+→ DB Trigger `trg_update_booking_addon_amount` tự động cộng dồn `addon_amount` và `total_amount` trong bảng `bookings`
+
+**Các bước chi tiết:**
+
+### Bước 1: Staff thêm dịch vụ vào booking
+```sql
+-- Lấy thông tin dịch vụ (VD: Nước lọc, giá 15,000)
+SELECT id, code, price FROM extra_services 
+WHERE code = 'DRINK_WATER' AND (branch_id = 'branch-001' OR branch_id IS NULL)
+ORDER BY branch_id DESC NULLS LAST LIMIT 1;
+
+-- Thêm dịch vụ vào booking. Lưu ý: Không cần tự UPDATE bảng bookings vì đã có DB Trigger lo việc này.
+INSERT INTO booking_services (
+  id, booking_id, extra_service_id, quantity, unit_price, line_total, added_by_staff_id, created_at
+) VALUES (
+  gen_random_uuid(),
+  'booking-id-from-step-1',  -- ID của booking đang chạy
+  'service-id',              -- ID của dịch vụ vừa lấy
+  2,                         -- Số lượng: 2 chai nước
+  15000,                     -- Đơn giá tại thời điểm thêm
+  30000,                     -- Tổng tiền = 2 * 15000
+  'staff-id',                -- Truy vết staff
+  now()
+) RETURNING id, line_total;
+```
+
+**Vấn đề cần kiểm tra:**
+- ✓ Sau khi lệnh INSERT `booking_services` chạy, kiểm tra xem `bookings.addon_amount` có tự động tăng thêm 30000 không?
+- ✓ `bookings.total_amount` có tăng tương ứng không?
+- ✓ Tránh được hoàn toàn lỗi Lost Update khi 2 Staff cùng thêm dịch vụ cùng lúc.
 
 ---
 
@@ -1026,7 +1068,8 @@ VALUES ('customer-001', 'tag-web3', 3);
 ```sql
 -- Tính score giữa customer-001 và các user khác
 -- Logic: so sánh skills overlap + interests overlap
--- Score = (skill_overlap * 0.7) + (interest_overlap * 0.3)
+-- Score = (skill_overlap × 0.6) + (interest_overlap × 0.25) + (same_branch_bonus × 0.15)
+-- TODO: SQL below uses old weights (0.7/0.3). Service layer implementation sẽ dùng đúng formula từ Spec.
 
 WITH customer_skills AS (
   SELECT tag_id, level FROM profile_skills WHERE profile_user_id = 'customer-001'

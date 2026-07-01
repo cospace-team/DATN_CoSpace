@@ -21,8 +21,10 @@
 1. Khách hàng tới quầy và cung cấp `booking_code`
 2. Staff nhập `booking_code` vào hệ thống
 3. Hệ thống kiểm tra:
-   a. Booking có tồn tại và thuộc branch hiện tại của Staff
-   b. Booking status == 'confirmed'
+   a. Booking có tồn tại và thuộc branch hiện tại của Staff.
+   b. Booking status == 'confirmed' HOẶC ('checked_in' nếu là hợp đồng dài hạn và có checkout trước đó).
+   c. Đối với Hợp đồng (week/month): Cho phép check-in lại nhiều lần trong ngày/tuần (Daily Check-in).
+   d. Đối với ngắn hạn (hour/day): Chỉ cho phép check-in nếu booking.status = `confirmed`.
    c. Thời gian hiện tại nằm trong khoảng cho phép (VD: không sớm hơn start_at quá 30 phút)
 4. Hệ thống tạo record trong `checkin_logs`:
    - booking_id = booking.id
@@ -60,8 +62,12 @@
 4. Hệ thống cập nhật:
    - checkin_logs.checkout_at = now()
    - checkin_logs.checkout_staff_id = current_user.id
-5. Hệ thống cập nhật `bookings.status = 'completed'`
+5. Hệ thống kiểm tra điều kiện đóng booking:
+   - Nếu booking là hợp đồng dài hạn (`is_contract = true`) VÀ chưa đến ngày `end_at`: Giữ nguyên `bookings.status = 'checked_in'` (Để khách có thể check-in lại vào ngày mai).
+   - Ngược lại (ngắn hạn hoặc đã đến ngày cuối hợp đồng): Cập nhật `bookings.status = 'completed'`.
 6. (Tùy chọn) Gửi notification cho khách cảm ơn.
+
+> **Gotcha UI/API**: Để hiển thị đúng danh sách "Khách đang ở quán" cho Staff (tránh bị lẫn khách hợp đồng đã đi về), Backend API và Frontend phải dùng điều kiện: `bookings.status = 'checked_in' AND EXISTS (SELECT 1 FROM checkin_logs WHERE booking_id = bookings.id AND checkout_at IS NULL)`.
 ```
 
 ### Luồng Ngoại Lệ

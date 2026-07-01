@@ -251,23 +251,8 @@
 |-------|------|----------|-----------|
 | `reason` | string | ❌ | max 255 chars |
 
-**Logic xử lý** (tham chiếu [SYSTEM_SPEC.md §4.5](file:///d:/DA/docs/SYSTEM_SPEC.md)):
-```
-1. Validate: booking.status ∈ {pending_payment, confirmed}
-2. Tìm cancellation_policy phù hợp:
-   - WHERE is_active = true
-   - AND (branch_id = booking.branch_id OR branch_id IS NULL)
-   - AND (workspace_type_id = workspace.type_id OR workspace_type_id IS NULL)
-   - AND effective_from <= now() AND (effective_to IS NULL OR effective_to > now())
-   - ORDER BY branch_id DESC NULLS LAST, priority DESC
-   - LIMIT 1
-3. Tính refund:
-   - refund_amount = booking.total_amount × policy.refund_percent / 100
-   - penalty_amount = booking.total_amount - refund_amount
-4. Tạo booking_cancellations record (refund_status = confirmed)
-5. Cập nhật booking.status = canceled
-6. Tạo notification cho customer (kết quả refund)
-```
+**Logic xử lý**:
+Vui lòng tham khảo chi tiết flow hủy và tính toán refund tại [Use Case: Cancellation (UC-CAN-02)](file:///d:/DA/docs/business/use_cases/cancellation.md). API này chỉ nhận request, validate status, áp dụng Policy và trả về kết quả.
 
 **Response — 200 OK**:
 ```json
@@ -381,30 +366,8 @@
 | `capacity_min` | int | ❌ | Sức chứa tối thiểu |
 | `floor_id` | UUID | ❌ | Filter theo tầng |
 
-**Logic**:
-```sql
-SELECT w.* FROM workspaces w
-JOIN floors f ON w.floor_id = f.id
-WHERE f.branch_id = :branch_id
-  AND w.status = 'active'
-  AND (:workspace_type IS NULL OR wt.code = :workspace_type)
-  AND (:capacity_min IS NULL OR w.capacity >= :capacity_min)
-  AND (:floor_id IS NULL OR w.floor_id = :floor_id)
-  -- Exclude overlap bookings
-  AND NOT EXISTS (
-    SELECT 1 FROM bookings b
-    WHERE b.workspace_id = w.id
-      AND b.status IN ('pending_payment', 'confirmed', 'checked_in')
-      AND b.start_at < :end_at AND b.end_at > :start_at
-  )
-  -- Exclude overlap maintenance
-  AND NOT EXISTS (
-    SELECT 1 FROM workspace_maintenance m
-    WHERE m.workspace_id = w.id
-      AND m.status IN ('scheduled', 'active')
-      AND m.start_at < :end_at AND m.end_at > :start_at
-  )
-```
+**Logic xử lý**:
+Vui lòng tham khảo SQL query và quy tắc kiểm tra tại [Workflows & SQL Test](file:///d:/DA/docs/Workflows_va_SQL_Test.md) và [Use Case: Booking](file:///d:/DA/docs/business/use_cases/booking.md). Nguyên tắc cơ bản: Lọc ra các workspace thuộc chi nhánh, thỏa mãn tiêu chí loại/sức chứa, và KHÔNG bị overlap bởi các Booking đang active hoặc Lịch bảo trì (Maintenance).
 
 **Response — 200 OK**:
 ```json
