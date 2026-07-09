@@ -36,6 +36,7 @@ type ModalMode =
   | { type: 'edit-ws'; ws: WorkspaceResponse }
   | { type: 'confirm-delete-floor'; floorId: string; floorName: string }
   | { type: 'confirm-delete-ws'; wsId: string; wsCode: string }
+  | { type: 'assign-ws-layout'; element: any }
   | null;
 
 const BAWorkspacePage: React.FC = () => {
@@ -50,6 +51,8 @@ const BAWorkspacePage: React.FC = () => {
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [showEditorPopup, setShowEditorPopup] = useState(false);
+  const [assigningWsId, setAssigningWsId] = useState<string | null>(null);
+  const [assigningWsCode, setAssigningWsCode] = useState<string | null>(null);
 
   // Form state
   const [floorForm, setFloorForm] = useState({ floor_no: '', name: '', svgContent: '' });
@@ -108,6 +111,13 @@ const BAWorkspacePage: React.FC = () => {
     try { return JSON.parse(currentFloor.layoutJson) as FloorLayout; }
     catch { return null; }
   }, [currentFloor?.layoutJson]);
+
+  const assignedWorkspaceIds = useMemo<string[]>(() => {
+    if (!currentLayout) return [];
+    return currentLayout.elements
+      .map((el) => el.workspaceId)
+      .filter((id): id is string => !!id);
+  }, [currentLayout]);
 
   /* ── Floor modal ── */
   const openFloorModal = (mode: 'add' | 'edit', floor?: FloorResponse) => {
@@ -263,6 +273,47 @@ const BAWorkspacePage: React.FC = () => {
     }
   };
 
+  const saveLayoutWithAssignedWorkspace = async (elementId: string, wsId: string | null) => {
+    if (!currentFloor || !currentLayout) return;
+    try {
+      const updatedElements = currentLayout.elements.map((el) => {
+        if (el.id === elementId) {
+          return { ...el, workspaceId: wsId };
+        }
+        // Avoid duplicate workspace assignments on different elements
+        if (wsId && el.workspaceId === wsId) {
+          return { ...el, workspaceId: null };
+        }
+        return el;
+      });
+
+      const updatedLayout = { ...currentLayout, elements: updatedElements };
+      const updated = await floorApi.update(currentFloor.id, {
+        layoutJson: JSON.stringify(updatedLayout),
+      });
+
+      setFloors((prev) => prev.map((f) => (f.id === updated.id ? updated : f)));
+      // Refetch workspaces so the table display and svgElementIds are in sync
+      await fetchWorkspaces(currentFloor.id);
+      showSuccess(wsId ? 'Gán workspace thành công!' : 'Đã gỡ gán workspace!');
+    } catch (e: any) {
+      showError(e.message || 'Lỗi khi gán workspace');
+    }
+  };
+
+  const handleFloorPlanElementClick = (el: any) => {
+    const LINKABLE_TYPES = ['desk', 'chair', 'standing_desk', 'meeting_room', 'private_office'];
+    if (!LINKABLE_TYPES.includes(el.type)) return;
+
+    if (assigningWsId) {
+      saveLayoutWithAssignedWorkspace(el.id, assigningWsId);
+      setAssigningWsId(null);
+      setAssigningWsCode(null);
+    } else {
+      setModal({ type: 'assign-ws-layout', element: el });
+    }
+  };
+
   const statusBadge = (status: string) =>
     status === 'active' ? 'badge-success' : status === 'maintenance' ? 'badge-warning' : 'badge-danger';
   const statusLabel = (status: string) =>
@@ -345,7 +396,7 @@ const BAWorkspacePage: React.FC = () => {
         )}
       </div>
 
-      {/* Floor Plan Viewer (read-only) */}
+      {/* Floor Plan Viewer */}
       {currentFloor && (
         <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
           <div className="px-6 py-3 border-b border-border bg-muted/20 flex items-center justify-between">
@@ -353,7 +404,25 @@ const BAWorkspacePage: React.FC = () => {
               <FiMap className="h-4 w-4 text-primary" />
               <div>
                 <h2 className="font-semibold text-sm">Sơ đồ mặt bằng — {currentFloor.name}</h2>
-                <p className="text-xs text-muted-foreground">Click vào element để xem workspace liên kết</p>
+                <div className="text-xs text-muted-foreground">
+                  {assigningWsId ? (
+                    <span className="text-warning font-medium animate-pulse flex items-center gap-1.5">
+                      👉 Đang gán không gian {assigningWsCode}. Click bàn/phòng trên sơ đồ để gán.
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setAssigningWsId(null);
+                          setAssigningWsCode(null);
+                        }}
+                        className="underline text-[10px] text-muted-foreground hover:text-foreground ml-1"
+                      >
+                        (Hủy)
+                      </button>
+                    </span>
+                  ) : (
+                    "Click vào element để gán hoặc thay đổi workspace liên kết"
+                  )}
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -373,6 +442,8 @@ const BAWorkspacePage: React.FC = () => {
                 layout={currentLayout}
                 selectedWsId={selectedWsId}
                 onSelectWorkspace={setSelectedWsId}
+                isAdmin={true}
+                onElementClick={handleFloorPlanElementClick}
                 getAvailability={(wsId) => {
                   const ws = workspaces.find((w) => w.id === wsId);
                   if (!ws) return 'available';
@@ -418,31 +489,79 @@ const BAWorkspacePage: React.FC = () => {
             <div className="overflow-x-auto">
               <table className="data-table">
                 <thead><tr className="bg-muted/50">
-                  <th>Mã</th><th>Tên không gian</th><th>Loại</th><th>Sức chứa</th><th>SVG ID</th><th className="text-center">Trạng thái</th><th className="text-right">Thao tác</th>
+                  <th>Mã</th><th>Tên không gian</th><th>Loại</th><th>Sức chứa</th><th>Vị trí sơ đồ</th><th className="text-center">Trạng thái</th><th className="text-right">Thao tác</th>
                 </tr></thead>
                 <tbody>
-                  {workspaces.map((ws) => (
-                    <tr key={ws.id} className="hover:bg-muted/30 transition-colors">
-                      <td className="font-mono font-semibold text-sm">{ws.code}</td>
-                      <td className="font-medium">{ws.name}</td>
-                      <td className="text-muted-foreground text-sm">{ws.workspaceTypeName}</td>
-                      <td className="text-sm">{ws.capacity} người</td>
-                      <td className="font-mono text-xs text-muted-foreground">#{ws.svgElementId}</td>
-                      <td className="text-center">
-                        <span className={`badge ${statusBadge(ws.status)} shadow-sm`}>{statusLabel(ws.status)}</span>
-                      </td>
-                      <td>
-                        <div className="flex items-center gap-2 justify-end">
-                          <button onClick={() => openWsModal('edit', ws)} className="btn btn-ghost btn-sm text-muted-foreground hover:text-primary p-2" title="Chỉnh sửa">
-                            <FiEdit2 className="h-4 w-4" />
-                          </button>
-                          <button onClick={() => deleteWorkspace(ws.id, ws.code)} className="btn btn-ghost btn-sm text-muted-foreground hover:text-destructive hover:bg-destructive/10 p-2" title="Xóa">
-                            <FiTrash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {workspaces.map((ws) => {
+                    const linkedEl = currentLayout?.elements.find((el) => el.workspaceId === ws.id);
+                    return (
+                      <tr key={ws.id} className="hover:bg-muted/30 transition-colors">
+                        <td className="font-mono font-semibold text-sm">{ws.code}</td>
+                        <td className="font-medium">{ws.name}</td>
+                        <td className="text-muted-foreground text-sm">{ws.workspaceTypeName}</td>
+                        <td className="text-sm">{ws.capacity} người</td>
+                        <td className="text-sm">
+                          {linkedEl ? (
+                            <button
+                              onClick={() => {
+                                setSelectedWsId(selectedWsId === ws.id ? null : ws.id);
+                              }}
+                              className={`px-2 py-1 rounded-lg text-xs font-semibold transition-all ${
+                                selectedWsId === ws.id
+                                  ? 'bg-primary text-primary-foreground shadow-sm'
+                                  : 'bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20'
+                              }`}
+                              title="Click để định vị trên sơ đồ"
+                            >
+                              📍 {linkedEl.label || 'Đã gán'} ({linkedEl.id.substring(0, 6)})
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                if (assigningWsId === ws.id) {
+                                  setAssigningWsId(null);
+                                  setAssigningWsCode(null);
+                                } else {
+                                  setAssigningWsId(ws.id);
+                                  setAssigningWsCode(ws.code);
+                                }
+                              }}
+                              className={`px-2 py-1 rounded-lg text-xs font-semibold transition-all ${
+                                assigningWsId === ws.id
+                                  ? 'bg-warning text-warning-foreground animate-pulse'
+                                  : 'bg-muted hover:bg-muted-foreground/20 text-muted-foreground'
+                              }`}
+                              title="Click để chọn vị trí trên sơ đồ"
+                            >
+                              {assigningWsId === ws.id ? 'Đang gán...' : '➕ Gán sơ đồ'}
+                            </button>
+                          )}
+                        </td>
+                        <td className="text-center">
+                          <span className={`badge ${statusBadge(ws.status)} shadow-sm`}>{statusLabel(ws.status)}</span>
+                        </td>
+                        <td>
+                          <div className="flex items-center gap-2 justify-end">
+                            {linkedEl && (
+                              <button
+                                onClick={() => saveLayoutWithAssignedWorkspace(linkedEl.id, null)}
+                                className="btn btn-ghost btn-sm text-muted-foreground hover:text-warning p-2"
+                                title="Hủy liên kết vị trí"
+                              >
+                                <FiX className="h-4 w-4" />
+                              </button>
+                            )}
+                            <button onClick={() => openWsModal('edit', ws)} className="btn btn-ghost btn-sm text-muted-foreground hover:text-primary p-2" title="Chỉnh sửa">
+                              <FiEdit2 className="h-4 w-4" />
+                            </button>
+                            <button onClick={() => deleteWorkspace(ws.id, ws.code)} className="btn btn-ghost btn-sm text-muted-foreground hover:text-destructive hover:bg-destructive/10 p-2" title="Xóa">
+                              <FiTrash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -611,6 +730,81 @@ const BAWorkspacePage: React.FC = () => {
                 onClick={() => handleConfirmDeleteWorkspace(modal.wsId, modal.wsCode)}>
                 <FiTrash2 className="h-4 w-4" /> Xóa không gian
               </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── Assign Workspace Layout Modal ── */}
+      {modal?.type === 'assign-ws-layout' && (
+        <Modal title="Gán không gian làm việc" onClose={() => setModal(null)}>
+          <div className="space-y-4">
+            <div className="p-4 bg-muted/40 border border-border rounded-xl">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Thông tin phần tử sơ đồ</p>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Loại phần tử:</span>{' '}
+                  <strong className="capitalize">{modal.element.type}</strong>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Mã ID phần tử:</span>{' '}
+                  <strong className="font-mono text-xs">{modal.element.id.substring(0, 8)}...</strong>
+                </div>
+                {modal.element.label && (
+                  <div className="col-span-2">
+                    <span className="text-muted-foreground">Nhãn hiển thị:</span>{' '}
+                    <strong>{modal.element.label}</strong>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                Chọn Workspace để liên kết
+              </label>
+              <select
+                className="input-field"
+                value={modal.element.workspaceId || ''}
+                onChange={async (e) => {
+                  const val = e.target.value || null;
+                  await saveLayoutWithAssignedWorkspace(modal.element.id, val);
+                  setModal(null);
+                }}
+              >
+                <option value="">-- Chưa gán workspace --</option>
+                {workspaces.map((ws) => {
+                  const isThisElement = modal.element.workspaceId === ws.id;
+                  const isAssignedElsewhere = assignedWorkspaceIds.includes(ws.id) && !isThisElement;
+                  return (
+                    <option key={ws.id} value={ws.id} disabled={isAssignedElsewhere}>
+                      {ws.code} - {ws.name} {isAssignedElsewhere ? '(Đã gán phần tử khác)' : ''}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+
+            <div className="flex gap-3 justify-end pt-4 border-t border-border mt-6">
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => setModal(null)}
+              >
+                Hủy bỏ
+              </button>
+              {modal.element.workspaceId && (
+                <button
+                  type="button"
+                  className="btn bg-destructive hover:bg-destructive/90 text-white flex items-center gap-2"
+                  onClick={async () => {
+                    await saveLayoutWithAssignedWorkspace(modal.element.id, null);
+                    setModal(null);
+                  }}
+                >
+                  <FiX className="h-4 w-4" /> Hủy liên kết
+                </button>
+              )}
             </div>
           </div>
         </Modal>

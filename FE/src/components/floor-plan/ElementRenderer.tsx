@@ -13,6 +13,7 @@ interface Props {
   onMouseDown: (e: React.MouseEvent) => void;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
+  cursor?: string;
 }
 
 /** Render type-specific inner decoration inside the element bounds */
@@ -349,6 +350,7 @@ const ElementRenderer: React.FC<Props> = ({
   onMouseDown,
   onMouseEnter,
   onMouseLeave,
+  cursor,
 }) => {
   if (!el.visible) return null;
 
@@ -376,7 +378,7 @@ const ElementRenderer: React.FC<Props> = ({
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
       style={{
-        cursor: el.locked ? 'not-allowed' : 'move',
+        cursor: cursor || (el.locked ? 'not-allowed' : 'move'),
         opacity: el.opacity,
         transition: 'opacity 120ms',
       }}

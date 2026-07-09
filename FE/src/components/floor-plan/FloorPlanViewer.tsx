@@ -15,6 +15,8 @@ interface Props {
   onSelectWorkspace: (wsId: string | null) => void;
   /** Optional: returns availability status for a workspace */
   getAvailability?: (wsId: string) => 'available' | 'booked' | 'maintenance';
+  isAdmin?: boolean;
+  onElementClick?: (el: LayoutElement) => void;
 }
 
 const FloorPlanViewer: React.FC<Props> = ({
@@ -22,6 +24,8 @@ const FloorPlanViewer: React.FC<Props> = ({
   selectedWsId,
   onSelectWorkspace,
   getAvailability,
+  isAdmin = false,
+  onElementClick,
 }) => {
   const [zoom, setZoom] = useState(1);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -34,7 +38,11 @@ const FloorPlanViewer: React.FC<Props> = ({
 
   const handleElementClick = useCallback(
     (el: LayoutElement) => {
-      // Only workspace-linked elements are clickable
+      if (isAdmin && onElementClick) {
+        onElementClick(el);
+        return;
+      }
+      // Only workspace-linked elements are clickable for clients
       if (!el.workspaceId) return;
       if (getAvailability) {
         const avail = getAvailability(el.workspaceId);
@@ -44,11 +52,44 @@ const FloorPlanViewer: React.FC<Props> = ({
         selectedWsId === el.workspaceId ? null : el.workspaceId
       );
     },
-    [selectedWsId, onSelectWorkspace, getAvailability]
+    [selectedWsId, onSelectWorkspace, getAvailability, isAdmin, onElementClick]
   );
 
-  /** Override element colors based on availability status */
+  /** Override element colors based on availability status or admin assignment state */
   const getElementWithStatus = (el: LayoutElement): LayoutElement => {
+    // Check if it is a linkable type
+    const catalogItem = ELEMENT_CATALOG.find((c) => c.type === el.type);
+    const canLink = catalogItem?.canLinkWorkspace ?? false;
+
+    if (isAdmin) {
+      if (!canLink) return el;
+      
+      const isSelected = selectedWsId === el.workspaceId;
+      let fillColor = el.fillColor;
+      let strokeColor = el.strokeColor;
+
+      if (el.workspaceId) {
+        // Linked workspace
+        const avail = getAvailability ? getAvailability(el.workspaceId) : 'available';
+        if (isSelected) {
+          fillColor = 'rgba(59,130,246,0.22)';
+          strokeColor = '#3B82F6';
+        } else if (avail === 'maintenance') {
+          fillColor = 'rgba(245,158,11,0.12)';
+          strokeColor = '#F59E0B';
+        } else {
+          fillColor = 'rgba(34,197,94,0.12)';
+          strokeColor = '#22C55E';
+        }
+      } else {
+        // Unassigned elements: light gray with dashed/gray stroke
+        fillColor = 'rgba(148,163,184,0.08)';
+        strokeColor = '#94A3B8';
+      }
+
+      return { ...el, fillColor, strokeColor };
+    }
+
     if (!el.workspaceId || !getAvailability) return el;
 
     const avail = getAvailability(el.workspaceId);
@@ -220,12 +261,19 @@ const FloorPlanViewer: React.FC<Props> = ({
             .filter((el) => el.visible)
             .map((el) => {
               const styledEl = getElementWithStatus(el);
+              const catalogItem = ELEMENT_CATALOG.find((c) => c.type === el.type);
+              const canLink = catalogItem?.canLinkWorkspace ?? false;
+              const cursor = isAdmin 
+                ? (canLink ? 'pointer' : 'default') 
+                : (el.workspaceId ? 'pointer' : 'default');
+
               return (
                 <ElementRenderer
                   key={el.id}
                   element={styledEl}
                   isSelected={selectedWsId === el.workspaceId}
                   isHovered={hoveredId === el.id}
+                  cursor={cursor}
                   onMouseDown={(e) => {
                     e.stopPropagation();
                     handleElementClick(el);
