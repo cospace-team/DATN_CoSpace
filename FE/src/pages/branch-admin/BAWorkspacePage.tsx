@@ -119,6 +119,108 @@ const BAWorkspacePage: React.FC = () => {
       .filter((id): id is string => !!id);
   }, [currentLayout]);
 
+  const [syncing, setSyncing] = useState(false);
+
+  const orphanWorkspaceElements = useMemo(() => {
+    if (!currentLayout || workspaces.length === 0) return [];
+    return currentLayout.elements.filter(
+      (el) =>
+        ['desk', 'chair', 'standing_desk', 'meeting_room', 'private_office'].includes(el.type) &&
+        el.workspaceId &&
+        !workspaces.some((ws) => ws.id === el.workspaceId)
+    );
+  }, [currentLayout, workspaces]);
+
+  const handleSyncOrphans = async () => {
+    if (!currentFloor || !currentLayout) return;
+    setSyncing(true);
+    try {
+      const updatedElements = [...currentLayout.elements];
+      let autoCreatedCount = 0;
+      const tempWorkspaces = [...workspaces];
+      
+      const orphans = updatedElements
+        .map((el, idx) => ({ el, idx }))
+        .filter(({ el }) => 
+          ['desk', 'chair', 'standing_desk', 'meeting_room', 'private_office'].includes(el.type) &&
+          el.workspaceId &&
+          !workspaces.some(w => w.id === el.workspaceId)
+        );
+
+      for (const { el, idx } of orphans) {
+        let typeId = wsTypes[0]?.id;
+        let capacity = el.seatCount || 1;
+
+        if (wsTypes.length > 0) {
+          const lowercaseType = el.type.toLowerCase();
+          let matched = null;
+          if (lowercaseType.includes('desk')) {
+            matched = wsTypes.find(t => t.code.toLowerCase().includes('desk') || t.name.toLowerCase().includes('bàn') || t.name.toLowerCase().includes('desk'));
+          } else if (lowercaseType.includes('meeting')) {
+            matched = wsTypes.find(t => t.code.toLowerCase().includes('meeting') || t.name.toLowerCase().includes('họp') || t.name.toLowerCase().includes('meeting'));
+          } else if (lowercaseType.includes('office') || lowercaseType.includes('private')) {
+            matched = wsTypes.find(t => t.code.toLowerCase().includes('office') || t.name.toLowerCase().includes('phòng riêng') || t.name.toLowerCase().includes('office'));
+          }
+          if (matched) {
+            typeId = matched.id;
+            capacity = el.seatCount || matched.capacityDefault || 1;
+          }
+        }
+
+        let baseCode = '';
+        if (el.label) {
+          baseCode = el.label.toUpperCase().trim().replace(/[^A-Z0-9-]/g, '');
+        }
+        if (!baseCode) {
+          const typePrefix = el.type === 'desk' || el.type === 'standing_desk' ? 'DESK'
+            : el.type === 'meeting_room' ? 'MEET'
+            : el.type === 'private_office' ? 'OFFICE' : 'WS';
+          baseCode = `${typePrefix}-${Math.floor(100 + Math.random() * 900)}`;
+        }
+
+        let finalCode = baseCode;
+        let counter = 1;
+        while (tempWorkspaces.some(w => w.code.toUpperCase() === finalCode.toUpperCase())) {
+          finalCode = `${baseCode}-${counter}`;
+          counter++;
+        }
+
+        const newWs = await workspaceApi.create({
+          floorId: currentFloor.id,
+          workspaceTypeId: typeId,
+          code: finalCode,
+          name: el.label || (el.type === 'meeting_room' ? 'Phòng họp' : el.type === 'private_office' ? 'Phòng riêng' : 'Bàn làm việc'),
+          capacity: capacity,
+          svgElementId: el.id,
+        });
+
+        updatedElements[idx] = {
+          ...el,
+          workspaceId: newWs.id,
+          label: el.label || finalCode,
+        };
+
+        tempWorkspaces.push(newWs);
+        autoCreatedCount++;
+      }
+
+      const finalLayout = { ...currentLayout, elements: updatedElements };
+      const updated = await floorApi.update(currentFloor.id, {
+        layoutJson: JSON.stringify(finalLayout),
+      });
+
+      setFloors((prev) =>
+        prev.map((f) => (f.id === updated.id ? updated : f))
+      );
+      await fetchWorkspaces(currentFloor.id);
+      showSuccess(`Đồng bộ thành công! Đã tạo và liên kết ${autoCreatedCount} workspace.`);
+    } catch (e: any) {
+      showError(e.message || 'Lỗi khi đồng bộ workspace');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   /* ── Floor modal ── */
   const openFloorModal = (mode: 'add' | 'edit', floor?: FloorResponse) => {
     setErrorMsg('');
@@ -397,6 +499,35 @@ const BAWorkspacePage: React.FC = () => {
         )}
       </div>
 
+      {/* Sync Orphans Banner */}
+      {currentFloor && orphanWorkspaceElements.length > 0 && (
+        <div className="p-4 bg-warning/15 border border-warning/30 rounded-xl text-warning flex items-center justify-between flex-wrap gap-4 shadow-sm mb-6 animate-fade-in">
+          <div className="flex items-center gap-3">
+            <FiAlertCircle className="h-5 w-5 shrink-0 animate-bounce" />
+            <div>
+              <p className="font-semibold text-sm">Sơ đồ có các phần tử chưa đồng bộ với Database</p>
+              <p className="text-xs opacity-95">
+                Phát hiện {orphanWorkspaceElements.length} phần tử (bàn, phòng...) trên sơ đồ mang ID chưa tồn tại trong Database (do mới thêm hoặc import mẫu).
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleSyncOrphans}
+            className="btn bg-warning hover:bg-warning/90 text-warning-foreground btn-sm font-semibold flex items-center gap-2 shadow-sm"
+            disabled={syncing}
+          >
+            {syncing ? (
+              <>
+                <span className="animate-spin rounded-full h-3 w-3 border-2 border-warning-foreground border-t-transparent"></span>
+                Đang đồng bộ...
+              </>
+            ) : (
+              '⚡ Đồng bộ & Tạo ngay'
+            )}
+          </button>
+        </div>
+      )}
+
       {/* Floor Plan Viewer */}
       {currentFloor && (
         <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
@@ -447,7 +578,7 @@ const BAWorkspacePage: React.FC = () => {
                 onElementClick={handleFloorPlanElementClick}
                 getAvailability={(wsId) => {
                   const ws = workspaces.find((w) => w.id === wsId);
-                  if (!ws) return 'available';
+                  if (!ws) return 'unassigned';
                   if (ws.status === 'maintenance') return 'maintenance';
                   if (ws.status === 'inactive') return 'booked';
                   return 'available';
@@ -834,7 +965,10 @@ const BAWorkspacePage: React.FC = () => {
                   const LINKABLE_TYPES = ['desk', 'chair', 'standing_desk', 'meeting_room', 'private_office'];
                   const unlinkedIndices = updatedElements
                     .map((el, idx) => ({ el, idx }))
-                    .filter(({ el }) => LINKABLE_TYPES.includes(el.type) && !el.workspaceId);
+                    .filter(({ el }) => 
+                      LINKABLE_TYPES.includes(el.type) && 
+                      (!el.workspaceId || !workspaces.some(w => w.id === el.workspaceId))
+                    );
 
                   if (unlinkedIndices.length > 0) {
                     const tempWorkspaces = [...workspaces];

@@ -14,7 +14,7 @@ interface Props {
   selectedWsId: string | null;
   onSelectWorkspace: (wsId: string | null) => void;
   /** Optional: returns availability status for a workspace */
-  getAvailability?: (wsId: string) => 'available' | 'booked' | 'maintenance';
+  getAvailability?: (wsId: string) => 'available' | 'booked' | 'maintenance' | 'unassigned';
   isAdmin?: boolean;
   onElementClick?: (el: LayoutElement) => void;
 }
@@ -46,7 +46,7 @@ const FloorPlanViewer: React.FC<Props> = ({
       if (!el.workspaceId) return;
       if (getAvailability) {
         const avail = getAvailability(el.workspaceId);
-        if (avail === 'maintenance') return;
+        if (avail === 'maintenance' || avail === 'unassigned') return;
       }
       onSelectWorkspace(
         selectedWsId === el.workspaceId ? null : el.workspaceId
@@ -71,7 +71,10 @@ const FloorPlanViewer: React.FC<Props> = ({
       if (el.workspaceId) {
         // Linked workspace
         const avail = getAvailability ? getAvailability(el.workspaceId) : 'available';
-        if (isSelected) {
+        if (avail === 'unassigned') {
+          fillColor = 'rgba(148,163,184,0.08)';
+          strokeColor = '#94A3B8';
+        } else if (isSelected) {
           fillColor = 'rgba(59,130,246,0.22)';
           strokeColor = '#3B82F6';
         } else if (avail === 'maintenance') {
@@ -93,6 +96,14 @@ const FloorPlanViewer: React.FC<Props> = ({
     if (!el.workspaceId || !getAvailability) return el;
 
     const avail = getAvailability(el.workspaceId);
+    if (avail === 'unassigned') {
+      // Treat as unassigned (grayed out)
+      return {
+        ...el,
+        fillColor: 'rgba(148,163,184,0.08)',
+        strokeColor: '#94A3B8',
+      };
+    }
     const isSelected = selectedWsId === el.workspaceId;
 
     let fillColor = el.fillColor;
