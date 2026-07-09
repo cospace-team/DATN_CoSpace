@@ -72,7 +72,7 @@ public class SpaceDto {
         @Min(value = 1, message = "Sức chứa phải >= 1")
         private int capacity;
 
-        @NotBlank(message = "SVG Element ID không được để trống")
+    
         private String svgElementId;
     }
 

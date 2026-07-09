@@ -204,10 +204,11 @@ const BAWorkspacePage: React.FC = () => {
 
   const saveWorkspace = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!wsForm.code.trim() || !wsForm.name.trim() || !wsForm.svg_element_id.trim()) {
+    if (!wsForm.code.trim() || !wsForm.name.trim()) {
       setErrorMsg('Vui lòng điền các trường bắt buộc (*).'); return;
     }
     try {
+      const finalSvgElementId = wsForm.svg_element_id || wsForm.code;
       if (modal?.type === 'add-ws') {
         const newWs = await workspaceApi.create({
           floorId: modal.floorId,
@@ -215,7 +216,7 @@ const BAWorkspacePage: React.FC = () => {
           code: wsForm.code,
           name: wsForm.name,
           capacity: parseInt(wsForm.capacity) || 1,
-          svgElementId: wsForm.svg_element_id,
+          svgElementId: finalSvgElementId,
         });
         setWorkspaces((prev) => [...prev, newWs]);
         showSuccess('Thêm không gian thành công!');
@@ -224,7 +225,7 @@ const BAWorkspacePage: React.FC = () => {
           code: wsForm.code, name: wsForm.name,
           workspaceTypeId: wsForm.workspace_type_id,
           capacity: parseInt(wsForm.capacity) || 1,
-          svgElementId: wsForm.svg_element_id,
+          svgElementId: finalSvgElementId,
           status: wsForm.status,
         });
         setWorkspaces((prev) => prev.map((w) => (w.id === updated.id ? updated : w)));
@@ -513,7 +514,7 @@ const BAWorkspacePage: React.FC = () => {
                               }`}
                               title="Click để định vị trên sơ đồ"
                             >
-                              📍 {linkedEl.label || 'Đã gán'} ({linkedEl.id.substring(0, 6)})
+                            {linkedEl.label || 'Đã gán'} 
                             </button>
                           ) : (
                             <button
@@ -659,20 +660,6 @@ const BAWorkspacePage: React.FC = () => {
                   <option value="maintenance">Bảo trì</option>
                   <option value="inactive">Tạm ngưng</option>
                 </select>
-              </div>
-            </div>
-            <div className="p-4 bg-muted/40 border border-border rounded-xl">
-              <label className="block text-sm font-medium text-foreground mb-1.5">
-                SVG Element ID <span className="text-destructive">*</span>
-                {modal?.type === 'add-ws' && modal.svgElementId && (
-                  <span className="ml-2 text-xs text-primary font-normal">(tự động từ SVG click)</span>
-                )}
-              </label>
-              <p className="text-xs text-muted-foreground mb-2">ID của element trên file SVG — click element trên bản đồ để tự động điền.</p>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-mono text-sm">#</span>
-                <input className="input-field pl-7 font-mono text-sm" placeholder="desk_01" required
-                  value={wsForm.svg_element_id} onChange={(e) => setWsForm((p) => ({ ...p, svg_element_id: e.target.value }))} />
               </div>
             </div>
             <div className="flex gap-3 justify-end pt-4 border-t border-border mt-6">
