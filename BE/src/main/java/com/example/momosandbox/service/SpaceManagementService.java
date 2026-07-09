@@ -11,9 +11,12 @@ import com.example.momosandbox.repository.WorkspaceTypeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.OffsetDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -24,6 +27,7 @@ public class SpaceManagementService {
     private final WorkspaceEntityRepository workspaceRepository;
     private final WorkspaceTypeRepository workspaceTypeRepository;
     private final BookingRepository bookingRepository;
+    private final ObjectMapper objectMapper;
 
     /* ═══════════════════════ Workspace Types ═══════════════════════ */
 
@@ -52,6 +56,7 @@ public class SpaceManagementService {
                 .floorNo(req.getFloorNo())
                 .name(req.getName())
                 .svgContent(req.getSvgContent())
+                .layoutJson(req.getLayoutJson())
                 .svgUrl("")
                 .mapVersion(1)
                 .isPublished(true)
@@ -88,6 +93,48 @@ public class SpaceManagementService {
             floor.setSvgContent(req.getSvgContent());
             floor.setMapVersion(floor.getMapVersion() + 1);
         }
+        if (req.getLayoutJson() != null) {
+            floor.setLayoutJson(req.getLayoutJson());
+            floor.setMapVersion(floor.getMapVersion() + 1);
+
+            try {
+                JsonNode root = objectMapper.readTree(req.getLayoutJson());
+                JsonNode elementsNode = root.get("elements");
+                if (elementsNode != null && elementsNode.isArray()) {
+                    List<WorkspaceEntity> workspacesInFloor = workspaceRepository.findByFloorId(floorId);
+                    
+                    // 1. Build a map of workspaceId (UUID string) -> elementId (from JSON)
+                    Map<String, String> workspaceToElementMap = new HashMap<>();
+                    for (JsonNode elNode : elementsNode) {
+                        JsonNode wsIdNode = elNode.get("workspaceId");
+                        JsonNode idNode = elNode.get("id");
+                        if (wsIdNode != null && !wsIdNode.isNull() && idNode != null && !idNode.isNull()) {
+                            workspaceToElementMap.put(wsIdNode.asText(), idNode.asText());
+                        }
+                    }
+
+                    // 2. Temporarily set unique random values to avoid unique constraint conflicts on save
+                    for (WorkspaceEntity ws : workspacesInFloor) {
+                        ws.setSvgElementId("temp-" + UUID.randomUUID().toString());
+                    }
+                    workspaceRepository.saveAllAndFlush(workspacesInFloor);
+
+                    // 3. Set the actual final svgElementId (either matching elementId or fallback to code)
+                    for (WorkspaceEntity ws : workspacesInFloor) {
+                        String wsIdStr = ws.getId().toString();
+                        if (workspaceToElementMap.containsKey(wsIdStr)) {
+                            ws.setSvgElementId(workspaceToElementMap.get(wsIdStr));
+                        } else {
+                            // Fallback to code if not linked in layout
+                            ws.setSvgElementId(ws.getCode());
+                        }
+                    }
+                    workspaceRepository.saveAll(workspacesInFloor);
+                }
+            } catch (Exception e) {
+                throw new IllegalArgumentException("Lỗi đồng bộ Workspace với Layout JSON: " + e.getMessage());
+            }
+        }
 
         floor = floorRepository.save(floor);
         return toResponse(floor);
@@ -112,7 +159,7 @@ public class SpaceManagementService {
             }
         }
 
-        workspaceRepository.deleteAllByFloorId(floorId);
+        workspaceRepository.deleteAll(workspacesInFloor);
         floorRepository.delete(floor);
     }
 
@@ -253,6 +300,7 @@ public class SpaceManagementService {
                 .floorNo(floor.getFloorNo())
                 .name(floor.getName())
                 .svgContent(floor.getSvgContent())
+                .layoutJson(floor.getLayoutJson())
                 .mapVersion(floor.getMapVersion())
                 .isPublished(floor.isPublished())
                 .workspaceCount(wsCount)

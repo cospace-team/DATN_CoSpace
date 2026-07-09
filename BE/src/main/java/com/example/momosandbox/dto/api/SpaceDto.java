@@ -33,6 +33,9 @@ public class SpaceDto {
 
         /** SVG content as string (full XML) */
         private String svgContent;
+
+        /** Structured layout JSON */
+        private String layoutJson;
     }
 
     @Data
@@ -45,6 +48,8 @@ public class SpaceDto {
         private Boolean isPublished;
         /** If provided, replaces SVG content and bumps mapVersion */
         private String svgContent;
+        /** If provided, replaces layout JSON and bumps mapVersion */
+        private String layoutJson;
     }
 
     @Data
@@ -100,6 +105,7 @@ public class SpaceDto {
         private int floorNo;
         private String name;
         private String svgContent;
+        private String layoutJson;
         private int mapVersion;
         private boolean isPublished;
         private int workspaceCount;

@@ -489,6 +489,27 @@
   box-shadow: 0 0 0 3px hsl(var(--ring) / 0.12);
   background: hsl(var(--background));
 }
+.input-field-custom {
+  width: 100%;
+  min-height: 32px;
+  padding: 6px 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--input));
+  border-radius: 6px;
+  color: hsl(var(--foreground));
+  transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+}
+.input-field-custom:hover:not(:focus) {
+  border-color: hsl(var(--muted-foreground) / 0.4);
+}
+.input-field-custom:focus {
+  outline: none;
+  border-color: hsl(var(--ring));
+  box-shadow: 0 0 0 2px hsl(var(--ring) / 0.1);
+  background: hsl(var(--background));
+}
 .input-field.input-error, .input-field[aria-invalid="true"] {
   border-color: hsl(var(--destructive));
 }

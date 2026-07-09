@@ -12,6 +12,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.UUID;
@@ -45,6 +48,11 @@ public class Floor {
     /** Full SVG content stored in DB for inline rendering */
     @Column(name = "svg_content", columnDefinition = "TEXT")
     private String svgContent;
+
+    /** Structured layout JSON from the drag-and-drop Floor Plan Editor */
+    @Column(name = "layout_json", columnDefinition = "JSONB")
+    @JdbcTypeCode(SqlTypes.JSON)
+    private String layoutJson;
 
     @Column(name = "map_version", nullable = false)
     @Builder.Default

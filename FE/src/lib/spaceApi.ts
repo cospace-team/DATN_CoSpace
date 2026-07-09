@@ -17,6 +17,7 @@ export interface FloorResponse {
   floorNo: number;
   name: string;
   svgContent: string | null;
+  layoutJson: string | null;
   mapVersion: number;
   isPublished: boolean;
   workspaceCount: number;
@@ -51,6 +52,7 @@ export interface UpdateFloorRequest {
   floorNo?: number;
   isPublished?: boolean;
   svgContent?: string;
+  layoutJson?: string;
 }
 
 export interface CreateWorkspaceRequest {
@@ -165,6 +167,26 @@ export const workspaceApi = {
     apiFetch<{ message: string }>(
       `${API}/api/branch-admin/workspaces/${id}`,
       { method: "DELETE" }
+    ),
+};
+
+/* ─── Floor Layout APIs ─── */
+
+export const floorLayoutApi = {
+  /** Get layout JSON for a floor */
+  get: (floorId: string) =>
+    apiFetch<{ layoutJson: string | null }>(
+      `${API}/api/branch-admin/floors/${floorId}/layout`
+    ),
+
+  /** Save layout JSON for a floor */
+  save: (floorId: string, layoutJson: string) =>
+    apiFetch<FloorResponse>(
+      `${API}/api/branch-admin/floors/${floorId}/layout`,
+      {
+        method: "PUT",
+        body: JSON.stringify({ layoutJson }),
+      }
     ),
 };
 

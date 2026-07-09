@@ -1,13 +1,16 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   FiLayers, FiGrid, FiPlus, FiEdit2, FiX, FiCheck, FiAlertCircle,
-  FiTrash2, FiUploadCloud, FiCheckCircle,
+  FiTrash2, FiUploadCloud, FiCheckCircle, FiLayout, FiMap,
 } from 'react-icons/fi';
-import SVGFloorPlanEditor from '../../components/branch-admin/SVGFloorPlanEditor';
+import FloorPlanEditor from '../../components/floor-plan/FloorPlanEditor';
+import FloorPlanViewer from '../../components/floor-plan/FloorPlanViewer';
 import {
   floorApi, workspaceApi, workspaceTypeApi,
   type FloorResponse, type WorkspaceResponse, type WorkspaceTypeResponse,
 } from '../../lib/spaceApi';
+import type { FloorLayout } from '../../types/floorPlan';
+import { createDefaultLayout } from '../../data/elementCatalog';
 
 /* ── Modal shell ── */
 const Modal: React.FC<{ title: string; onClose: () => void; children: React.ReactNode }> = ({
@@ -41,11 +44,12 @@ const BAWorkspacePage: React.FC = () => {
   const [workspaces, setWorkspaces] = useState<WorkspaceResponse[]>([]);
   const [wsTypes, setWsTypes] = useState<WorkspaceTypeResponse[]>([]);
   const [selectedFloorId, setSelectedFloorId] = useState<string>('');
-  const [selectedSvgElement, setSelectedSvgElement] = useState<string | null>(null);
+  const [selectedWsId, setSelectedWsId] = useState<string | null>(null);
   const [modal, setModal] = useState<ModalMode>(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [showEditorPopup, setShowEditorPopup] = useState(false);
 
   // Form state
   const [floorForm, setFloorForm] = useState({ floor_no: '', name: '', svgContent: '' });
@@ -98,18 +102,12 @@ const BAWorkspacePage: React.FC = () => {
     reader.readAsText(file);
   };
 
-  /* ── SVG element click → open assign modal ── */
-  const handleSelectSvgElement = (elementId: string | null) => {
-    setSelectedSvgElement(elementId);
-    if (!elementId || !selectedFloorId) return;
-
-    const existingWs = workspaces.find((w) => w.svgElementId === elementId);
-    if (existingWs) {
-      openWsModal('edit', existingWs);
-    } else {
-      openWsModal('add', undefined, elementId);
-    }
-  };
+  /* ── Parse layout for viewer (memoized) ── */
+  const currentLayout = useMemo<FloorLayout | null>(() => {
+    if (!currentFloor?.layoutJson) return null;
+    try { return JSON.parse(currentFloor.layoutJson) as FloorLayout; }
+    catch { return null; }
+  }, [currentFloor?.layoutJson]);
 
   /* ── Floor modal ── */
   const openFloorModal = (mode: 'add' | 'edit', floor?: FloorResponse) => {
@@ -234,6 +232,29 @@ const BAWorkspacePage: React.FC = () => {
     try {
       await workspaceApi.delete(wsId);
       setWorkspaces((prev) => prev.filter((w) => w.id !== wsId));
+
+      // Clean up orphan workspaceId references in the current floor layout
+      if (currentFloor?.layoutJson) {
+        try {
+          const layout = JSON.parse(currentFloor.layoutJson) as import('../../types/floorPlan').FloorLayout;
+          const hasOrphan = layout.elements.some((el) => el.workspaceId === wsId);
+          if (hasOrphan) {
+            const cleaned = {
+              ...layout,
+              elements: layout.elements.map((el) =>
+                el.workspaceId === wsId ? { ...el, workspaceId: null } : el
+              ),
+            };
+            const updated = await floorApi.update(currentFloor.id, {
+              layoutJson: JSON.stringify(cleaned),
+            });
+            setFloors((prev) => prev.map((f) => (f.id === updated.id ? updated : f)));
+          }
+        } catch {
+          // Non-critical: layout cleanup failed, ignore
+        }
+      }
+
       showSuccess(`Đã xóa không gian ${wsCode}`);
       setModal(null);
     } catch (e: any) {
@@ -259,12 +280,12 @@ const BAWorkspacePage: React.FC = () => {
     <div className="space-y-6 animate-fade-in relative">
       {/* Toast Notifications */}
       {successMsg && (
-        <div className="fixed top-4 right-4 z-50 animate-slide-up flex items-center gap-2 bg-success text-success-foreground px-4 py-3 rounded-xl shadow-xl">
+        <div className="fixed top-4 right-4 z-[70] animate-slide-up flex items-center gap-2 bg-success text-success-foreground px-4 py-3 rounded-xl shadow-xl">
           <FiCheckCircle className="h-5 w-5" /><p className="font-medium text-sm">{successMsg}</p>
         </div>
       )}
       {errorMsg && !modal && (
-        <div className="fixed top-4 right-4 z-50 animate-slide-up flex items-center gap-2 bg-destructive text-destructive-foreground px-4 py-3 rounded-xl shadow-xl">
+        <div className="fixed top-4 right-4 z-[70] animate-slide-up flex items-center gap-2 bg-destructive text-destructive-foreground px-4 py-3 rounded-xl shadow-xl">
           <FiAlertCircle className="h-5 w-5" /><p className="font-medium text-sm">{errorMsg}</p>
         </div>
       )}
@@ -275,7 +296,7 @@ const BAWorkspacePage: React.FC = () => {
           <div>
             <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Quản lý chi nhánh</p>
             <h1 className="text-xl font-bold font-heading mt-1">Sơ đồ & Không gian</h1>
-            <p className="text-sm text-muted-foreground mt-1">Upload bản đồ SVG, click để gán workspace tương tác.</p>
+            <p className="text-sm text-muted-foreground mt-1">Thiết kế layout tầng bằng kéo thả hoặc upload SVG, gán workspace tương tác.</p>
           </div>
           <button className="btn btn-primary btn-sm flex items-center gap-2" onClick={() => openFloorModal('add')}>
             <FiPlus className="h-4 w-4" /> Thêm Tầng Mới
@@ -324,23 +345,54 @@ const BAWorkspacePage: React.FC = () => {
         )}
       </div>
 
-      {/* SVG Floor Plan Editor */}
+      {/* Floor Plan Viewer (read-only) */}
       {currentFloor && (
-        <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm" style={{ height: '500px' }}>
+        <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
           <div className="px-6 py-3 border-b border-border bg-muted/20 flex items-center justify-between">
-            <div>
-              <h2 className="font-semibold text-sm">Bản đồ tương tác — {currentFloor.name}</h2>
-              <p className="text-xs text-muted-foreground">Click vào element trên SVG để gán hoặc chỉnh sửa workspace</p>
+            <div className="flex items-center gap-2">
+              <FiMap className="h-4 w-4 text-primary" />
+              <div>
+                <h2 className="font-semibold text-sm">Sơ đồ mặt bằng — {currentFloor.name}</h2>
+                <p className="text-xs text-muted-foreground">Click vào element để xem workspace liên kết</p>
+              </div>
             </div>
-            <span className="text-xs text-muted-foreground font-mono">v{currentFloor.mapVersion}</span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground font-mono">v{currentFloor.mapVersion}</span>
+              <button
+                onClick={() => setShowEditorPopup(true)}
+                className="btn btn-primary btn-sm flex items-center gap-2"
+              >
+                <FiEdit2 className="h-3.5 w-3.5" /> Chỉnh sửa Layout
+              </button>
+            </div>
           </div>
-          <div style={{ height: 'calc(100% - 52px)' }}>
-            <SVGFloorPlanEditor
-              svgContent={currentFloor.svgContent}
-              workspaces={workspaces}
-              selectedElementId={selectedSvgElement}
-              onSelectElement={handleSelectSvgElement}
-            />
+          <div style={{ height: '400px' }}>
+            {currentLayout ? (
+              <FloorPlanViewer
+                key={`viewer-${currentFloor.id}`}
+                layout={currentLayout}
+                selectedWsId={selectedWsId}
+                onSelectWorkspace={setSelectedWsId}
+                getAvailability={(wsId) => {
+                  const ws = workspaces.find((w) => w.id === wsId);
+                  if (!ws) return 'available';
+                  if (ws.status === 'maintenance') return 'maintenance';
+                  if (ws.status === 'inactive') return 'booked';
+                  return 'available';
+                }}
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground">
+                <FiLayout className="h-12 w-12 opacity-30" />
+                <p className="font-medium">Chưa có layout cho tầng này</p>
+                <button
+                  onClick={() => setShowEditorPopup(true)}
+                  className="btn btn-primary btn-sm flex items-center gap-2 mt-1"
+                >
+                  <FiEdit2 className="h-3.5 w-3.5" /> Tạo Layout
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -562,6 +614,56 @@ const BAWorkspacePage: React.FC = () => {
             </div>
           </div>
         </Modal>
+      )}
+
+      {/* ── Fullscreen Editor Popup ── */}
+      {showEditorPopup && currentFloor && (
+        <div className="fixed inset-0 z-[60] flex flex-col bg-background animate-fade-in">
+          {/* Popup Header */}
+          <div className="flex items-center justify-between px-6 py-3 border-b border-border bg-card shadow-sm shrink-0">
+            <div className="flex items-center gap-3">
+              <FiLayout className="h-5 w-5 text-primary" />
+              <div>
+                <h2 className="text-sm font-bold font-heading">Chỉnh sửa Layout — {currentFloor.name}</h2>
+                <p className="text-xs text-muted-foreground">Kéo thả elements từ panel trái để thiết kế, gán workspace từ panel phải</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowEditorPopup(false)}
+              className="btn btn-ghost btn-sm flex items-center gap-2 text-muted-foreground hover:text-foreground"
+            >
+              <FiX className="h-4 w-4" /> Đóng
+            </button>
+          </div>
+          {/* Editor */}
+          <div className="flex-1 overflow-hidden">
+            <FloorPlanEditor
+              key={`floor-editor-${currentFloor.id}`}
+              initialLayout={
+                currentFloor.layoutJson
+                  ? (JSON.parse(currentFloor.layoutJson) as FloorLayout)
+                  : createDefaultLayout()
+              }
+              floorName={currentFloor.name}
+              workspaces={workspaces}
+              onSave={async (layout) => {
+                try {
+                  const updated = await floorApi.update(currentFloor.id, {
+                    layoutJson: JSON.stringify(layout),
+                  });
+                  setFloors((prev) =>
+                    prev.map((f) => (f.id === updated.id ? updated : f))
+                  );
+                  showSuccess('Layout đã được lưu thành công!');
+                  setShowEditorPopup(false);
+                } catch (err: any) {
+                  showError(err.message || 'Lỗi khi lưu layout');
+                  throw err;
+                }
+              }}
+            />
+          </div>
+        </div>
       )}
     </div>
   );
