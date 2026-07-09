@@ -829,13 +829,92 @@ const BAWorkspacePage: React.FC = () => {
               workspaces={workspaces}
               onSave={async (layout) => {
                 try {
+                  const updatedElements = [...layout.elements];
+                  let autoCreatedCount = 0;
+                  const LINKABLE_TYPES = ['desk', 'chair', 'standing_desk', 'meeting_room', 'private_office'];
+                  const unlinkedIndices = updatedElements
+                    .map((el, idx) => ({ el, idx }))
+                    .filter(({ el }) => LINKABLE_TYPES.includes(el.type) && !el.workspaceId);
+
+                  if (unlinkedIndices.length > 0) {
+                    const tempWorkspaces = [...workspaces];
+                    for (const { el, idx } of unlinkedIndices) {
+                      // 1. Determine workspace type id
+                      let typeId = wsTypes[0]?.id; // Default fallback
+                      let capacity = el.seatCount || 1;
+
+                      if (wsTypes.length > 0) {
+                        const lowercaseType = el.type.toLowerCase();
+                        let matched = null;
+                        if (lowercaseType.includes('desk')) {
+                          matched = wsTypes.find(t => t.code.toLowerCase().includes('desk') || t.name.toLowerCase().includes('bàn') || t.name.toLowerCase().includes('desk'));
+                        } else if (lowercaseType.includes('meeting')) {
+                          matched = wsTypes.find(t => t.code.toLowerCase().includes('meeting') || t.name.toLowerCase().includes('họp') || t.name.toLowerCase().includes('meeting'));
+                        } else if (lowercaseType.includes('office') || lowercaseType.includes('private')) {
+                          matched = wsTypes.find(t => t.code.toLowerCase().includes('office') || t.name.toLowerCase().includes('phòng riêng') || t.name.toLowerCase().includes('office'));
+                        }
+                        if (matched) {
+                          typeId = matched.id;
+                          capacity = el.seatCount || matched.capacityDefault || 1;
+                        }
+                      }
+
+                      // 2. Generate clean unique code
+                      let baseCode = '';
+                      if (el.label) {
+                        baseCode = el.label.toUpperCase().trim().replace(/[^A-Z0-9-]/g, '');
+                      }
+                      if (!baseCode) {
+                        const typePrefix = el.type === 'desk' || el.type === 'standing_desk' ? 'DESK'
+                          : el.type === 'meeting_room' ? 'MEET'
+                          : el.type === 'private_office' ? 'OFFICE' : 'WS';
+                        baseCode = `${typePrefix}-${Math.floor(100 + Math.random() * 900)}`;
+                      }
+
+                      let finalCode = baseCode;
+                      let counter = 1;
+                      while (tempWorkspaces.some(w => w.code.toUpperCase() === finalCode.toUpperCase())) {
+                        finalCode = `${baseCode}-${counter}`;
+                        counter++;
+                      }
+
+                      // 3. Call API to create workspace
+                      const newWs = await workspaceApi.create({
+                        floorId: currentFloor.id,
+                        workspaceTypeId: typeId,
+                        code: finalCode,
+                        name: el.label || (el.type === 'meeting_room' ? 'Phòng họp' : el.type === 'private_office' ? 'Phòng riêng' : 'Bàn làm việc'),
+                        capacity: capacity,
+                        svgElementId: el.id,
+                      });
+
+                      // 4. Update the layout element
+                      updatedElements[idx] = {
+                        ...el,
+                        workspaceId: newWs.id,
+                        label: el.label || finalCode,
+                      };
+
+                      tempWorkspaces.push(newWs);
+                      autoCreatedCount++;
+                    }
+                  }
+
+                  const finalLayout = { ...layout, elements: updatedElements };
                   const updated = await floorApi.update(currentFloor.id, {
-                    layoutJson: JSON.stringify(layout),
+                    layoutJson: JSON.stringify(finalLayout),
                   });
+
                   setFloors((prev) =>
                     prev.map((f) => (f.id === updated.id ? updated : f))
                   );
-                  showSuccess('Layout đã được lưu thành công!');
+                  await fetchWorkspaces(currentFloor.id);
+
+                  if (autoCreatedCount > 0) {
+                    showSuccess(`Đã lưu sơ đồ và tự động tạo ${autoCreatedCount} workspace tương ứng!`);
+                  } else {
+                    showSuccess('Layout đã được lưu thành công!');
+                  }
                   setShowEditorPopup(false);
                 } catch (err: any) {
                   showError(err.message || 'Lỗi khi lưu layout');
