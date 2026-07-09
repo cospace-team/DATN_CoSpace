@@ -122,7 +122,7 @@ const BAWorkspacePage: React.FC = () => {
   const [syncing, setSyncing] = useState(false);
 
   const orphanWorkspaceElements = useMemo(() => {
-    if (!currentLayout || workspaces.length === 0) return [];
+    if (!currentLayout) return [];
     return currentLayout.elements.filter(
       (el) =>
         ['desk', 'chair', 'standing_desk', 'meeting_room', 'private_office'].includes(el.type) &&
