@@ -445,13 +445,9 @@ const BAWorkspacePage: React.FC = () => {
       )}
 
       {/* Header */}
-      <div className="rounded-xl border border-border bg-card p-6">
+      <div className="bg-card rounded-3xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow">
         <div className="flex items-center justify-between flex-wrap gap-4">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Quản lý chi nhánh</p>
-            <h1 className="text-xl font-bold font-heading mt-1">Sơ đồ & Không gian</h1>
-            <p className="text-sm text-muted-foreground mt-1">Thiết kế layout tầng bằng kéo thả hoặc upload SVG, gán workspace tương tác.</p>
-          </div>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Sơ đồ & Không gian</h1>
           <button className="btn btn-primary btn-sm flex items-center gap-2" onClick={() => openFloorModal('add')}>
             <FiPlus className="h-4 w-4" /> Thêm Tầng Mới
           </button>
@@ -459,7 +455,7 @@ const BAWorkspacePage: React.FC = () => {
       </div>
 
       {/* Floors tab bar */}
-      <div className="rounded-xl border border-border bg-card p-6">
+      <div className="bg-card rounded-3xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow">
         <h2 className="font-semibold flex items-center gap-2 mb-4">
           <FiLayers className="h-4 w-4 text-primary" /> Tầng hiện tại
         </h2>
@@ -530,7 +526,7 @@ const BAWorkspacePage: React.FC = () => {
 
       {/* Floor Plan Viewer */}
       {currentFloor && (
-        <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
+        <div className="bg-card rounded-3xl border border-border overflow-hidden shadow-sm hover:shadow-md transition-shadow">
           <div className="px-6 py-3 border-b border-border bg-muted/20 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <FiMap className="h-4 w-4 text-primary" />
@@ -602,7 +598,7 @@ const BAWorkspacePage: React.FC = () => {
 
       {/* Workspaces table */}
       {currentFloor && (
-        <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
+        <div className="bg-card rounded-3xl border border-border overflow-hidden shadow-sm hover:shadow-md transition-shadow">
           <div className="p-6 border-b border-border flex items-center justify-between flex-wrap gap-3 bg-muted/20">
             <h2 className="font-semibold flex items-center gap-2 text-lg">
               <FiGrid className="h-5 w-5 text-primary" /> Workspace tại {currentFloor.name}
@@ -641,7 +637,7 @@ const BAWorkspacePage: React.FC = () => {
                               className={`px-2 py-1 rounded-lg text-xs font-semibold transition-all ${
                                 selectedWsId === ws.id
                                   ? 'bg-primary text-primary-foreground shadow-sm'
-                                  : 'bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20'
+                                  : 'bg-emerald-50 dark:bg-emerald-950/300/10 text-emerald-600 hover:bg-emerald-50 dark:bg-emerald-950/300/20'
                               }`}
                               title="Click để định vị trên sơ đồ"
                             >
@@ -932,19 +928,19 @@ const BAWorkspacePage: React.FC = () => {
       {showEditorPopup && currentFloor && (
         <div className="fixed inset-0 z-[60] flex flex-col bg-background animate-fade-in">
           {/* Popup Header */}
-          <div className="flex items-center justify-between px-6 py-3 border-b border-border bg-card shadow-sm shrink-0">
+          <div className="flex items-center justify-between px-6 py-3 border-b border-slate-800 bg-slate-950 shadow-sm shrink-0 text-slate-200">
             <div className="flex items-center gap-3">
-              <FiLayout className="h-5 w-5 text-primary" />
+              <FiLayout className="h-5 w-5 text-violet-400" />
               <div>
-                <h2 className="text-sm font-bold font-heading">Chỉnh sửa Layout — {currentFloor.name}</h2>
-                <p className="text-xs text-muted-foreground">Kéo thả elements từ panel trái để thiết kế, gán workspace từ panel phải</p>
+                <h2 className="text-sm font-bold font-heading text-slate-100">Chỉnh sửa Layout — {currentFloor.name}</h2>
+                <p className="text-xs text-slate-400">Kéo thả elements từ panel trái để thiết kế, gán workspace từ panel phải</p>
               </div>
             </div>
             <button
               onClick={() => setShowEditorPopup(false)}
-              className="btn btn-ghost btn-sm flex items-center gap-2 text-muted-foreground hover:text-foreground"
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 hover:text-white flex items-center gap-2 transition-all shadow-sm active:scale-95"
             >
-              <FiX className="h-4 w-4" /> Đóng
+              <FiX className="h-4 w-4" /> Đóng Editor
             </button>
           </div>
           {/* Editor */}

@@ -26,26 +26,24 @@ const AdminDashboardPage: React.FC = () => {
   const maxChart = Math.max(...chartData.map(d => d.value));
 
   const statCards = [
-    { icon: FiDollarSign, label: 'Tổng doanh thu', value: formatVND(totalRevenue), delta: '+12.5%', positive: true, gradient: 'from-emerald-500 to-teal-500', bgGlow: 'bg-emerald-500/10' },
-    { icon: FiCalendar, label: 'Tổng booking', value: String(totalBookings), delta: '+8.2%', positive: true, gradient: 'from-blue-500 to-indigo-500', bgGlow: 'bg-blue-500/10' },
+    { icon: FiDollarSign, label: 'Tổng doanh thu', value: formatVND(totalRevenue), delta: '+12.5%', positive: true, gradient: 'from-emerald-500 to-teal-500', bgGlow: 'bg-emerald-50 dark:bg-emerald-950/300/10' },
+    { icon: FiCalendar, label: 'Tổng booking', value: String(totalBookings), delta: '+8.2%', positive: true, gradient: 'from-blue-500 to-indigo-500', bgGlow: 'bg-blue-50 dark:bg-blue-950/300/10' },
     { icon: FiActivity, label: 'Đang hoạt động', value: String(activeBookings), delta: '+3.1%', positive: true, gradient: 'from-violet-500 to-purple-500', bgGlow: 'bg-violet-500/10' },
     { icon: FiUsers, label: 'Khách hàng', value: String(totalUsers), delta: '+15.3%', positive: true, gradient: 'from-rose-500 to-pink-500', bgGlow: 'bg-rose-500/10' },
-    { icon: FiMapPin, label: 'Workspace', value: String(totalSpaces), delta: '0%', positive: true, gradient: 'from-amber-500 to-orange-500', bgGlow: 'bg-amber-500/10' },
+    { icon: FiMapPin, label: 'Workspace', value: String(totalSpaces), delta: '0%', positive: true, gradient: 'from-amber-500 to-orange-500', bgGlow: 'bg-amber-50 dark:bg-amber-950/300/10' },
   ];
 
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="rounded-xl border border-border bg-card p-6">
-        <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Quản trị hệ thống</p>
-        <h1 className="text-xl font-bold font-heading mt-1">Tổng quan hệ thống</h1>
-        <p className="text-sm text-muted-foreground mt-1">Dashboard quản trị toàn bộ chi nhánh</p>
+      <div className="bg-card rounded-3xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Tổng quan hệ thống</h1>
       </div>
 
       {/* Bento Grid Stats */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {statCards.map(s => (
-          <div key={s.label} className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 transition-all duration-300 hover:border-primary/50 hover:shadow-lg">
+          <div key={s.label} className="group relative overflow-hidden bg-card rounded-3xl border border-border p-5 shadow-sm hover:shadow-md transition-shadow transition-all duration-300 hover:border-primary/50 hover:shadow-lg">
             {/* Background glow */}
             <div className={`absolute -top-8 -right-8 h-24 w-24 rounded-full ${s.bgGlow} blur-2xl transition-opacity group-hover:opacity-100 opacity-50`} />
 
@@ -68,7 +66,7 @@ const AdminDashboardPage: React.FC = () => {
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Occupancy Chart */}
-        <div className="rounded-xl border border-border bg-card p-6">
+        <div className="bg-card rounded-3xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow">
           <h2 className="font-semibold flex items-center gap-2">
             <FiTrendingUp className="h-4 w-4 text-primary" /> Tỷ lệ sử dụng (tuần này)
           </h2>
@@ -95,13 +93,13 @@ const AdminDashboardPage: React.FC = () => {
         </div>
 
         {/* Branch Overview */}
-        <div className="rounded-xl border border-border bg-card p-6">
+        <div className="bg-card rounded-3xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow">
           <h2 className="font-semibold flex items-center gap-2">
             <FiMapPin className="h-4 w-4 text-primary" /> Theo chi nhánh
           </h2>
           <div className="mt-4 space-y-4">
             {revenueByBranch.map(b => (
-              <div key={b.id} className="group rounded-xl border border-border bg-muted/50 p-4 transition-all hover:border-primary/30 hover:bg-muted">
+              <div key={b.id} className="group rounded-2xl bg-muted/50 border border-border shadow-inner p-4 transition-all hover:border-primary/30 hover:bg-muted">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-semibold">{b.name}</p>

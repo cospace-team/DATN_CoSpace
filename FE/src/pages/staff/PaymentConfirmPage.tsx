@@ -17,9 +17,7 @@ const PaymentConfirmPage: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="rounded-xl border border-border bg-card p-6">
-        <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Xác nhận thanh toán</p>
-        <h1 className="text-xl font-bold font-heading mt-1">Thanh toán tiền mặt</h1>
-        <p className="text-sm text-muted-foreground mt-1">Xác nhận các khoản thanh toán tiền mặt từ khách hàng</p>
+        <h1 className="text-xl font-bold font-heading">Thanh toán tiền mặt</h1>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

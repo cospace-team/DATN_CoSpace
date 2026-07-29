@@ -175,9 +175,9 @@ const BAPricingPage: React.FC = () => {
         <CardContent className="p-6">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Quản lý chi nhánh</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Quản lý chi nhánh</p>
               <h1 className="text-2xl font-bold font-heading mt-1">Bảng giá</h1>
-              <p className="text-sm text-muted-foreground mt-1">Quản lý các mức giá áp dụng tại chi nhánh của bạn.</p>
+              <p className="text-sm font-medium text-muted-foreground mt-2">Quản lý các mức giá áp dụng tại chi nhánh của bạn.</p>
             </div>
             <Button onClick={openAdd}>
               <FiPlus className="h-4 w-4 mr-2" /> Thêm giá riêng
@@ -311,7 +311,7 @@ const BAPricingPage: React.FC = () => {
         >
           <div className="space-y-5">
             {errors.general && (
-              <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
+              <div className="flex items-center gap-2 rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 px-3 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
                 <FiAlertCircle className="h-5 w-5 shrink-0" />
                 <p>{errors.general}</p>
               </div>

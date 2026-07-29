@@ -154,9 +154,9 @@ const PricingPage: React.FC = () => {
         <CardContent className="p-6">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Cấu hình hệ thống</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Cấu hình hệ thống</p>
               <h1 className="text-2xl font-bold font-heading mt-1">Bảng giá dịch vụ</h1>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-sm font-medium text-muted-foreground mt-2">
                 Quản lý mức giá theo loại không gian, thời lượng và phạm vi áp dụng.
               </p>
             </div>
@@ -261,7 +261,7 @@ const PricingPage: React.FC = () => {
         >
           <div className="space-y-5">
             {errors.general && (
-              <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
+              <div className="flex items-center gap-2 rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 px-3 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
                 <FiAlertCircle className="h-5 w-5 shrink-0" />
                 <p>{errors.general}</p>
               </div>

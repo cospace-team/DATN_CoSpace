@@ -44,12 +44,12 @@ const CancellationPoliciesPage: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="rounded-xl border border-border bg-card p-6">
+      <div className="bg-card rounded-3xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Chính sách hủy</p>
-            <h1 className="text-xl font-bold font-heading mt-1">Quy định hủy booking & hoàn tiền</h1>
-            <p className="text-sm text-muted-foreground mt-1">Quản lý các quy tắc hoàn tiền khi hủy booking theo điều kiện thời gian</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Chính sách hủy</p>
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground mt-1">Quy định hủy booking & hoàn tiền</h1>
+            <p className="text-sm font-medium text-muted-foreground mt-2">Quản lý các quy tắc hoàn tiền khi hủy booking theo điều kiện thời gian</p>
           </div>
           <button onClick={addNewRule} className="btn btn-primary btn-sm"><FiPlus className="h-4 w-4" /> Thêm quy tắc</button>
         </div>
@@ -70,7 +70,7 @@ const CancellationPoliciesPage: React.FC = () => {
 
           <div className="space-y-3">
             {newRules.map((rule, idx) => (
-              <div key={rule.id} className="rounded-xl border border-border bg-card p-4 flex flex-wrap items-center gap-3 group transition-all hover:border-primary/30">
+              <div key={rule.id} className="bg-card rounded-2xl border border-border p-4 shadow-sm flex flex-wrap items-center gap-3 group transition-all hover:border-primary/30">
                 {/* Row number */}
                 <span className="h-7 w-7 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center shrink-0">
                   {idx + 1}
@@ -134,7 +134,7 @@ const CancellationPoliciesPage: React.FC = () => {
       )}
 
       {/* Existing Policies Table */}
-      <div className="rounded-xl border border-border bg-card p-6">
+      <div className="bg-card rounded-3xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow">
         <h2 className="font-semibold mb-4 flex items-center gap-2">
           <FiShield className="h-4 w-4 text-primary" />
           Chính sách hiện tại
@@ -184,7 +184,7 @@ const CancellationPoliciesPage: React.FC = () => {
       {deleteConfirm && (
         <>
           <div className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm" onClick={() => setDeleteConfirm(null)} />
-          <div className="fixed z-[60] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-xl">
+          <div className="fixed z-[60] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm bg-card rounded-3xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow shadow-xl">
             <div className="flex items-center gap-3 mb-4">
               <div className="h-10 w-10 rounded-full bg-destructive/10 flex items-center justify-center"><FiAlertTriangle className="h-5 w-5 text-destructive" /></div>
               <h3 className="font-bold text-lg">Xóa chính sách?</h3>

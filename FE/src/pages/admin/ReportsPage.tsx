@@ -14,8 +14,8 @@ const ReportsPage: React.FC = () => {
   const canceledBookings = bookings.filter(b => b.status === 'canceled').length;
 
   const statCards = [
-    { icon: FiDollarSign, label: 'Tổng doanh thu', value: formatVND(totalRevenue), delta: '+12.5%', gradient: 'from-emerald-500 to-teal-500', bgGlow: 'bg-emerald-500/10', color: 'text-emerald-600 dark:text-emerald-400' },
-    { icon: FiCalendar, label: 'Tổng booking', value: String(totalBookings), delta: '+8.2%', gradient: 'from-blue-500 to-indigo-500', bgGlow: 'bg-blue-500/10', color: 'text-blue-600 dark:text-blue-400' },
+    { icon: FiDollarSign, label: 'Tổng doanh thu', value: formatVND(totalRevenue), delta: '+12.5%', gradient: 'from-emerald-500 to-teal-500', bgGlow: 'bg-emerald-50 dark:bg-emerald-950/300/10', color: 'text-emerald-600 dark:text-emerald-400' },
+    { icon: FiCalendar, label: 'Tổng booking', value: String(totalBookings), delta: '+8.2%', gradient: 'from-blue-500 to-indigo-500', bgGlow: 'bg-blue-50 dark:bg-blue-950/300/10', color: 'text-blue-600 dark:text-blue-400 dark:text-blue-400' },
     { icon: FiCheckCircle, label: 'Hoàn thành', value: String(completedBookings), delta: '+15%', gradient: 'from-violet-500 to-purple-500', bgGlow: 'bg-violet-500/10', color: 'text-violet-600 dark:text-violet-400' },
     { icon: FiXCircle, label: 'Đã hủy', value: String(canceledBookings), delta: '-2.1%', gradient: 'from-rose-500 to-pink-500', bgGlow: 'bg-rose-500/10', color: 'text-rose-600 dark:text-rose-400' },
   ];
@@ -42,11 +42,11 @@ const ReportsPage: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header + Filters */}
-      <div className="rounded-xl border border-border bg-card p-6">
+      <div className="bg-card rounded-3xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow">
         <div className="flex items-center justify-between flex-wrap gap-4 mb-4">
           <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Báo cáo</p>
-            <h1 className="text-xl font-bold font-heading mt-1">Phân tích & Thống kê</h1>
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Báo cáo</p>
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground mt-1">Phân tích & Thống kê</h1>
           </div>
           <button className="btn btn-secondary btn-sm"><FiDownload className="h-4 w-4" /> Xuất CSV</button>
         </div>
@@ -78,7 +78,7 @@ const ReportsPage: React.FC = () => {
       {/* Stat Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {statCards.map(s => (
-          <div key={s.label} className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 transition-all duration-300 hover:border-primary/50 hover:shadow-lg">
+          <div key={s.label} className="group relative overflow-hidden bg-card rounded-3xl border border-border p-5 shadow-sm hover:shadow-md transition-shadow transition-all duration-300 hover:border-primary/50 hover:shadow-lg">
             <div className={`absolute -top-8 -right-8 h-24 w-24 rounded-full ${s.bgGlow} blur-2xl transition-opacity group-hover:opacity-100 opacity-50`} />
             <div className="relative">
               <div className={`inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${s.gradient} text-white shadow-sm`}>
@@ -99,7 +99,7 @@ const ReportsPage: React.FC = () => {
       {/* Charts Grid */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Line Chart (Monthly Revenue) */}
-        <div className="rounded-xl border border-border bg-card p-6">
+        <div className="bg-card rounded-3xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow">
           <h2 className="font-semibold flex items-center gap-2 mb-6">
             <FiTrendingUp className="h-4 w-4 text-primary" /> Doanh thu theo tháng
           </h2>
@@ -112,7 +112,7 @@ const ReportsPage: React.FC = () => {
                 <div className="w-full rounded-t-lg bg-gradient-to-t from-blue-500 to-indigo-500 transition-all duration-500 group-hover:from-blue-400 group-hover:to-indigo-400 relative"
                   style={{ height: `${(monthlyRevenue[i] / maxRev) * 100}%` }}>
                   {/* Tooltip dot */}
-                  <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 h-3 w-3 rounded-full bg-white border-2 border-primary opacity-0 group-hover:opacity-100 transition-opacity shadow-sm" />
+                  <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 h-3 w-3 rounded-full bg-card border-2 border-primary opacity-0 group-hover:opacity-100 transition-opacity shadow-sm" />
                 </div>
                 <span className="text-xs text-muted-foreground font-medium">{m}/2026</span>
               </div>
@@ -121,7 +121,7 @@ const ReportsPage: React.FC = () => {
         </div>
 
         {/* Bar Chart (By Workspace Type) */}
-        <div className="rounded-xl border border-border bg-card p-6">
+        <div className="bg-card rounded-3xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow">
           <h2 className="font-semibold flex items-center gap-2 mb-6">
             <FiPieChart className="h-4 w-4 text-primary" /> Doanh thu theo loại workspace
           </h2>
@@ -146,7 +146,7 @@ const ReportsPage: React.FC = () => {
       </div>
 
       {/* Branch Comparison Table */}
-      <div className="rounded-xl border border-border bg-card p-6">
+      <div className="bg-card rounded-3xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow">
         <h2 className="font-semibold flex items-center gap-2 mb-4">
           <FiBarChart2 className="h-4 w-4 text-primary" /> So sánh chi nhánh
         </h2>

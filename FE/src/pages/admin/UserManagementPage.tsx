@@ -17,7 +17,7 @@ const ActionDropdown: React.FC<{ children: React.ReactNode }> = ({ children }) =
     <div className="relative" ref={ref}>
       <button onClick={() => setOpen(!open)} className="btn btn-ghost btn-sm !min-h-[32px] !p-1.5"><FiMoreVertical className="h-4 w-4" /></button>
       {open && (
-        <div className="absolute right-0 top-full mt-1 z-30 w-52 rounded-xl border border-border bg-card shadow-xl py-1.5 animate-fade-in">
+        <div className="absolute right-0 top-full mt-1 z-30 w-52 bg-card rounded-3xl border border-border shadow-sm shadow-xl py-1.5 animate-fade-in">
           {React.Children.map(children, child => (
             <div onClick={() => setOpen(false)}>{child}</div>
           ))}
@@ -72,19 +72,15 @@ const UserManagementPage: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="rounded-xl border border-border bg-card p-6">
+      <div className="bg-card rounded-3xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow">
         <div className="flex items-center justify-between flex-wrap gap-4">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Quản lý người dùng</p>
-            <h1 className="text-xl font-bold font-heading mt-1">Người dùng hệ thống</h1>
-            <p className="text-sm text-muted-foreground mt-1">Quản lý tất cả tài khoản: khách hàng, nhân viên và quản trị viên</p>
-          </div>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Người dùng hệ thống</h1>
           <button className="btn btn-primary btn-sm"><FiUserPlus className="h-4 w-4" /> Thêm người dùng</button>
         </div>
       </div>
 
       {/* Filter Bar */}
-      <div className="rounded-xl border border-border bg-card p-4">
+      <div className="bg-card rounded-2xl border border-border p-4 shadow-sm">
         <div className="flex flex-wrap gap-3 items-center">
           {/* Search */}
           <div className="relative flex-1 min-w-[220px]">
@@ -145,7 +141,7 @@ const UserManagementPage: React.FC = () => {
       </div>
 
       {/* Data Table */}
-      <div className="rounded-xl border border-border bg-card p-6 overflow-x-auto">
+      <div className="bg-card rounded-3xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow overflow-x-auto">
         <table className="data-table">
           <thead>
             <tr><th>Người dùng</th><th>Vai trò</th><th>Chi nhánh</th><th>Trạng thái</th><th></th></tr>
@@ -196,15 +192,15 @@ const UserManagementPage: React.FC = () => {
                     <td>
                       {/* Toggle Switch — disabled for current admin */}
                       {isCurrentAdmin ? (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950 dark:text-blue-400 dark:border-blue-800">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 dark:bg-blue-950/30 text-blue-700 border border-blue-200 dark:border-blue-900/50 dark:bg-blue-950 dark:text-blue-400 dark:border-blue-800">
                           <FiShield className="h-3 w-3" /> Tài khoản hiện tại
                         </span>
                       ) : (
                         <button onClick={() => toggleLock(u.id)}
                           className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                             status === 'active'
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-800'
-                              : 'bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 dark:bg-red-950 dark:text-red-400 dark:border-red-800'
+                              ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 border border-emerald-200 dark:border-emerald-900/50 hover:bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-800'
+                              : 'bg-red-50 dark:bg-red-950/30 text-red-700 border border-red-200 dark:border-red-900/50 hover:bg-red-100 dark:bg-red-950 dark:text-red-400 dark:border-red-800'
                           }`}>
                           {status === 'active' ? <FiUnlock className="h-3 w-3" /> : <FiLock className="h-3 w-3" />}
                           {status === 'active' ? 'Hoạt động' : 'Đã khóa'}

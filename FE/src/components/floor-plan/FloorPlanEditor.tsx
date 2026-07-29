@@ -1,11 +1,11 @@
 /**
  * FloorPlanEditor — Main orchestrator component.
  * Composes Toolbar + ElementLibrary + EditorCanvas + PropertiesPanel
- * into a modern 3-panel layout with collapsible side panels.
+ * into a modern 3-panel layout with collapsible side panels and Pro Max dark aesthetics.
  */
 
 import React, { useState, useCallback } from 'react';
-import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+import { FiChevronLeft, FiChevronRight, FiEye, FiArrowLeft, FiGrid, FiCheckCircle } from 'react-icons/fi';
 import type { FloorLayout, ElementCatalogItem } from '../../types/floorPlan';
 import type { WorkspaceResponse } from '../../lib/spaceApi';
 import { useFloorPlanEditor } from '../../hooks/useFloorPlanEditor';
@@ -13,6 +13,7 @@ import EditorToolbar from './EditorToolbar';
 import ElementLibrary from './ElementLibrary';
 import EditorCanvas from './EditorCanvas';
 import PropertiesPanel from './PropertiesPanel';
+import ElementRenderer from './ElementRenderer';
 
 interface Props {
   initialLayout: FloorLayout | null;
@@ -48,7 +49,7 @@ const FloorPlanEditor: React.FC<Props> = ({
   }, [editor, onSave]);
 
   const handleLibraryDragStart = useCallback((_item: ElementCatalogItem) => {
-    // Could show a ghost preview; for now just a no-op
+    // Optional drag ghost handling
   }, []);
 
   const linkedCount = editor.layout.elements.filter(
@@ -57,20 +58,27 @@ const FloorPlanEditor: React.FC<Props> = ({
 
   if (showPreview) {
     return (
-      <div className="flex flex-col h-full bg-background animate-fade-scale-in">
-        <div className="flex items-center justify-between px-6 py-3 border-b border-border bg-card shadow-sm">
-          <span className="text-sm font-bold flex items-center gap-2">
-            <span role="img" aria-label="eye">👁️</span> Chế độ Xem trước — {floorName}
-          </span>
+      <div className="flex flex-col h-full bg-slate-950 text-slate-100 animate-fade-scale-in">
+        {/* Preview Topbar */}
+        <div className="flex items-center justify-between px-6 py-3 border-b border-slate-800 bg-slate-900/90 shadow-md">
+          <div className="flex items-center gap-2.5">
+            <FiEye className="h-4 w-4 text-cyan-400" />
+            <span className="text-sm font-bold font-heading">
+              Chế độ Xem trước Sơ đồ — {floorName}
+            </span>
+          </div>
           <button
             onClick={() => setShowPreview(false)}
-            className="btn btn-secondary btn-sm flex items-center gap-1 border border-border"
+            className="px-4 py-1.5 rounded-xl text-xs font-semibold bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-200 flex items-center gap-2 transition-all shadow-sm active:scale-95"
           >
-            ← Quay lại Thiết kế
+            <FiArrowLeft className="h-4 w-4" />
+            <span>Quay lại Thiết kế</span>
           </button>
         </div>
-        <div className="flex-1 overflow-auto flex items-center justify-center bg-slate-50 dark:bg-slate-950 p-6">
-          <div className="w-full max-w-5xl rounded-2xl border border-border/80 bg-card p-6 shadow-xl relative overflow-hidden">
+
+        {/* Preview Viewport */}
+        <div className="flex-1 overflow-auto flex items-center justify-center bg-slate-950 p-8">
+          <div className="w-full max-w-5xl rounded-3xl border border-slate-800 bg-slate-900/60 p-8 shadow-2xl relative overflow-hidden backdrop-blur-xl">
             <FloorPlanPreview layout={editor.layout} workspaces={workspaces} />
           </div>
         </div>
@@ -79,7 +87,11 @@ const FloorPlanEditor: React.FC<Props> = ({
   }
 
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-background">
+    <div className="flex flex-col h-full overflow-hidden bg-[#0F172A] font-sans relative z-0">
+      {/* Ambient Light Blobs (Cinema Dark Mode) */}
+      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-violet-600/20 rounded-full blur-[140px] pointer-events-none -z-10 animate-pulse" style={{ animationDuration: '8s' }} />
+      <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-cyan-600/10 rounded-full blur-[140px] pointer-events-none -z-10 animate-pulse" style={{ animationDuration: '12s', animationDelay: '2s' }} />
+
       {/* Toolbar */}
       <EditorToolbar
         editor={editor}
@@ -89,27 +101,27 @@ const FloorPlanEditor: React.FC<Props> = ({
         onPreview={() => setShowPreview(true)}
       />
 
-      {/* 3-panel layout */}
+      {/* 3-Panel Layout */}
       <div className="flex flex-1 overflow-hidden relative">
         {/* Left Sidebar: Element Library */}
         <div
-          className={`border-r border-border bg-card shrink-0 overflow-hidden transition-all duration-300 flex flex-col relative ${
-            isLeftCollapsed ? 'w-0' : 'w-[220px]'
+          className={`border-r border-slate-800/60 bg-slate-900/60 backdrop-blur-3xl shrink-0 overflow-hidden transition-all duration-300 flex flex-col relative z-20 ${
+            isLeftCollapsed ? 'w-0' : 'w-[230px]'
           }`}
         >
           {!isLeftCollapsed && <ElementLibrary onDragStart={handleLibraryDragStart} />}
         </div>
 
-        {/* Center: Canvas Area & Toggle Handles */}
+        {/* Center: Canvas Area & Collapse Handles */}
         <div className="flex-1 flex flex-col relative h-full overflow-hidden">
           
           {/* Toggle Left Sidebar Button */}
           <button
             onClick={() => setIsLeftCollapsed(!isLeftCollapsed)}
-            className="absolute left-2 top-1/2 -translate-y-1/2 z-20 w-5 h-12 rounded-r-lg bg-card/90 backdrop-blur-sm border-y border-r border-border hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center shadow-md transition-all"
+            className="absolute left-3 top-1/2 -translate-y-1/2 z-30 w-5 h-12 rounded-r-xl bg-slate-900/90 backdrop-blur-md border-y border-r border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-slate-100 flex items-center justify-center shadow-lg transition-all active:scale-95"
             title={isLeftCollapsed ? "Hiện danh mục" : "Ẩn danh mục"}
           >
-            {isLeftCollapsed ? <FiChevronRight className="h-3.5 w-3.5" /> : <FiChevronLeft className="h-3.5 w-3.5" />}
+            {isLeftCollapsed ? <FiChevronRight className="h-3.5 w-3.5 text-violet-400" /> : <FiChevronLeft className="h-3.5 w-3.5" />}
           </button>
 
           {/* Canvas Component */}
@@ -118,17 +130,17 @@ const FloorPlanEditor: React.FC<Props> = ({
           {/* Toggle Right Sidebar Button */}
           <button
             onClick={() => setIsRightCollapsed(!isRightCollapsed)}
-            className="absolute right-2 top-1/2 -translate-y-1/2 z-20 w-5 h-12 rounded-l-lg bg-card/90 backdrop-blur-sm border-y border-l border-border hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center shadow-md transition-all"
+            className="absolute right-3 top-1/2 -translate-y-1/2 z-30 w-5 h-12 rounded-l-xl bg-slate-900/90 backdrop-blur-md border-y border-l border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-slate-100 flex items-center justify-center shadow-lg transition-all active:scale-95"
             title={isRightCollapsed ? "Hiện thuộc tính" : "Ẩn thuộc tính"}
           >
-            {isRightCollapsed ? <FiChevronLeft className="h-3.5 w-3.5" /> : <FiChevronRight className="h-3.5 w-3.5" />}
+            {isRightCollapsed ? <FiChevronLeft className="h-3.5 w-3.5 text-violet-400" /> : <FiChevronRight className="h-3.5 w-3.5" />}
           </button>
         </div>
 
         {/* Right Sidebar: Properties Panel */}
         <div
-          className={`border-l border-border bg-card shrink-0 overflow-hidden transition-all duration-300 flex flex-col relative ${
-            isRightCollapsed ? 'w-0' : 'w-[320px]'
+          className={`border-l border-slate-800/60 bg-slate-900/60 backdrop-blur-3xl shrink-0 overflow-hidden transition-all duration-300 flex flex-col relative z-20 ${
+            isRightCollapsed ? 'w-0' : 'w-[330px]'
           }`}
         >
           {!isRightCollapsed && (
@@ -148,39 +160,48 @@ const FloorPlanEditor: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* Bottom Status Bar */}
-      <div className="px-4 py-1.5 border-t border-border bg-muted/30 text-[11px] text-muted-foreground flex items-center gap-4 shrink-0 select-none">
-        <span className="flex items-center gap-1">
-          <span className="font-semibold text-foreground">{editor.layout.elements.length}</span> elements
-        </span>
-        <div className="w-px h-3 bg-border" />
+      {/* Bottom Telemetry Status Bar */}
+      <div className="px-5 py-2 border-t border-slate-800/60 bg-slate-950/60 backdrop-blur-2xl text-[11px] text-slate-400 flex items-center gap-4 shrink-0 select-none font-mono z-30">
         <span className="flex items-center gap-1.5">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-          <span className="font-semibold text-foreground">{linkedCount}</span> đã liên kết workspace
+          <span className="font-bold text-slate-200">{editor.layout.elements.length}</span>
+          <span>phần tử</span>
         </span>
-        <div className="w-px h-3 bg-border" />
+
+        <div className="w-px h-3.5 bg-slate-800" />
+
         <span className="flex items-center gap-1.5">
-          <span className="h-1.5 w-1.5 rounded-full bg-slate-400 dark:bg-slate-600" />
-          <span className="font-semibold text-foreground">
+          <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50" />
+          <span className="font-bold text-emerald-400">{linkedCount}</span>
+          <span>đã gán workspace</span>
+        </span>
+
+        <div className="w-px h-3.5 bg-slate-800" />
+
+        <span className="flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-slate-600" />
+          <span className="font-bold text-slate-300">
             {editor.layout.elements.filter((e) => !e.workspaceId).length}
-          </span>{' '}
-          chưa gán
+          </span>
+          <span>chưa gán</span>
         </span>
-        <span className="ml-auto font-mono text-muted-foreground/85">
-          Canvas: <span className="font-semibold">{editor.layout.canvas.width}×{editor.layout.canvas.height}px</span>
+
+        <span className="ml-auto text-slate-400">
+          Canvas: <strong className="text-slate-200 font-bold">{editor.layout.canvas.width}×{editor.layout.canvas.height}px</strong>
         </span>
-        <div className="w-px h-3 bg-border" />
-        <span className="font-mono text-muted-foreground/85">
-          Grid: <span className="font-semibold">{editor.snapToGrid ? `${editor.layout.canvas.gridSize}px` : 'OFF'}</span>
+
+        <div className="w-px h-3.5 bg-slate-800" />
+
+        <span className="text-slate-400 flex items-center gap-1">
+          <FiGrid className="h-3 w-3 text-violet-400" />
+          <span>Grid:</span>
+          <strong className="text-slate-200 font-bold">{editor.snapToGrid ? `${editor.layout.canvas.gridSize}px` : 'TẮT'}</strong>
         </span>
       </div>
     </div>
   );
 };
 
-/* ─── Simple Preview (read-only) ─── */
-
-import ElementRenderer from './ElementRenderer';
+/* ── Simple Read-Only Floor Plan Preview ── */
 
 const FloorPlanPreview: React.FC<{
   layout: FloorLayout;
@@ -189,10 +210,10 @@ const FloorPlanPreview: React.FC<{
   const { width, height, gridSize } = layout.canvas;
 
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full max-h-[500px]">
+    <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full max-h-[520px]">
       <defs>
         <pattern
-          id="preview-dots"
+          id="preview-dots-dark"
           width={gridSize}
           height={gridSize}
           patternUnits="userSpaceOnUse"
@@ -200,9 +221,9 @@ const FloorPlanPreview: React.FC<{
           <circle
             cx={gridSize}
             cy={gridSize}
-            r={0.8}
-            fill="var(--border-strong, #CBD5E1)"
-            opacity={0.35}
+            r={1}
+            fill="#475569"
+            opacity={0.4}
           />
         </pattern>
       </defs>
@@ -210,17 +231,17 @@ const FloorPlanPreview: React.FC<{
       <rect
         width={width}
         height={height}
-        fill="url(#preview-dots)"
-        rx={6}
+        fill="url(#preview-dots-dark)"
+        rx={12}
       />
       <rect
         width={width}
         height={height}
         fill="none"
-        stroke="var(--border-strong, #CBD5E1)"
+        stroke="#334155"
         strokeWidth={1.5}
         strokeDasharray="6 4"
-        rx={6}
+        rx={12}
       />
 
       {layout.elements
@@ -240,4 +261,4 @@ const FloorPlanPreview: React.FC<{
   );
 };
 
-export default FloorPlanEditor;
+export default React.memo(FloorPlanEditor);

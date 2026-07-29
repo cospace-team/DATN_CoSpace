@@ -198,3 +198,15 @@ export const workspaceTypeApi = {
       `${API}/api/branch-admin/workspace-types`
     ),
 };
+
+/* ─── Customer Space APIs ─── */
+export const customerSpaceApi = {
+  listFloors: (branchId: string) =>
+    apiFetch<FloorResponse[]>(`${API}/api/customer/spaces/branches/${branchId}/floors`),
+
+  listWorkspaces: (branchId: string, floorId: string) =>
+    apiFetch<WorkspaceResponse[]>(
+      `${API}/api/customer/spaces/branches/${branchId}/floors/${floorId}/workspaces`
+    ),
+};
+

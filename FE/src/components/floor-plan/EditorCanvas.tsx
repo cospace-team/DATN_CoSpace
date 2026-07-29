@@ -1,10 +1,12 @@
 /**
  * EditorCanvas — The main SVG canvas where elements are rendered, selected,
  * dragged, resized, and dropped from the library.
- * Features a dots-grid pattern, real-time coordinate tracking, and zoom bounds.
+ * Redesigned with Pro Max dark theme, precision dot-matrix grid, floating telemetry HUD,
+ * and high-frequency snap handles.
  */
 
 import React, { useRef, useState, useCallback, useEffect } from 'react';
+import { FiAlertTriangle, FiCompass, FiTarget } from 'react-icons/fi';
 import type { FloorPlanEditorAPI } from '../../hooks/useFloorPlanEditor';
 import type { ElementCatalogItem, LayoutElement, ElementType } from '../../types/floorPlan';
 import ElementRenderer from './ElementRenderer';
@@ -33,8 +35,23 @@ const EditorCanvas: React.FC<Props> = ({ editor }) => {
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   const [cursorCoords, setCursorCoords] = useState<{ x: number; y: number } | null>(null);
 
-  const { layout, selectedIds, hoveredId, zoom, panOffset, showGrid } = editor;
+  const { layout, selectedIds, hoveredId, zoom, panOffset, showGrid, snapToGrid } = editor;
   const { width: canvasW, height: canvasH, gridSize } = layout.canvas;
+
+  /* ─── Out-of-bounds detection ─── */
+  const outOfBoundsIds = React.useMemo(() => {
+    return new Set(
+      layout.elements
+        .filter(
+          (el) =>
+            el.x < 0 ||
+            el.y < 0 ||
+            el.x + el.width > canvasW ||
+            el.y + el.height > canvasH
+        )
+        .map((el) => el.id)
+    );
+  }, [layout.elements, canvasW, canvasH]);
 
   /* ─── SVG coordinate conversion ─── */
   const toSVGCoords = useCallback(
@@ -271,7 +288,7 @@ const EditorCanvas: React.FC<Props> = ({ editor }) => {
 
   return (
     <div
-      className="flex-1 relative overflow-hidden bg-slate-50 dark:bg-slate-950 transition-colors"
+      className="flex-1 relative overflow-hidden bg-transparent transition-colors select-none"
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
@@ -282,7 +299,7 @@ const EditorCanvas: React.FC<Props> = ({ editor }) => {
         style={{
           transform: `scale(${zoom}) translate(${panOffset.x}px, ${panOffset.y}px)`,
           transformOrigin: 'center center',
-          transition: drag || isPanning ? 'none' : 'transform 150ms ease',
+          transition: drag || isPanning ? 'none' : 'transform 150ms cubic-bezier(0.16, 1, 0.3, 1)',
           cursor: isPanning ? 'grabbing' : editor.tool === 'pan' ? 'grab' : 'default',
         }}
         onMouseDown={handleCanvasMouseDown}
@@ -295,10 +312,10 @@ const EditorCanvas: React.FC<Props> = ({ editor }) => {
         onWheel={handleWheel}
       >
         <defs>
-          {/* Dots Grid Pattern */}
+          {/* Pro Precision Dot Grid */}
           {showGrid && (
             <pattern
-              id="editor-dots"
+              id="editor-dots-dark"
               width={gridSize}
               height={gridSize}
               patternUnits="userSpaceOnUse"
@@ -306,32 +323,46 @@ const EditorCanvas: React.FC<Props> = ({ editor }) => {
               <circle
                 cx={gridSize}
                 cy={gridSize}
-                r={1}
-                fill="var(--border-strong, #CBD5E1)"
+                r={1.2}
+                fill="#475569"
                 opacity={0.45}
               />
             </pattern>
           )}
+
+          {/* Glowing Selection Linear Gradients */}
+          <linearGradient id="selectionGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#8B5CF6" stopOpacity="0.8" />
+            <stop offset="100%" stopColor="#06B6D4" stopOpacity="0.8" />
+          </linearGradient>
         </defs>
 
-        {/* Canvas Background */}
+        {/* Canvas Background Base (Semi-transparent for ambient light) */}
+        <rect
+          width={canvasW}
+          height={canvasH}
+          fill="rgba(15, 23, 42, 0.5)"
+          rx={12}
+        />
+        
+        {/* Pattern Overlay */}
         <rect
           data-canvas="bg"
           width={canvasW}
           height={canvasH}
-          fill={showGrid ? 'url(#editor-dots)' : 'transparent'}
-          rx={6}
+          fill={showGrid ? 'url(#editor-dots-dark)' : 'transparent'}
+          rx={12}
         />
 
-        {/* Outer Canvas Border */}
+        {/* Outer Blueprint Canvas Border */}
         <rect
           width={canvasW}
           height={canvasH}
           fill="none"
-          stroke="var(--border-strong, #CBD5E1)"
+          stroke="#334155"
           strokeWidth={1.5}
-          strokeDasharray="6 4"
-          rx={6}
+          strokeDasharray="8 6"
+          rx={12}
           style={{ pointerEvents: 'none' }}
         />
 
@@ -348,6 +379,27 @@ const EditorCanvas: React.FC<Props> = ({ editor }) => {
           />
         ))}
 
+        {/* Out-of-bounds warning overlay */}
+        {outOfBoundsIds.size > 0 &&
+          layout.elements
+            .filter((el) => outOfBoundsIds.has(el.id))
+            .map((el) => (
+              <rect
+                key={`oob-${el.id}`}
+                x={el.x - 3}
+                y={el.y - 3}
+                width={el.width + 6}
+                height={el.height + 6}
+                fill="none"
+                stroke="#EF4444"
+                strokeWidth={2}
+                strokeDasharray="5 4"
+                rx={6}
+                opacity={0.9}
+                style={{ pointerEvents: 'none' }}
+              />
+            ))}
+
         {/* Selection handles for selected elements */}
         {layout.elements
           .filter((el) => selectedIds.includes(el.id) && !el.locked)
@@ -360,10 +412,28 @@ const EditorCanvas: React.FC<Props> = ({ editor }) => {
           ))}
       </svg>
 
-      {/* Floating Coordinates Tooltip */}
+      {/* Floating Telemetry HUD (Coordinates + Tooltips) */}
       {cursorCoords && (
-        <div className="absolute bottom-3 left-3 bg-card/85 backdrop-blur-sm px-2.5 py-1 rounded-lg border border-border text-[10px] font-mono font-bold shadow-sm pointer-events-none text-muted-foreground/90">
-          X: {Math.round(cursorCoords.x)} · Y: {Math.round(cursorCoords.y)}
+        <div className="absolute bottom-4 left-4 bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-800 text-[11px] font-mono shadow-xl pointer-events-none text-slate-300 flex items-center gap-3">
+          <div className="flex items-center gap-1 text-violet-400">
+            <FiCompass className="h-3.5 w-3.5" />
+            <span className="font-bold">X: {Math.round(cursorCoords.x)}</span>
+            <span className="text-slate-600">·</span>
+            <span className="font-bold">Y: {Math.round(cursorCoords.y)}</span>
+          </div>
+          <div className="h-3 w-px bg-slate-800" />
+          <div className="flex items-center gap-1.5 text-slate-400">
+            <FiTarget className="h-3.5 w-3.5 text-cyan-400" />
+            <span>Grid: <strong className="text-slate-200">{snapToGrid ? `${gridSize}px` : 'Tắt'}</strong></span>
+          </div>
+        </div>
+      )}
+
+      {/* Out-of-bounds warning banner */}
+      {outOfBoundsIds.size > 0 && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-red-500/90 backdrop-blur-md text-white text-xs font-bold px-4 py-2 rounded-full shadow-2xl pointer-events-none animate-pulse">
+          <FiAlertTriangle className="h-4 w-4" />
+          <span>{outOfBoundsIds.size} phần tử vượt ngoài khung vẽ — hãy di chuyển vào trong</span>
         </div>
       )}
     </div>

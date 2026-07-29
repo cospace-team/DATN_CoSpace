@@ -157,136 +157,137 @@ const LoginPage: React.FC = () => {
 
   const leftPanelContent = {
     bgImage: isRegisterView 
-      ? "url('https://lh3.googleusercontent.com/aida-public/AB6AXuAVtB2_C8za3TFo5CPdXHtv9R5a27S_hfJ-e4GoCJ2SNxakyFmMvLJuu0lAAEZ8drB1k1qQBNZZH3m86vBuP0vI2Mgu5cwE22jpR4-Szskve_6sc6QT6Cbbv3Px3hNA8039yvYroOkArEUJ7wzIkBmxhO2zsERoS0_3d2bQfi8MnLHB-T_KAQOqGYRv08XC3vgcNbalMzyyah_2HtTVA5ODImfL37egXqZmrSkRwRh-yGJTRspfM2Ta2uJGKnlzOnYHutQJmSAyUE24')"
-      : "url('https://lh3.googleusercontent.com/aida-public/AB6AXuDEy9LrJ4k0aCV_Lr27vCrOSfPtfvvIsfHof9I-Q6gjv2EoAqDT-zfWmeQRpFEcw84A20Eu-TXTp0GLzrg9TDWR5-5DA9vZ-z3y_PQMxC0E7gMgQNPm7oqVMgUfw_jo7Hc0O6kUAHz25bFTovX37C4bbd699ku6W_Wm2C3_BJlRLd13jUQ8WhpkXbL5AS2DKXFh1VtOOx3yoKKPQRSGIb59PtTjrwnsMHidsLCaP5W0gS2SPGUiQhUL-odG8TzeXC1LaA2m4yIDf06n')",
+      ? "url('https://images.unsplash.com/photo-1515187029135-18ee286d815b?auto=format&fit=crop&q=80&w=1200')"
+      : "url('https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&q=80&w=1200')",
     title: isRegisterView 
-      ? "Tham gia cộng đồng những người đổi mới"
-      : "Giải pháp không gian làm việc tối ưu cho doanh nghiệp.",
+      ? "Cộng đồng khởi nghiệp"
+      : "Không gian làm việc",
     description: isRegisterView
-      ? "Hệ sinh thái tối ưu cho các startup, freelancer và doanh nghiệp đang phát triển. Trải nghiệm làm việc chưa từng có."
-      : "Hàng ngàn doanh nghiệp đã tin tưởng sử dụng nền tảng của chúng tôi để tối ưu không gian làm việc và tăng trưởng hiệu quả."
+      ? "Hệ sinh thái tối ưu cho startups, freelancer và doanh nghiệp. Trải nghiệm tối giản và hiệu quả."
+      : "Giải pháp văn phòng linh hoạt, tối ưu chi phí và tăng trưởng doanh thu vượt bậc."
   };
 
   return (
-    <div className="flex min-h-screen lg:h-screen lg:max-h-screen w-full flex-col lg:flex-row overflow-hidden bg-background">
+    <div className="flex min-h-screen lg:h-screen lg:max-h-screen w-full flex-col lg:flex-row bg-muted/50 font-sans selection:bg-blue-100 selection:text-blue-900">
+      
       {/* ── Left Column: Visual Brand Section ── */}
       <div className="relative hidden w-full lg:flex lg:w-1/2 xl:w-7/12 flex-col justify-between p-12 overflow-hidden h-full">
-        {/* Background Image with Dark Indigo and Brand Overlay */}
-        <div 
-          className="absolute inset-0 z-0 bg-cover bg-center transition-all duration-700" 
-          style={{ backgroundImage: leftPanelContent.bgImage }}
-        />
-        <div className="absolute inset-0 z-10 bg-gradient-to-br from-slate-950/95 to-indigo-900/85" />
+        {/* Background Image with elegant overlay */}
+        <div className="absolute inset-0 z-0 m-4 rounded-[2.5rem] overflow-hidden shadow-sm border border-border">
+          <div 
+            className="absolute inset-0 bg-cover bg-center transition-all duration-1000 transform hover:scale-105" 
+            style={{ backgroundImage: leftPanelContent.bgImage }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/40 to-transparent" />
+        </div>
         
         {/* Brand Logo/Header */}
-        <div className="relative z-20">
-          <Logo isDarkBackground={true} textClassName="text-2xl font-bold tracking-tight" />
+        <div className="relative z-20 self-start mt-8 ml-8">
+          <div className="bg-card/90 backdrop-blur-md text-foreground px-6 py-3 rounded-full shadow-sm border border-white/20 inline-block">
+            <Logo iconClassName="h-6 w-6" textClassName="text-xl font-semibold tracking-tight" />
+          </div>
         </div>
 
         {/* Dynamic Value Prop */}
-        <div className="relative z-20 mt-auto max-w-lg space-y-6">
-          <h1 className="text-4xl md:text-5xl font-extrabold leading-tight text-white">
-            {isRegisterView ? (
-              <>
-                Tham gia cộng đồng <span className="text-indigo-300">những người đổi mới</span>
-              </>
-            ) : (
-              leftPanelContent.title
-            )}
+        <div className="relative z-20 mt-auto ml-8 mb-8 max-w-lg space-y-6">
+          <div className="inline-block bg-card/20 backdrop-blur-md text-white px-4 py-1.5 rounded-full border border-white/20 text-xs font-medium tracking-wide">
+            CoSpace Minimalist
+          </div>
+          <h1 className="text-5xl font-semibold leading-[1.1] text-white tracking-tight">
+            {leftPanelContent.title}
           </h1>
-          <p className="text-lg text-white/80 font-medium leading-relaxed">
+          <p className="text-lg text-slate-200 leading-relaxed font-normal">
             {leftPanelContent.description}
           </p>
           
           {/* Dynamic Footer stats/avatars */}
           {isRegisterView ? (
-            <div className="grid grid-cols-3 gap-8 pt-4">
-              <div>
-                <div className="text-3xl font-extrabold text-white">25+</div>
-                <div className="text-xs text-gray-400 font-medium">Trung tâm toàn cầu</div>
+            <div className="grid grid-cols-3 gap-4 pt-6">
+              <div className="bg-card/10 backdrop-blur-md p-4 rounded-2xl border border-white/10 text-white">
+                <div className="text-2xl font-semibold">25+</div>
+                <div className="text-xs font-medium text-slate-300 mt-1">Chi nhánh</div>
               </div>
-              <div>
-                <div className="text-3xl font-extrabold text-white">10k+</div>
-                <div className="text-xs text-gray-400 font-medium">Thành viên</div>
+              <div className="bg-card/10 backdrop-blur-md p-4 rounded-2xl border border-white/10 text-white">
+                <div className="text-2xl font-semibold">10k+</div>
+                <div className="text-xs font-medium text-slate-300 mt-1">Thành viên</div>
               </div>
-              <div>
-                <div className="text-3xl font-extrabold text-white">24/7</div>
-                <div className="text-xs text-gray-400 font-medium">Truy cập</div>
+              <div className="bg-card/10 backdrop-blur-md p-4 rounded-2xl border border-white/10 text-white">
+                <div className="text-2xl font-semibold">24/7</div>
+                <div className="text-xs font-medium text-slate-300 mt-1">Truy cập</div>
               </div>
             </div>
           ) : (
-            <div className="mt-10 flex items-center gap-4 pt-4">
+            <div className="mt-8 flex items-center gap-4 pt-4">
               <div className="flex -space-x-3">
-                <div className="h-10 w-10 rounded-full border-2 border-primary bg-white overflow-hidden">
-                  <img className="h-full w-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDQjjGTsi9DxSykN6jXCVhFIyxAvZI_BuWDkEQbKwFKcrelpwMyqM4_blADd9LRq22xMD0B1iGtD4Pg6HguKv_qj_PTHSpVoL5ke1xXy1j_9O1HsI4pe-HSGYj0PmocmP-61TWISx6M96ut3Kl_rrWG63EJ7Fi7t-jTvWX_ree5RSvAWoW_izQmKG7hovtbsmg_LR3J1DWyx_TgpyhHG1AjLQR4eG9-wdKdlK4LBcwECqwtJviT2Nig9esi-wrWgRQUe64wZwxCXefL" alt="User portrait" />
-                </div>
-                <div className="h-10 w-10 rounded-full border-2 border-primary bg-white overflow-hidden">
-                  <img className="h-full w-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDsupOKSJbwMvblpxoHKMeyNQrwEICCOj8eeF1OI0wSPQWzLoN1I76m9Lxmb8i3Aq3RsTkP-ytQCu8jwSxfcY44XnWz79AkC0b1isZljxTFGPPdNfLovsPOeeOy1GdmjfuVsxAo4F0NMpo0NMN0CTwsd84RH6jNZnsy9iyFjplm6VUMmiNZmmoqQYGUTfSQ6KwvGabQAcmMixMMTk7_WgasKAcuk-Naa_U95cVs3HQaB72Cqq-LkQ24PXWwpINVJVCyPETRcINJdvb1" alt="User portrait" />
-                </div>
-                <div className="h-10 w-10 rounded-full border-2 border-primary bg-white overflow-hidden">
-                  <img className="h-full w-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD8tHGYvERFrf-4AC0ad5q7TLrK7Wb3Ugh6PhfODP3xh-Z0Bxr7Wx-wUGUPdLSwnF4FeHVXYIusJ6MfCn8ZXv9WDU8pZK2gDsEZ_zt9Mbbco9bF7LmjLCxt_xChbp78fLdzK3hJQcOwkw0c-J9M5rKdXZXj_ARA5A76anVa6h96t76dvFwRh6mGg2LrqevVa-PF_HWbcRp4RfsBTYLsjBIS6nUMErKGUjt_RRNiLg4-SNBrdjYaJr63nBNbUlco-wxvULsW-VfphGbJ" alt="User portrait" />
-                </div>
+                <img className="h-10 w-10 rounded-full border-2 border-slate-900 object-cover" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=100" alt="User" />
+                <img className="h-10 w-10 rounded-full border-2 border-slate-900 object-cover" src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=100" alt="User" />
+                <img className="h-10 w-10 rounded-full border-2 border-slate-900 object-cover" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=100" alt="User" />
               </div>
-              <span className="text-sm font-semibold text-white/90">Tham gia cùng hơn 10,000+ thành viên</span>
+              <span className="text-sm font-medium text-slate-300">Hơn 10,000+ thành viên</span>
             </div>
           )}
         </div>
       </div>
 
       {/* ── Right Column: Form Panel Section ── */}
-      <div className="flex flex-1 flex-col justify-between bg-card px-6 py-8 sm:px-12 lg:w-1/2 xl:w-5/12 items-center min-h-screen lg:min-h-0 lg:h-screen lg:overflow-y-auto">
-        <div className="mx-auto w-full max-w-md my-auto space-y-6">
+      <div className="flex flex-1 flex-col justify-center bg-muted/50 px-6 py-12 sm:px-12 lg:w-1/2 xl:w-5/12 min-h-screen lg:min-h-0 lg:h-screen overflow-y-auto">
+        <div className="mx-auto w-full max-w-sm space-y-8">
+          
           {/* Mobile Logo */}
-          <div className="flex lg:hidden justify-center mb-6">
-            <Logo textClassName="text-xl font-bold tracking-tight" />
+          <div className="flex lg:hidden justify-center mb-8">
+            <div className="bg-card text-foreground px-6 py-3 rounded-full shadow-sm border border-border inline-block">
+              <Logo textClassName="text-xl font-semibold tracking-tight" />
+            </div>
           </div>
 
           {/* View Headers */}
-          <div>
+          <div className="text-center md:text-left space-y-2">
             {view === "forgot" ? (
               <>
                 <button 
                   onClick={() => switchView("login")} 
-                  className="mb-4 flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+                  className="mb-6 flex items-center justify-center md:justify-start gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <FiArrowLeft className="w-4 h-4" /> Quay lại đăng nhập
                 </button>
-                <h2 className="text-3xl font-extrabold tracking-tight text-foreground">Khôi phục mật khẩu</h2>
-                <p className="mt-2 text-sm text-muted-foreground">Vui lòng nhập email của bạn để nhận liên kết khôi phục.</p>
+                <h2 className="text-3xl font-semibold tracking-tight text-foreground">Khôi phục mật khẩu</h2>
+                <p className="text-muted-foreground">Vui lòng nhập email của bạn để nhận liên kết khôi phục.</p>
               </>
             ) : isRegisterView ? (
               <>
-                <h2 className="text-3xl font-extrabold tracking-tight text-foreground">Tạo tài khoản mới</h2>
-                <p className="mt-2 text-sm text-muted-foreground">Bắt đầu hành trình làm việc chung của bạn ngay hôm nay.</p>
+                <h2 className="text-3xl font-semibold tracking-tight text-foreground">Tạo tài khoản</h2>
+                <p className="text-muted-foreground">Bắt đầu hành trình làm việc chung của bạn ngay hôm nay.</p>
               </>
             ) : view === "verify_otp" ? (
               <>
                 <button 
                   onClick={() => switchView("register")} 
-                  className="mb-4 flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+                  className="mb-6 flex items-center justify-center md:justify-start gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  <FiArrowLeft className="w-4 h-4" /> Quay lại đăng ký
+                  <FiArrowLeft className="w-4 h-4" /> Quay lại
                 </button>
-                <h2 className="text-3xl font-extrabold tracking-tight text-foreground">Xác thực OTP</h2>
-                <p className="mt-2 text-sm text-muted-foreground">Nhập mã xác nhận 8 chữ số đã được gửi tới email của bạn.</p>
+                <h2 className="text-3xl font-semibold tracking-tight text-foreground">Xác thực OTP</h2>
+                <p className="text-muted-foreground">Nhập mã xác nhận 8 chữ số đã được gửi tới email của bạn.</p>
               </>
             ) : (
               <>
-                <h2 className="text-3xl font-extrabold tracking-tight text-foreground">Chào mừng bạn trở lại</h2>
-                <p className="mt-2 text-sm text-muted-foreground">Vui lòng đăng nhập để truy cập tài khoản CoSpace của bạn.</p>
+                <h2 className="text-3xl font-semibold tracking-tight text-foreground">Chào mừng trở lại</h2>
+                <p className="text-muted-foreground">Vui lòng đăng nhập để truy cập tài khoản CoSpace của bạn.</p>
               </>
             )}
           </div>
 
           {/* Success/Error Alerts */}
           {successMessage && (
-            <div className="rounded-xl border border-green-200 bg-green-50/50 dark:bg-green-950/20 px-4 py-3 text-xs text-green-700 dark:text-green-400">
-              {successMessage}
+            <div className="rounded-2xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-950/30 p-4 text-sm font-medium text-emerald-800 dark:text-emerald-400 flex items-start gap-3">
+              <FiZap className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+              <span>{successMessage}</span>
             </div>
           )}
           {errorMessage && (
-            <div className="rounded-xl border border-red-200 bg-red-50/50 dark:bg-red-950/20 px-4 py-3 text-xs text-red-700 dark:text-red-400">
-              {errorMessage}
+            <div className="rounded-2xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 p-4 text-sm font-medium text-red-800 dark:text-red-400 flex items-start gap-3">
+              <FiX className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+              <span>{errorMessage}</span>
             </div>
           )}
 
@@ -294,17 +295,17 @@ const LoginPage: React.FC = () => {
           {view === "forgot" ? (
             <form onSubmit={handleForgotSubmit} className="space-y-5">
               <div>
-                <label className="block text-sm font-bold text-foreground mb-2" htmlFor="email">Địa chỉ Email</label>
+                <label className="block text-sm font-medium text-foreground mb-1.5" htmlFor="email">Địa chỉ Email</label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-muted-foreground">
-                    <FiMail className="w-4 h-4" />
+                    <FiMail className="w-5 h-5" />
                   </span>
                   <input 
                     type="email" 
                     id="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="block w-full rounded-xl border border-border bg-muted/20 px-4 py-3.5 pl-11 text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all outline-none text-sm"
+                    className="block w-full rounded-xl border border-border bg-card px-4 py-3.5 pl-11 text-foreground placeholder:text-muted-foreground focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition-all duration-200 outline-none text-sm"
                     placeholder="ten@congty.com" 
                     required 
                   />
@@ -314,27 +315,27 @@ const LoginPage: React.FC = () => {
               <Button 
                 type="submit" 
                 disabled={isSubmittingForgot || isLoading} 
-                className="w-full py-4 bg-primary hover:bg-primary-hover text-primary-foreground font-bold rounded-xl shadow-lg shadow-primary/10 flex items-center justify-center gap-2"
+                className="w-full py-3.5 bg-slate-900 hover:bg-secondary text-white font-medium rounded-full shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2"
               >
-                {isSubmittingForgot && <FiLoader className="w-4 h-4 animate-spin" />}
-                {isSubmittingForgot ? "Đang gửi..." : "Gửi liên kết khôi phục"}
+                {isSubmittingForgot && <FiLoader className="w-5 h-5 animate-spin" />}
+                {isSubmittingForgot ? "Đang gửi..." : "Gửi liên kết"}
               </Button>
             </form>
           ) : isRegisterView ? (
             <div className="space-y-6">
               <form onSubmit={handleRegisterSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-bold text-foreground mb-1.5" htmlFor="fullName">Họ và Tên</label>
+                  <label className="block text-sm font-medium text-foreground mb-1.5" htmlFor="fullName">Họ và Tên</label>
                   <div className="relative">
                     <span className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-muted-foreground">
-                      <FiUser className="w-4 h-4" />
+                      <FiUser className="w-5 h-5" />
                     </span>
                     <input 
                       type="text" 
                       id="fullName"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      className="block w-full rounded-xl border border-border bg-muted/20 px-4 py-3 pl-11 text-foreground text-sm focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none"
+                      className="block w-full rounded-xl border border-border bg-card px-4 py-3.5 pl-11 text-foreground placeholder:text-muted-foreground focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition-all duration-200 outline-none text-sm"
                       placeholder="Nguyễn Văn A" 
                       required 
                     />
@@ -342,37 +343,36 @@ const LoginPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-foreground mb-1.5" htmlFor="reg-email">Địa chỉ Email</label>
+                  <label className="block text-sm font-medium text-foreground mb-1.5" htmlFor="reg-email">Địa chỉ Email</label>
                   <div className="relative">
                     <span className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-muted-foreground">
-                      <FiMail className="w-4 h-4" />
+                      <FiMail className="w-5 h-5" />
                     </span>
                     <input 
                       type="email" 
                       id="reg-email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="block w-full rounded-xl border border-border bg-muted/20 px-4 py-3 pl-11 text-foreground text-sm focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none"
+                      className="block w-full rounded-xl border border-border bg-card px-4 py-3.5 pl-11 text-foreground placeholder:text-muted-foreground focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition-all duration-200 outline-none text-sm"
                       placeholder="ten@congty.com" 
                       required 
                     />
                   </div>
                 </div>
 
-                {/* 2-column grid for passwords */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   <div>
-                    <label className="block text-sm font-bold text-foreground mb-1.5" htmlFor="reg-password">Mật khẩu</label>
+                    <label className="block text-sm font-medium text-foreground mb-1.5" htmlFor="reg-password">Mật khẩu</label>
                     <div className="relative">
                       <span className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-muted-foreground">
-                        <FiLock className="w-4 h-4" />
+                        <FiLock className="w-5 h-5" />
                       </span>
                       <input 
                         type="password" 
                         id="reg-password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="block w-full rounded-xl border border-border bg-muted/20 px-4 py-3 pl-11 text-foreground text-sm focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none"
+                        className="block w-full rounded-xl border border-border bg-card px-4 py-3.5 pl-11 text-foreground placeholder:text-muted-foreground focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition-all duration-200 outline-none text-sm"
                         placeholder="••••••••" 
                         required 
                         minLength={8}
@@ -380,17 +380,17 @@ const LoginPage: React.FC = () => {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-foreground mb-1.5" htmlFor="confirm-password">Xác nhận mật khẩu</label>
+                    <label className="block text-sm font-medium text-foreground mb-1.5" htmlFor="confirm-password">Xác nhận</label>
                     <div className="relative">
                       <span className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-muted-foreground">
-                        <FiLock className="w-4 h-4" />
+                        <FiLock className="w-5 h-5" />
                       </span>
                       <input 
                         type="password" 
                         id="confirm-password"
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="block w-full rounded-xl border border-border bg-muted/20 px-4 py-3 pl-11 text-foreground text-sm focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none"
+                        className="block w-full rounded-xl border border-border bg-card px-4 py-3.5 pl-11 text-foreground placeholder:text-muted-foreground focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition-all duration-200 outline-none text-sm"
                         placeholder="••••••••" 
                         required 
                         minLength={8}
@@ -399,60 +399,55 @@ const LoginPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Terms agreement checkbox */}
                 <div className="flex items-center pt-2">
                   <input 
-                    className="h-4 w-4 text-primary focus:ring-primary border-border rounded" 
+                    className="h-4 w-4 text-foreground border-border/80 rounded focus:ring-slate-900" 
                     id="terms" 
-                    name="terms" 
                     type="checkbox"
                     checked={termsAccepted}
                     onChange={(e) => setTermsAccepted(e.target.checked)}
                     required 
                   />
-                  <label className="ml-2.5 block text-xs text-muted-foreground font-semibold" htmlFor="terms">
-                    Tôi đồng ý với <a className="text-primary hover:underline font-bold" href="#">Điều khoản và Điều kiện</a>
+                  <label className="ml-2 block text-sm text-muted-foreground" htmlFor="terms">
+                    Tôi đồng ý với <a className="text-foreground font-medium hover:underline" href="#">Điều khoản dịch vụ</a>
                   </label>
                 </div>
 
                 <Button 
                   type="submit" 
                   disabled={isSubmittingRegister || isLoading} 
-                  className="w-full py-4 bg-primary hover:bg-primary-hover text-primary-foreground font-bold rounded-xl shadow-lg shadow-primary/10 flex items-center justify-center gap-2 mt-2"
+                  className="w-full py-3.5 mt-4 bg-slate-900 hover:bg-secondary text-white font-medium rounded-full shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2"
                 >
-                  {isSubmittingRegister && <FiLoader className="w-4 h-4 animate-spin" />}
-                  {isSubmittingRegister ? "Đang xử lý..." : "Đăng ký"}
+                  {isSubmittingRegister && <FiLoader className="w-5 h-5 animate-spin" />}
+                  {isSubmittingRegister ? "Đang xử lý..." : "Tạo tài khoản"}
                 </Button>
               </form>
 
-              {/* Toggle to Login */}
-              <div className="text-center text-sm font-medium text-muted-foreground">
+              <div className="text-center text-sm text-muted-foreground">
                 Đã có tài khoản?
                 <button 
                   type="button" 
                   onClick={() => switchView("login")} 
-                  className="font-bold text-primary hover:underline ml-1"
+                  className="font-medium text-foreground hover:underline ml-1"
                 >
                   Đăng nhập
                 </button>
               </div>
 
-              {/* Separator */}
               <div className="relative flex py-2 items-center">
                 <div className="flex-grow border-t border-border"></div>
-                <span className="flex-shrink mx-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">HOẶC</span>
+                <span className="flex-shrink mx-4 text-xs font-medium text-muted-foreground">HOẶC</span>
                 <div className="flex-grow border-t border-border"></div>
               </div>
 
-              {/* Google signup button */}
               <button 
                 type="button"
                 onClick={handleGoogleLogin}
                 disabled={isSubmittingGoogle || isSubmittingRegister || isLoading}
-                className="flex w-full items-center justify-center gap-3 rounded-xl border border-border bg-card px-4 py-3.5 text-sm font-bold text-foreground transition-all hover:bg-muted active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="flex w-full items-center justify-center gap-3 rounded-full border border-border bg-card px-4 py-3.5 text-sm font-medium text-foreground shadow-sm transition-all duration-200 hover:bg-muted/50 active:scale-[0.98] focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100"
               >
                 {isSubmittingGoogle ? (
-                  <FiLoader className="w-4 h-4 animate-spin" />
+                  <FiLoader className="w-5 h-5 animate-spin" />
                 ) : (
                   <svg height="20" viewBox="0 0 24 24" width="20" xmlns="http://www.w3.org/2000/svg">
                     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"></path>
@@ -461,16 +456,16 @@ const LoginPage: React.FC = () => {
                     <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"></path>
                   </svg>
                 )}
-                <span className="text-sm font-bold">Đăng ký với Google</span>
+                <span>Tiếp tục với Google</span>
               </button>
             </div>
           ) : view === "verify_otp" ? (
             <form onSubmit={handleVerifyOtpSubmit} className="space-y-5">
               <div>
-                <label className="block text-sm font-bold text-foreground mb-2">Mã OTP (8 chữ số)</label>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Mã OTP (8 chữ số)</label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-muted-foreground">
-                    <FiShield className="w-4 h-4" />
+                    <FiShield className="w-5 h-5" />
                   </span>
                   <input 
                     type="text" 
@@ -478,39 +473,39 @@ const LoginPage: React.FC = () => {
                     pattern="[0-9]*" 
                     value={otpCode} 
                     onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 8))} 
-                    className="block w-full rounded-xl border border-border bg-muted/20 px-4 py-3.5 pl-11 text-foreground font-mono tracking-widest text-lg placeholder:text-muted-foreground/60 focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none"
+                    className="block w-full rounded-xl border border-border bg-card px-4 py-3.5 pl-11 text-foreground font-mono tracking-widest text-lg placeholder:text-slate-300 focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition-all duration-200 outline-none"
                     placeholder="••••••••" 
                     maxLength={8} 
                     required 
                   />
                 </div>
-                <p className="mt-2 text-xs text-muted-foreground">Vui lòng kiểm tra hộp thư điện tử của bạn để lấy mã xác nhận.</p>
+                <p className="mt-2 text-sm text-muted-foreground">Vui lòng kiểm tra hộp thư điện tử của bạn để lấy mã xác nhận.</p>
               </div>
 
               <Button 
                 type="submit" 
                 disabled={isSubmittingOtp || isLoading || otpCode.length !== 8} 
-                className="w-full py-4 bg-primary hover:bg-primary-hover text-primary-foreground font-bold rounded-xl shadow-lg shadow-primary/10 flex items-center justify-center gap-2"
+                className="w-full py-3.5 bg-slate-900 hover:bg-secondary text-white font-medium rounded-full shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2"
               >
-                {isSubmittingOtp && <FiLoader className="w-4 h-4 animate-spin" />}
-                {isSubmittingOtp ? "Đang xác thực..." : "Xác nhận mã OTP"}
+                {isSubmittingOtp && <FiLoader className="w-5 h-5 animate-spin" />}
+                {isSubmittingOtp ? "Đang xác thực..." : "Xác nhận"}
               </Button>
             </form>
           ) : (
             <div className="space-y-6">
               <form onSubmit={handleEmailLogin} className="space-y-5">
                 <div>
-                  <label className="block text-sm font-bold text-foreground mb-2" htmlFor="login-email">Địa chỉ Email</label>
+                  <label className="block text-sm font-medium text-foreground mb-1.5" htmlFor="login-email">Địa chỉ Email</label>
                   <div className="relative">
                     <span className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-muted-foreground">
-                      <FiMail className="w-4 h-4" />
+                      <FiMail className="w-5 h-5" />
                     </span>
                     <input 
                       type="email" 
                       id="login-email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="block w-full rounded-xl border border-border bg-muted/20 px-4 py-3.5 pl-11 text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-sm"
+                      className="block w-full rounded-xl border border-border bg-card px-4 py-3.5 pl-11 text-foreground placeholder:text-muted-foreground focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition-all duration-200 outline-none text-sm"
                       placeholder="ten@congty.com" 
                       required 
                     />
@@ -518,12 +513,12 @@ const LoginPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="block text-sm font-bold text-foreground" htmlFor="login-password">Mật khẩu</label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-sm font-medium text-foreground" htmlFor="login-password">Mật khẩu</label>
                     <button 
                       type="button" 
                       onClick={() => switchView("forgot")} 
-                      className="text-sm font-bold text-primary hover:underline"
+                      className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
                     >
                       Quên mật khẩu?
                     </button>
@@ -531,21 +526,21 @@ const LoginPage: React.FC = () => {
                   
                   <div className="relative">
                     <span className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-muted-foreground">
-                      <FiLock className="w-4 h-4" />
+                      <FiLock className="w-5 h-5" />
                     </span>
                     <input 
                       type={showPassword ? "text" : "password"} 
                       id="login-password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="block w-full rounded-xl border border-border bg-muted/20 px-4 py-3.5 pl-11 pr-12 text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-sm"
+                      className="block w-full rounded-xl border border-border bg-card px-4 py-3.5 pl-11 pr-12 text-foreground placeholder:text-muted-foreground focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition-all duration-200 outline-none text-sm"
                       placeholder="••••••••" 
                       required 
                     />
                     <button 
                       type="button" 
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute inset-y-0 right-0 flex items-center pr-4 text-muted-foreground hover:text-foreground"
+                      className="absolute inset-y-0 right-0 flex items-center px-4 text-muted-foreground hover:text-foreground transition-all duration-200 active:scale-[0.98]"
                     >
                       {showPassword ? <FiEyeOff className="w-4 h-4" /> : <FiEye className="w-4 h-4" />}
                     </button>
@@ -555,41 +550,38 @@ const LoginPage: React.FC = () => {
                 <Button 
                   type="submit" 
                   disabled={isSubmittingEmail || isSubmittingGoogle || isLoading} 
-                  className="w-full py-4 bg-primary hover:bg-primary-hover text-primary-foreground font-bold rounded-xl shadow-lg shadow-primary/10 flex items-center justify-center gap-2"
+                  className="w-full py-3.5 mt-2 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-full shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2"
                 >
-                  {isSubmittingEmail && <FiLoader className="w-4 h-4 animate-spin" />}
+                  {isSubmittingEmail && <FiLoader className="w-5 h-5 animate-spin" />}
                   {isSubmittingEmail ? "Đang đăng nhập..." : "Đăng nhập"}
                 </Button>
               </form>
 
-              {/* Toggle Register */}
-              <div className="text-center text-sm font-medium text-muted-foreground">
+              <div className="text-center text-sm text-muted-foreground">
                 Chưa có tài khoản?
                 <button 
                   type="button" 
                   onClick={() => switchView("register")} 
-                  className="font-bold text-primary hover:underline ml-1"
+                  className="font-medium text-foreground hover:underline ml-1"
                 >
                   Đăng ký ngay
                 </button>
               </div>
 
-              {/* Separator */}
               <div className="relative flex py-2 items-center">
                 <div className="flex-grow border-t border-border"></div>
-                <span className="flex-shrink mx-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">HOẶC</span>
+                <span className="flex-shrink mx-4 text-xs font-medium text-muted-foreground">HOẶC</span>
                 <div className="flex-grow border-t border-border"></div>
               </div>
 
-              {/* Google Login button */}
               <button 
                 type="button"
                 onClick={handleGoogleLogin}
                 disabled={isSubmittingGoogle || isSubmittingEmail || isLoading}
-                className="flex w-full items-center justify-center gap-3 rounded-xl border border-border bg-card px-4 py-3.5 text-sm font-bold text-foreground transition-all hover:bg-muted active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="flex w-full items-center justify-center gap-3 rounded-full border border-border bg-card px-4 py-3.5 text-sm font-medium text-foreground shadow-sm transition-all duration-200 hover:bg-muted/50 active:scale-[0.98] focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100"
               >
                 {isSubmittingGoogle ? (
-                  <FiLoader className="w-4 h-4 animate-spin" />
+                  <FiLoader className="w-5 h-5 animate-spin" />
                 ) : (
                   <svg height="20" viewBox="0 0 24 24" width="20" xmlns="http://www.w3.org/2000/svg">
                     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"></path>
@@ -598,33 +590,46 @@ const LoginPage: React.FC = () => {
                     <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"></path>
                   </svg>
                 )}
-                <span className="text-sm font-bold">Tiếp tục với Google</span>
+                <span>Tiếp tục với Google</span>
               </button>
             </div>
           )}
 
           {/* ── DEV: Quick role switcher ── */}
-          <div className="rounded-xl border border-dashed border-amber-300 bg-amber-50/50 dark:bg-amber-950/20 p-4 mt-6">
-            <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 mb-3 uppercase tracking-wider flex items-center gap-1.5">
-              <FiZap className="w-3.5 h-3.5 text-amber-500" /> Dev Quick Login
+          <div className="rounded-2xl border border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-950/30 p-5 mt-8 shadow-sm">
+            <p className="text-xs font-medium text-blue-600 dark:text-blue-400 mb-3 flex items-center justify-center gap-1">
+              <FiZap /> Developer Quick Login
             </p>
             <div className="grid grid-cols-2 gap-2">
-              <Button variant="outline" size="sm" onClick={() => devLoginAs("customer")} className="w-full text-xs cursor-pointer"><FiUser className="h-3.5 w-3.5" /> Customer</Button>
-              <Button variant="outline" size="sm" onClick={() => devLoginAs("staff")} className="w-full text-xs cursor-pointer"><FiShield className="h-3.5 w-3.5" /> Staff</Button>
-              <Button variant="outline" size="sm" onClick={() => devLoginAs("admin")} className="w-full text-xs cursor-pointer"><FiLock className="h-3.5 w-3.5" /> Admin</Button>
-              <Button variant="outline" size="sm" onClick={() => devLoginAsBranchAdmin()} className="w-full text-xs cursor-pointer"><FiMapPin className="h-3.5 w-3.5" /> Branch Admin</Button>
+              <button 
+                type="button" 
+                onClick={() => devLoginAs("customer")} 
+                className="text-xs font-medium bg-card border border-blue-200 dark:border-blue-900/50 text-foreground py-2 rounded-lg hover:bg-blue-50 dark:bg-blue-950/30 transition-colors shadow-sm"
+              >
+                Customer
+              </button>
+              <button 
+                type="button" 
+                onClick={() => devLoginAsBranchAdmin()} 
+                className="text-xs font-medium bg-card border border-blue-200 dark:border-blue-900/50 text-foreground py-2 rounded-lg hover:bg-blue-50 dark:bg-blue-950/30 transition-colors shadow-sm"
+              >
+                Admin CN1
+              </button>
+              <button 
+                type="button" 
+                onClick={() => devLoginAs("staff")} 
+                className="text-xs font-medium bg-card border border-blue-200 dark:border-blue-900/50 text-foreground py-2 rounded-lg hover:bg-blue-50 dark:bg-blue-950/30 transition-colors shadow-sm"
+              >
+                Staff
+              </button>
+              <button 
+                type="button" 
+                onClick={() => devLoginAs("admin")} 
+                className="text-xs font-medium bg-blue-600 border border-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+              >
+                Super Admin
+              </button>
             </div>
-          </div>
-        </div>
-
-        {/* Footer Links */}
-        <div className="w-full text-center lg:text-left mt-8 border-t border-border pt-6">
-          <div className="flex flex-wrap justify-center lg:justify-start gap-x-6 gap-y-2 text-xs font-semibold text-muted-foreground">
-            <a className="hover:text-primary transition-colors" href="#">Điều khoản dịch vụ</a>
-            <a className="hover:text-primary transition-colors" href="#">Chính sách bảo mật</a>
-            <a className="hover:text-primary transition-colors" href="#">Trợ giúp</a>
-            <span className="text-border hidden sm:inline">•</span>
-            <span className="w-full sm:w-auto mt-2 sm:mt-0 text-muted-foreground/80">© 2026 CoSpace Inc. All rights reserved.</span>
           </div>
         </div>
       </div>
