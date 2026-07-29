@@ -455,8 +455,6 @@ const ExplorePage: React.FC = () => {
   const [selectedHour, setSelectedHour] = useState(new Date().getHours());
   const [selectedWs, setSelectedWs] = useState<string | null>(null);
   const [showTags, setShowTags] = useState(false);
-  const [zoom, setZoom] = useState(1);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
 
   // Database-loaded floors and workspaces
   const [dbFloors, setDbFloors] = useState<FloorResponse[]>([]);
@@ -598,7 +596,7 @@ const ExplorePage: React.FC = () => {
 
   const getWsAvailability = useCallback(
     (wsId: string, checkDate?: Date, checkHour?: number) => {
-      const ws = mappedWorkspaces.find((w) => w.id === wsId);
+      const ws = mappedWorkspaces.find((w) => w.id === wsId || w.mockId === wsId);
       if (!ws) return "unassigned";
       if (
         ws.status.toLowerCase() === "maintenance" ||
@@ -610,7 +608,8 @@ const ExplorePage: React.FC = () => {
       const targetHour = checkHour !== undefined ? checkHour : selectedHour;
 
       const activeBooking = bookings.find((b) => {
-        if (b.workspace_id !== ws.mockId) return false;
+        if (b.workspace_id !== ws.id && b.workspace_id !== ws.mockId)
+          return false;
         if (["canceled", "expired", "completed"].includes(b.status))
           return false;
         const start = new Date(b.start_at);
@@ -625,7 +624,7 @@ const ExplorePage: React.FC = () => {
   );
 
   const selectedWsData = selectedWs
-    ? mappedWorkspaces.find((w) => w.id === selectedWs)
+    ? mappedWorkspaces.find((w) => w.id === selectedWs || w.mockId === selectedWs)
     : null;
   const selectedWsType = selectedWsData
     ? getWorkspaceType(selectedWsData.workspace_type_id)
@@ -662,13 +661,6 @@ const ExplorePage: React.FC = () => {
     d.setHours(0, 0, 0, 0);
     if (d < today) return; // Prevent picking past dates
     setSelectedDate(d);
-  };
-
-  const handleZoomIn = () => setZoom((z) => Math.min(z + 0.2, 2.5));
-  const handleZoomOut = () => setZoom((z) => Math.max(z - 0.2, 0.5));
-  const handleReset = () => {
-    setZoom(1);
-    setPan({ x: 0, y: 0 });
   };
 
   const handleBookNow = (
@@ -879,52 +871,6 @@ const ExplorePage: React.FC = () => {
         <div className="flex-1 relative bg-muted/50 overflow-hidden">
           {viewMode === "map" ? (
             <>
-              {/* Zoom controls */}
-              <div className="absolute top-6 left-6 z-10 flex flex-col gap-2">
-                <button
-                  onClick={handleZoomIn}
-                  className="bg-card border border-border text-foreground p-2.5 rounded-2xl shadow-sm hover:bg-muted transition"
-                  aria-label="Phóng to"
-                >
-                  <FiPlus className="h-5 w-5" />
-                </button>
-                <button
-                  onClick={handleZoomOut}
-                  className="bg-card border border-border text-foreground p-2.5 rounded-2xl shadow-sm hover:bg-muted transition"
-                  aria-label="Thu nhỏ"
-                >
-                  <FiMinus className="h-5 w-5" />
-                </button>
-                <button
-                  onClick={handleReset}
-                  className="bg-slate-900 border border-border text-white p-2.5 rounded-2xl shadow-sm hover:bg-secondary transition"
-                  aria-label="Đặt lại zoom"
-                >
-                  <FiMaximize2 className="h-5 w-5" />
-                </button>
-              </div>
-
-              {/* Availability indicator */}
-              <div className="absolute top-6 right-6 z-10 flex items-center gap-4 px-5 py-3 rounded-2xl bg-card border border-border shadow-sm">
-                <div className="flex items-center gap-2">
-                  <span className="h-4 w-4 rounded-full bg-emerald-400 border border-border" />
-                  <span className="text-xs font-medium text-foreground">
-                    Trống ({stats.available})
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="h-4 w-4 rounded-full bg-rose-400 border border-border" />
-                  <span className="text-xs font-medium text-foreground">
-                    Đã đặt ({stats.booked})
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="h-4 w-4 rounded-full bg-slate-300 border border-border" />
-                  <span className="text-xs font-medium text-foreground">
-                    Bảo trì ({stats.maintenance})
-                  </span>
-                </div>
-              </div>
 
               {/* SVG Floor Plan */}
               <div className="w-full h-full flex items-center justify-center p-4 overflow-auto">

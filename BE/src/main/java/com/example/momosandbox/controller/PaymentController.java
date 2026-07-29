@@ -108,7 +108,7 @@ public class PaymentController {
             message = "Payment verification failed";
         }
 
-        String redirect = frontendBaseUrl + "/customer/bookings" +
+        String redirect = frontendBaseUrl + "/customer/history" +
                 "?orderId=" + url(orderId) +
                 "&resultCode=" + url(resultCode) +
                 "&message=" + url(message);
