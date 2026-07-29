@@ -28,13 +28,46 @@ const FloorPlanViewer: React.FC<Props> = ({
   onElementClick,
 }) => {
   const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [hasMoved, setHasMoved] = useState(false);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   const { width, height, gridSize } = layout.canvas;
 
   const handleZoomIn = () => setZoom((z) => Math.min(z + 0.2, 2.5));
   const handleZoomOut = () => setZoom((z) => Math.max(z - 0.2, 0.5));
-  const handleReset = () => setZoom(1);
+  const handleReset = () => {
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0 && e.button !== 1) return;
+    setIsPanning(true);
+    setHasMoved(false);
+    setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isPanning) return;
+    const newX = e.clientX - dragStart.x;
+    const newY = e.clientY - dragStart.y;
+    if (Math.abs(newX - pan.x) > 3 || Math.abs(newY - pan.y) > 3) {
+      setHasMoved(true);
+    }
+    setPan({ x: newX, y: newY });
+  };
+
+  const handleMouseUp = () => {
+    setIsPanning(false);
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
+    setZoom((z) => Math.min(Math.max(z * zoomFactor, 0.5), 2.5));
+  };
 
   const handleElementClick = useCallback(
     (el: LayoutElement) => {
@@ -64,7 +97,7 @@ const FloorPlanViewer: React.FC<Props> = ({
     if (isAdmin) {
       if (!canLink) return el;
       
-      const isSelected = selectedWsId === el.workspaceId;
+      const isSelected = Boolean(selectedWsId) && Boolean(el.workspaceId) && selectedWsId === el.workspaceId;
       let fillColor = el.fillColor;
       let strokeColor = el.strokeColor;
 
@@ -93,18 +126,23 @@ const FloorPlanViewer: React.FC<Props> = ({
       return { ...el, fillColor, strokeColor };
     }
 
-    if (!el.workspaceId || !getAvailability) return el;
+    if (!el.workspaceId || !getAvailability) {
+      const strokeLower = (el.strokeColor || '').toLowerCase();
+      const isBlue =
+        !el.strokeColor ||
+        strokeLower.includes('3b82f6') ||
+        strokeLower.includes('59,130,246') ||
+        strokeLower.includes('59, 130, 246');
 
-    const avail = getAvailability(el.workspaceId);
-    if (avail === 'unassigned') {
-      // Treat as unassigned (grayed out)
       return {
         ...el,
-        fillColor: 'rgba(148,163,184,0.08)',
-        strokeColor: '#94A3B8',
+        strokeColor: isBlue ? '#64748B' : el.strokeColor,
+        fillColor: isBlue ? 'rgba(148, 163, 184, 0.08)' : el.fillColor,
       };
     }
-    const isSelected = selectedWsId === el.workspaceId;
+
+    const isSelected = Boolean(selectedWsId) && Boolean(el.workspaceId) && selectedWsId === el.workspaceId;
+    const avail = getAvailability(el.workspaceId);
 
     let fillColor = el.fillColor;
     let strokeColor = el.strokeColor;
@@ -112,6 +150,9 @@ const FloorPlanViewer: React.FC<Props> = ({
     if (isSelected) {
       fillColor = 'rgba(59,130,246,0.18)';
       strokeColor = '#3B82F6';
+    } else if (avail === 'unassigned') {
+      fillColor = 'rgba(148,163,184,0.08)';
+      strokeColor = '#94A3B8';
     } else if (avail === 'available') {
       fillColor = 'rgba(34,197,94,0.12)';
       strokeColor = '#22C55E';
@@ -232,16 +273,26 @@ const FloorPlanViewer: React.FC<Props> = ({
       )}
 
       {/* SVG */}
-      <div className="w-full h-full overflow-auto flex items-center justify-center p-4">
+      <div
+        className={`w-full h-full overflow-hidden flex items-center justify-center p-4 select-none ${
+          isPanning ? 'cursor-grabbing' : 'cursor-grab'
+        }`}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        onWheel={handleWheel}
+      >
         <svg
           viewBox={`0 0 ${width} ${height}`}
           className="w-full h-full"
           style={{
-            transform: `scale(${zoom})`,
+            transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
             transformOrigin: 'center center',
-            transition: 'transform 200ms ease',
+            transition: isPanning ? 'none' : 'transform 150ms ease',
           }}
           onClick={(e) => {
+            if (hasMoved) return;
             if (e.target === e.currentTarget) onSelectWorkspace(null);
           }}
         >
@@ -282,10 +333,10 @@ const FloorPlanViewer: React.FC<Props> = ({
                 <ElementRenderer
                   key={el.id}
                   element={styledEl}
-                  isSelected={selectedWsId === el.workspaceId}
+                  isSelected={Boolean(selectedWsId) && Boolean(el.workspaceId) && selectedWsId === el.workspaceId}
                   isHovered={hoveredId === el.id}
                   cursor={cursor}
-                  onMouseDown={(e) => {
+                  onClick={(e) => {
                     e.stopPropagation();
                     handleElementClick(el);
                   }}

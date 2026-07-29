@@ -10,7 +10,8 @@ interface Props {
   element: LayoutElement;
   isSelected: boolean;
   isHovered: boolean;
-  onMouseDown: (e: React.MouseEvent) => void;
+  onClick?: (e: React.MouseEvent) => void;
+  onMouseDown?: (e: React.MouseEvent) => void;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
   cursor?: string;
@@ -68,19 +69,19 @@ const InnerDecoration: React.FC<{
           <path
             d={`M ${el.width * 0.25} ${el.height * 0.2} Q ${el.width * 0.5} ${el.height * 0.05} ${el.width * 0.75} ${el.height * 0.2}`}
             fill="none"
-            stroke={el.strokeColor || '#3B82F6'}
+            stroke={el.strokeColor || '#64748B'}
             strokeWidth={1.5}
             strokeLinecap="round"
           />
           {/* Chair seat arm rests */}
           <path
             d={`M ${el.width * 0.15} ${el.height * 0.3} L ${el.width * 0.15} ${el.height * 0.7}`}
-            stroke={el.strokeColor || '#3B82F6'}
+            stroke={el.strokeColor || '#64748B'}
             strokeWidth={1.2}
           />
           <path
             d={`M ${el.width * 0.85} ${el.height * 0.3} L ${el.width * 0.85} ${el.height * 0.7}`}
-            stroke={el.strokeColor || '#3B82F6'}
+            stroke={el.strokeColor || '#64748B'}
             strokeWidth={1.2}
           />
           {/* Chair seat cushion */}
@@ -91,7 +92,7 @@ const InnerDecoration: React.FC<{
             height={el.height * 0.5}
             rx={3}
             fill="var(--bg-surface, #fff)"
-            stroke={el.strokeColor || '#3B82F6'}
+            stroke={el.strokeColor || '#64748B'}
             strokeWidth={1}
           />
         </g>
@@ -163,7 +164,7 @@ const InnerDecoration: React.FC<{
               cx={seat.cx}
               cy={seat.cy}
               r={4}
-              fill={el.strokeColor || '#3B82F6'}
+              fill={el.strokeColor || '#64748B'}
             />
           ))}
         </g>
@@ -347,6 +348,7 @@ const ElementRenderer: React.FC<Props> = ({
   element: el,
   isSelected,
   isHovered,
+  onClick,
   onMouseDown,
   onMouseEnter,
   onMouseLeave,
@@ -374,13 +376,21 @@ const ElementRenderer: React.FC<Props> = ({
       transform={`translate(${el.x}, ${el.y})${
         el.rotation ? ` rotate(${el.rotation}, ${el.width / 2}, ${el.height / 2})` : ''
       }`}
-      onMouseDown={onMouseDown}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (onClick) onClick(e);
+      }}
+      onMouseDown={(e) => {
+        e.stopPropagation();
+        if (onMouseDown) onMouseDown(e);
+      }}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
       style={{
         cursor: cursor || (el.locked ? 'not-allowed' : 'move'),
         opacity: el.opacity,
         transition: 'opacity 120ms',
+        pointerEvents: cursor === 'default' ? 'none' : 'auto',
       }}
       data-element-id={el.id}
     >

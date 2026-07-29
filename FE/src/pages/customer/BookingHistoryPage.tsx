@@ -56,8 +56,26 @@ const BookingHistoryPage: React.FC = () => {
   const [showCancelModal, setShowCancelModal] = useState<string | null>(null);
   const [showQrModal, setShowQrModal] = useState<any | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(state?.message || null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [bookings, setBookings] = useState(MOCK_BOOKINGS);
   const [loading, setLoading] = useState(false);
+
+  // Parse MoMo Return URL parameters
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const resultCode = params.get('resultCode');
+    const message = params.get('message');
+    
+    if (resultCode !== null) {
+      if (resultCode === '0') {
+        setSuccessMessage(message || 'Thanh toán MoMo thành công!');
+      } else {
+        setErrorMessage(message || 'Thanh toán MoMo thất bại hoặc người dùng đã hủy giao dịch.');
+      }
+      // Clean up URL without reloading the page
+      window.history.replaceState({}, document.title, location.pathname);
+    }
+  }, [location.search]);
 
   // Sync state if redirected from checkout page with a new booking
   useEffect(() => {
@@ -150,9 +168,16 @@ const BookingHistoryPage: React.FC = () => {
       </div>
 
       {successMessage && (
-        <div className="mb-8 p-4 rounded-2xl border border-emerald-200 dark:border-emerald-900/50 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-950/30 dark:bg-emerald-950/30 flex items-center gap-3 animate-fade-scale-in shadow-sm">
+        <div className="mb-8 p-4 rounded-2xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-950/30 flex items-center gap-3 animate-fade-scale-in shadow-sm">
           <FiCheckCircle className="h-6 w-6 shrink-0 text-emerald-600" />
-          <span className="font-semibold text-sm text-emerald-800 dark:text-emerald-400 dark:text-emerald-400 tracking-tight">{successMessage}</span>
+          <span className="font-semibold text-sm text-emerald-800 dark:text-emerald-400 tracking-tight">{successMessage}</span>
+        </div>
+      )}
+
+      {errorMessage && (
+        <div className="mb-8 p-4 rounded-2xl border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/30 flex items-center gap-3 animate-fade-scale-in shadow-sm">
+          <FiAlertCircle className="h-6 w-6 shrink-0 text-rose-600" />
+          <span className="font-semibold text-sm text-rose-800 dark:text-rose-400 tracking-tight">{errorMessage}</span>
         </div>
       )}
 
