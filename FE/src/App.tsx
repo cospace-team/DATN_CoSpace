@@ -77,7 +77,7 @@ interface NavItem {
 }
 
 const customerNav: NavItem[] = [
-  { to: "/customer/explore", label: "Đặt chỗ", icon: <FiMapPin className="h-4 w-4" /> },
+  { to: "/customer/explore", label: "Khám phá Không gian", icon: <FiMapPin className="h-4 w-4" /> },
   { to: "/customer/history", label: "Lịch sử", icon: <FiCalendar className="h-4 w-4" /> },
   { to: "/customer/profile", label: "Hồ sơ & Kết nối", icon: <FiUser className="h-4 w-4" /> },
 ];
@@ -149,10 +149,13 @@ const AppShell: React.FC = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background px-6">
-        <div className="flex flex-col items-center gap-4">
-          <Logo showText={false} iconClassName="h-10 w-10 animate-float" />
-          <div className="rounded-xl border border-border bg-card px-6 py-4 text-sm text-muted-foreground shadow-sm">
-            Đang kiểm tra phiên đăng nhập...
+        <div className="flex flex-col items-center gap-5">
+          <Logo showText={false} iconClassName="h-12 w-12 animate-float" />
+          <div className="rounded-2xl border border-border bg-card/80 backdrop-blur-sm px-8 py-5 text-sm text-muted-foreground shadow-lg">
+            <div className="flex items-center gap-3">
+              <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+              Đang kiểm tra phiên đăng nhập...
+            </div>
           </div>
         </div>
       </div>
@@ -160,11 +163,8 @@ const AppShell: React.FC = () => {
   }
 
   // ── Public Routes ──
-  if (location.pathname === "/") {
+  if (location.pathname === "/" || location.pathname === "/locations") {
     return <LandingPage />;
-  }
-  if (location.pathname === "/locations") {
-    return <LocationsPage />;
   }
 
   // ── Auth Check ──
@@ -206,14 +206,18 @@ const AppShell: React.FC = () => {
     return <Navigate to={defaultRoute} replace />;
   }
 
+  // Find current nav label for breadcrumb
+  const currentNavItem = navItems.find((item) => location.pathname.startsWith(item.to));
+  const pageTitle = currentNavItem?.label || "Dashboard";
+
   const backendPillClass =
     backendStatus === "ok"
-      ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-400 dark:border-green-800"
+      ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-400"
       : backendStatus === "error"
-        ? "bg-red-50 text-red-700 border-red-200 dark:bg-red-950 dark:text-red-400 dark:border-red-800"
+        ? "bg-red-500/10 text-red-600 border-red-500/20 dark:text-red-400"
         : "bg-muted text-muted-foreground border-border";
   const backendLabel =
-    backendStatus === "ok" ? "BE Online" : backendStatus === "error" ? "BE Offline" : "BE Chưa kiểm tra";
+    backendStatus === "ok" ? "Online" : backendStatus === "error" ? "Offline" : "Checking";
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -225,7 +229,7 @@ const AppShell: React.FC = () => {
       {/* Sidebar overlay (mobile) */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden transition-opacity"
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden transition-opacity"
           onClick={() => setSidebarOpen(false)}
           role="button"
           aria-label="Đóng menu"
@@ -233,26 +237,34 @@ const AppShell: React.FC = () => {
         />
       )}
 
-      {/* Sidebar */}
+      {/* ─── Sidebar ─── */}
       <aside
-        className={`fixed lg:static z-50 h-full flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300 ${
+        className={`fixed lg:static z-50 h-full flex flex-col bg-sidebar transition-all duration-300 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-        } ${collapsed ? "w-[68px]" : "w-64"}`}
+        } ${collapsed ? "w-[68px]" : "w-[260px]"}`}
         aria-label="Điều hướng chính"
       >
-        {/* Logo */}
-        <div
-          className={`flex items-center gap-3 px-5 h-16 border-b border-sidebar-border shrink-0 ${collapsed ? "justify-center px-3" : ""}`}
-        >
+        {/* Logo area */}
+        <div className={`flex items-center gap-3 h-[68px] border-b border-sidebar-border shrink-0 ${collapsed ? "justify-center px-3" : "px-5"}`}>
           <Logo
             showText={!collapsed}
+            isDarkBackground
             iconClassName="h-9 w-9"
             textClassName="text-lg font-bold tracking-tight"
           />
         </div>
 
+        {/* Section label */}
+        {!collapsed && (
+          <div className="px-5 pt-5 pb-1">
+            <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-sidebar-foreground/40">
+              Điều hướng
+            </p>
+          </div>
+        )}
+
         {/* Nav links */}
-        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1" aria-label="Menu chính">
+        <nav className="flex-1 overflow-y-auto py-2 px-3 space-y-0.5" aria-label="Menu chính">
           {navItems.map((item) => (
             <NavLink
               key={item.to}
@@ -263,15 +275,15 @@ const AppShell: React.FC = () => {
               title={item.label}
               aria-current={location.pathname === item.to ? "page" : undefined}
             >
-              <span className="transition-transform group-hover:scale-110">
+              <span className="transition-transform duration-200 group-hover:scale-110 shrink-0">
                 {item.icon}
               </span>
-              {!collapsed && <span>{item.label}</span>}
+              {!collapsed && <span className="truncate">{item.label}</span>}
             </NavLink>
           ))}
         </nav>
 
-        {/* Collapse button (desktop) */}
+        {/* Collapse toggle (desktop) */}
         <div className="hidden lg:block px-3 py-2 border-t border-sidebar-border">
           <button
             onClick={() => setCollapsed(!collapsed)}
@@ -284,21 +296,29 @@ const AppShell: React.FC = () => {
           </button>
         </div>
 
-        {/* User section */}
-        <div className={`px-4 py-3 border-t border-sidebar-border shrink-0 ${collapsed ? "px-2" : ""}`}>
+        {/* User profile card */}
+        <div className={`shrink-0 border-t border-sidebar-border ${collapsed ? "px-2 py-3" : "p-3"}`}>
           {!collapsed ? (
-            <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-sm font-bold shrink-0 shadow-sm">
+            <div className="flex items-center gap-3 p-2.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.10] transition-colors cursor-default">
+              <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-sm font-bold shrink-0 shadow-lg shadow-blue-500/30">
                 {user.fullName.charAt(0)}
               </div>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold truncate">{user.fullName}</p>
-                <p className="text-xs text-muted-foreground truncate">{roleLabel[user.role]}</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-[13px] font-semibold text-white truncate">{user.fullName}</p>
+                <p className="text-[11px] text-sidebar-foreground/60 truncate">{roleLabel[user.role]}</p>
               </div>
+              <button
+                onClick={() => void logout()}
+                className="p-1.5 rounded-lg text-sidebar-foreground/40 hover:text-red-400 hover:bg-red-500/10 transition-all shrink-0"
+                aria-label="Đăng xuất"
+                title="Đăng xuất"
+              >
+                <FiLogOut className="h-3.5 w-3.5" />
+              </button>
             </div>
           ) : (
             <div className="flex justify-center">
-              <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-sm font-bold shadow-sm">
+              <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-sm font-bold shadow-lg shadow-blue-500/30" title={user.fullName}>
                 {user.fullName.charAt(0)}
               </div>
             </div>
@@ -306,39 +326,51 @@ const AppShell: React.FC = () => {
         </div>
       </aside>
 
-      {/* Main Content */}
+      {/* ─── Main Content Area ─── */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top bar */}
-        <header className="h-16 flex items-center justify-between px-6 border-b border-border bg-card/80 backdrop-blur-md shrink-0">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="lg:hidden p-2 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-            aria-label="Mở menu điều hướng"
-          >
-            <FiMenu className="h-5 w-5" />
-          </button>
+        {/* Top header bar */}
+        <header className="h-[60px] flex items-center justify-between px-6 border-b border-border bg-card/60 backdrop-blur-xl shrink-0">
+          {/* Left: mobile menu + page context */}
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="lg:hidden p-2 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              aria-label="Mở menu điều hướng"
+            >
+              <FiMenu className="h-5 w-5" />
+            </button>
 
-          <div className="hidden lg:flex items-center gap-3">
-            {user.branchName && (
-              <span className="text-sm text-muted-foreground flex items-center gap-2">
-                <FiMapPin className="h-3.5 w-3.5" /> {user.branchName}
-              </span>
-            )}
+            <div className="hidden lg:flex items-center gap-2.5">
+              <h1 className="text-[15px] font-bold font-heading text-foreground">{pageTitle}</h1>
+              {user.branchName && (
+                <>
+                  <div className="w-px h-4 bg-border" />
+                  <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+                    <FiMapPin className="h-3 w-3" /> {user.branchName}
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Right: status + actions */}
+          <div className="flex items-center gap-2">
             <span
-              className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${backendPillClass}`}
+              className={`hidden sm:inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-semibold ${backendPillClass}`}
             >
               <span className={`mr-1.5 h-1.5 w-1.5 rounded-full ${
-                backendStatus === "ok" ? "bg-green-500 animate-glow" : backendStatus === "error" ? "bg-red-500" : "bg-gray-400"
+                backendStatus === "ok" ? "bg-emerald-500 animate-glow" : backendStatus === "error" ? "bg-red-500" : "bg-gray-400"
               }`} />
               {backendLabel}
             </span>
-          </div>
 
-          <div className="flex items-center gap-1">
+            <div className="w-px h-5 bg-border hidden sm:block" />
+
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+              className="h-9 w-9 rounded-lg"
               aria-label={resolvedTheme === "dark" ? "Chuyển sang chế độ sáng" : "Chuyển sang chế độ tối"}
             >
               {resolvedTheme === "dark" ? (
@@ -347,15 +379,17 @@ const AppShell: React.FC = () => {
                 <FiMoon className="h-4 w-4" />
               )}
             </Button>
+
+            {/* Logout visible only on desktop header (mobile uses sidebar) */}
             <Button
               variant="ghost"
               size="sm"
               onClick={() => void logout()}
-              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+              className="hidden lg:inline-flex text-muted-foreground hover:text-destructive hover:bg-destructive/10"
               aria-label="Đăng xuất"
             >
               <FiLogOut className="h-4 w-4" />
-              <span className="hidden sm:inline">Đăng xuất</span>
+              <span className="hidden xl:inline">Đăng xuất</span>
             </Button>
           </div>
         </header>

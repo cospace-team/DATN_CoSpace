@@ -78,12 +78,12 @@ const BAPoliciesPage: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="rounded-xl border border-border bg-card p-6">
+      <div className="bg-card rounded-3xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Quản lý chi nhánh</p>
-            <h1 className="text-xl font-bold font-heading mt-1">Chính sách hủy</h1>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Quản lý chi nhánh</p>
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground mt-1">Chính sách hủy</h1>
+            <p className="text-sm font-medium text-muted-foreground mt-2">
               Thêm chính sách riêng cho chi nhánh. Chính sách chi nhánh được ưu tiên hơn mặc định.
             </p>
           </div>
@@ -106,7 +106,7 @@ const BAPoliciesPage: React.FC = () => {
       </div>
 
       {/* Policy list */}
-      <div className="rounded-xl border border-border bg-card overflow-hidden">
+      <div className="bg-card rounded-3xl border border-border shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="data-table">
             <thead>

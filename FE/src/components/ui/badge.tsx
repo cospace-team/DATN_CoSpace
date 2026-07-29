@@ -17,10 +17,10 @@ const badgeVariants = cva(
         success:
           "border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950 dark:text-green-400",
         warning:
-          "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-400",
+          "border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-400",
         danger:
-          "border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400",
-        info: "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-400",
+          "border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400",
+        info: "border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-400",
         neutral:
           "border-border bg-muted text-muted-foreground",
       },

@@ -28,7 +28,7 @@ const Modal: React.FC<{ open: boolean; onClose: () => void; title: string; child
   return (
     <>
       <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg rounded-xl border border-border bg-card shadow-xl">
+      <div className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg bg-card rounded-3xl border border-border shadow-sm shadow-xl">
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <h3 className="text-lg font-bold font-heading">{title}</h3>
           <button onClick={onClose} className="btn btn-ghost btn-sm !min-h-[32px] !p-2"><FiX className="h-5 w-5" /></button>
@@ -57,12 +57,12 @@ const ExtraServicesPage: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="rounded-xl border border-border bg-card p-6">
+      <div className="bg-card rounded-3xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Quản lý loại hình dịch vụ</p>
-            <h1 className="text-xl font-bold font-heading mt-1">Danh mục dịch vụ bổ sung</h1>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Quản lý loại hình dịch vụ</p>
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground mt-1">Danh mục dịch vụ bổ sung</h1>
+            <p className="text-sm font-medium text-muted-foreground mt-2">
               Định nghĩa các loại hình dịch vụ mà các chi nhánh có thể cung cấp. 
               Việc tạo dịch vụ cụ thể và đặt giá thuộc về Quản lý chi nhánh.
             </p>
@@ -72,9 +72,9 @@ const ExtraServicesPage: React.FC = () => {
       </div>
 
       {/* Info Banner */}
-      <div className="rounded-xl border border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/50 p-4 flex items-start gap-3">
-        <FiInfo className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-        <div className="text-sm text-blue-800 dark:text-blue-300">
+      <div className="rounded-xl border border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-900 dark:bg-blue-950/50 p-4 flex items-start gap-3">
+        <FiInfo className="h-5 w-5 text-blue-600 dark:text-blue-400 dark:text-blue-400 shrink-0 mt-0.5" />
+        <div className="text-sm text-blue-800 dark:text-blue-400 dark:text-blue-300">
           <p className="font-semibold">Lưu ý về phân quyền</p>
           <p className="mt-1 text-blue-700 dark:text-blue-400">
             Trang này chỉ quản lý <strong>loại hình</strong> dịch vụ (danh mục). Quản lý chi nhánh (Branch Admin) sẽ tạo các dịch vụ cụ thể, đặt giá và quản lý tồn kho dựa trên các loại hình này.
@@ -83,7 +83,7 @@ const ExtraServicesPage: React.FC = () => {
       </div>
 
       {/* Service Category Table */}
-      <div className="rounded-xl border border-border bg-card p-6 overflow-x-auto">
+      <div className="bg-card rounded-3xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow overflow-x-auto">
         <table className="data-table">
           <thead>
             <tr>
@@ -156,7 +156,7 @@ const ExtraServicesPage: React.FC = () => {
             <label className="text-sm font-medium">Trạng thái hoạt động</label>
             <div className="relative inline-flex items-center cursor-pointer">
               <input type="checkbox" className="sr-only peer" defaultChecked={editItem?.is_active ?? true} />
-              <div className="w-11 h-6 bg-muted rounded-full peer peer-checked:bg-primary transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full" />
+              <div className="w-11 h-6 bg-muted rounded-full peer peer-checked:bg-primary transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full" />
             </div>
           </div>
           <div className="flex gap-3 pt-4 border-t border-border">
@@ -172,7 +172,7 @@ const ExtraServicesPage: React.FC = () => {
       {deleteConfirm && (
         <>
           <div className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm" onClick={() => setDeleteConfirm(null)} />
-          <div className="fixed z-[60] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-xl">
+          <div className="fixed z-[60] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm bg-card rounded-3xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow shadow-xl">
             <div className="flex items-center gap-3 mb-4">
               <div className="h-10 w-10 rounded-full bg-destructive/10 flex items-center justify-center">
                 <FiAlertTriangle className="h-5 w-5 text-destructive" />

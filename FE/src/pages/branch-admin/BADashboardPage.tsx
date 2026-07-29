@@ -55,7 +55,7 @@ const BADashboardPage: React.FC = () => {
   const statCards = useMemo(() => [
     {
       icon: FiGrid, label: 'Tổng workspace', value: String(branchWorkspaces.length),
-      sub: `${activeWs} hoạt động`, gradient: 'from-blue-500 to-indigo-500', glow: 'bg-blue-500/10',
+      sub: `${activeWs} hoạt động`, gradient: 'from-blue-500 to-indigo-500', glow: 'bg-blue-50 dark:bg-blue-950/300/10',
     },
     {
       icon: FiActivity, label: 'Đặt chỗ hôm nay', value: String(todayBookings.length),
@@ -65,7 +65,7 @@ const BADashboardPage: React.FC = () => {
     {
       icon: FiUsers, label: 'Nhân viên', value: String(branchStaff.length),
       sub: `${branchStaff.filter(u => u.status === 'active').length} đang làm việc`,
-      gradient: 'from-emerald-500 to-teal-500', glow: 'bg-emerald-500/10',
+      gradient: 'from-emerald-500 to-teal-500', glow: 'bg-emerald-50 dark:bg-emerald-950/300/10',
     },
     {
       icon: FiCalendar, label: 'Doanh thu', value: formatVND(branchRevenue),
@@ -120,21 +120,18 @@ const BADashboardPage: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="rounded-xl border border-border bg-card p-6">
-        <div className="flex items-start justify-between flex-wrap gap-4">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Quản lý chi nhánh
-            </p>
-            <h1 className="text-xl font-bold font-heading mt-1">Báo cáo & Lịch sử hoạt động</h1>
-            <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1.5">
+      <div className="bg-card rounded-3xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Báo cáo & Lịch sử hoạt động</h1>
+            <span className="text-xs bg-muted text-muted-foreground px-2.5 py-1 rounded-full font-medium flex items-center gap-1">
               <FiMapPin className="h-3.5 w-3.5" />
-              {branch?.name ?? branchId} — {branch?.address}
-            </p>
+              {branch?.name ?? branchId}
+            </span>
           </div>
           <div className="flex items-center gap-3">
             {branch?.status === 'inactive' && (
-              <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-400">
+              <div className="flex items-center gap-2 rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/30 px-3 py-2 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-400">
                 <FiAlertCircle className="h-4 w-4 shrink-0" />
                 Đang tạm ngưng hoạt động
               </div>
@@ -187,7 +184,7 @@ const BADashboardPage: React.FC = () => {
           {/* KPI Cards */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {statCards.map((s) => (
-              <div key={s.label} className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 transition-all duration-300 hover:border-primary/50 hover:shadow-lg">
+              <div key={s.label} className="group relative overflow-hidden bg-card rounded-3xl border border-border p-5 shadow-sm hover:shadow-md transition-shadow transition-all duration-300 hover:border-primary/50 hover:shadow-lg">
                 <div className={`absolute -top-8 -right-8 h-24 w-24 rounded-full ${s.glow} blur-2xl opacity-50 transition-opacity group-hover:opacity-100`} />
                 <div className="relative">
                   <div className={`inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${s.gradient} text-white shadow-sm`}>
@@ -207,7 +204,7 @@ const BADashboardPage: React.FC = () => {
           </div>
 
           <div className="grid gap-6 lg:grid-cols-2">
-            <div className="rounded-xl border border-border bg-card p-6">
+            <div className="bg-card rounded-3xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow">
               <h2 className="font-semibold flex items-center gap-2">
                 <FiTrendingUp className="h-4 w-4 text-primary" /> 
                 {reportType === 'revenue' ? 'Doanh thu theo tháng' : 'Tỷ lệ lấp đầy theo tháng'}
@@ -230,7 +227,7 @@ const BADashboardPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="rounded-xl border border-border bg-card p-6">
+            <div className="bg-card rounded-3xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow">
               <h2 className="font-semibold flex items-center gap-2"><FiPieChart className="h-4 w-4 text-primary" /> Doanh thu theo loại Workspace</h2>
               <div className="mt-6 space-y-4">
                 {byType.map(t => (
@@ -283,7 +280,7 @@ const BADashboardPage: React.FC = () => {
           </div>
 
           {/* Audit Table */}
-          <div className="rounded-xl border border-border bg-card p-0 overflow-hidden">
+          <div className="bg-card rounded-3xl border border-border shadow-sm p-0 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="data-table">
                 <thead>

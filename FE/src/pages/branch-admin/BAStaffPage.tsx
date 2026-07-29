@@ -118,14 +118,14 @@ const BAStaffPage: React.FC = () => {
       )}
 
       {/* Header */}
-      <div className="rounded-xl border border-border bg-card p-6">
+      <div className="bg-card rounded-3xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Quản lý chi nhánh</p>
-            <h1 className="text-xl font-bold font-heading mt-1">Quản lý nhân viên</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              {staffList.length} nhân viên · <span className="text-emerald-600 dark:text-emerald-400">{staffList.filter((u) => u.status === 'active').length} hoạt động</span>
-            </p>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Quản lý nhân viên</h1>
+            <span className="text-xs font-medium bg-muted text-muted-foreground px-2.5 py-1 rounded-full flex items-center gap-1.5">
+              <FiUsers className="h-3.5 w-3.5" />
+              {staffList.length} nhân viên ({staffList.filter((u) => u.status === 'active').length} hoạt động)
+            </span>
           </div>
           <button onClick={() => handleOpenModal()} className="btn btn-primary btn-sm flex items-center gap-2">
             <FiPlus className="h-4 w-4" /> Thêm nhân viên
@@ -135,12 +135,12 @@ const BAStaffPage: React.FC = () => {
 
       {/* Staff list */}
       {staffList.length === 0 ? (
-        <div className="rounded-xl border border-border bg-card p-10 flex flex-col items-center gap-3 text-muted-foreground">
+        <div className="bg-card rounded-3xl border border-border shadow-sm p-10 flex flex-col items-center gap-3 text-muted-foreground">
           <FiUsers className="h-10 w-10 opacity-30" />
           <p className="text-sm font-medium">Chưa có nhân viên nào được phân công.</p>
         </div>
       ) : (
-        <div className="rounded-xl border border-border bg-card overflow-hidden">
+        <div className="bg-card rounded-3xl border border-border shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="data-table">
               <thead>
@@ -195,7 +195,7 @@ const BAStaffPage: React.FC = () => {
 
       {/* Alert if no active staff */}
       {staffList.length > 0 && staffList.every((s) => s.status === 'suspended') && (
-        <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-400">
+        <div className="flex items-center gap-2 rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/30 px-4 py-3 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-400">
           <FiAlertCircle className="h-4 w-4 shrink-0" />
           Tất cả nhân viên đang bị tạm khóa. Chi nhánh không có ai trực.
         </div>

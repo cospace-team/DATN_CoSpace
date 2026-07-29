@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FiUser, FiBriefcase, FiMapPin, FiMail, FiPhone, FiGithub, FiLinkedin, FiSettings, FiCheck, FiX, FiInfo, FiUsers, FiStar, FiMessageCircle, FiEyeOff } from 'react-icons/fi';
+import { FiUser, FiBriefcase, FiMapPin, FiMail, FiPhone, FiGithub, FiLinkedin, FiSettings, FiCheck, FiCheckCircle, FiX, FiInfo, FiUsers, FiStar, FiMessageCircle, FiEyeOff } from 'react-icons/fi';
 import { Button } from '../../components/ui/button';
 import { useAuth } from '../../context/AuthContext';
 
@@ -175,208 +175,241 @@ const ProfilePage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto py-6 pb-20">
+    <div className="max-w-6xl mx-auto py-8 px-4 pb-24 font-sans animate-fade-in">
       {/* Header Banner */}
-      <div className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-blue-600 to-indigo-700 h-48 md:h-64 mb-16 shadow-lg">
-        <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '24px 24px' }}></div>
+      <div className="relative rounded-3xl overflow-hidden bg-muted h-48 md:h-64 mb-20 border border-border shadow-sm">
+        {/* Geometric Patterns */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-slate-900 rounded-full mix-blend-multiply filter blur-3xl opacity-50 translate-x-1/3 -translate-y-1/3"></div>
+        <div className="absolute bottom-0 left-1/3 w-48 h-48 bg-muted rounded-full mix-blend-multiply filter blur-3xl opacity-50 translate-y-1/3"></div>
+        
+        {/* Retro Dots */}
+        
 
         {/* Avatar */}
-        <div className="absolute -bottom-12 left-8 md:left-12 flex items-end">
-          <div className="h-28 w-28 md:h-32 md:w-32 rounded-2xl bg-card border-4 border-background flex items-center justify-center shadow-xl overflow-hidden">
+        <div className="absolute -bottom-14 left-6 md:left-12 flex items-end z-10">
+          <div className="h-32 w-32 md:h-40 md:w-40 rounded-2xl bg-muted/50 border border-border flex items-center justify-center shadow-sm overflow-hidden transform hover:-translate-y-2 transition-transform duration-300">
             {user?.avatarUrl ? (
               <img src={user.avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
             ) : (
-              <span className="text-4xl md:text-5xl font-bold bg-gradient-to-br from-blue-500 to-indigo-600 bg-clip-text text-transparent">
-                {user?.fullName ? user.fullName.charAt(0) : '?'}
+              <span className="text-6xl md:text-7xl font-semibold text-foreground">
+                {user?.fullName ? user.fullName.charAt(0).toUpperCase() : '?'}
               </span>
             )}
           </div>
-          <div className="ml-4 mb-12 md:mb-14 text-white drop-shadow-md hidden md:block">
-            <h1 className="text-3xl font-bold font-heading">{user?.fullName}</h1>
-            <p className="text-blue-100 font-medium opacity-90">{profileData.profession || 'Thành viên'} @ {profileData.company || 'WorkHub'}</p>
+          <div className="ml-6 mb-14 md:mb-16 text-white drop-shadow-md hidden md:block">
+            <h1 className="text-4xl font-semibold tracking-tight">{user?.fullName}</h1>
+            <p className="text-xl font-medium bg-secondary text-slate-100 px-3 py-1 rounded-lg border border-slate-700 inline-block mt-2 shadow-sm">
+              {profileData.profession || 'Thành viên'} @ {profileData.company || 'CoSpace'}
+            </p>
           </div>
         </div>
       </div>
 
-      {/* Mobile Title (visible only on small screens) */}
-      <div className="px-6 mb-8 md:hidden">
-        <h1 className="text-2xl font-bold font-heading">{user?.fullName}</h1>
-        <p className="text-muted-foreground">{profileData.profession || 'Thành viên'} @ {profileData.company || 'WorkHub'}</p>
+      {/* Mobile Title */}
+      <div className="px-2 mb-10 md:hidden mt-16 text-center">
+        <h1 className="text-3xl font-semibold text-foreground">{user?.fullName}</h1>
+        <p className="text-sm font-medium bg-secondary text-slate-100 px-3 py-1 rounded-lg border border-slate-700 inline-block mt-3 shadow-sm">
+          {profileData.profession || 'Thành viên'} @ {profileData.company || 'CoSpace'}
+        </p>
       </div>
 
-      {/* Tabs */}
-      <div className="flex px-4 md:px-12 border-b border-border mb-8">
+      {/* Block-based Tabs */}
+      <div className="flex flex-wrap gap-4 px-2 md:px-12 mb-10">
         <button
           onClick={() => setActiveTab('personal')}
-          className={`flex items-center gap-2 px-6 py-4 font-semibold text-sm transition-all relative ${activeTab === 'personal' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+          className={`flex items-center gap-2 px-6 py-3 font-semibold text-sm tracking-tight rounded-full border border-border transition-all ${
+            activeTab === 'personal' 
+              ? 'bg-slate-900 text-white shadow-sm -translate-y-1' 
+              : 'bg-card text-foreground shadow-sm hover:-translate-y-1 hover:shadow-sm'
+          }`}
         >
-          <FiUser className="h-4 w-4" /> Thông tin cá nhân
-          {activeTab === 'personal' && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-primary rounded-t-full" />}
+          <FiUser className="h-5 w-5" /> Cá nhân
         </button>
         <button
           onClick={() => setActiveTab('profile')}
-          className={`flex items-center gap-2 px-6 py-4 font-semibold text-sm transition-all relative ${activeTab === 'profile' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+          className={`flex items-center gap-2 px-6 py-3 font-semibold text-sm tracking-tight rounded-full border border-border transition-all ${
+            activeTab === 'profile' 
+              ? 'bg-slate-900 text-white shadow-sm -translate-y-1' 
+              : 'bg-card text-foreground shadow-sm hover:-translate-y-1 hover:shadow-sm'
+          }`}
         >
-          <FiBriefcase className="h-4 w-4" /> Thông tin profile
-          {activeTab === 'profile' && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-primary rounded-t-full" />}
+          <FiBriefcase className="h-5 w-5" /> Profile
         </button>
         <button
           onClick={() => setActiveTab('network')}
-          className={`flex items-center gap-2 px-6 py-4 font-semibold text-sm transition-all relative ${activeTab === 'network' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+          className={`flex items-center gap-2 px-6 py-3 font-semibold text-sm tracking-tight rounded-full border border-border transition-all ${
+            activeTab === 'network' 
+              ? 'bg-slate-900 text-white shadow-sm -translate-y-1' 
+              : 'bg-card text-foreground shadow-sm hover:-translate-y-1 hover:shadow-sm'
+          }`}
         >
-          <FiUsers className="h-4 w-4" /> Kết nối & Gợi ý
-          {activeTab === 'network' && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-primary rounded-t-full" />}
+          <FiUsers className="h-5 w-5" /> Kết nối
         </button>
       </div>
 
-      <div className="px-4 md:px-12">
-
+      <div className="px-2 md:px-12">
         {/* ==================== TAB 1: PERSONAL INFO ==================== */}
         {activeTab === 'personal' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Core personal details form */}
             <div className="lg:col-span-2">
-              <section className="bg-card rounded-2xl border border-border p-6 shadow-sm">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-lg font-bold font-heading flex items-center gap-2">
-                    <FiUser className="text-primary" /> Thông tin liên hệ
+              <section className="bg-card rounded-2xl border border-border p-6 shadow-sm relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-slate-900 opacity-10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
+                
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
+                  <h2 className="text-2xl font-semibold flex items-center gap-3 text-foreground">
+                    <div className="p-2 bg-muted rounded-lg border border-border"><FiUser className="text-muted-foreground" /></div>
+                    Liên hệ
                   </h2>
                   {!isEditingPersonal ? (
-                    <Button variant="ghost" size="sm" onClick={() => setIsEditingPersonal(true)}>Chỉnh sửa</Button>
+                    <button 
+                      onClick={() => setIsEditingPersonal(true)}
+                      className="px-5 py-2 bg-muted text-foreground font-medium tracking-tight text-xs border border-border rounded-full shadow-sm hover:-translate-y-0.5 hover:shadow-sm transition-all"
+                    >
+                      Chỉnh sửa
+                    </button>
                   ) : (
-                    <div className="flex gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => {
-                        setIsEditingPersonal(false);
-                        if (user) {
-                          setPersonalForm({
-                            fullName: user.fullName || '',
-                            email: user.email || '',
-                            phone: user.phone || ''
-                          });
-                        }
-                      }}>Hủy</Button>
-                      <Button size="sm" onClick={handleSavePersonal}>Lưu</Button>
+                    <div className="flex gap-3">
+                      <button 
+                        onClick={() => {
+                          setIsEditingPersonal(false);
+                          if (user) {
+                            setPersonalForm({
+                              fullName: user.fullName || '',
+                              email: user.email || '',
+                              phone: user.phone || ''
+                            });
+                          }
+                        }}
+                        className="px-5 py-2 bg-card text-foreground font-medium tracking-tight text-xs border border-border rounded-full shadow-sm hover:bg-muted transition-all"
+                      >
+                        Hủy
+                      </button>
+                      <button 
+                        onClick={handleSavePersonal}
+                        className="px-5 py-2 bg-slate-900 text-white font-medium tracking-tight text-xs border border-slate-800 rounded-full shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all"
+                      >
+                        Lưu lại
+                      </button>
                     </div>
                   )}
                 </div>
 
                 {isEditingPersonal ? (
-                  <div className="space-y-4">
+                  <div className="space-y-6">
                     <div>
-                      <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Họ và tên</label>
+                      <label className="block text-xs font-semibold text-foreground tracking-tight mb-2">Họ và tên</label>
                       <input
                         type="text"
                         value={personalForm.fullName}
                         onChange={e => setPersonalForm({ ...personalForm, fullName: e.target.value })}
-                        className="input-field"
+                        className="w-full px-4 py-3 bg-muted/50 border border-border rounded-xl font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-slate-900/20 transition-all"
                         required
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Email (Tài khoản)</label>
+                      <label className="block text-xs font-semibold text-foreground tracking-tight mb-2">Email</label>
                       <input
                         type="email"
                         value={personalForm.email}
                         onChange={e => setPersonalForm({ ...personalForm, email: e.target.value })}
-                        className="input-field"
+                        className="w-full px-4 py-3 bg-muted/50 border border-border rounded-xl font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-slate-900/20 transition-all"
                         required
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Số điện thoại</label>
+                      <label className="block text-xs font-semibold text-foreground tracking-tight mb-2">Số điện thoại</label>
                       <input
                         type="text"
                         value={personalForm.phone}
                         onChange={e => setPersonalForm({ ...personalForm, phone: e.target.value })}
-                        className="input-field"
+                        className="w-full px-4 py-3 bg-muted/50 border border-border rounded-xl font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-slate-900/20 transition-all"
                       />
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-4 text-sm">
-                    <div className="grid grid-cols-3 gap-2 py-2 border-b border-border">
-                      <span className="text-muted-foreground font-medium">Họ và tên:</span>
-                      <span className="col-span-2 font-semibold text-foreground">{user?.fullName || 'Chưa cập nhật'}</span>
+                  <div className="space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center py-4 border-b border-border/10 gap-2">
+                      <span className="w-40 text-xs font-semibold tracking-tight text-foreground/60">Họ và tên</span>
+                      <span className="font-medium text-lg text-foreground">{user?.fullName || 'Chưa cập nhật'}</span>
                     </div>
-                    <div className="grid grid-cols-3 gap-2 py-2 border-b border-border">
-                      <span className="text-muted-foreground font-medium">Email:</span>
-                      <span className="col-span-2 font-semibold text-foreground">{user?.email || 'Chưa cập nhật'}</span>
+                    <div className="flex flex-col sm:flex-row sm:items-center py-4 border-b border-border/10 gap-2">
+                      <span className="w-40 text-xs font-semibold tracking-tight text-foreground/60">Email</span>
+                      <span className="font-medium text-lg text-foreground">{user?.email || 'Chưa cập nhật'}</span>
                     </div>
-                    <div className="grid grid-cols-3 gap-2 py-2">
-                      <span className="text-muted-foreground font-medium">Số điện thoại:</span>
-                      <span className="col-span-2 font-semibold text-foreground">{user?.phone || 'Chưa cập nhật'}</span>
+                    <div className="flex flex-col sm:flex-row sm:items-center py-4 gap-2">
+                      <span className="w-40 text-xs font-semibold tracking-tight text-foreground/60">Số điện thoại</span>
+                      <span className="font-medium text-lg text-foreground">{user?.phone || 'Chưa cập nhật'}</span>
                     </div>
                   </div>
                 )}
               </section>
             </div>
 
-            {/* Inline Password Change form */}
             <div className="lg:col-span-1">
-              <section className="bg-card rounded-2xl border border-border p-6 shadow-sm">
-                <h2 className="text-lg font-bold font-heading mb-4">Đổi mật khẩu</h2>
-                <form onSubmit={handlePasswordChange} className="space-y-3">
+              <section className="bg-muted/50 rounded-2xl border border-border p-6 shadow-sm">
+                <h2 className="text-xl font-semibold   mb-6 text-foreground">Đổi mật khẩu</h2>
+                <form onSubmit={handlePasswordChange} className="space-y-5">
                   {!user?.email.endsWith("@dev.local") && !localStorage.getItem("workhub_access_token")?.startsWith("eyJhbGciOiJIUzI1NiJ") && (
-                    <div className="p-3 bg-blue-50 text-blue-800 text-xs rounded-xl border border-blue-100 flex items-start gap-2 mb-2">
-                      <FiInfo className="mt-0.5 shrink-0" />
-                      <span>Tài khoản Google. Thiết lập mật khẩu không cần nhập mật khẩu cũ.</span>
+                    <div className="p-4 bg-card border border-border rounded-full shadow-sm flex items-start gap-3">
+                      <FiInfo className="text-foreground h-5 w-5 shrink-0 mt-0.5" />
+                      <p className="text-xs font-medium text-foreground leading-relaxed">Tài khoản Google/Mạng xã hội. Thiết lập mật khẩu không cần nhập mật khẩu cũ.</p>
                     </div>
                   )}
 
                   <div>
-                    <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Mật khẩu cũ</label>
+                    <label className="block text-[10px] font-semibold text-foreground tracking-tight mb-2">Mật khẩu cũ</label>
                     <input
                       type="password"
                       value={passwordForm.oldPassword}
                       onChange={(e) => setPasswordForm({ ...passwordForm, oldPassword: e.target.value })}
-                      placeholder="Nhập mật khẩu cũ (nếu có)"
-                      className="input-field"
+                      placeholder="••••••••"
+                      className="w-full px-4 py-3 bg-card border border-border rounded-xl font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-slate-900/20"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Mật khẩu mới</label>
+                    <label className="block text-[10px] font-semibold text-foreground tracking-tight mb-2">Mật khẩu mới</label>
                     <input
                       type="password"
                       value={passwordForm.newPassword}
                       onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
                       placeholder="Ít nhất 8 ký tự"
-                      className="input-field"
+                      className="w-full px-4 py-3 bg-card border border-border rounded-xl font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-slate-900/20"
                       required
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Xác nhận mật khẩu mới</label>
+                    <label className="block text-[10px] font-semibold text-foreground tracking-tight mb-2">Xác nhận MK mới</label>
                     <input
                       type="password"
                       value={passwordForm.confirmNewPassword}
                       onChange={(e) => setPasswordForm({ ...passwordForm, confirmNewPassword: e.target.value })}
-                      placeholder="Xác nhận mật khẩu mới"
-                      className="input-field"
+                      placeholder="••••••••"
+                      className="w-full px-4 py-3 bg-card border border-border rounded-xl font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-slate-900/20"
                       required
                     />
                   </div>
 
                   {passwordError && (
-                    <div className="p-3 bg-red-50 text-red-700 text-xs rounded-xl border border-red-100">
+                    <div className="p-3 bg-red-50 dark:bg-red-950/30 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 dark:border-red-900/50 rounded-xl text-xs font-medium text-red-700">
                       {passwordError}
                     </div>
                   )}
 
                   {passwordSuccess && (
-                    <div className="p-3 bg-green-50 text-green-700 text-xs rounded-xl border border-green-100">
+                    <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 dark:border-emerald-900/50 rounded-xl text-xs font-medium text-emerald-700">
                       {passwordSuccess}
                     </div>
                   )}
 
-                  <Button
+                  <button
                     type="submit"
                     disabled={isSavingPassword}
-                    className="w-full text-xs font-bold py-2.5"
+                    className="w-full py-4 bg-slate-900 text-white font-semibold tracking-tight text-sm border border-border rounded-full shadow-sm hover:-translate-y-1 hover:shadow-sm transition-all disabled:opacity-70 disabled:cursor-not-allowed mt-4"
                   >
-                    {isSavingPassword ? "Đang xử lý..." : "Lưu mật khẩu mới"}
-                  </Button>
+                    {isSavingPassword ? "Đang xử lý..." : "Lưu mật khẩu"}
+                  </button>
                 </form>
               </section>
             </div>
@@ -388,62 +421,85 @@ const ProfilePage: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2">
               <section className="bg-card rounded-2xl border border-border p-6 shadow-sm">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-lg font-bold font-heading flex items-center gap-2">
-                    <FiBriefcase className="text-primary" /> Chi tiết Profile
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
+                  <h2 className="text-2xl font-semibold flex items-center gap-3 text-foreground">
+                    <div className="p-2 bg-muted rounded-lg border border-border"><FiBriefcase className="text-muted-foreground" /></div>
+                    Công việc
                   </h2>
                   {!isEditingProfile ? (
-                    <Button variant="ghost" size="sm" onClick={() => setIsEditingProfile(true)}>Chỉnh sửa</Button>
+                    <button 
+                      onClick={() => setIsEditingProfile(true)}
+                      className="px-5 py-2 bg-muted text-foreground font-medium tracking-tight text-xs border border-border rounded-full shadow-sm hover:-translate-y-0.5 hover:shadow-sm transition-all"
+                    >
+                      Chỉnh sửa
+                    </button>
                   ) : (
-                    <div className="flex gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => setIsEditingProfile(false)}>Hủy</Button>
-                      <Button size="sm" onClick={handleSaveProfile}>Lưu</Button>
+                    <div className="flex gap-3">
+                      <button 
+                        onClick={() => setIsEditingProfile(false)}
+                        className="px-5 py-2 bg-card text-foreground font-medium tracking-tight text-xs border border-border rounded-full shadow-sm hover:bg-muted transition-all"
+                      >
+                        Hủy
+                      </button>
+                      <button 
+                        onClick={handleSaveProfile}
+                        className="px-5 py-2 bg-slate-900 text-white font-medium tracking-tight text-xs border border-border rounded-full shadow-sm hover:-translate-y-0.5 hover:shadow-sm transition-all"
+                      >
+                        Lưu lại
+                      </button>
                     </div>
                   )}
                 </div>
 
                 {isEditingProfile ? (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
-                        <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Chức danh</label>
+                        <label className="block text-xs font-semibold text-foreground tracking-tight mb-2">Chức danh</label>
                         <input
                           type="text"
                           value={profileData.profession}
                           onChange={e => setProfileData({ ...profileData, profession: e.target.value })}
-                          className="input-field"
+                          className="w-full px-4 py-3 bg-muted/50 border border-border rounded-xl font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-slate-900/20"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Công ty</label>
+                        <label className="block text-xs font-semibold text-foreground tracking-tight mb-2">Công ty</label>
                         <input
                           type="text"
                           value={profileData.company}
                           onChange={e => setProfileData({ ...profileData, company: e.target.value })}
-                          className="input-field"
+                          className="w-full px-4 py-3 bg-muted/50 border border-border rounded-xl font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-slate-900/20"
                         />
                       </div>
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Giới thiệu bản thân (Bio)</label>
+                      <label className="block text-xs font-semibold text-foreground tracking-tight mb-2">Bio (Giới thiệu)</label>
                       <textarea
                         value={profileData.bio}
                         onChange={e => setProfileData({ ...profileData, bio: e.target.value })}
-                        className="input-field min-h-[100px] resize-y"
+                        className="w-full px-4 py-3 bg-muted/50 border border-border rounded-xl font-medium text-foreground min-h-[120px] resize-y focus:outline-none focus:ring-2 focus:ring-slate-900/20"
+                        placeholder="Một vài dòng về bản thân bạn..."
                       />
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-6 text-sm">
-                    <p className="leading-relaxed text-muted-foreground">{profileData.bio || 'Chưa có thông tin giới thiệu bản thân.'}</p>
-                    <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border">
-                      <div>
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Chức danh</p>
-                        <p className="font-medium flex items-center gap-2"><FiBriefcase className="text-primary/70" /> {profileData.profession || 'Chưa cập nhật'}</p>
+                  <div className="space-y-8">
+                    <div className="bg-muted/50 p-5 rounded-2xl border border-border relative">
+                      <div className="absolute -top-3 left-6 bg-card border border-border px-2 py-0.5 rounded text-[10px] font-semibold text-muted-foreground">Bio</div>
+                      <p className="font-medium text-foreground leading-relaxed text-base pt-2">
+                        {profileData.bio || 'Bạn chưa cập nhật thông tin giới thiệu bản thân. Hãy thêm vài dòng để kết nối với mọi người tốt hơn nhé!'}
+                      </p>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="p-4 border border-border rounded-2xl">
+                        <p className="text-[10px] font-semibold text-muted-foreground tracking-tight mb-1">Chức danh</p>
+                        <p className="font-semibold text-xl text-foreground break-words">{profileData.profession || '—'}</p>
                       </div>
-                      <div>
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Công ty</p>
-                        <p className="font-medium flex items-center gap-2"><FiMapPin className="text-primary/70" /> {profileData.company || 'Chưa cập nhật'}</p>
+                      <div className="p-4 border border-border rounded-full bg-slate-900 text-white shadow-sm">
+                        <p className="text-[10px] font-semibold text-white/60 tracking-tight mb-1">Công ty</p>
+                        <p className="font-semibold text-xl break-words">{profileData.company || '—'}</p>
                       </div>
                     </div>
                   </div>
@@ -451,44 +507,52 @@ const ProfilePage: React.FC = () => {
               </section>
             </div>
 
-            {/* Visibility Settings card */}
             <div className="lg:col-span-1">
               <section className="bg-card rounded-2xl border border-border p-6 shadow-sm">
-                <h2 className="text-lg font-bold font-heading mb-4">Cấu hình hiển thị</h2>
-                <div className="flex items-start justify-between gap-4 p-4 rounded-xl border border-border bg-background">
-                  <div>
-                    <h3 className="text-sm font-semibold mb-1">Công khai liên hệ</h3>
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      Cho phép người dùng khác nhìn thấy email và số điện thoại của bạn trên tab tìm kiếm/kết nối.
-                    </p>
+                <h2 className="text-xl font-semibold   mb-6 flex items-center gap-2"><FiSettings /> Hiển thị</h2>
+                
+                <div className="p-5 rounded-2xl border border-border bg-muted/50">
+                  <div className="flex items-start justify-between gap-4 mb-4">
+                    <div>
+                      <h3 className="text-base font-semibold text-foreground mb-1">Public Liên hệ</h3>
+                      <p className="text-xs font-semibold text-foreground/70 leading-relaxed">
+                        Cho phép người dùng khác nhìn thấy email và số điện thoại của bạn trên tab kết nối.
+                      </p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
+                      <input
+                        type="checkbox"
+                        className="sr-only peer"
+                        checked={profileData.contactPublic}
+                        onChange={async (e) => {
+                          const nextVal = e.target.checked;
+                          setProfileData(prev => ({ ...prev, contactPublic: nextVal }));
+                          try {
+                            await updateProfile({
+                              fullName: user?.fullName,
+                              email: user?.email,
+                              phone: user?.phone,
+                              avatarUrl: user?.avatarUrl,
+                              bio: profileData.bio,
+                              profession: profileData.profession,
+                              company: profileData.company,
+                              contactPublic: nextVal,
+                              contactLink: profileData.contactLink
+                            });
+                          } catch (err) {
+                            console.error(err);
+                          }
+                        }}
+                      />
+                      <div className="w-14 h-8 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-card after:border-2 after:border-border/80 after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600 border border-border/80"></div>
+                    </label>
                   </div>
-                  <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
-                    <input
-                      type="checkbox"
-                      className="sr-only peer"
-                      checked={profileData.contactPublic}
-                      onChange={async (e) => {
-                        const nextVal = e.target.checked;
-                        setProfileData(prev => ({ ...prev, contactPublic: nextVal }));
-                        try {
-                          await updateProfile({
-                            fullName: user?.fullName,
-                            email: user?.email,
-                            phone: user?.phone,
-                            avatarUrl: user?.avatarUrl,
-                            bio: profileData.bio,
-                            profession: profileData.profession,
-                            company: profileData.company,
-                            contactPublic: nextVal,
-                            contactLink: profileData.contactLink
-                          });
-                        } catch (err) {
-                          console.error(err);
-                        }
-                      }}
-                    />
-                    <div className="w-11 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                  </label>
+                  
+                  {profileData.contactPublic && (
+                    <div className="mt-4 p-3 border-t border-border/10 text-xs font-medium text-foreground flex items-center gap-2">
+                      <FiCheckCircle className="h-4 w-4" /> Mọi người có thể thấy thông tin của bạn
+                    </div>
+                  )}
                 </div>
               </section>
             </div>
@@ -498,57 +562,58 @@ const ProfilePage: React.FC = () => {
         {/* ==================== TAB 3: NETWORKING ==================== */}
         {activeTab === 'network' && (
           <div>
-            <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
               <div>
-                <h2 className="text-xl font-bold font-heading text-primary flex items-center gap-2">
-                  <FiUsers /> Gợi ý kết nối dành cho bạn
+                <h2 className="text-3xl font-semibold   text-foreground">
+                  Gợi ý kết nối
                 </h2>
-                <p className="text-sm text-muted-foreground mt-1">Dựa trên kỹ năng và sở thích của bạn.</p>
+                <p className="text-sm font-medium bg-slate-900 text-white px-3 py-1 rounded-lg border border-border inline-block mt-3 shadow-sm">
+                  Dựa trên kỹ năng & sở thích của bạn
+                </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
               {MOCK_PARTNERS.map(partner => (
-                <div key={partner.id} className="bg-card border border-border rounded-2xl p-5 hover:shadow-md transition-shadow group flex flex-col h-full">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-indigo-100 to-blue-100 text-primary flex items-center justify-center text-lg font-bold">
-                        {partner.avatar}
-                      </div>
-                      <div>
-                        <h3 className="font-bold">{partner.name}</h3>
-                        <p className="text-xs text-muted-foreground">{partner.profession}</p>
-                      </div>
+                <div key={partner.id} className="bg-card border border-border rounded-2xl p-6 shadow-sm hover:-translate-y-2 hover:shadow-sm transition-all flex flex-col h-full relative">
+                  {/* Match Score Badge */}
+                  <div className="absolute -top-4 -right-4 px-4 py-2 bg-blue-600 text-white font-semibold text-sm border border-blue-700 rounded-full shadow-sm rotate-3">
+                    {partner.matchScore}% Match
+                  </div>
+                  
+                  <div className="flex items-center gap-4 mb-6 mt-2">
+                    <div className="h-16 w-16 rounded-2xl bg-muted/50 border border-border text-foreground flex items-center justify-center text-2xl font-semibold shadow-sm">
+                      {partner.avatar}
                     </div>
-                    <div className="flex flex-col items-end">
-                      <span className="inline-flex items-center justify-center px-2 py-1 rounded-lg bg-green-50 text-green-700 text-xs font-bold border border-green-200">
-                        {partner.matchScore}% Match
-                      </span>
+                    <div>
+                      <h3 className="text-xl font-semibold text-foreground">{partner.name}</h3>
+                      <p className="text-xs font-medium text-foreground/70 tracking-tight">{partner.profession}</p>
                     </div>
                   </div>
 
-                  <p className="text-sm text-muted-foreground line-clamp-2 mb-4 flex-1">
-                    "{partner.bio}"
-                  </p>
+                  <div className="bg-muted/50 p-4 rounded-2xl border border-border mb-6 flex-1">
+                    <p className="text-sm font-medium text-foreground leading-relaxed line-clamp-3">
+                      "{partner.bio}"
+                    </p>
+                  </div>
 
-                  <div className="mb-5">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Điểm chung</p>
-                    <div className="flex flex-wrap gap-1.5">
+                  <div className="mb-6">
+                    <p className="text-[10px] font-semibold text-foreground tracking-tight mb-3">Điểm chung</p>
+                    <div className="flex flex-wrap gap-2">
                       {partner.commonTags.map(tag => (
-                        <span key={tag} className="px-2 py-0.5 rounded text-xs bg-primary/10 text-primary font-medium">
+                        <span key={tag} className="px-3 py-1 rounded-lg border border-border bg-slate-900 text-white text-xs font-semibold shadow-sm">
                           {tag}
                         </span>
                       ))}
                     </div>
                   </div>
 
-                  <Button
-                    className="w-full"
-                    variant="outline"
+                  <button
+                    className="w-full py-4 bg-card text-foreground font-semibold tracking-tight border border-border rounded-full shadow-sm hover:bg-muted/50 transition-colors mt-auto"
                     onClick={() => setSelectedPartner(partner)}
                   >
                     Xem chi tiết
-                  </Button>
+                  </button>
                 </div>
               ))}
             </div>
@@ -559,74 +624,78 @@ const ProfilePage: React.FC = () => {
 
       {/* ==================== PARTNER DETAIL MODAL ==================== */}
       {selectedPartner && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-          <div className="bg-card rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden animate-scale-in">
-            <div className="h-24 bg-gradient-to-r from-blue-100 to-indigo-100 relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm px-4">
+          <div className="bg-card rounded-3xl max-w-lg w-full border border-border shadow-sm overflow-hidden animate-scale-in relative">
+            <div className="h-32 bg-muted relative border-b border-border overflow-hidden">
+              
               <button
-                className="absolute top-4 right-4 h-8 w-8 rounded-full bg-white/50 flex items-center justify-center hover:bg-white"
+                className="absolute top-4 right-4 h-10 w-10 rounded-full border border-border bg-card flex items-center justify-center shadow-sm hover:bg-muted hover:text-white transition-colors z-10"
                 onClick={() => setSelectedPartner(null)}
               >
-                <FiX />
+                <FiX className="h-5 w-5 font-semibold" />
               </button>
             </div>
 
-            <div className="px-6 pb-6 relative">
-              <div className="h-20 w-20 rounded-2xl bg-white border-4 border-card flex items-center justify-center shadow-sm absolute -top-10 text-3xl font-bold text-primary">
+            <div className="px-8 pb-8 relative">
+              <div className="h-24 w-24 rounded-2xl bg-muted/50 border border-border flex items-center justify-center shadow-sm absolute -top-12 text-4xl font-semibold text-foreground">
                 {selectedPartner.avatar}
               </div>
-
-              <div className="pt-12 mb-6 flex justify-between items-start">
-                <div>
-                  <h2 className="text-2xl font-bold font-heading">{selectedPartner.name}</h2>
-                  <p className="text-muted-foreground flex items-center gap-1.5 mt-1">
-                    <FiBriefcase className="h-4 w-4" /> {selectedPartner.profession} @ {selectedPartner.company}
-                  </p>
-                </div>
-                <div className="px-3 py-1.5 rounded-lg bg-green-50 text-green-700 text-sm font-bold border border-green-200">
-                  {selectedPartner.matchScore}% Phù hợp
-                </div>
+              
+              <div className="absolute -top-6 right-8 px-4 py-2 bg-blue-600 text-white font-semibold text-sm border border-blue-700 rounded-full shadow-sm">
+                {selectedPartner.matchScore}% Match
               </div>
 
-              <div className="space-y-6">
+              <div className="pt-16 mb-8">
+                <h2 className="text-3xl font-semibold   text-foreground">{selectedPartner.name}</h2>
+                <p className="text-sm font-medium text-foreground flex items-center gap-2 mt-2 bg-muted inline-flex px-3 py-1.5 rounded-lg border border-border">
+                  <FiBriefcase className="h-4 w-4 text-foreground" /> {selectedPartner.profession} @ {selectedPartner.company}
+                </p>
+              </div>
+
+              <div className="space-y-8">
                 <div>
-                  <h3 className="text-sm font-semibold mb-2">Giới thiệu</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{selectedPartner.bio}</p>
+                  <h3 className="text-xs font-semibold tracking-tight text-foreground mb-3">Giới thiệu</h3>
+                  <div className="bg-muted/50 p-4 rounded-2xl border border-border">
+                    <p className="text-sm font-medium text-muted-foreground leading-relaxed">{selectedPartner.bio}</p>
+                  </div>
                 </div>
 
                 <div>
-                  <h3 className="text-sm font-semibold mb-2">Điểm chung với bạn</h3>
+                  <h3 className="text-xs font-semibold tracking-tight text-foreground mb-3">Điểm chung</h3>
                   <div className="flex flex-wrap gap-2">
                     {selectedPartner.commonTags.map(tag => (
-                      <span key={tag} className="px-2.5 py-1 rounded bg-primary/10 text-primary text-xs font-medium">
+                      <span key={tag} className="px-4 py-1.5 rounded-full border border-border bg-slate-900 text-white text-xs font-semibold shadow-sm">
                         {tag}
                       </span>
                     ))}
                   </div>
                 </div>
 
-                <div className="border-t border-border pt-6">
+                <div className="border-t border-border pt-8">
                   {selectedPartner.contactPublic ? (
-                    <div className="space-y-3">
-                      <h3 className="text-sm font-semibold mb-2">Thông tin liên hệ</h3>
-                      <div className="flex items-center gap-3 text-sm">
-                        <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-foreground"><FiMail /></div>
-                        <a href={`mailto:${selectedPartner.email}`} className="font-medium hover:text-primary transition-colors">{selectedPartner.email}</a>
+                    <div className="space-y-4">
+                      <h3 className="text-xs font-semibold tracking-tight text-foreground mb-4">Thông tin liên hệ</h3>
+                      <div className="flex items-center gap-4">
+                        <div className="h-12 w-12 rounded-full bg-muted border border-border flex items-center justify-center text-muted-foreground shadow-sm"><FiMail className="h-5 w-5" /></div>
+                        <a href={`mailto:${selectedPartner.email}`} className="font-semibold text-lg text-foreground hover:text-foreground transition-colors">{selectedPartner.email}</a>
                       </div>
-                      <div className="flex items-center gap-3 text-sm">
-                        <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-foreground"><FiPhone /></div>
-                        <a href={`tel:${selectedPartner.phone}`} className="font-medium hover:text-primary transition-colors">{selectedPartner.phone}</a>
+                      <div className="flex items-center gap-4">
+                        <div className="h-12 w-12 rounded-full bg-muted border border-border flex items-center justify-center text-foreground shadow-sm"><FiPhone className="h-5 w-5" /></div>
+                        <a href={`tel:${selectedPartner.phone}`} className="font-semibold text-lg text-foreground hover:text-foreground transition-colors">{selectedPartner.phone}</a>
                       </div>
-                      <div className="mt-4 flex gap-3">
-                        <Button className="flex-1 gap-2"><FiMessageCircle /> Nhắn tin</Button>
+                      <div className="mt-6">
+                        <button className="w-full py-4 bg-slate-900 text-white font-semibold tracking-tight text-lg border border-border rounded-full shadow-sm hover:-translate-y-1 hover:shadow-sm transition-all flex items-center justify-center gap-3">
+                          <FiMessageCircle className="h-6 w-6" /> Gửi tin nhắn
+                        </button>
                       </div>
                     </div>
                   ) : (
-                    <div className="text-center py-6 px-4 rounded-xl bg-muted/50 border border-border">
-                      <div className="h-12 w-12 rounded-full bg-card shadow-sm flex items-center justify-center mx-auto mb-3 text-muted-foreground">
-                        <FiEyeOff className="h-5 w-5" />
+                    <div className="text-center py-10 px-6 rounded-2xl bg-muted border border-border border-dashed">
+                      <div className="h-16 w-16 rounded-2xl bg-card border border-border shadow-sm flex items-center justify-center mx-auto mb-4 text-foreground">
+                        <FiEyeOff className="h-8 w-8" />
                       </div>
-                      <h3 className="text-sm font-semibold mb-1">Liên hệ đang ẩn</h3>
-                      <p className="text-xs text-muted-foreground">Người dùng này chưa bật tính năng công khai thông tin liên hệ.</p>
+                      <h3 className="text-lg font-semibold  text-foreground mb-2">Liên hệ đang ẩn</h3>
+                      <p className="text-sm font-medium text-foreground/70">Người dùng này chưa bật tính năng công khai thông tin liên hệ.</p>
                     </div>
                   )}
                 </div>

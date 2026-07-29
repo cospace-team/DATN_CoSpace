@@ -40,4 +40,14 @@ public class ApiExceptionHandler {
         body.put("fields", errors);
         return ResponseEntity.badRequest().body(body);
     }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String, Object>> handleAll(Exception ex) {
+        ex.printStackTrace();
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("error", "internal_server_error");
+        body.put("exception", ex.getClass().getName());
+        body.put("message", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
+    }
 }

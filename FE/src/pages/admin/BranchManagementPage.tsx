@@ -26,7 +26,7 @@ const ConfirmDialog: React.FC<{ open: boolean; title: string; message: string; o
   return (
     <>
       <div className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm" onClick={onCancel} />
-      <div className="fixed z-[60] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-xl">
+      <div className="fixed z-[60] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm bg-card rounded-3xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow shadow-xl">
         <div className="flex items-center gap-3 mb-4">
           <div className="h-10 w-10 rounded-full bg-destructive/10 flex items-center justify-center">
             <FiAlertTriangle className="h-5 w-5 text-destructive" />
@@ -64,13 +64,9 @@ const BranchManagementPage: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="rounded-xl border border-border bg-card p-6">
+      <div className="bg-card rounded-3xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow">
         <div className="flex items-center justify-between flex-wrap gap-4">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Quản lý không gian</p>
-            <h1 className="text-xl font-bold font-heading mt-1">Chi nhánh & Loại không gian</h1>
-            <p className="text-sm text-muted-foreground mt-1">Quản lý cấu trúc vĩ mô toàn hệ thống. Tầng và workspace được cấu hình bởi Quản lý chi nhánh.</p>
-          </div>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Chi nhánh & Loại không gian</h1>
           <div className="flex gap-2">
             <TabBtn active={activeTab === 'branches'} onClick={() => setActiveTab('branches')}>
               <FiMapPin className="inline h-3.5 w-3.5 mr-1.5" />Chi nhánh
@@ -94,7 +90,7 @@ const BranchManagementPage: React.FC = () => {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {branchData.map(b => (
               <div key={b.id}
-                className="rounded-xl border border-border bg-card p-6 card-interactive group">
+                className="bg-card rounded-3xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow card-interactive group">
                 <div className="flex items-start justify-between">
                   <div className="h-10 w-10 rounded-xl flex items-center justify-center bg-primary/10 text-primary transition-colors">
                     <FiMapPin className="h-5 w-5" />
@@ -106,7 +102,7 @@ const BranchManagementPage: React.FC = () => {
                   </div>
                 </div>
                 <h3 className="mt-3 font-semibold">{b.name}</h3>
-                <p className="text-sm text-muted-foreground mt-1">{b.address}</p>
+                <p className="text-sm font-medium text-muted-foreground mt-2">{b.address}</p>
                 <div className="mt-3 flex gap-4 text-xs text-muted-foreground">
                   <span className="font-mono">{b.code}</span>
                   <span>{b.city}</span>
@@ -125,11 +121,11 @@ const BranchManagementPage: React.FC = () => {
 
       {/* ── Tab: Workspace Types ── */}
       {activeTab === 'types' && (
-        <div className="rounded-xl border border-border bg-card p-6">
+        <div className="bg-card rounded-3xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="font-semibold">Loại không gian</h2>
-              <p className="text-sm text-muted-foreground mt-1">Các loại hình không gian làm việc toàn hệ thống (VD: Chỗ ngồi cá nhân, Phòng họp)</p>
+              <p className="text-sm font-medium text-muted-foreground mt-2">Các loại hình không gian làm việc toàn hệ thống (VD: Chỗ ngồi cá nhân, Phòng họp)</p>
             </div>
             <button onClick={() => openAdd('type')} className="btn btn-primary btn-sm"><FiPlus className="h-4 w-4" /> Thêm loại</button>
           </div>
@@ -175,7 +171,7 @@ const BranchManagementPage: React.FC = () => {
             <label className="text-sm font-medium">Trạng thái</label>
             <div className="relative inline-flex items-center cursor-pointer">
               <input type="checkbox" className="sr-only peer" defaultChecked={(editItem as Branch)?.status === 'active'} />
-              <div className="w-11 h-6 bg-muted rounded-full peer peer-checked:bg-primary transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full" />
+              <div className="w-11 h-6 bg-muted rounded-full peer peer-checked:bg-primary transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full" />
             </div>
           </div>
           <div className="flex gap-3 pt-4 border-t border-border">
@@ -205,7 +201,7 @@ const BranchManagementPage: React.FC = () => {
         return hasRelatedData ? (
           <>
             <div className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm" onClick={() => setDeleteConfirm(null)} />
-            <div className="fixed z-[60] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-xl">
+            <div className="fixed z-[60] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm bg-card rounded-3xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow shadow-xl">
               <div className="flex items-center gap-3 mb-4">
                 <div className="h-10 w-10 rounded-full bg-destructive/10 flex items-center justify-center"><FiAlertTriangle className="h-5 w-5 text-destructive" /></div>
                 <h3 className="font-bold text-lg">Không thể xóa</h3>

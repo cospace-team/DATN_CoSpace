@@ -154,22 +154,20 @@ const BAMaintenancePage: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in pb-10">
       {/* Header */}
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Quản lý chi nhánh</p>
-              <h1 className="text-2xl font-bold font-heading mt-1">Lịch bảo trì</h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                {active.length} đang thực hiện · {scheduled.length} lên lịch
-              </p>
-            </div>
-            <Button onClick={() => setModalOpen(true)}>
-              <FiPlus className="h-4 w-4 mr-2" /> Tạo lịch bảo trì
-            </Button>
+      <div className="bg-card rounded-3xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Lịch bảo trì</h1>
+            <span className="text-xs font-medium bg-muted text-muted-foreground px-2.5 py-1 rounded-full flex items-center gap-1.5">
+              <FiTool className="h-3.5 w-3.5" />
+              {active.length} đang thực hiện · {scheduled.length} lên lịch
+            </span>
           </div>
-        </CardContent>
-      </Card>
+          <Button onClick={() => setModalOpen(true)}>
+            <FiPlus className="h-4 w-4 mr-2" /> Tạo lịch bảo trì
+          </Button>
+        </div>
+      </div>
 
       {maintenances.length === 0 ? (
         <Card>
@@ -245,7 +243,7 @@ const BAMaintenancePage: React.FC = () => {
         <Modal title="Tạo lịch bảo trì" onClose={() => setModalOpen(false)}>
           <div className="space-y-5">
             {formError && (
-              <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
+              <div className="flex items-center gap-2 rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 px-3 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
                 <FiAlertCircle className="h-5 w-5 shrink-0" />
                 <p>{formError}</p>
               </div>

@@ -1,0 +1,253 @@
+/**
+ * Element Catalog — Predefined element types for the Floor Plan Editor
+ * Defines visual defaults and categories for the element library panel.
+ */
+
+import type { ElementCatalogItem } from '../types/floorPlan';
+
+export const ELEMENT_CATALOG: ElementCatalogItem[] = [
+  // ── Workspace Elements (can link to DB workspace) ──
+  {
+    type: 'desk',
+    label: 'Bàn làm việc',
+    icon: '💻',
+    category: 'workspace',
+    defaultWidth: 80,
+    defaultHeight: 60,
+    defaultCornerRadius: 4,
+    defaultFill: 'rgba(34,197,94,0.12)',
+    defaultStroke: '#22C55E',
+    canLinkWorkspace: true,
+  },
+  {
+    type: 'chair',
+    label: 'Ghế làm việc',
+    icon: '🪑',
+    category: 'workspace',
+    defaultWidth: 32,
+    defaultHeight: 32,
+    defaultCornerRadius: 16,
+    defaultFill: 'rgba(59,130,246,0.12)',
+    defaultStroke: '#3B82F6',
+    canLinkWorkspace: true,
+  },
+  {
+    type: 'standing_desk',
+    label: 'Bàn đứng',
+    icon: '🧍',
+    category: 'workspace',
+    defaultWidth: 80,
+    defaultHeight: 50,
+    defaultCornerRadius: 4,
+    defaultFill: 'rgba(16,185,129,0.12)',
+    defaultStroke: '#10B981',
+    canLinkWorkspace: true,
+  },
+  {
+    type: 'meeting_room',
+    label: 'Phòng họp',
+    icon: '🚪',
+    category: 'workspace',
+    defaultWidth: 180,
+    defaultHeight: 130,
+    defaultCornerRadius: 6,
+    defaultFill: 'rgba(59,130,246,0.08)',
+    defaultStroke: '#3B82F6',
+    canLinkWorkspace: true,
+  },
+  {
+    type: 'private_office',
+    label: 'VP riêng',
+    icon: '🏢',
+    category: 'workspace',
+    defaultWidth: 160,
+    defaultHeight: 120,
+    defaultCornerRadius: 6,
+    defaultFill: 'rgba(139,92,246,0.08)',
+    defaultStroke: '#8B5CF6',
+    canLinkWorkspace: true,
+  },
+
+  // ── Structure Elements ──
+  {
+    type: 'wall',
+    label: 'Tường',
+    icon: '🧱',
+    category: 'structure',
+    defaultWidth: 200,
+    defaultHeight: 8,
+    defaultCornerRadius: 2,
+    defaultFill: '#94A3B8',
+    defaultStroke: '#64748B',
+    canLinkWorkspace: false,
+  },
+  {
+    type: 'door',
+    label: 'Cửa',
+    icon: '🚪',
+    category: 'structure',
+    defaultWidth: 50,
+    defaultHeight: 8,
+    defaultCornerRadius: 2,
+    defaultFill: 'rgba(245,158,11,0.3)',
+    defaultStroke: '#F59E0B',
+    canLinkWorkspace: false,
+  },
+  {
+    type: 'window',
+    label: 'Cửa sổ',
+    icon: '🪟',
+    category: 'structure',
+    defaultWidth: 60,
+    defaultHeight: 6,
+    defaultCornerRadius: 1,
+    defaultFill: 'rgba(56,189,248,0.2)',
+    defaultStroke: '#38BDF8',
+    canLinkWorkspace: false,
+  },
+  {
+    type: 'pillar',
+    label: 'Cột',
+    icon: '🏛️',
+    category: 'structure',
+    defaultWidth: 20,
+    defaultHeight: 20,
+    defaultCornerRadius: 10,
+    defaultFill: '#CBD5E1',
+    defaultStroke: '#94A3B8',
+    canLinkWorkspace: false,
+  },
+
+  // ── Furniture & Areas ──
+  {
+    type: 'lounge',
+    label: 'Lounge',
+    icon: '☕',
+    category: 'furniture',
+    defaultWidth: 120,
+    defaultHeight: 80,
+    defaultCornerRadius: 8,
+    defaultFill: 'rgba(251,146,60,0.1)',
+    defaultStroke: '#FB923C',
+    canLinkWorkspace: false,
+  },
+  {
+    type: 'reception',
+    label: 'Lễ tân',
+    icon: '📋',
+    category: 'furniture',
+    defaultWidth: 140,
+    defaultHeight: 40,
+    defaultCornerRadius: 6,
+    defaultFill: 'rgba(168,85,247,0.1)',
+    defaultStroke: '#A855F7',
+    canLinkWorkspace: false,
+  },
+  {
+    type: 'plant',
+    label: 'Cây cảnh',
+    icon: '🌿',
+    category: 'furniture',
+    defaultWidth: 24,
+    defaultHeight: 24,
+    defaultCornerRadius: 12,
+    defaultFill: 'rgba(34,197,94,0.2)',
+    defaultStroke: '#22C55E',
+    canLinkWorkspace: false,
+  },
+
+  // ── Utility ──
+  {
+    type: 'restroom',
+    label: 'WC',
+    icon: '🚻',
+    category: 'utility',
+    defaultWidth: 60,
+    defaultHeight: 50,
+    defaultCornerRadius: 4,
+    defaultFill: 'rgba(148,163,184,0.15)',
+    defaultStroke: '#94A3B8',
+    canLinkWorkspace: false,
+  },
+  {
+    type: 'kitchen',
+    label: 'Pantry',
+    icon: '🍳',
+    category: 'utility',
+    defaultWidth: 80,
+    defaultHeight: 60,
+    defaultCornerRadius: 4,
+    defaultFill: 'rgba(251,191,36,0.1)',
+    defaultStroke: '#FBBF24',
+    canLinkWorkspace: false,
+  },
+  {
+    type: 'staircase',
+    label: 'Cầu thang',
+    icon: '⬆️',
+    category: 'utility',
+    defaultWidth: 50,
+    defaultHeight: 80,
+    defaultCornerRadius: 4,
+    defaultFill: 'rgba(148,163,184,0.12)',
+    defaultStroke: '#94A3B8',
+    canLinkWorkspace: false,
+  },
+  {
+    type: 'elevator',
+    label: 'Thang máy',
+    icon: '🛗',
+    category: 'utility',
+    defaultWidth: 50,
+    defaultHeight: 50,
+    defaultCornerRadius: 4,
+    defaultFill: 'rgba(100,116,139,0.12)',
+    defaultStroke: '#64748B',
+    canLinkWorkspace: false,
+  },
+  {
+    type: 'label',
+    label: 'Nhãn',
+    icon: '🏷️',
+    category: 'utility',
+    defaultWidth: 100,
+    defaultHeight: 30,
+    defaultCornerRadius: 4,
+    defaultFill: 'transparent',
+    defaultStroke: 'transparent',
+    canLinkWorkspace: false,
+  },
+];
+
+export const CATALOG_BY_CATEGORY = {
+  workspace: ELEMENT_CATALOG.filter((e) => e.category === 'workspace'),
+  structure: ELEMENT_CATALOG.filter((e) => e.category === 'structure'),
+  furniture: ELEMENT_CATALOG.filter((e) => e.category === 'furniture'),
+  utility: ELEMENT_CATALOG.filter((e) => e.category === 'utility'),
+};
+
+export const CATEGORY_LABELS: Record<string, string> = {
+  workspace: 'Không gian làm việc',
+  structure: 'Kết cấu',
+  furniture: 'Nội thất & Khu vực',
+  utility: 'Tiện ích',
+};
+
+/** Create a default FloorLayout for a brand-new floor */
+export function createDefaultLayout(): import('../types/floorPlan').FloorLayout {
+  return {
+    version: 1,
+    canvas: {
+      width: 1200,
+      height: 800,
+      gridSize: 20,
+      backgroundColor: 'transparent',
+    },
+    elements: [],
+  };
+}
+
+/** Generate a unique element ID using crypto.randomUUID */
+export function generateElementId(): string {
+  return `el-${crypto.randomUUID().replace(/-/g, '').substring(0, 12)}`;
+}

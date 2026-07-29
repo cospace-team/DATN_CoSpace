@@ -131,12 +131,12 @@ const BAServicesPage: React.FC = () => {
       )}
 
       {/* Header */}
-      <div className="rounded-xl border border-border bg-card p-6">
+      <div className="bg-card rounded-3xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Quản lý chi nhánh</p>
-            <h1 className="text-xl font-bold font-heading mt-1">Dịch vụ thêm</h1>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Quản lý chi nhánh</p>
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground mt-1">Dịch vụ thêm</h1>
+            <p className="text-sm font-medium text-muted-foreground mt-2">
               {services.length} dịch vụ · {services.filter((s) => s.is_active).length} đang hoạt động
             </p>
           </div>
@@ -148,7 +148,7 @@ const BAServicesPage: React.FC = () => {
 
       {/* Service grid */}
       {services.length === 0 ? (
-        <div className="rounded-xl border border-border bg-card p-10 flex flex-col items-center gap-3 text-muted-foreground">
+        <div className="bg-card rounded-3xl border border-border shadow-sm p-10 flex flex-col items-center gap-3 text-muted-foreground">
           <FiCoffee className="h-10 w-10 opacity-30" />
           <p className="text-sm">Chưa có dịch vụ nào cho chi nhánh này.</p>
         </div>

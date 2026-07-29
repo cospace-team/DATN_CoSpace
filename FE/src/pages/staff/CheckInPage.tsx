@@ -118,11 +118,7 @@ const CheckInPage: React.FC = () => {
     <div className="space-y-6 animate-fade-in pb-24 lg:pb-6">
       {/* Header */}
       <div className="rounded-2xl border border-border bg-card p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-sm">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-primary">Vận hành & Lễ tân</p>
-          <h1 className="text-2xl font-bold font-heading mt-1">Kiểm tra & Xác nhận Check-in</h1>
-          <p className="text-sm text-muted-foreground mt-1">Xác thực vé và cho khách vào không gian thông qua mã đặt chỗ (Booking Code)</p>
-        </div>
+        <h1 className="text-2xl font-bold font-heading">Kiểm tra & Xác nhận Check-in</h1>
       </div>
 
       {successMessage && (
@@ -166,9 +162,9 @@ const CheckInPage: React.FC = () => {
             </div>
 
             {searchError && (
-              <div className="mt-6 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 p-4 flex items-center gap-3 animate-fade-in">
+              <div className="mt-6 rounded-xl bg-red-50 dark:bg-red-950/30 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 dark:border-red-800 p-4 flex items-center gap-3 animate-fade-in">
                 <FiAlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 shrink-0" />
-                <p className="text-sm font-medium text-red-800 dark:text-red-300">{searchError}</p>
+                <p className="text-sm font-medium text-red-800 dark:text-red-400 dark:text-red-300">{searchError}</p>
               </div>
             )}
           </div>

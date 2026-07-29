@@ -46,11 +46,7 @@ const MaintenancePage: React.FC = () => {
     <div className="space-y-6 animate-fade-in relative">
       <div className="rounded-xl border border-border bg-card p-6">
         <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Vận hành</p>
-            <h1 className="text-xl font-bold font-heading mt-1">Báo cáo Hư hỏng / Bảo trì</h1>
-            <p className="text-sm text-muted-foreground mt-1">Khóa không gian ngay lập tức để sửa chữa</p>
-          </div>
+          <h1 className="text-xl font-bold font-heading">Báo cáo Hư hỏng / Bảo trì</h1>
           <button onClick={() => setIsModalOpen(true)} className="btn btn-destructive"><FiAlertTriangle className="h-4 w-4" /> Báo lỗi & Khóa bàn</button>
         </div>
       </div>
@@ -93,7 +89,7 @@ const MaintenancePage: React.FC = () => {
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-fade-in">
           <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-slide-in-up">
-            <div className="flex items-center gap-3 p-4 border-b border-border bg-red-50 dark:bg-red-950/20">
+            <div className="flex items-center gap-3 p-4 border-b border-border bg-red-50 dark:bg-red-950/30 dark:bg-red-950/20">
               <div className="h-10 w-10 bg-red-100 text-red-600 rounded-full flex items-center justify-center"><FiTool /></div>
               <div>
                 <h2 className="font-bold text-lg text-red-700 dark:text-red-400">Báo cáo Hư hỏng</h2>

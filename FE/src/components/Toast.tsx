@@ -12,6 +12,7 @@ interface Toast {
 
 interface ToastContextValue {
   addToast: (type: ToastType, message: string) => void;
+  showToast: (message: string, type?: ToastType) => void;
 }
 
 const ToastContext = createContext<ToastContextValue | null>(null);
@@ -42,8 +43,12 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     setTimeout(() => removeToast(id), 4000);
   }, [removeToast]);
 
+  const showToast = useCallback((message: string, type: ToastType = 'info') => {
+    addToast(type, message);
+  }, [addToast]);
+
   return (
-    <ToastContext.Provider value={{ addToast }}>
+    <ToastContext.Provider value={{ addToast, showToast }}>
       {children}
       <div className="toast-container" role="status" aria-live="polite">
         {toasts.map(t => (

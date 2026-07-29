@@ -74,13 +74,9 @@ const OperationsDashboardPage: React.FC = () => {
     <div className="space-y-6 animate-fade-in pb-24 lg:pb-6">
       {/* Header */}
       <div className="rounded-2xl border border-border bg-card p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-sm">
-        <div>
-          <div className="flex items-center gap-2">
-            <p className="text-xs font-bold uppercase tracking-wider text-primary">Vận hành & Lễ tân</p>
-            <span className="text-xs bg-muted text-muted-foreground px-2.5 py-0.5 rounded-full font-medium">{branchName}</span>
-          </div>
-          <h1 className="text-2xl font-bold font-heading mt-1">Dashboard Trực ban</h1>
-          <p className="text-sm text-muted-foreground mt-1">Quản lý tổng quan hoạt động kinh doanh và theo dõi lượng khách trong ngày</p>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold font-heading">Dashboard Trực ban</h1>
+          <span className="text-xs bg-muted text-muted-foreground px-2.5 py-0.5 rounded-full font-medium">{branchName}</span>
         </div>
         <div className="flex items-center gap-3 bg-primary/5 border border-primary/20 text-primary px-5 py-3 rounded-xl shadow-inner">
           <FiUsers className="h-6 w-6 text-primary" />
@@ -107,14 +103,14 @@ const OperationsDashboardPage: React.FC = () => {
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-6 shadow-sm flex items-center gap-4 transition-all hover:shadow-md">
-          <div className="h-14 w-14 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0">
+          <div className="h-14 w-14 rounded-xl bg-blue-50 dark:bg-blue-950/300/10 text-blue-500 flex items-center justify-center shrink-0">
             <FiTrendingUp className="h-7 w-7" />
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Tỷ lệ lấp đầy (Occupancy)</p>
             <p className="text-2xl font-bold text-foreground mt-1">{stats.occupancyRate}%</p>
             <div className="w-full bg-muted rounded-full h-1.5 mt-2 overflow-hidden">
-              <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${stats.occupancyRate}%` }} />
+              <div className="bg-blue-50 dark:bg-blue-950/300 h-1.5 rounded-full" style={{ width: `${stats.occupancyRate}%` }} />
             </div>
           </div>
         </div>

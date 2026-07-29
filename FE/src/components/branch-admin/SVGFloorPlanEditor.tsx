@@ -1,8 +1,8 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { FiPlus, FiMinus, FiMaximize2 } from 'react-icons/fi';
+import { FiPlus, FiMinus, FiMaximize2, FiMap, FiLayers } from 'react-icons/fi';
 import type { WorkspaceResponse } from '../../lib/spaceApi';
 
-/* ─── Types ─── */
+/* ── Types ── */
 
 export interface SVGElementInfo {
   id: string;
@@ -16,7 +16,7 @@ interface Props {
   onSelectElement: (elementId: string | null) => void;
 }
 
-/* ─── Ignore list: SVG system elements that shouldn't be assignable ─── */
+/* ── Ignore list: SVG system elements that shouldn't be assignable ── */
 const IGNORE_PREFIXES = [
   'defs', 'gradient', 'clip', 'mask', 'filter', 'pattern',
   'linearGradient', 'radialGradient', 'clipPath', 'symbol',
@@ -27,7 +27,7 @@ const isAssignableElement = (id: string): boolean => {
   return !IGNORE_PREFIXES.some((p) => id.toLowerCase().startsWith(p.toLowerCase()));
 };
 
-/* ─── Component ─── */
+/* ── Component ── */
 
 const SVGFloorPlanEditor: React.FC<Props> = ({
   svgContent,
@@ -64,25 +64,21 @@ const SVGFloorPlanEditor: React.FC<Props> = ({
     const parseError = doc.querySelector('parsererror');
     if (parseError) {
       console.error('[SVGEditor] Parse error:', parseError.textContent);
-      console.error('[SVGEditor] svgContent preview:', svgContent.substring(0, 200));
-      container.innerHTML = '<p class="text-sm text-destructive p-4">File SVG không hợp lệ (lỗi parse XML).</p>';
+      container.innerHTML = '<p class="text-xs text-red-400 p-4 font-mono">File SVG không hợp lệ (lỗi parse XML).</p>';
       return;
     }
 
     const svgEl = doc.querySelector('svg');
     if (!svgEl) {
-      console.error('[SVGEditor] No <svg> element found. Content starts with:', svgContent.substring(0, 200));
-      container.innerHTML = '<p class="text-sm text-destructive p-4">File SVG không hợp lệ (không tìm thấy thẻ svg).</p>';
+      container.innerHTML = '<p class="text-xs text-red-400 p-4 font-mono">File SVG không hợp lệ (không tìm thấy thẻ svg).</p>';
       return;
     }
 
     // Ensure SVG scales to fill container
-    // Remove fixed dimensions, let viewBox handle scaling
     svgEl.removeAttribute('width');
     svgEl.removeAttribute('height');
     svgEl.style.width = '100%';
     svgEl.style.height = '100%';
-    // Ensure viewBox exists for proper scaling
     if (!svgEl.getAttribute('viewBox')) {
       const w = svgEl.getAttribute('width') || '800';
       const h = svgEl.getAttribute('height') || '500';
@@ -104,10 +100,9 @@ const SVGFloorPlanEditor: React.FC<Props> = ({
     container.innerHTML = '';
     container.appendChild(svgEl);
 
-    // Apply styles & handlers to assignable elements
+    // Apply styles & handlers
     applyInteractiveStyles(container, elements);
 
-    // Cleanup
     return () => {
       container.innerHTML = '';
     };
@@ -138,27 +133,27 @@ const SVGFloorPlanEditor: React.FC<Props> = ({
         let strokeWidth: string;
 
         if (isSelected) {
-          fillColor = 'rgba(59,130,246,0.25)';
-          strokeColor = '#3B82F6';
+          fillColor = 'rgba(139,92,246,0.35)';
+          strokeColor = '#8B5CF6';
           strokeWidth = '3';
         } else if (ws) {
           if (ws.status === 'active') {
-            fillColor = isHovered ? 'rgba(34,197,94,0.25)' : 'rgba(34,197,94,0.15)';
+            fillColor = isHovered ? 'rgba(34,197,94,0.3)' : 'rgba(34,197,94,0.18)';
             strokeColor = '#22C55E';
             strokeWidth = isHovered ? '2.5' : '1.5';
           } else if (ws.status === 'maintenance') {
-            fillColor = isHovered ? 'rgba(245,158,11,0.25)' : 'rgba(245,158,11,0.15)';
+            fillColor = isHovered ? 'rgba(245,158,11,0.3)' : 'rgba(245,158,11,0.18)';
             strokeColor = '#F59E0B';
             strokeWidth = isHovered ? '2.5' : '1.5';
           } else {
-            fillColor = 'rgba(148,163,184,0.15)';
+            fillColor = 'rgba(148,163,184,0.18)';
             strokeColor = '#94A3B8';
             strokeWidth = '1.5';
           }
         } else {
           // Unassigned
-          fillColor = isHovered ? 'rgba(59,130,246,0.15)' : 'rgba(148,163,184,0.08)';
-          strokeColor = isHovered ? '#3B82F6' : '#94A3B8';
+          fillColor = isHovered ? 'rgba(6,182,212,0.2)' : 'rgba(51,65,85,0.2)';
+          strokeColor = isHovered ? '#06B6D4' : '#475569';
           strokeWidth = isHovered ? '2' : '1';
         }
 
@@ -168,7 +163,6 @@ const SVGFloorPlanEditor: React.FC<Props> = ({
         el.style.cursor = 'pointer';
         el.style.transition = 'fill 150ms, stroke 150ms, stroke-width 150ms';
 
-        // Event handlers (re-attach on each render)
         el.onmouseenter = () => setHoveredId(id);
         el.onmouseleave = () => setHoveredId(null);
         el.onclick = (e) => {
@@ -187,84 +181,85 @@ const SVGFloorPlanEditor: React.FC<Props> = ({
 
   if (!svgContent) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-3 p-8">
-        <svg className="h-16 w-16 opacity-30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-          <rect x="3" y="3" width="18" height="18" rx="2" />
-          <path d="M3 9h18M9 3v18" />
-        </svg>
-        <p className="font-medium">Chưa có bản đồ SVG</p>
-        <p className="text-sm">Tải lên file SVG cho tầng này để bắt đầu gán không gian.</p>
+      <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-3 p-8 bg-slate-950 rounded-2xl border border-slate-800">
+        <FiMap className="h-12 w-12 opacity-30 text-violet-400" />
+        <p className="font-semibold text-slate-300">Chưa có bản đồ SVG</p>
+        <p className="text-xs text-muted-foreground max-w-sm text-center">
+          Tải lên file SVG cho tầng này để bắt đầu gán không gian tương tác.
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="relative h-full flex flex-col">
-      {/* Zoom controls */}
-      <div className="absolute top-3 left-3 z-10 flex flex-col gap-1">
-        <button onClick={handleZoomIn} className="btn btn-ghost btn-sm p-2 bg-card/80 backdrop-blur-sm border border-border shadow-sm" aria-label="Phóng to">
+    <div className="relative h-full flex flex-col bg-slate-950 select-none overflow-hidden rounded-2xl border border-slate-800">
+      {/* Zoom controls overlay */}
+      <div className="absolute top-4 left-4 z-20 flex flex-col gap-1.5 bg-slate-900/90 backdrop-blur-md p-1 rounded-xl border border-slate-800 shadow-xl">
+        <button onClick={handleZoomIn} className="p-2 rounded-lg hover:bg-secondary text-slate-300 hover:text-white transition-colors" title="Phóng to">
           <FiPlus className="h-4 w-4" />
         </button>
-        <button onClick={handleZoomOut} className="btn btn-ghost btn-sm p-2 bg-card/80 backdrop-blur-sm border border-border shadow-sm" aria-label="Thu nhỏ">
+        <button onClick={handleZoomOut} className="p-2 rounded-lg hover:bg-secondary text-slate-300 hover:text-white transition-colors" title="Thu nhỏ">
           <FiMinus className="h-4 w-4" />
         </button>
-        <button onClick={handleReset} className="btn btn-ghost btn-sm p-2 bg-card/80 backdrop-blur-sm border border-border shadow-sm" aria-label="Reset zoom">
+        <button onClick={handleReset} className="p-2 rounded-lg hover:bg-secondary text-slate-300 hover:text-white transition-colors" title="Reset Zoom">
           <FiMaximize2 className="h-4 w-4" />
         </button>
       </div>
 
-      {/* Legend */}
-      <div className="absolute top-3 right-3 z-10 flex items-center gap-4 px-4 py-2 rounded-xl bg-card/80 backdrop-blur-sm border border-border shadow-sm">
-        <div className="flex items-center gap-1.5">
-          <span className="h-3 w-3 rounded-full" style={{ background: '#22C55E' }} />
-          <span className="text-xs font-medium text-muted-foreground">Đã gán</span>
+      {/* Legend overlay */}
+      <div className="absolute top-4 right-4 z-20 flex items-center gap-4 px-4 py-2 rounded-2xl bg-slate-900/90 backdrop-blur-md border border-slate-800 shadow-xl text-xs font-semibold">
+        <div className="flex items-center gap-2">
+          <span className="h-2.5 w-2.5 rounded-full bg-emerald-50 dark:bg-emerald-950/300 shadow-sm shadow-emerald-500/50" />
+          <span className="text-slate-300">Đã gán</span>
         </div>
-        <div className="flex items-center gap-1.5">
-          <span className="h-3 w-3 rounded-full" style={{ background: '#94A3B8' }} />
-          <span className="text-xs font-medium text-muted-foreground">Chưa gán</span>
+        <div className="flex items-center gap-2">
+          <span className="h-2.5 w-2.5 rounded-full bg-muted/500" />
+          <span className="text-slate-400">Chưa gán</span>
         </div>
-        <div className="flex items-center gap-1.5">
-          <span className="h-3 w-3 rounded-full" style={{ background: '#F59E0B' }} />
-          <span className="text-xs font-medium text-muted-foreground">Bảo trì</span>
+        <div className="flex items-center gap-2">
+          <span className="h-2.5 w-2.5 rounded-full bg-amber-50 dark:bg-amber-950/300 shadow-sm shadow-amber-500/50" />
+          <span className="text-slate-300">Bảo trì</span>
         </div>
       </div>
 
-      {/* Hover tooltip */}
+      {/* Hover tooltip HUD */}
       {hoveredId && (
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 px-4 py-2 rounded-lg bg-card border border-border shadow-lg text-sm animate-fade-in">
-          <span className="font-mono text-primary font-semibold">#{hoveredId}</span>
+        <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-20 px-4 py-2 rounded-xl bg-slate-900/95 border border-slate-800 shadow-2xl text-xs font-mono backdrop-blur-md animate-fade-in flex items-center gap-2">
+          <span className="text-violet-400 font-bold">#{hoveredId}</span>
           {wsMap.has(hoveredId) ? (
-            <span className="ml-2 text-muted-foreground">
-              → {wsMap.get(hoveredId)!.name} ({wsMap.get(hoveredId)!.code})
+            <span className="text-slate-200">
+              → <strong className="text-emerald-400">{wsMap.get(hoveredId)!.name}</strong> ({wsMap.get(hoveredId)!.code})
             </span>
           ) : (
-            <span className="ml-2 text-muted-foreground">— Chưa gán workspace</span>
+            <span className="text-slate-400">— Chưa gán workspace</span>
           )}
         </div>
       )}
 
       {/* SVG container */}
-      <div className="flex-1 overflow-auto flex items-center justify-center bg-muted/20">
+      <div className="flex-1 overflow-auto flex items-center justify-center bg-slate-950 p-4">
         <div
           ref={containerRef}
-          className="svg-floor-plan-container"
+          className="svg-floor-plan-container w-full h-full flex items-center justify-center"
           style={{
             transform: `scale(${zoom})`,
             transformOrigin: 'center center',
-            transition: 'transform 200ms ease',
-            width: '100%',
-            height: '100%',
-            padding: '8px',
+            transition: 'transform 200ms cubic-bezier(0.16, 1, 0.3, 1)',
           }}
-          onClick={() => onSelectElement(null)} // Deselect when clicking background
+          onClick={() => onSelectElement(null)}
         />
       </div>
 
-      {/* Element count */}
-      <div className="px-4 py-2 border-t border-border bg-muted/30 text-xs text-muted-foreground flex items-center gap-4">
-        <span>{parsedElements.length} element(s) có thể gán</span>
-        <span>{workspaces.length} workspace đã gán</span>
-        <span>{parsedElements.length - workspaces.length} chưa gán</span>
+      {/* Footer Telemetry */}
+      <div className="px-5 py-2 border-t border-slate-800 bg-slate-900/60 text-[11px] text-slate-400 flex items-center gap-4 font-mono">
+        <span className="flex items-center gap-1.5">
+          <FiLayers className="h-3.5 w-3.5 text-violet-400" />
+          <strong className="text-slate-200">{parsedElements.length}</strong> gán được
+        </span>
+        <div className="w-px h-3 bg-secondary" />
+        <span><strong className="text-emerald-400">{workspaces.length}</strong> đã gán</span>
+        <div className="w-px h-3 bg-secondary" />
+        <span><strong className="text-slate-400">{parsedElements.length - workspaces.length}</strong> chưa gán</span>
       </div>
     </div>
   );

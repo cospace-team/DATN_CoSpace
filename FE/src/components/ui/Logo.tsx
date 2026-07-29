@@ -40,7 +40,7 @@ export const Logo: React.FC<LogoProps> = ({
             className={
               isDarkBackground
                 ? "text-white"
-                : "text-slate-900 dark:text-white"
+                : "text-foreground dark:text-white"
             }
           >
             Co
