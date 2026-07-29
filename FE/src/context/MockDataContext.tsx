@@ -13,7 +13,8 @@ import {
   cancellationPolicies as initCancellationPolicies,
   bookingCancellations as initBookingCancellations,
   workspaceMaintenances as initMaintenances,
-  type Branch, type Floor, type Workspace, type WorkspaceType,
+  users as initUsers,
+  type Branch, type Floor, type Workspace, type WorkspaceType, type User,
   type Booking, type Payment, type CheckinLog,
   type PricePolicy, type ExtraService, type BookingService,
   type CancellationPolicy, type BookingCancellation, type WorkspaceMaintenance,
@@ -23,6 +24,7 @@ import { generateBookingCode } from '../utils/formatters';
 /* ── Context Value Type ── */
 interface MockDataContextValue {
   // Data
+  users: User[];
   branches: Branch[];
   floors: Floor[];
   workspaces: Workspace[];
@@ -81,6 +83,7 @@ interface CreateBookingParams {
 const MockDataContext = createContext<MockDataContextValue | null>(null);
 
 export const MockDataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [users] = useState<User[]>(initUsers);
   const [branches] = useState<Branch[]>(initBranches);
   const [floors, setFloors] = useState<Floor[]>(initFloors);
   const [workspaces, setWorkspaces] = useState<Workspace[]>(initWorkspaces);
@@ -318,7 +321,7 @@ export const MockDataProvider: React.FC<{ children: ReactNode }> = ({ children }
   }, []);
 
   const value: MockDataContextValue = {
-    branches, floors, workspaces, workspaceTypes,
+    users, branches, floors, workspaces, workspaceTypes,
     bookings: bookingsState, payments: paymentsState, checkinLogs,
     pricePolicies, extraServices, bookingServices: bookingServicesState,
     cancellationPolicies, bookingCancellations, maintenances,
