@@ -38,7 +38,7 @@ const DEV_MOCK_USERS: Record<UserRole, AuthUser> = {
     fullName: "Trần Nhân Viên",
     avatarUrl: "",
     role: "staff",
-    branchId: "branch-0001",
+    branchId: "33333333-3333-3333-3333-333333333333",
     branchName: "WorkHub Quận 1",
   },
   admin: {
@@ -58,7 +58,7 @@ const DEV_BRANCH_ADMIN_USER: AuthUser = {
   fullName: "Phạm Chi Nhánh Q1",
   avatarUrl: "",
   role: "admin",
-  branchId: "branch-0001",
+  branchId: "33333333-3333-3333-3333-333333333333",
   branchName: "WorkHub Quận 1",
 };
 

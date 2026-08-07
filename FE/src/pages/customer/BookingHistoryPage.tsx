@@ -125,7 +125,7 @@ const BookingHistoryPage: React.FC = () => {
     const fetchBookings = async () => {
       setLoading(true);
       try {
-        const apiBookings = await bookingApi.getMyBookings();
+        const apiBookings = await bookingApi.getMyBookings(true);
         // Always replace with API data (even empty array) so real state is shown
         const mapped = (apiBookings || []).map((b) => {
           const workspace = workspaces.find((w) => w.id === b.workspaceId);
@@ -146,7 +146,7 @@ const BookingHistoryPage: React.FC = () => {
             minute: "2-digit",
           }),
           // Normalize: Java enum serializes as UPPERCASE → lowercase for filter
-          status: (b.status as string).toLowerCase(),
+          status: b.status ? (b.status as string).toLowerCase() : "pending_payment",
           totalAmount: b.totalAmount,
           paymentMethod: "momo",
         };
@@ -167,14 +167,14 @@ const BookingHistoryPage: React.FC = () => {
   const getFilteredBookings = () => {
     return bookings.filter((b) => {
       if (activeTab === "canceled")
-        return b.status === "canceled" || b.status === "cancelled" || b.status === "expired";
+        return b.status === "canceled" || b.status === "cancelled" || b.status === "expired" || b.status === "no_show";
       if (activeTab === "upcoming")
         return (
           b.status === "confirmed" ||
           b.status === "checked_in" ||
           b.status === "pending_payment"
         );
-      return b.status === "completed";
+      return b.status === "completed" || b.status === "checked_out";
     });
   };
 
@@ -321,7 +321,7 @@ const BookingHistoryPage: React.FC = () => {
                     className={`px-3 py-1 text-xs font-semibold  rounded-lg border border-border shadow-sm ${
                       booking.status === "confirmed" || booking.status === "pending_payment" || booking.status === "checked_in"
                         ? "bg-muted text-foreground"
-                        : booking.status === "completed"
+                        : booking.status === "completed" || booking.status === "checked_out"
                           ? "bg-emerald-100 text-emerald-900"
                           : "bg-rose-100 text-rose-900"
                     }`}
@@ -332,9 +332,11 @@ const BookingHistoryPage: React.FC = () => {
                         ? "⏳ Chờ thanh toán"
                         : booking.status === "checked_in"
                           ? "🔑 Đã check-in"
-                          : booking.status === "completed"
+                          : booking.status === "completed" || booking.status === "checked_out"
                             ? "✓ Hoàn thành"
-                            : "× Đã hủy"}
+                            : booking.status === "no_show"
+                              ? "× Không đến"
+                              : "× Đã hủy"}
                   </span>
                 </div>
 
@@ -396,7 +398,7 @@ const BookingHistoryPage: React.FC = () => {
                     </button>
                   </>
                 )}
-                {booking.status === "completed" && (
+                {(booking.status === "completed" || booking.status === "checked_out") && (
                   <button className="w-full py-3 bg-card text-foreground font-semibold tracking-tight border border-border rounded-full shadow-sm hover:bg-muted/50 transition-colors text-xs">
                     Đặt lại chỗ này
                   </button>

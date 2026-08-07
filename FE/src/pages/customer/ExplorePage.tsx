@@ -189,6 +189,7 @@ const BookingPanel: React.FC<{
   selectedDate: Date;
   getPrice: () => any;
   onClose: () => void;
+  onChangeStartHour: (hour: number) => void;
   checkAvailability?: (startHour: number, endHour: number, endDate: Date, unit: string) => string;
   onBookNow: (
     endHour: number,
@@ -208,6 +209,7 @@ const BookingPanel: React.FC<{
   selectedDate,
   getPrice,
   onClose,
+  onChangeStartHour,
   checkAvailability,
   onBookNow,
 }) => {
@@ -404,13 +406,18 @@ const BookingPanel: React.FC<{
                 >
                   Bắt đầu
                 </label>
-                <input
+                <select
                   id={`start-time-${selectedWs}`}
-                  type="time"
-                  defaultValue={`${String(selectedHour).padStart(2, '00')}:00`}
-                  className="input-field mt-1 text-sm"
-                  readOnly
-                />
+                  value={selectedHour}
+                  onChange={(e) => onChangeStartHour(Number(e.target.value))}
+                  className="input-field mt-1 text-sm bg-transparent border-b border-border focus:outline-none w-full"
+                >
+                  {Array.from({ length: 17 }, (_, i) => i + 6).map((h) => (
+                    <option key={h} value={h}>
+                      {String(h).padStart(2, '0')}:00
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label
@@ -1525,6 +1532,7 @@ const ExplorePage: React.FC = () => {
                 selectedDate={selectedDate}
                 getPrice={() => getPrice(selectedWsData.workspace_type_id)}
                 onClose={() => setSelectedWs(null)}
+                onChangeStartHour={(h) => setSelectedHour(h)}
                 checkAvailability={(stH, endH, endD, unit) => getWsAvailability(selectedWs, selectedDate, stH, endD, unit === 'hour' ? endH : undefined)}
                 onBookNow={handleBookNow}
               />
@@ -1548,6 +1556,7 @@ const ExplorePage: React.FC = () => {
                   selectedDate={selectedDate}
                   getPrice={() => getPrice(selectedWsData.workspace_type_id)}
                   onClose={() => setSelectedWs(null)}
+                  onChangeStartHour={(h) => setSelectedHour(h)}
                   checkAvailability={(stH, endH, endD, unit) => getWsAvailability(selectedWs, selectedDate, stH, endD, unit === 'hour' ? endH : undefined)}
                   onBookNow={handleBookNow}
                 />

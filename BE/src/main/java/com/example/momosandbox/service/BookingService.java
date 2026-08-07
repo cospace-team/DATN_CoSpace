@@ -22,6 +22,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import com.example.momosandbox.repository.UserRepository;
+import com.example.momosandbox.repository.CheckinLogRepository;
 
 @Service
 public class BookingService {
@@ -34,13 +36,17 @@ public class BookingService {
     private final PricingService pricingService;
     private final WorkspaceEntityRepository workspaceEntityRepository;
     private final BranchEntityRepository branchEntityRepository;
+    private final UserRepository userRepository;
+    private final CheckinLogRepository checkinLogRepository;
 
-    public BookingService(BookingRepository bookingRepository, PaymentRepository paymentRepository, PricingService pricingService, WorkspaceEntityRepository workspaceEntityRepository, BranchEntityRepository branchEntityRepository) {
+    public BookingService(BookingRepository bookingRepository, PaymentRepository paymentRepository, PricingService pricingService, WorkspaceEntityRepository workspaceEntityRepository, BranchEntityRepository branchEntityRepository, UserRepository userRepository, CheckinLogRepository checkinLogRepository) {
         this.bookingRepository = bookingRepository;
         this.paymentRepository = paymentRepository;
         this.pricingService = pricingService;
         this.workspaceEntityRepository = workspaceEntityRepository;
         this.branchEntityRepository = branchEntityRepository;
+        this.userRepository = userRepository;
+        this.checkinLogRepository = checkinLogRepository;
     }
 
     @Transactional
@@ -112,6 +118,73 @@ public class BookingService {
         return bookingRepository.findByIdAndUserId(bookingId, userId)
                 .map(this::toDto)
                 .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
+    }
+
+    @Transactional(readOnly = true)
+    public com.example.momosandbox.dto.api.BookingWithDetailsDto getBookingByCode(String code, UUID branchId) {
+        Booking booking = bookingRepository.findByBookingCode(code)
+                .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
+
+        if (!booking.getBranchId().equals(branchId)) {
+            throw new IllegalArgumentException("Booking belongs to a different branch");
+        }
+
+        return toBookingWithDetailsDto(booking);
+    }
+
+    @Transactional(readOnly = true)
+    public List<BookingDto> getBranchTodayBookings(UUID branchId) {
+        OffsetDateTime todayStart = OffsetDateTime.now(ZoneOffset.UTC).withHour(0).withMinute(0).withSecond(0).withNano(0);
+        OffsetDateTime todayEnd = todayStart.plusDays(1);
+        
+        return bookingRepository.findByBranchIdAndStartAtBetweenOrderByStartAtAsc(branchId, todayStart, todayEnd)
+                .stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
+    }
+
+    private com.example.momosandbox.dto.api.BookingWithDetailsDto toBookingWithDetailsDto(Booking b) {
+        BookingDto bookingDto = toDto(b);
+        
+        com.example.momosandbox.dto.api.UserProfileDto customer = userRepository.findById(b.getUserId())
+                .map(u -> com.example.momosandbox.dto.api.UserProfileDto.builder()
+                        .id(u.getId())
+                        .email(u.getEmail())
+                        .fullName(u.getFullName())
+                        .phone(u.getPhone())
+                        .build())
+                .orElse(null);
+
+        com.example.momosandbox.dto.api.SpaceDto.WorkspaceResponse workspace = workspaceEntityRepository.findById(b.getWorkspaceId())
+                .map(w -> com.example.momosandbox.dto.api.SpaceDto.WorkspaceResponse.builder()
+                        .id(w.getId())
+                        .code(w.getCode())
+                        .name(w.getName())
+                        .workspaceTypeId(w.getWorkspaceTypeId().toString())
+                        .capacity(w.getCapacity())
+                        .svgElementId(w.getSvgElementId())
+                        .status(w.getStatus().name())
+                        .build())
+                .orElse(null);
+
+        Optional<com.example.momosandbox.entity.CheckinLog> activeCheckinOpt = checkinLogRepository.findActiveCheckinByBookingId(b.getId());
+        
+        com.example.momosandbox.dto.api.CheckinLogDto checkinLogDto = activeCheckinOpt.map(c -> com.example.momosandbox.dto.api.CheckinLogDto.builder()
+                .id(c.getId())
+                .bookingId(c.getBookingId())
+                .staffUserId(c.getStaffUserId())
+                .checkinAt(c.getCheckinAt().toString())
+                .checkoutAt(c.getCheckoutAt() != null ? c.getCheckoutAt().toString() : null)
+                .note(c.getNote())
+                .build()).orElse(null);
+
+        return com.example.momosandbox.dto.api.BookingWithDetailsDto.builder()
+                .booking(bookingDto)
+                .customer(customer)
+                .workspace(workspace)
+                .alreadyCheckedIn(activeCheckinOpt.isPresent())
+                .activeCheckin(checkinLogDto)
+                .build();
     }
 
     private BookingDto toDto(Booking b) {

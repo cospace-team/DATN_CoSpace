@@ -1,57 +1,43 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiCalendar, FiUsers, FiClock, FiDollarSign, FiTrendingUp, FiLayers, FiArrowRight } from 'react-icons/fi';
-import { bookings, checkinLogs, workspaces, getUser, getWorkspace } from '../../data/mockData';
 import { useAuth } from '../../context/AuthContext';
 import { formatTime, formatVND, bookingStatusLabel, bookingStatusColor } from '../../utils/formatters';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
+import { staffApi, StaffDashboardStatsDto } from '../../api/staffApi';
 
 const OperationsDashboardPage: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const branchId = user?.branchId || 'branch-0001';
-  const branchName = branchId === 'branch-0001' ? 'WorkHub Quận 1' : 'WorkHub Chi nhánh';
+  const branchId = user?.branchId || '33333333-3333-3333-3333-333333333333';
+  const branchName = branchId === '33333333-3333-3333-3333-333333333333' ? 'WorkHub Quận 1' : 'WorkHub Chi nhánh';
 
   const [activeTab, setActiveTab] = useState<'all' | 'incoming' | 'seated'>('all');
+  const [stats, setStats] = useState<StaffDashboardStatsDto | null>(null);
+  const [branchBookingsToday, setBranchBookingsToday] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Lọc dữ liệu booking hôm nay của chi nhánh
-  const today = new Date().toISOString().split('T')[0];
-  const branchBookingsToday = useMemo(() => {
-    return bookings.filter(b => {
-      const ws = getWorkspace(b.workspace_id);
-      return ws?.floor_id.includes(branchId) && b.start_at.startsWith(today);
-    }).sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime());
-  }, [branchId, today]);
-
-  // Các con số thống kê an toàn & chuẩn xác
-  const stats = useMemo(() => {
-    const confirmedOrCheckedIn = branchBookingsToday.filter(b => b.status === 'confirmed' || b.status === 'checked_in');
-    const revenue = confirmedOrCheckedIn.reduce((sum, b) => sum + b.total_amount, 0);
-    
-    const activeCheckins = checkinLogs.filter(log => {
-      const b = bookings.find(bk => bk.id === log.booking_id);
-      const ws = getWorkspace(b?.workspace_id || '');
-      return ws?.floor_id.includes(branchId) && !log.checkout_at;
-    });
-
-    const branchWorkspaces = workspaces.filter(w => w.floor_id.includes(branchId));
-    const totalWs = branchWorkspaces.length;
-    const maintenanceWs = branchWorkspaces.filter(w => w.status === 'maintenance').length;
-    const occupiedWs = activeCheckins.length;
-    const availableWs = totalWs - maintenanceWs - occupiedWs;
-    const occupancyRate = totalWs > 0 ? Math.round((occupiedWs / (totalWs - maintenanceWs)) * 100) : 0;
-
-    return {
-      revenue,
-      activeCheckinsCount: activeCheckins.length,
-      availableWs,
-      maintenanceWs,
-      occupancyRate
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [statsData, bookingsData] = await Promise.all([
+          staffApi.getDashboardStats(branchId),
+          staffApi.getBranchTodayBookings(branchId)
+        ]);
+        setStats(statsData);
+        setBranchBookingsToday(bookingsData);
+      } catch (error) {
+        console.error('Failed to fetch dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
     };
-  }, [branchBookingsToday, branchId]);
+    fetchData();
+  }, [branchId]);
 
-  // Dữ liệu biểu đồ lượng khách theo khung giờ
+  // Dữ liệu biểu đồ lượng khách theo khung giờ - Giữ nguyên mock cho biểu đồ hiện tại
   const chartData = useMemo(() => {
     return [
       { hour: '08:00', guests: 5, revenue: 350000 },
@@ -65,10 +51,14 @@ const OperationsDashboardPage: React.FC = () => {
 
   // Lọc danh sách hiển thị theo tab
   const filteredBookings = useMemo(() => {
-    if (activeTab === 'incoming') return branchBookingsToday.filter(b => b.status === 'confirmed');
-    if (activeTab === 'seated') return branchBookingsToday.filter(b => b.status === 'checked_in');
+    if (activeTab === 'incoming') return branchBookingsToday.filter(b => b.status === 'CONFIRMED');
+    if (activeTab === 'seated') return branchBookingsToday.filter(b => b.status === 'CHECKED_IN');
     return branchBookingsToday;
   }, [branchBookingsToday, activeTab]);
+
+  if (loading) {
+    return <div className="p-8 text-center text-muted-foreground">Đang tải dữ liệu...</div>;
+  }
 
   return (
     <div className="space-y-6 animate-fade-in pb-24 lg:pb-6">
@@ -82,7 +72,7 @@ const OperationsDashboardPage: React.FC = () => {
           <FiUsers className="h-6 w-6 text-primary" />
           <div>
             <p className="text-xs font-medium opacity-80 uppercase tracking-wider">Đang phục vụ</p>
-            <p className="font-bold text-xl leading-tight">{stats.activeCheckinsCount} khách hàng</p>
+            <p className="font-bold text-xl leading-tight">{stats?.activeCheckinsCount || 0} khách hàng</p>
           </div>
         </div>
       </div>
@@ -95,7 +85,7 @@ const OperationsDashboardPage: React.FC = () => {
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Doanh thu hôm nay</p>
-            <p className="text-2xl font-bold text-foreground mt-1 truncate">{formatVND(stats.revenue)}</p>
+            <p className="text-2xl font-bold text-foreground mt-1 truncate">{formatVND(stats?.revenue || 0)}</p>
             <p className="text-xs text-green-600 dark:text-green-400 mt-1 flex items-center gap-1 font-medium">
               <FiTrendingUp /> Đã bao gồm dịch vụ
             </p>
@@ -103,14 +93,14 @@ const OperationsDashboardPage: React.FC = () => {
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-6 shadow-sm flex items-center gap-4 transition-all hover:shadow-md">
-          <div className="h-14 w-14 rounded-xl bg-blue-50 dark:bg-blue-950/300/10 text-blue-500 flex items-center justify-center shrink-0">
+          <div className="h-14 w-14 rounded-xl bg-blue-50 dark:bg-blue-950/30 text-blue-500 flex items-center justify-center shrink-0">
             <FiTrendingUp className="h-7 w-7" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Tỷ lệ lấp đầy (Occupancy)</p>
-            <p className="text-2xl font-bold text-foreground mt-1">{stats.occupancyRate}%</p>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Tỷ lệ lấp đầy</p>
+            <p className="text-2xl font-bold text-foreground mt-1">{stats?.occupancyRate || 0}%</p>
             <div className="w-full bg-muted rounded-full h-1.5 mt-2 overflow-hidden">
-              <div className="bg-blue-50 dark:bg-blue-950/300 h-1.5 rounded-full" style={{ width: `${stats.occupancyRate}%` }} />
+              <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${stats?.occupancyRate || 0}%` }} />
             </div>
           </div>
         </div>
@@ -121,7 +111,7 @@ const OperationsDashboardPage: React.FC = () => {
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Khách đang ngồi</p>
-            <p className="text-2xl font-bold text-foreground mt-1">{stats.activeCheckinsCount}</p>
+            <p className="text-2xl font-bold text-foreground mt-1">{stats?.activeCheckinsCount || 0}</p>
             <p className="text-xs text-muted-foreground mt-1 font-medium">Trên tổng số bàn đang mở</p>
           </div>
         </div>
@@ -132,8 +122,8 @@ const OperationsDashboardPage: React.FC = () => {
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Bàn Trống / Bảo trì</p>
-            <p className="text-2xl font-bold text-foreground mt-1">{stats.availableWs} <span className="text-sm font-normal text-muted-foreground">/ {stats.maintenanceWs}</span></p>
-            <p className="text-xs text-orange-600 dark:text-orange-400 mt-1 font-medium">Sẵn sàng đón khách Walk-in</p>
+            <p className="text-2xl font-bold text-foreground mt-1">{stats?.availableWs || 0} <span className="text-sm font-normal text-muted-foreground">/ {stats?.maintenanceWs || 0}</span></p>
+            <p className="text-xs text-orange-600 dark:text-orange-400 mt-1 font-medium">Sẵn sàng đón khách</p>
           </div>
         </div>
       </div>
@@ -199,29 +189,30 @@ const OperationsDashboardPage: React.FC = () => {
                   className="py-16"
                 />
               ) : filteredBookings.map(b => {
-                const ws = getWorkspace(b.workspace_id);
-                const customer = getUser(b.user_id);
-                const isIncoming = b.status === 'confirmed';
+                const statusStr = b.status?.toLowerCase() || '';
+                const isIncoming = b.status === 'CONFIRMED';
+                const statusColor = (bookingStatusColor as any)[statusStr] || 'bg-gray-100 text-gray-700';
+                const statusLabel = (bookingStatusLabel as any)[statusStr] || b.status;
 
                 return (
                   <div key={b.id} className="flex items-center gap-4 rounded-xl bg-muted/40 p-4 border border-border transition-all hover:bg-muted/80 hover:border-border/80">
                     <div className="text-center shrink-0 w-16">
-                      <p className="text-lg font-bold text-primary">{formatTime(b.start_at)}</p>
-                      <p className="text-xs text-muted-foreground">{formatTime(b.end_at)}</p>
+                      <p className="text-lg font-bold text-primary">{formatTime(b.startAt)}</p>
+                      <p className="text-xs text-muted-foreground">{formatTime(b.endAt)}</p>
                     </div>
                     <div className="h-10 w-px bg-border hidden sm:block" />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="font-bold text-base truncate">{customer?.full_name}</p>
-                        <span className="text-xs font-mono bg-background px-2 py-0.5 rounded border border-border text-muted-foreground">{b.booking_code}</span>
+                        <p className="font-bold text-base truncate">User: {b.userId?.substring(0, 8)}...</p>
+                        <span className="text-xs font-mono bg-background px-2 py-0.5 rounded border border-border text-muted-foreground">{b.bookingCode}</span>
                       </div>
-                      <p className="text-sm text-muted-foreground truncate mt-0.5">{ws?.name} <span className="opacity-50">·</span> {formatVND(b.total_amount)}</p>
+                      <p className="text-sm text-muted-foreground truncate mt-0.5">WS: {b.workspaceId?.substring(0, 8)}... <span className="opacity-50">·</span> {formatVND(b.totalAmount)}</p>
                     </div>
                     <div className="shrink-0 flex items-center gap-3 text-right">
-                      <span className={`badge ${bookingStatusColor[b.status]}`}>{bookingStatusLabel[b.status]}</span>
+                      <span className={`badge ${statusColor}`}>{statusLabel}</span>
                       {isIncoming && (
                         <button 
-                          onClick={() => navigate('/staff/checkin', { state: { bookingCode: b.booking_code } })}
+                          onClick={() => navigate('/staff/checkin', { state: { bookingCode: b.bookingCode } })}
                           className="btn btn-primary btn-sm shadow-md shadow-primary/20 hidden md:inline-flex items-center gap-1.5"
                         >
                           Check-in <FiArrowRight />
@@ -240,4 +231,3 @@ const OperationsDashboardPage: React.FC = () => {
 };
 
 export default OperationsDashboardPage;
-

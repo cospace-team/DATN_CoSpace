@@ -60,6 +60,23 @@ public class BookingController {
         return bookingService.cancelBooking(userId, id);
     }
 
+    @GetMapping("/code/{code}")
+    public com.example.momosandbox.dto.api.BookingWithDetailsDto getByCode(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable("code") String code,
+            @org.springframework.web.bind.annotation.RequestParam("branchId") UUID branchId) {
+        // Staff/Branch Admin auth validation can be done in security config or here.
+        // Assuming branchId is passed as parameter to verify the booking belongs to their branch.
+        return bookingService.getBookingByCode(code, branchId);
+    }
+
+    @GetMapping("/branch-today")
+    public List<BookingDto> getBranchTodayBookings(
+            @AuthenticationPrincipal Jwt jwt,
+            @org.springframework.web.bind.annotation.RequestParam("branchId") UUID branchId) {
+        return bookingService.getBranchTodayBookings(branchId);
+    }
+
     private UUID requireSubject(Jwt jwt) {
         if (jwt == null || jwt.getSubject() == null || jwt.getSubject().isBlank()) {
             throw new IllegalArgumentException("Missing JWT subject");

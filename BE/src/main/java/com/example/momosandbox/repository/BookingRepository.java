@@ -25,4 +25,8 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
     boolean existsByWorkspaceIdAndStartAtAfter(
             @org.springframework.data.repository.query.Param("workspaceId") UUID workspaceId,
             @org.springframework.data.repository.query.Param("after") OffsetDateTime after);
+
+    Optional<Booking> findByBookingCode(String bookingCode);
+
+    List<Booking> findByBranchIdAndStartAtBetweenOrderByStartAtAsc(UUID branchId, OffsetDateTime start, OffsetDateTime end);
 }
