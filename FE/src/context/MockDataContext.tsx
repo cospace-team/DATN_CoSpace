@@ -73,7 +73,7 @@ interface CreateBookingParams {
   branchId: string;
   startAt: string;
   endAt: string;
-  unit: Booking['unit'];
+  durationUnit: Booking['durationUnit'];
   unitCount: number;
   paymentMethod: 'momo' | 'cash';
   source?: Booking['source'];
@@ -158,7 +158,7 @@ export const MockDataProvider: React.FC<{ children: ReactNode }> = ({ children }
       branch_id: params.branchId,
       start_at: params.startAt,
       end_at: params.endAt,
-      unit: params.unit,
+      duration_unit: params.durationUnit,
       unit_count: params.unitCount,
       status: 'pending_payment',
       subtotal_amount: subtotal,

@@ -16,7 +16,8 @@ import java.util.UUID;
  */
 public class SpaceDto {
 
-    private SpaceDto() {}
+    private SpaceDto() {
+    }
 
     /* ─── Request DTOs ─── */
 
@@ -61,7 +62,7 @@ public class SpaceDto {
         private UUID floorId;
 
         @NotNull(message = "workspaceTypeId không được để trống")
-        private UUID workspaceTypeId;
+        private String workspaceTypeId;
 
         @NotBlank(message = "Mã không gian không được để trống")
         private String code;
@@ -72,7 +73,6 @@ public class SpaceDto {
         @Min(value = 1, message = "Sức chứa phải >= 1")
         private int capacity;
 
-    
         private String svgElementId;
     }
 
@@ -83,7 +83,7 @@ public class SpaceDto {
     public static class UpdateWorkspaceRequest {
         private String code;
         private String name;
-        private UUID workspaceTypeId;
+        private String workspaceTypeId;
 
         @Min(value = 1, message = "Sức chứa phải >= 1")
         private int capacity;
@@ -119,7 +119,7 @@ public class SpaceDto {
         private UUID id;
         private String code;
         private String name;
-        private UUID workspaceTypeId;
+        private String workspaceTypeId;
         private String workspaceTypeName;
         private int capacity;
         private String svgElementId;

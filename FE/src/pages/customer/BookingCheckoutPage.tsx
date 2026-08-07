@@ -18,6 +18,24 @@ const MOCK_SERVICES = [
   { id: 'printing', name: 'In ấn (50 trang)', price: 20000, icon: <FiPrinter /> },
 ];
 
+const PUBLIC_BRANCH_ALIASES: Record<string, string> = {
+  'branch-1': 'b1000000-0000-0000-0000-000000000001',
+  'branch-2': 'b2000000-0000-0000-0000-000000000002',
+  'branch-3': 'b3000000-0000-0000-0000-000000000003',
+  'branch-0001': 'b1000000-0000-0000-0000-000000000001',
+  'branch-0002': 'b2000000-0000-0000-0000-000000000002',
+  'branch-0003': 'b3000000-0000-0000-0000-000000000003',
+  'WH-Q1': 'b1000000-0000-0000-0000-000000000001',
+  'WH-Q7': 'b2000000-0000-0000-0000-000000000002',
+  'WH-TD': 'b3000000-0000-0000-0000-000000000003',
+  'CS-Q1': 'b1000000-0000-0000-0000-000000000001',
+};
+
+const resolveBranchId = (id?: string | null): string => {
+  if (!id) return 'b1000000-0000-0000-0000-000000000001';
+  return PUBLIC_BRANCH_ALIASES[id] ?? id;
+};
+
 const BookingCheckoutPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -30,15 +48,26 @@ const BookingCheckoutPage: React.FC = () => {
   const date = (state?.date ? new Date(state.date) : new Date());
   const startHour = state?.hour || 9;
   const endHour = state?.endHour || 11;
+  // Multi-day support: endDate and durationUnit passed from BookingPanel
+  const rawEndDate = state?.endDate ? new Date(state.endDate) : null;
+  const bookingDurationUnit: 'hour' | 'day' | 'week' = state?.durationUnit || 'hour';
+  const endDate = rawEndDate && bookingDurationUnit !== 'hour' ? rawEndDate : new Date(date);
   const services = state?.services || {};
   const basePrice = state?.price?.price || 0;
-  const durationUnit = state?.price?.duration_unit || 'hour';
   const subtotal = state?.subtotal || 0;
   const addonTotal = state?.addonTotal || 0;
   const total = state?.total || 0;
 
+  // Derived display values
+  const isMultiDay = bookingDurationUnit !== 'hour';
+  const unitCount = isMultiDay
+    ? (bookingDurationUnit === 'week'
+        ? Math.max(1, Math.round(Math.abs(endDate.getTime() - date.getTime()) / (86_400_000 * 7)))
+        : Math.max(1, Math.round(Math.abs(endDate.getTime() - date.getTime()) / 86_400_000)))
+    : Math.max(1, endHour - startHour);
+
   const [isProcessing, setIsProcessing] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'momo'>('momo');
+  const [paymentMethod, setPaymentMethod] = useState<'momo' | 'cash'>('momo');
   
   // 15-Minute Expiration Countdown
   const [timeLeft, setTimeLeft] = useState(15 * 60); // 900 seconds
@@ -74,28 +103,62 @@ const BookingCheckoutPage: React.FC = () => {
     );
   }
 
-  const duration = Math.max(1, endHour - startHour);
-
   const handleCreateBooking = async () => {
     setIsProcessing(true);
     try {
-      // 1. Send API booking request
+      // 1. Build startAt/endAt based on durationUnit
       const startAtDate = new Date(date);
       startAtDate.setHours(startHour, 0, 0, 0);
-      const endAtDate = new Date(date);
-      endAtDate.setHours(endHour, 0, 0, 0);
+
+      const now = new Date();
+      now.setMinutes(0, 0, 0); // Allow booking for the current hour even if minutes have passed
+      
+      if (startAtDate < now) {
+        showToast('Không thể đặt chỗ trong quá khứ. Vui lòng chọn thời gian khác.', 'error');
+        setIsProcessing(false);
+        return;
+      }
+
+      let endAtDate: Date;
+      if (isMultiDay) {
+        // For day/week bookings: end at 23:59:59 of the selected end date
+        endAtDate = new Date(endDate);
+        endAtDate.setHours(23, 59, 59, 999);
+      } else {
+        // For hour bookings: same day, specified end hour
+        endAtDate = new Date(date);
+        endAtDate.setHours(endHour, 0, 0, 0);
+      }
 
       const bookingRes = await bookingApi.createBooking({
-        branchId: workspace.branch_id || '7c27278b-eeba-462f-9720-23849d1c3703',
+        branchId: resolveBranchId(workspace.branch_id || workspace.branchId),
         workspaceId: workspace.id,
-        workspaceTypeId: workspace.workspace_type_id,
+        workspaceTypeId: workspace.workspace_type_id || workspace.workspaceTypeId || 'wst-desk',
         startAt: startAtDate.toISOString(),
         endAt: endAtDate.toISOString(),
-        unit: 'hour',
-        unitCount: duration,
+        unit: bookingDurationUnit,
+        unitCount: unitCount,
         services,
         source: 'web',
       });
+
+      if (paymentMethod === 'cash') {
+        const cashRes = await bookingApi.createCashPayment(bookingRes.id);
+        if (cashRes.success) {
+          showToast('Đặt chỗ thành công (Tiền mặt)!', 'success');
+          navigate('/customer/history', { 
+            state: { 
+              message: `Đặt chỗ thành công! Mã đơn của bạn là ${bookingRes.bookingCode}.`,
+              newBookingCode: bookingRes.bookingCode,
+              branchName: state.branchName || "CoSpace Chi nhánh",
+            } 
+          });
+        } else {
+          showToast(cashRes.message, 'error');
+        }
+        setIsProcessing(false);
+        return;
+      }
 
       // 2. Request MoMo Sandbox Payment API & redirect directly to MoMo Gateway page
       const momoRes = await bookingApi.createMomoPayment(bookingRes.id, total);
@@ -110,6 +173,7 @@ const BookingCheckoutPage: React.FC = () => {
           state: { 
             message: `Đặt chỗ thành công! Mã đơn của bạn là ${bookingRes.bookingCode}.`,
             newBookingCode: bookingRes.bookingCode,
+            branchName: state.branchName || "CoSpace Chi nhánh",
           } 
         });
       }
@@ -182,7 +246,9 @@ const BookingCheckoutPage: React.FC = () => {
 
             <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-6 bg-card">
               <div className="space-y-2 p-4 bg-muted/50 rounded-3xl border border-border shadow-inner">
-                <p className="text-[10px] text-foreground  tracking-tight font-semibold">Ngày sử dụng</p>
+                <p className="text-[10px] text-foreground  tracking-tight font-semibold">
+                  {isMultiDay ? 'Từ ngày' : 'Ngày sử dụng'}
+                </p>
                 <p className="flex items-center gap-3 font-semibold text-lg text-foreground">
                   <div className="p-2 bg-card border border-border rounded-lg shadow-sm"><FiCalendar className="text-foreground h-5 w-5" /></div>
                   {date.toLocaleDateString('vi-VN')}
@@ -190,11 +256,27 @@ const BookingCheckoutPage: React.FC = () => {
               </div>
 
               <div className="space-y-2 p-4 bg-muted/50 rounded-3xl border border-border shadow-inner">
-                <p className="text-[10px] text-foreground  tracking-tight font-semibold">Khung giờ</p>
-                <div className="flex items-center gap-3 font-semibold text-lg text-foreground">
-                  <div className="p-2 bg-card border border-border rounded-lg shadow-sm"><FiClock className="text-foreground h-5 w-5" /></div>
-                  <span>{String(startHour).padStart(2, '0')}:00 → {String(endHour).padStart(2, '0')}:00</span>
-                </div>
+                {isMultiDay ? (
+                  <>
+                    <p className="text-[10px] text-foreground tracking-tight font-semibold">Đến ngày</p>
+                    <p className="flex items-center gap-3 font-semibold text-lg text-foreground">
+                      <div className="p-2 bg-card border border-border rounded-lg shadow-sm"><FiCalendar className="text-foreground h-5 w-5" /></div>
+                      {endDate.toLocaleDateString('vi-VN')}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {unitCount} {bookingDurationUnit === 'week' ? 'tuần' : 'ngày'}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-[10px] text-foreground  tracking-tight font-semibold">Khung giờ</p>
+                    <div className="flex items-center gap-3 font-semibold text-lg text-foreground">
+                      <div className="p-2 bg-card border border-border rounded-lg shadow-sm"><FiClock className="text-foreground h-5 w-5" /></div>
+                      <span>{String(startHour).padStart(2, '0')}:00 → {String(endHour).padStart(2, '0')}:00</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">{unitCount} giờ</p>
+                  </>
+                )}
               </div>
             </div>
           </section>
@@ -262,6 +344,31 @@ const BookingCheckoutPage: React.FC = () => {
                   <FiCheckCircle className="h-5 w-5 font-semibold" />
                 </div>
               </label>
+
+              <label className={`flex items-center justify-between p-4 rounded-3xl border-4 cursor-pointer transition-all ${
+                paymentMethod === 'cash' ? 'border-emerald-500 bg-muted/5 shadow-sm' : 'border-border hover:-translate-y-1 hover:shadow-sm'
+              }`}>
+                <div className="flex items-center gap-4">
+                  <input 
+                    type="radio" 
+                    name="payment" 
+                    value="cash" 
+                    checked={paymentMethod === 'cash'} 
+                    onChange={() => setPaymentMethod('cash')} 
+                    className="w-5 h-5 accent-emerald-500" 
+                  />
+                  <div className="h-12 w-12 rounded-3xl bg-emerald-500 flex items-center justify-center shadow-sm">
+                    <span className="text-white font-semibold text-[10px] tracking-tight">CASH</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-lg block text-foreground">Tiền mặt tại quầy</span>
+                    <span className="text-xs font-medium text-foreground/70">Thanh toán trực tiếp khi đến nơi</span>
+                  </div>
+                </div>
+                <div className={`h-8 w-8 rounded-full border flex items-center justify-center ${paymentMethod === 'cash' ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-border/50 text-transparent'}`}>
+                  <FiCheckCircle className="h-5 w-5 font-semibold" />
+                </div>
+              </label>
               
               <div className="p-4 rounded-3xl bg-muted/50 border border-border text-sm font-medium text-foreground flex items-start gap-3 shadow-inner">
                 <FiLock className="h-6 w-6 shrink-0 text-foreground mt-0.5" />
@@ -287,7 +394,7 @@ const BookingCheckoutPage: React.FC = () => {
             <div className="p-6 space-y-4">
               <div className="flex flex-col gap-2 p-4 bg-muted/50 rounded-3xl border border-border">
                 <div className="flex justify-between items-center text-sm font-medium text-foreground/70">
-                  <span className="">Tiền thuê ({formatVND(basePrice)}) × {duration}h</span>
+                  <span className="">Tiền thuê ({formatVND(basePrice)}) × {unitCount}{bookingDurationUnit === 'week' ? ' tuần' : bookingDurationUnit === 'day' ? ' ngày' : 'h'}</span>
                   <span className="font-semibold text-foreground font-mono text-lg">{formatVND(subtotal)}</span>
                 </div>
                 

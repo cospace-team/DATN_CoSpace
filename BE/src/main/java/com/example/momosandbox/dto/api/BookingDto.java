@@ -1,60 +1,43 @@
 package com.example.momosandbox.dto.api;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.example.momosandbox.entity.BookingStatus;
+import com.example.momosandbox.entity.DurationUnit;
+import com.example.momosandbox.entity.PaymentStatus;
 import lombok.Builder;
 import lombok.Data;
+import java.util.UUID;
 
 @Data
 @Builder
 public class BookingDto {
 
-    private String id;
-
-    @JsonProperty("booking_code")
+    private UUID id;
     private String bookingCode;
-
-    @JsonProperty("user_id")
-    private String userId;
-
-    @JsonProperty("workspace_id")
-    private String workspaceId;
-
-    @JsonProperty("branch_id")
-    private String branchId;
-
-    @JsonProperty("workspace_type_id")
+    private UUID userId;
+    private UUID workspaceId;
+    private String workspaceName;
     private String workspaceTypeId;
-
-    @JsonProperty("start_at")
+    private UUID branchId;
+    private String branchName;
+    private BookingStatus status;
     private String startAt;
-
-    @JsonProperty("end_at")
     private String endAt;
-
-    private String unit;
-
-    @JsonProperty("unit_count")
+    private DurationUnit unit;
     private int unitCount;
 
-    private String status;
-
-    @JsonProperty("subtotal_amount")
+    // Price Snapshot
+    private long pricePerUnit;
     private long subtotalAmount;
-
-    @JsonProperty("discount_amount")
     private long discountAmount;
-
-    @JsonProperty("addon_amount")
     private long addonAmount;
-
-    @JsonProperty("total_amount")
+    private long taxAmount;
+    private long serviceFeeAmount;
     private long totalAmount;
 
-    @JsonProperty("payment_deadline_at")
+    // Payment Info
     private String paymentDeadlineAt;
+    private PaymentStatus paymentStatus;
+    private UUID latestPaymentId;
 
-    private String source;
-
-    @JsonProperty("created_at")
     private String createdAt;
 }

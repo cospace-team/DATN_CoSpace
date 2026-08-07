@@ -1,6 +1,12 @@
 package com.example.momosandbox.service;
 
-import com.example.momosandbox.dto.api.SpaceDto.*;
+import com.example.momosandbox.dto.api.SpaceDto.CreateWorkspaceRequest;
+import com.example.momosandbox.dto.api.SpaceDto.UpdateWorkspaceRequest;
+import com.example.momosandbox.dto.api.SpaceDto.WorkspaceResponse;
+import com.example.momosandbox.dto.api.SpaceDto.WorkspaceTypeResponse;
+import com.example.momosandbox.dto.api.SpaceDto.FloorResponse;
+import com.example.momosandbox.dto.api.SpaceDto.CreateFloorRequest;
+import com.example.momosandbox.dto.api.SpaceDto.UpdateFloorRequest;
 import com.example.momosandbox.entity.Floor;
 import com.example.momosandbox.entity.WorkspaceEntity;
 import com.example.momosandbox.entity.WorkspaceType;
@@ -188,7 +194,7 @@ public class SpaceManagementService {
         }
 
         // Verify workspace type exists
-        workspaceTypeRepository.findById(req.getWorkspaceTypeId())
+        workspaceTypeRepository.findByString(req.getWorkspaceTypeId())
                 .orElseThrow(() -> new IllegalArgumentException("Loại không gian không hợp lệ."));
 
         // Check unique code per floor
@@ -204,7 +210,7 @@ public class SpaceManagementService {
 
         WorkspaceEntity ws = WorkspaceEntity.builder()
                 .floorId(req.getFloorId())
-                .workspaceTypeId(req.getWorkspaceTypeId())
+                .workspaceTypeId(UUID.fromString(req.getWorkspaceTypeId()))
                 .code(req.getCode())
                 .name(req.getName())
                 .capacity(req.getCapacity())
@@ -238,9 +244,9 @@ public class SpaceManagementService {
             ws.setName(req.getName());
         }
         if (req.getWorkspaceTypeId() != null) {
-            workspaceTypeRepository.findById(req.getWorkspaceTypeId())
+            workspaceTypeRepository.findByString(req.getWorkspaceTypeId())
                     .orElseThrow(() -> new IllegalArgumentException("Loại không gian không hợp lệ."));
-            ws.setWorkspaceTypeId(req.getWorkspaceTypeId());
+            ws.setWorkspaceTypeId(UUID.fromString(req.getWorkspaceTypeId()));
         }
         if (req.getCapacity() > 0) {
             ws.setCapacity(req.getCapacity());
@@ -286,10 +292,9 @@ public class SpaceManagementService {
     /* ═══════════════════════ Helpers ═══════════════════════ */
 
     private boolean hasFutureBookings(UUID workspaceId) {
-        return bookingRepository.existsByWorkspaceIdAndStartAtAfterAndStatusNotIn(
-                workspaceId.toString(),
-                OffsetDateTime.now(),
-                List.of("canceled", "expired", "completed")
+        return bookingRepository.existsByWorkspaceIdAndStartAtAfter(
+                workspaceId,
+                OffsetDateTime.now()
         );
     }
 
@@ -308,15 +313,17 @@ public class SpaceManagementService {
     }
 
     private WorkspaceResponse toResponse(WorkspaceEntity ws) {
-        String typeName = workspaceTypeRepository.findById(ws.getWorkspaceTypeId())
-                .map(WorkspaceType::getName)
-                .orElse("—");
+        String typeName = ws.getWorkspaceTypeId() != null
+                ? workspaceTypeRepository.findById(ws.getWorkspaceTypeId())
+                        .map(WorkspaceType::getName)
+                        .orElse("—")
+                : "—";
 
         return WorkspaceResponse.builder()
                 .id(ws.getId())
                 .code(ws.getCode())
                 .name(ws.getName())
-                .workspaceTypeId(ws.getWorkspaceTypeId())
+                .workspaceTypeId(ws.getWorkspaceTypeId() != null ? ws.getWorkspaceTypeId().toString() : null)
                 .workspaceTypeName(typeName)
                 .capacity(ws.getCapacity())
                 .svgElementId(ws.getSvgElementId())

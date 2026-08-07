@@ -77,11 +77,17 @@ export interface UpdateWorkspaceRequest {
 
 async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
   const token = localStorage.getItem("workhub_access_token");
-  if (!token) {
-    throw new Error("Chưa đăng nhập. Vui lòng đăng nhập lại.");
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const res = await fetch(url, { ...options, headers: authHeaders() });
+  const res = await fetch(url, {
+    ...options,
+    headers: { ...headers, ...(options?.headers as Record<string, string> || {}) },
+  });
 
   // Handle empty responses
   const text = await res.text();

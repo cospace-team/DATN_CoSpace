@@ -40,6 +40,7 @@ public class SecurityConfig {
 
         @Bean
         public JwtDecoder jwtDecoder() {
+                // Local Decoder (HS384)
                 JwtDecoder localDecoder = NimbusJwtDecoder.withSecretKey(
                         new SecretKeySpec(jwtSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA384")
                 ).macAlgorithm(org.springframework.security.oauth2.jose.jws.MacAlgorithm.HS384).build();
@@ -49,6 +50,7 @@ public class SecurityConfig {
 
                         private synchronized JwtDecoder getSupabaseDecoder() {
                                 if (supabaseDecoder == null) {
+                                        // Supabase uses ECC (P-256) now. The public keys are fetched from JWKS URL
                                         supabaseDecoder = NimbusJwtDecoder.withIssuerLocation(supabaseIssuer).build();
                                 }
                                 return supabaseDecoder;
@@ -60,14 +62,29 @@ public class SecurityConfig {
                                         String[] parts = token.split("\\.");
                                         if (parts.length >= 2) {
                                                 String payload = new String(java.util.Base64.getUrlDecoder().decode(parts[1]), StandardCharsets.UTF_8);
-                                                if (payload.contains("\"iss\":\"" + supabaseIssuer + "\"") 
-                                                        || payload.contains("\"iss\": \"" + supabaseIssuer + "\"")) {
-                                                        return getSupabaseDecoder().decode(token);
+                                                System.err.println("[JWT Debug] Payload: " + payload);
+                                                if (payload.contains(supabaseIssuer)) {
+                                                        try {
+                                                                System.err.println("[JWT Debug] Routing to Supabase Decoder...");
+                                                                return getSupabaseDecoder().decode(token);
+                                                        } catch (org.springframework.security.oauth2.jwt.JwtException e) {
+                                                                System.err.println("[JWT Debug] Supabase JwtException: " + e.getMessage());
+                                                                throw e;
+                                                        } catch (Exception e) {
+                                                                System.err.println("[JWT Debug] Supabase Decoder Error: " + e.getMessage());
+                                                                e.printStackTrace();
+                                                                throw new org.springframework.security.oauth2.jwt.JwtException("Supabase token error: " + e.getMessage(), e);
+                                                        }
+                                                } else {
+                                                        System.err.println("[JWT Debug] Issuer not matched! Expected: " + supabaseIssuer);
                                                 }
                                         }
+                                } catch (org.springframework.security.oauth2.jwt.JwtException e) {
+                                        throw e;
                                 } catch (Exception e) {
-                                        // fallback to localDecoder
+                                        System.err.println("[JWT Debug] Unknown Parsing Error: " + e.getMessage());
                                 }
+                                System.err.println("[JWT Debug] Falling back to Local Decoder...");
                                 return localDecoder.decode(token);
                         }
                 };
@@ -79,6 +96,7 @@ public class SecurityConfig {
                                 .csrf(AbstractHttpConfigurer::disable)
                                 .cors(Customizer.withDefaults())
                                 .authorizeHttpRequests(auth -> auth
+                                                .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                                                 .requestMatchers(
                                                                 new AntPathRequestMatcher("/momo/**"),
                                                                 new AntPathRequestMatcher("/api/health"),
@@ -91,7 +109,26 @@ public class SecurityConfig {
                                                                 new AntPathRequestMatcher("/error"))
                                                 .permitAll()
                                                 .anyRequest().authenticated())
-                                .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
+                                .oauth2ResourceServer(oauth2 -> oauth2
+                                                .jwt(jwt -> jwt.decoder(jwtDecoder()))
+                                                .authenticationEntryPoint((request, response, authException) -> {
+                                                        response.setStatus(401);
+                                                        response.setContentType("application/json;charset=UTF-8");
+                                                        response.getWriter().write("{\"error\":\"UNAUTHORIZED\",\"message\":\"Phiên đăng nhập không hợp lệ hoặc đã hết hạn.\"}");
+                                                })
+                                )
+                                .exceptionHandling(ex -> ex
+                                                .authenticationEntryPoint((request, response, authException) -> {
+                                                        response.setStatus(401);
+                                                        response.setContentType("application/json;charset=UTF-8");
+                                                        response.getWriter().write("{\"error\":\"UNAUTHORIZED\",\"message\":\"Vui lòng đăng nhập để tiếp tục.\"}");
+                                                })
+                                                .accessDeniedHandler((request, response, accessDeniedException) -> {
+                                                        response.setStatus(403);
+                                                        response.setContentType("application/json;charset=UTF-8");
+                                                        response.getWriter().write("{\"error\":\"FORBIDDEN\",\"message\":\"Bạn không có quyền thực hiện hành động này.\"}");
+                                                })
+                                );
 
                 return http.build();
         }

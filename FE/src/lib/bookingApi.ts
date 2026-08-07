@@ -23,8 +23,10 @@ export interface BookingResponse {
   bookingCode: string;
   userId: string;
   workspaceId: string;
+  workspaceName?: string;
   workspaceTypeId: string;
   branchId: string;
+  branchName?: string;
   startAt: string;
   endAt: string;
   unit: string;
@@ -51,13 +53,15 @@ export interface MomoCreatePaymentResponse {
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
 async function getAuthHeader(): Promise<HeadersInit> {
-  const { data: { session } } = await supabase.auth.getSession();
-  const token = session?.access_token;
+  const token = localStorage.getItem("workhub_access_token");
   return {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 }
+
+const CACHE_KEY = "coSpace_myBookingsCache";
+const CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes
 
 export const bookingApi = {
   /**
@@ -73,7 +77,9 @@ export const bookingApi = {
       });
 
       if (res.ok) {
-        return await res.json();
+        const data = await res.json();
+        sessionStorage.removeItem(CACHE_KEY); // Invalidate cache
+        return data;
       }
       const errorData = await res.json().catch(() => ({}));
       throw new Error(errorData.message || `Lỗi tạo đơn đặt chỗ (${res.status})`);
@@ -85,9 +91,9 @@ export const bookingApi = {
 
       const code = 'WH-' + Math.random().toString(36).substring(2, 8).toUpperCase();
       const mockBooking: BookingResponse = {
-        id: 'bk-' + Date.now(),
+        id: crypto.randomUUID(),
         bookingCode: code,
-        userId: 'user-current',
+        userId: crypto.randomUUID(),
         workspaceId: payload.workspaceId,
         workspaceTypeId: payload.workspaceTypeId,
         branchId: payload.branchId,
@@ -104,6 +110,7 @@ export const bookingApi = {
         source: payload.source || 'web',
         createdAt: now.toISOString(),
       };
+      sessionStorage.removeItem(CACHE_KEY); // Invalidate cache
       return mockBooking;
     }
   },
@@ -111,7 +118,21 @@ export const bookingApi = {
   /**
    * List my bookings
    */
-  async getMyBookings(): Promise<BookingResponse[]> {
+  async getMyBookings(forceRefresh = false): Promise<BookingResponse[]> {
+    if (!forceRefresh) {
+      const cached = sessionStorage.getItem(CACHE_KEY);
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          if (Date.now() - parsed.timestamp < CACHE_DURATION_MS) {
+            return parsed.data;
+          }
+        } catch (e) {
+          // Ignore parse errors
+        }
+      }
+    }
+
     try {
       const headers = await getAuthHeader();
       const res = await fetch(`${API_BASE_URL}/api/bookings/my`, {
@@ -119,13 +140,47 @@ export const bookingApi = {
       });
 
       if (res.ok) {
-        return await res.json();
+        const data = await res.json();
+        sessionStorage.setItem(CACHE_KEY, JSON.stringify({ data, timestamp: Date.now() }));
+        return data;
       }
       throw new Error(`Failed to fetch bookings (${res.status})`);
     } catch (err) {
       console.warn('[bookingApi] Using fallback mock data');
+      const cached = sessionStorage.getItem(CACHE_KEY);
+      if (cached) {
+        try {
+          return JSON.parse(cached).data;
+        } catch (e) {}
+      }
       return [];
     }
+  },
+
+  /**
+   * Cancel a booking
+   */
+  async cancelBooking(bookingId: string): Promise<BookingResponse> {
+    const token = localStorage.getItem("workhub_access_token");
+    if (!token) {
+      throw new Error('User is not authenticated.');
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/bookings/${bookingId}/cancel`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Failed to cancel booking: ${response.statusText}`);
+    }
+
+    sessionStorage.removeItem(CACHE_KEY); // Invalidate cache
+    return response.json();
   },
 
   /**
@@ -141,12 +196,13 @@ export const bookingApi = {
       const res = await fetch(`${API_BASE_URL}/api/payments/momo/create`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ bookingId, amount: Math.round(amount) }),
+        body: JSON.stringify({ booking_id: bookingId, amount: Math.round(amount) }),
       });
 
       if (res.ok) {
         const data = await res.json();
         if (data.payUrl) {
+          sessionStorage.removeItem(CACHE_KEY); // Invalidate cache
           return {
             payUrl: data.payUrl,
             qrCodeUrl: `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(data.payUrl)}`,
@@ -177,6 +233,7 @@ export const bookingApi = {
 
       if (res.ok) {
         const data = await res.json();
+        sessionStorage.removeItem(CACHE_KEY); // Invalidate cache
         return {
           payUrl: data.payUrl || data.deeplink || '#',
           deeplink: data.deeplink,
@@ -193,6 +250,7 @@ export const bookingApi = {
     }
 
     // Path 3: Offline fallback payload
+    sessionStorage.removeItem(CACHE_KEY); // Invalidate cache
     return {
       payUrl: `https://test-payment.momo.vn/v2/gateway/pay?s=mock_${orderId}`,
       qrCodeUrl: `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=MOMO_SANDBOX_${orderId}`,
@@ -200,5 +258,30 @@ export const bookingApi = {
       resultCode: 0,
       message: 'MoMo Sandbox Mode Active',
     };
+  },
+
+  /**
+   * Create cash payment for a booking
+   */
+  async createCashPayment(bookingId: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const headers = await getAuthHeader();
+      const res = await fetch(`${API_BASE_URL}/api/payments/cash/create`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ booking_id: bookingId }),
+      });
+
+      if (res.ok) {
+        sessionStorage.removeItem(CACHE_KEY); // Invalidate cache
+        return { success: true, message: 'Thanh toán tiền mặt thành công' };
+      }
+      const errorData = await res.json().catch(() => ({}));
+      return { success: false, message: errorData.message || `Lỗi thanh toán (${res.status})` };
+    } catch (err: any) {
+      console.warn('[bookingApi] Cash payment fallback:', err.message);
+      // Fallback for offline mode
+      return { success: true, message: 'Đã lưu yêu cầu thanh toán tiền mặt (Offline)' };
+    }
   },
 };

@@ -1,6 +1,7 @@
 package com.example.momosandbox.controller;
 
-import com.example.momosandbox.dto.api.SpaceDto.*;
+import com.example.momosandbox.dto.api.SpaceDto.FloorResponse;
+import com.example.momosandbox.dto.api.SpaceDto.WorkspaceResponse;
 import com.example.momosandbox.service.SpaceManagementService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

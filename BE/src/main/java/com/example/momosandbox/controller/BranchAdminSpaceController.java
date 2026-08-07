@@ -1,12 +1,19 @@
 package com.example.momosandbox.controller;
 
-import com.example.momosandbox.dto.api.SpaceDto.*;
+import com.example.momosandbox.dto.api.SpaceDto.CreateFloorRequest;
+import com.example.momosandbox.dto.api.SpaceDto.CreateWorkspaceRequest;
+import com.example.momosandbox.dto.api.SpaceDto.FloorResponse;
+import com.example.momosandbox.dto.api.SpaceDto.UpdateFloorRequest;
+import com.example.momosandbox.dto.api.SpaceDto.UpdateWorkspaceRequest;
+import com.example.momosandbox.dto.api.SpaceDto.WorkspaceResponse;
+import com.example.momosandbox.dto.api.SpaceDto.WorkspaceTypeResponse;
 import com.example.momosandbox.entity.User;
 import com.example.momosandbox.repository.UserRepository;
 import com.example.momosandbox.service.SpaceManagementService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -24,6 +31,24 @@ public class BranchAdminSpaceController {
 
     private final SpaceManagementService spaceService;
     private final UserRepository userRepository;
+    private final JdbcTemplate jdbcTemplate;
+
+    /* ═══════════════════════ Branch ═══════════════════════ */
+
+    @GetMapping("/branches/{branchId}/name")
+    public ResponseEntity<?> getBranchName(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID branchId) {
+        try {
+            requireBranchId(jwt); // verify access
+            String name = jdbcTemplate.queryForObject(
+                "SELECT name FROM branches WHERE id = ?",
+                String.class,
+                branchId
+            );
+            return ResponseEntity.ok(Map.of("name", name));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Branch not found"));
+        }
+    }
 
     /* ═══════════════════════ Workspace Types ═══════════════════════ */
 

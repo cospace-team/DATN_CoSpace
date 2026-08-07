@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   FiGrid, FiUsers, FiTool, FiActivity, FiCalendar,
   FiArrowUpRight, FiMapPin, FiAlertCircle, FiTrendingUp, FiPieChart, FiBarChart2, FiSearch, FiFilter, FiCode, FiDownload
@@ -9,10 +9,35 @@ import {
   workspaceMaintenances, auditLogs
 } from '../../data/mockData';
 import { formatVND, formatDateTime } from '../../utils/formatters';
+import { API_BASE_URL } from '../../config/api';
 
 const BADashboardPage: React.FC = () => {
   const { user } = useAuth();
   const branchId = user!.branchId!;
+
+  const [dbBranchName, setDbBranchName] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (branchId) {
+      const fetchBranchName = async () => {
+        try {
+          const token = localStorage.getItem("workhub_access_token");
+          const response = await fetch(`${API_BASE_URL}/api/branch-admin/branches/${branchId}/name`, {
+            headers: {
+              "Authorization": `Bearer ${token}`
+            }
+          });
+          if (response.ok) {
+            const data = await response.json();
+            setDbBranchName(data.name);
+          }
+        } catch (error) {
+          console.error("Failed to fetch branch name", error);
+        }
+      };
+      fetchBranchName();
+    }
+  }, [branchId]);
 
   const [activeTab, setActiveTab] = useState<'overview' | 'audit'>('overview');
 
@@ -126,7 +151,7 @@ const BADashboardPage: React.FC = () => {
             <h1 className="text-2xl font-semibold tracking-tight text-foreground">Báo cáo & Lịch sử hoạt động</h1>
             <span className="text-xs bg-muted text-muted-foreground px-2.5 py-1 rounded-full font-medium flex items-center gap-1">
               <FiMapPin className="h-3.5 w-3.5" />
-              {branch?.name ?? branchId}
+              {dbBranchName ?? user?.branchName ?? branch?.name ?? branchId}
             </span>
           </div>
           <div className="flex items-center gap-3">

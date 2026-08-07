@@ -131,6 +131,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session && (event === "SIGNED_IN" || event === "USER_UPDATED")) {
+        const storedToken = localStorage.getItem("workhub_access_token");
+        if (event === "SIGNED_IN" && storedToken === session.access_token) {
+          // Prevent redundant sync API call on page reload if session is already stored
+          return;
+        }
+
         setIsLoading(true);
         try {
           const response = await fetch(`${API_BASE_URL}/api/auth/sync`, {

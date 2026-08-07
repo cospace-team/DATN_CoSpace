@@ -1,48 +1,67 @@
 package com.example.momosandbox.service;
 
-import com.example.momosandbox.dto.MomoResponse;
+import com.example.momosandbox.dto.api.CashCreatePaymentResponse;
+import com.example.momosandbox.dto.api.MomoCreatePaymentResponse;
+import com.example.momosandbox.dto.api.PaymentDto;
+import com.example.momosandbox.dto.api.BookingDto;
 import com.example.momosandbox.entity.Booking;
+import com.example.momosandbox.entity.BookingStatus;
 import com.example.momosandbox.entity.Payment;
+import com.example.momosandbox.entity.PaymentStatus;
+import com.example.momosandbox.repository.BookingRepository;
 import com.example.momosandbox.repository.PaymentRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.example.momosandbox.dto.MomoResponse;
 
+
+import java.security.SecureRandom;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class PaymentService {
 
-    private static final Logger logger = LoggerFactory.getLogger(PaymentService.class);
+    private static final SecureRandom RANDOM = new SecureRandom();
+    private static final String CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
     private final PaymentRepository paymentRepository;
+    private final BookingRepository bookingRepository;
     private final BookingService bookingService;
     private final MomoService momoService;
     private final ObjectMapper objectMapper;
 
-    public PaymentService(PaymentRepository paymentRepository, BookingService bookingService, MomoService momoService) {
+    public PaymentService(PaymentRepository paymentRepository, BookingRepository bookingRepository, BookingService bookingService, MomoService momoService) {
         this.paymentRepository = paymentRepository;
+        this.bookingRepository = bookingRepository;
         this.bookingService = bookingService;
         this.momoService = momoService;
         this.objectMapper = new ObjectMapper();
     }
 
     @Transactional
-    public Payment createMomoPayment(String userId, UUID bookingId) {
-        Booking booking = bookingService.getMyBooking(userId, bookingId);
-
-        if (!"pending_payment".equals(booking.getStatus())) {
-            throw new IllegalArgumentException("Booking không ở trạng thái chờ thanh toán");
+    public MomoCreatePaymentResponse createMomoPayment(UUID userId, UUID bookingId, String idempotencyKey) {
+        // Improvement #4: Idempotency check
+        if (idempotencyKey != null && !idempotencyKey.isBlank()) {
+            Optional<Payment> existingPayment = paymentRepository.findTopByBookingIdAndStatusInOrderByCreatedAtDesc(
+                    bookingId, List.of(PaymentStatus.INITIATED, PaymentStatus.PENDING));
+            if (existingPayment.isPresent()) {
+                log.warn("Idempotent request: Found existing pending payment {} for booking {}", existingPayment.get().getId(), bookingId);
+                return toMomoCreateResponse(existingPayment.get(), "Idempotent request: Payment is already being processed.");
+            }
         }
+        
+        BookingDto booking = bookingService.getMyBooking(userId, bookingId);
 
         Payment payment = Payment.builder()
                 .id(UUID.randomUUID())
@@ -50,129 +69,174 @@ public class PaymentService {
                 .userId(userId)
                 .provider("momo")
                 .method("ewallet")
-                .orderId(generateOrderId(booking))
+                .orderId(generateGatewayOrderId()) // Improvement #3: Decoupled Order ID
                 .requestId(UUID.randomUUID().toString())
                 .amount(booking.getTotalAmount())
-                .status("initiated")
+                .status(PaymentStatus.INITIATED)
                 .build();
-
         paymentRepository.save(payment);
 
-        String orderInfo = "Thanh toán booking " + booking.getBookingCode();
-        MomoResponse momoRes = momoService.createPayment(payment.getOrderId(), payment.getRequestId(),
-                payment.getAmount(), orderInfo);
+        String orderInfo = "Thanh toan don hang " + booking.getBookingCode();
+        MomoResponse momoRes = momoService.createPayment(payment.getOrderId(), payment.getRequestId(), payment.getAmount(), orderInfo);
 
-        Integer resultCode = momoRes.getResultCode();
-        if (resultCode == null && momoRes.getErrorCode() != null) {
-            // backward-compat
-            resultCode = momoRes.getErrorCode();
-        }
+        Integer resultCode = momoRes.getResultCode() != null ? momoRes.getResultCode() : momoRes.getErrorCode();
 
         if (resultCode == null || resultCode != 0 || momoRes.getPayUrl() == null || momoRes.getPayUrl().isBlank()) {
-            payment.setStatus("failed");
-            payment.setRawCallback(safeJson(Map.of(
-                    "create_error", true,
-                    "resultCode", resultCode,
-                    "message", momoRes.getMessage(),
-                    "raw", momoRes)));
+            payment.setStatus(PaymentStatus.FAILED);
+            payment.setRawCallback(safeJson(Map.of("create_error", true, "raw", momoRes)));
             paymentRepository.save(payment);
-            throw new IllegalStateException(
-                    "Tạo thanh toán MoMo thất bại: " + Objects.toString(momoRes.getMessage(), "unknown"));
+            throw new IllegalStateException("Failed to create MoMo payment: " + Objects.toString(momoRes.getMessage(), "unknown"));
         }
 
-        payment.setStatus("pending");
+        payment.setStatus(PaymentStatus.PENDING);
         payment.setPayUrl(momoRes.getPayUrl());
         paymentRepository.save(payment);
 
-        return payment;
-    }
-
-    @Transactional(readOnly = true)
-    public List<Payment> listMyPayments(String userId) {
-        return paymentRepository.findByUserIdOrderByCreatedAtDesc(userId);
-    }
-
-    @Transactional(readOnly = true)
-    public List<Payment> listPaymentsByBooking(String userId, UUID bookingId) {
-        Booking booking = bookingService.getMyBooking(userId, bookingId);
-        return paymentRepository.findByBookingIdOrderByCreatedAtDesc(booking.getId());
-    }
-
-    @Transactional(readOnly = true)
-    public Payment getByOrderId(String userId, String orderId) {
-        Payment payment = paymentRepository.findByOrderId(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("Payment not found"));
-        if (!payment.getUserId().equals(userId)) {
-            throw new IllegalArgumentException("Payment not found");
-        }
-        return payment;
+        return toMomoCreateResponse(payment, "Vui lòng thanh toán qua MoMo trong vòng 15 phút");
     }
 
     @Transactional
-    public void handleMomoCallback(Map<String, String> params, boolean strictSignature) {
+    public CashCreatePaymentResponse createCashPayment(UUID userId, UUID bookingId) {
+        BookingDto bookingDto = bookingService.getMyBooking(userId, bookingId);
+
+        Payment payment = Payment.builder()
+                .id(UUID.randomUUID())
+                .bookingId(bookingDto.getId())
+                .userId(userId)
+                .provider("cash")
+                .method("cash")
+                .orderId(generateGatewayOrderId())
+                .requestId(UUID.randomUUID().toString())
+                .amount(bookingDto.getTotalAmount())
+                .status(PaymentStatus.PAID)
+                .paidAt(OffsetDateTime.now(ZoneOffset.UTC))
+                .build();
+        paymentRepository.save(payment);
+
+        confirmBooking(bookingDto.getId());
+
+        return toCashCreateResponse(payment);
+    }
+
+    @Transactional
+    public void handleMomoCallback(Map<String, String> params) {
         String orderId = params.get("orderId");
-        String signature = params.get("signature");
         if (orderId == null || orderId.isBlank()) {
             throw new IllegalArgumentException("Missing orderId");
         }
 
-        if (strictSignature) {
-            if (!momoService.verifyCallbackSignature(params, signature)) {
-                throw new IllegalArgumentException("Invalid signature");
-            }
-        } else {
-            if (signature != null && !signature.isBlank() && !momoService.verifyCallbackSignature(params, signature)) {
-                logger.warn("MoMo signature mismatch for orderId={}", orderId);
-                return;
-            }
+        if (!momoService.verifyCallbackSignature(params, params.get("signature"))) {
+            log.warn("MoMo signature mismatch for orderId={}", orderId);
+            throw new IllegalArgumentException("Invalid signature");
         }
 
-        Payment payment = paymentRepository.findByOrderId(orderId).orElse(null);
-        if (payment == null) {
-            logger.warn("Payment not found for orderId={} (callback ignored)", orderId);
+        Payment payment = paymentRepository.findByOrderId(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Payment not found for orderId=" + orderId));
+
+        // Idempotency: if already paid, do nothing.
+        if (payment.getStatus() == PaymentStatus.PAID) {
+            log.info("Payment {} is already paid. Ignoring callback.", payment.getId());
             return;
         }
 
         String resultCode = params.get("resultCode");
         String transId = params.get("transId");
 
-        payment.setProviderTransId(transId);
+        payment.setGatewayTransactionId(transId);
         payment.setRawCallback(safeJson(params));
 
         if ("0".equals(resultCode)) {
-            if (!"paid".equals(payment.getStatus())) {
-                payment.setStatus("paid");
-                payment.setPaidAt(OffsetDateTime.now(ZoneOffset.UTC));
-                paymentRepository.save(payment);
-                bookingService.updateStatus(payment.getBookingId(), "confirmed");
-            }
+            payment.setStatus(PaymentStatus.PAID);
+            payment.setPaidAt(OffsetDateTime.now(ZoneOffset.UTC));
+            confirmBooking(payment.getBookingId());
         } else {
-            if (!"failed".equals(payment.getStatus())) {
-                payment.setStatus("failed");
-                paymentRepository.save(payment);
-            }
+            payment.setStatus(PaymentStatus.FAILED);
         }
+        paymentRepository.save(payment);
+    }
+    
+    @Transactional(readOnly = true)
+    public List<PaymentDto> listPaymentsByBooking(UUID userId, UUID bookingId) {
+        // Ensure user has access to this booking
+        bookingService.getMyBooking(userId, bookingId);
+        return paymentRepository.findByBookingIdOrderByCreatedAtDesc(bookingId)
+                .stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
+    }
+
+    private void confirmBooking(UUID bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new IllegalStateException("Booking not found for payment confirmation"));
+        booking.setStatus(BookingStatus.CONFIRMED);
+        bookingRepository.save(booking);
+    }
+
+    private PaymentDto toDto(Payment p) {
+        return PaymentDto.builder()
+                .id(p.getId())
+                .bookingId(p.getBookingId())
+                .userId(p.getUserId())
+                .provider(p.getProvider())
+                .method(p.getMethod())
+                .orderId(p.getOrderId())
+                .requestId(p.getRequestId())
+                .amount(p.getAmount())
+                .status(p.getStatus())
+                .payUrl(p.getPayUrl())
+                .gatewayTransactionId(p.getGatewayTransactionId())
+                .paidAt(p.getPaidAt() == null ? null : p.getPaidAt().toString())
+                .refundedAt(p.getRefundedAt() == null ? null : p.getRefundedAt().toString())
+                .createdAt(p.getCreatedAt().toString())
+                .build();
+    }
+    
+    private MomoCreatePaymentResponse toMomoCreateResponse(Payment p, String message) {
+        return MomoCreatePaymentResponse.builder()
+                .paymentId(p.getId())
+                .bookingId(p.getBookingId())
+                .orderId(p.getOrderId())
+                .provider(p.getProvider())
+                .payUrl(p.getPayUrl())
+                // qrCodeUrl is not provided by this version of MoMo API client
+                .amount(p.getAmount())
+                .status(p.getStatus())
+                .message(message)
+                .build();
+    }
+
+    private CashCreatePaymentResponse toCashCreateResponse(Payment p) {
+        return CashCreatePaymentResponse.builder()
+                .paymentId(p.getId())
+                .bookingId(p.getBookingId())
+                .provider(p.getProvider())
+                .method(p.getMethod())
+                .amount(p.getAmount())
+                .status(p.getStatus())
+                .paidAt(p.getPaidAt() == null ? null : p.getPaidAt().toString())
+                .build();
     }
 
     private String safeJson(Object any) {
         try {
             return objectMapper.writeValueAsString(any);
         } catch (JsonProcessingException e) {
+            log.warn("Failed to serialize to JSON", e);
             return null;
         }
     }
 
-    private String generateOrderId(Booking booking) {
-        // MoMo orderId needs to be unique and stable enough for callback lookup
-        return "BOOKING_" + booking.getId();
+    private String generateGatewayOrderId() {
+        StringBuilder sb = new StringBuilder("PAY-");
+        for (int i = 0; i < 12; i++) {
+            sb.append(CODE_CHARS.charAt(RANDOM.nextInt(CODE_CHARS.length())));
+        }
+        return sb.toString();
     }
 
     public Map<String, String> extractCallbackParams(Map<String, ?> body) {
-        Map<String, String> out = new LinkedHashMap<>();
-        if (body == null) {
-            return out;
-        }
-        body.forEach((k, v) -> out.put(k, v == null ? null : String.valueOf(v)));
-        return out;
+        // This helper can be removed from service if controller handles it
+        return body.entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> Objects.toString(e.getValue(), "")));
     }
 }

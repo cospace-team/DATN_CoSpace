@@ -404,7 +404,7 @@ const ElementRenderer: React.FC<Props> = ({
           fill={fill}
           stroke={stroke}
           strokeWidth={strokeW}
-          style={{ transition: 'stroke 120ms, stroke-width 120ms, fill 120ms' }}
+          style={{ transition: 'stroke 120ms, strokeWidth 120ms, fill 120ms' }}
         />
       ) : (
         <rect
@@ -414,7 +414,7 @@ const ElementRenderer: React.FC<Props> = ({
           fill={fill}
           stroke={stroke}
           strokeWidth={strokeW}
-          style={{ transition: 'stroke 120ms, stroke-width 120ms, fill 120ms' }}
+          style={{ transition: 'stroke 120ms, strokeWidth 120ms, fill 120ms' }}
         />
       )}
 

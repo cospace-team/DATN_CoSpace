@@ -4,6 +4,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 public class PricingService {
@@ -24,14 +25,27 @@ public class PricingService {
         put(DEFAULT_BRANCH, "wst-private", "day", 800_000L);
         put(DEFAULT_BRANCH, "wst-private", "month", 12_000_000L);
 
-        // Branch overrides
+        // Map workspace_types UUIDs (from seed scripts)
+        put(DEFAULT_BRANCH, "a1000000-0000-0000-0000-000000000001", "hour", 50_000L);
+        put(DEFAULT_BRANCH, "a1000000-0000-0000-0000-000000000001", "day", 250_000L);
+        put(DEFAULT_BRANCH, "a1000000-0000-0000-0000-000000000001", "month", 3_500_000L);
+
+        put(DEFAULT_BRANCH, "a1000000-0000-0000-0000-000000000002", "hour", 200_000L);
+        put(DEFAULT_BRANCH, "a1000000-0000-0000-0000-000000000002", "day", 1_200_000L);
+
+        put(DEFAULT_BRANCH, "a1000000-0000-0000-0000-000000000003", "day", 800_000L);
+        put(DEFAULT_BRANCH, "a1000000-0000-0000-0000-000000000003", "month", 12_000_000L);
+
+        // Branch overrides (by code and UUID)
         put("branch-0001", "wst-desk", "hour", 60_000L);
+        put("b1000000-0000-0000-0000-000000000001", "wst-desk", "hour", 60_000L);
+        put("b1000000-0000-0000-0000-000000000001", "a1000000-0000-0000-0000-000000000001", "hour", 60_000L);
     }
 
-    public long getUnitPriceVnd(String branchId, String workspaceTypeId, String unit) {
+    public long getUnitPriceVnd(UUID branchId, String workspaceTypeId, String unit) {
         String normalizedUnit = normalizeUnit(unit);
-        String b = (branchId == null || branchId.isBlank()) ? DEFAULT_BRANCH : branchId.trim();
-        String t = (workspaceTypeId == null) ? "" : workspaceTypeId.trim();
+        String b = (branchId == null) ? DEFAULT_BRANCH : branchId.toString();
+        String t = (workspaceTypeId == null) ? "" : workspaceTypeId;
 
         Long direct = unitPricesVnd.get(new PriceKey(b, t, normalizedUnit));
         if (direct != null) {

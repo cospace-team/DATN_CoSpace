@@ -4,7 +4,7 @@ import {
   FiDollarSign, FiSearch, FiPlus, FiCheckCircle,
   FiCheck, FiUserPlus, FiMaximize, FiCreditCard, FiZap
 } from 'react-icons/fi';
-import { users, workspaces, extraServices, getWorkspace, floors, workspaceMaintenances } from '../../data/mockData';
+import { users, workspaces, extraServices, getWorkspace, floors, workspaceMaintenances, bookings } from '../../data/mockData';
 import { formatVND } from '../../utils/formatters';
 import { useToast } from '../../components/Toast';
 
@@ -57,11 +57,44 @@ const WalkinBookingPage: React.FC = () => {
   }, 0);
   const total = subtotal + servicesTotal;
 
+  const checkOverlap = (wsId: string, sHour: number, eHour: number) => {
+    const today = new Date();
+    const checkStart = new Date(today);
+    checkStart.setHours(sHour, 0, 0, 0);
+    const checkEnd = new Date(today);
+    checkEnd.setHours(eHour, 0, 0, 0);
+
+    return bookings.some(b => {
+      if (b.workspace_id !== wsId) return false;
+      if (['canceled', 'completed', 'expired'].includes(b.status.toLowerCase())) return false;
+      
+      const bStart = new Date(b.start_at);
+      const bEnd = new Date(b.end_at);
+      
+      // Is there an overlap for today?
+      return checkStart < bEnd && bStart < checkEnd;
+    });
+  };
+
   const handleConfirm = () => {
     if ((!selectedUser && !newUserName) || !selectedWorkspaceId) {
       showToast('Vui lòng nhập thông tin khách hàng và chọn bàn làm việc!', 'error');
       return;
     }
+
+    const sH = parseInt(startHour);
+    const eH = parseInt(endHour);
+    
+    if (eH <= sH) {
+      showToast('Giờ kết thúc phải lớn hơn giờ bắt đầu!', 'error');
+      return;
+    }
+
+    if (checkOverlap(selectedWorkspaceId, sH, eH)) {
+      showToast(`Vị trí này đã có người đặt trong khoảng thời gian từ ${startHour} đến ${endHour}. Vui lòng chọn giờ hoặc vị trí khác.`, 'error');
+      return;
+    }
+
     const code = 'WH-WK' + Math.random().toString(36).substring(2, 6).toUpperCase();
     setCreatedBookingCode(code);
     setIsSuccess(true);
@@ -225,11 +258,16 @@ const WalkinBookingPage: React.FC = () => {
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
                 {workspaces.filter(w => w.floor_id === selectedFloorId).map(ws => {
                   const isMaintenance = workspaceMaintenances.some(m => m.workspace_id === ws.id && m.status === 'active');
+                  const sH = parseInt(startHour);
+                  const eH = parseInt(endHour);
+                  const isBooked = !isMaintenance && eH > sH && checkOverlap(ws.id, sH, eH);
                   const isSelected = selectedWorkspaceId === ws.id;
                   
                   let btnClass = "p-3 rounded-xl border text-center transition flex flex-col items-center justify-center min-h-[85px] relative overflow-hidden ";
                   if (isMaintenance) {
                     btnClass += "border-red-500/30 bg-red-50 dark:bg-red-950/300/10 text-red-400 cursor-not-allowed opacity-60";
+                  } else if (isBooked) {
+                    btnClass += "border-orange-500/30 bg-orange-50 dark:bg-orange-950/300/10 text-orange-500 cursor-not-allowed opacity-80";
                   } else if (isSelected) {
                     btnClass += "border-primary bg-primary/10 ring-2 ring-primary text-primary font-bold shadow-md shadow-primary/10";
                   } else {
@@ -239,13 +277,15 @@ const WalkinBookingPage: React.FC = () => {
                   return (
                     <button 
                       key={ws.id} 
-                      disabled={isMaintenance}
+                      disabled={isMaintenance || isBooked}
                       onClick={() => setSelectedWorkspaceId(ws.id)}
                       className={btnClass}
                     >
                       <p className="font-bold text-sm font-heading">{ws.name}</p>
                       {isMaintenance ? (
                         <span className="text-[9px] font-mono font-bold mt-1 text-red-500 uppercase tracking-wider">Bảo trì</span>
+                      ) : isBooked ? (
+                        <span className="text-[9px] font-mono font-bold mt-1 text-orange-500 uppercase tracking-wider">Đã đặt</span>
                       ) : (
                         <span className="text-[11px] text-muted-foreground font-mono mt-1 font-semibold">50k/h</span>
                       )}

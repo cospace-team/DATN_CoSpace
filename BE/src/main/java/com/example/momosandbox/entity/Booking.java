@@ -15,6 +15,13 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.UUID;
 
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import io.hypersistence.utils.hibernate.type.basic.PostgreSQLEnumType;
+import org.hibernate.annotations.Type;
+
+import java.math.BigDecimal;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -30,17 +37,21 @@ public class Booking {
     @Column(name = "booking_code", nullable = false, unique = true, length = 32)
     private String bookingCode;
 
-    @Column(name = "user_id", nullable = false, length = 64)
-    private String userId;
+    @Column(name = "user_id", nullable = false)
+    private UUID userId;
 
-    @Column(name = "workspace_id", nullable = false, length = 64)
-    private String workspaceId;
+    @Column(name = "workspace_id", nullable = false)
+    private UUID workspaceId;
 
-    @Column(name = "branch_id", nullable = false, length = 64)
-    private String branchId;
+    @Column(name = "branch_id", nullable = false)
+    private UUID branchId;
 
     @Column(name = "workspace_type_id", nullable = false, length = 64)
     private String workspaceTypeId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", length = 32, nullable = false)
+    private BookingStatus status;
 
     @Column(name = "start_at", nullable = false)
     private OffsetDateTime startAt;
@@ -48,14 +59,15 @@ public class Booking {
     @Column(name = "end_at", nullable = false)
     private OffsetDateTime endAt;
 
-    @Column(name = "unit", nullable = false, length = 16)
-    private String unit;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "unit", length = 32, nullable = false)
+    private DurationUnit unit;
 
     @Column(name = "unit_count", nullable = false)
     private int unitCount;
 
-    @Column(name = "status", nullable = false, length = 32)
-    private String status;
+    @Column(name = "price_per_unit", nullable = false)
+    private long pricePerUnit;
 
     @Column(name = "subtotal_amount", nullable = false)
     private long subtotalAmount;
@@ -66,14 +78,18 @@ public class Booking {
     @Column(name = "addon_amount", nullable = false)
     private long addonAmount;
 
+    @Column(name = "tax_amount", nullable = false)
+    private long taxAmount;
+
+    @Column(name = "service_fee_amount", nullable = false)
+    private long serviceFeeAmount;
+
     @Column(name = "total_amount", nullable = false)
     private long totalAmount;
 
     @Column(name = "payment_deadline_at")
     private OffsetDateTime paymentDeadlineAt;
 
-    @Column(name = "source", nullable = false, length = 16)
-    private String source;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
@@ -87,17 +103,14 @@ public class Booking {
         if (id == null) {
             id = UUID.randomUUID();
         }
+        if (status == null) {
+            status = BookingStatus.PENDING_PAYMENT;
+        }
         if (createdAt == null) {
             createdAt = now;
         }
         if (updatedAt == null) {
             updatedAt = createdAt;
-        }
-        if (status == null || status.isBlank()) {
-            status = "pending_payment";
-        }
-        if (source == null || source.isBlank()) {
-            source = "web";
         }
     }
 

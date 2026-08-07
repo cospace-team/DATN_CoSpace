@@ -1,35 +1,39 @@
 package com.example.momosandbox.controller;
 
-import com.example.momosandbox.dto.api.MomoCreatePaymentRequest;
+import com.example.momosandbox.dto.api.CashCreatePaymentResponse;
+import com.example.momosandbox.dto.api.CreatePaymentRequest;
 import com.example.momosandbox.dto.api.MomoCreatePaymentResponse;
 import com.example.momosandbox.dto.api.PaymentDto;
-import com.example.momosandbox.entity.Payment;
 import com.example.momosandbox.service.PaymentService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/payments")
+@Slf4j
 public class PaymentController {
 
     private final PaymentService paymentService;
@@ -42,79 +46,63 @@ public class PaymentController {
     }
 
     @PostMapping("/momo/create")
-    public ResponseEntity<MomoCreatePaymentResponse> createMomoPayment(
+    public MomoCreatePaymentResponse createMomoPayment(
             @AuthenticationPrincipal Jwt jwt,
-            @Valid @RequestBody MomoCreatePaymentRequest req) {
-        String userId = requireSubject(jwt);
-        UUID bookingId = UUID.fromString(req.getBookingId());
-        Payment payment = paymentService.createMomoPayment(userId, bookingId);
-        return ResponseEntity.ok(MomoCreatePaymentResponse.builder()
-                .orderId(payment.getOrderId())
-                .payUrl(payment.getPayUrl())
-                .build());
+            @Valid @RequestBody CreatePaymentRequest req,
+            @RequestHeader(name = "Idempotency-Key", required = false) String idempotencyKey) {
+        UUID userId = requireSubject(jwt);
+        return paymentService.createMomoPayment(userId, req.getBookingId(), idempotencyKey);
     }
 
-    @GetMapping("/my")
-    public ResponseEntity<List<PaymentDto>> myPayments(@AuthenticationPrincipal Jwt jwt) {
-        String userId = requireSubject(jwt);
-        List<PaymentDto> items = paymentService.listMyPayments(userId).stream().map(this::toDto).toList();
-        return ResponseEntity.ok(items);
+    @PostMapping("/cash/create")
+    @PreAuthorize("hasAnyRole('staff', 'branch_admin')")
+    public CashCreatePaymentResponse createCashPayment(
+            @AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody CreatePaymentRequest req) {
+        UUID userId = requireSubject(jwt);
+        return paymentService.createCashPayment(userId, req.getBookingId());
     }
 
     @GetMapping("/booking/{bookingId}")
-    public ResponseEntity<List<PaymentDto>> paymentsForBooking(
+    public List<PaymentDto> paymentsForBooking(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable("bookingId") UUID bookingId) {
-        String userId = requireSubject(jwt);
-        List<PaymentDto> items = paymentService.listPaymentsByBooking(userId, bookingId).stream().map(this::toDto)
-                .toList();
-        return ResponseEntity.ok(items);
-    }
-
-    @GetMapping("/order/{orderId}")
-    public ResponseEntity<PaymentDto> byOrderId(
-            @AuthenticationPrincipal Jwt jwt,
-            @PathVariable("orderId") String orderId) {
-        String userId = requireSubject(jwt);
-        Payment payment = paymentService.getByOrderId(userId, orderId);
-        return ResponseEntity.ok(toDto(payment));
+        UUID userId = requireSubject(jwt);
+        return paymentService.listPaymentsByBooking(userId, bookingId);
     }
 
     // Public endpoints for MoMo callbacks
-
-    @PostMapping("/momo/ipn")
-    public ResponseEntity<Map<String, Object>> momoIpn(@RequestBody Map<String, Object> body) {
-        Map<String, String> params = paymentService.extractCallbackParams(body);
-        paymentService.handleMomoCallback(params, true);
-
-        Map<String, Object> res = new HashMap<>();
-        res.put("result", "ok");
-        return ResponseEntity.ok(res);
+    @PostMapping("/momo/notify")
+    public ResponseEntity<Map<String, String>> momoIpn(@RequestBody Map<String, String> body) {
+        log.info("Received MoMo IPN: {}", body);
+        paymentService.handleMomoCallback(body);
+        // Per MoMo spec, return 204 No Content on success
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/momo/return")
-    public ResponseEntity<Void> momoReturn(HttpServletRequest request,
-            @RequestParam Map<String, String> allParams) {
-        // Verify & update payment status based on returnUrl callback
+    public ResponseEntity<Void> momoReturn(@RequestParam Map<String, String> allParams) {
+        log.info("Received MoMo return with params: {}", allParams);
         String orderId = allParams.getOrDefault("orderId", "");
         String resultCode = allParams.getOrDefault("resultCode", "");
-        String message = allParams.getOrDefault("message", "");
+        String message = allParams.getOrDefault("message", "Giao dịch hoàn tất."); // Default success message
 
         try {
-            paymentService.handleMomoCallback(allParams, true);
+            paymentService.handleMomoCallback(allParams);
         } catch (Exception ex) {
-            // Always redirect the user back to FE to show immediate feedback.
-            resultCode = "-1";
-            message = "Payment verification failed";
+            log.error("Error handling MoMo return for orderId {}: {}", orderId, ex.getMessage());
+            resultCode = "-1"; // Generic error code
+            message = "Lỗi xác thực thanh toán.";
         }
 
-        String redirect = frontendBaseUrl + "/customer/history" +
+        // Always redirect the user back to FE to show immediate feedback.
+        String redirectUrl = frontendBaseUrl + "/payment/result" +
                 "?orderId=" + url(orderId) +
                 "&resultCode=" + url(resultCode) +
                 "&message=" + url(message);
 
         return ResponseEntity.status(HttpStatus.FOUND)
-                .header(HttpHeaders.LOCATION, redirect)
+                .header(HttpHeaders.LOCATION, redirectUrl)
                 .build();
     }
 
@@ -122,28 +110,11 @@ public class PaymentController {
         return URLEncoder.encode(value == null ? "" : value, StandardCharsets.UTF_8);
     }
 
-    private String requireSubject(Jwt jwt) {
+    private UUID requireSubject(Jwt jwt) {
         if (jwt == null || jwt.getSubject() == null || jwt.getSubject().isBlank()) {
-            throw new IllegalArgumentException("Missing JWT subject");
+            // This would typically be handled by Spring Security config, but as a fallback:
+            throw new IllegalArgumentException("Missing or invalid user authentication.");
         }
-        return jwt.getSubject();
-    }
-
-    private PaymentDto toDto(Payment p) {
-        return PaymentDto.builder()
-                .id(p.getId().toString())
-                .bookingId(p.getBookingId().toString())
-                .userId(p.getUserId())
-                .provider(p.getProvider())
-                .method(p.getMethod())
-                .orderId(p.getOrderId())
-                .requestId(p.getRequestId())
-                .amount(p.getAmount())
-                .status(p.getStatus())
-                .payUrl(p.getPayUrl())
-                .providerTransId(p.getProviderTransId())
-                .paidAt(p.getPaidAt() == null ? null : p.getPaidAt().toString())
-                .createdAt(p.getCreatedAt().toString())
-                .build();
+        return UUID.fromString(jwt.getSubject());
     }
 }

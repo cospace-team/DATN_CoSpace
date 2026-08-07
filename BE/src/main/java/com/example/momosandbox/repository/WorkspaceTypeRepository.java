@@ -10,4 +10,12 @@ import java.util.UUID;
 @Repository
 public interface WorkspaceTypeRepository extends JpaRepository<WorkspaceType, UUID> {
     Optional<WorkspaceType> findByCode(String code);
+
+    default Optional<WorkspaceType> findByString(String idStr) {
+        try {
+            return findById(UUID.fromString(idStr));
+        } catch (IllegalArgumentException e) {
+            return Optional.empty();
+        }
+    }
 }

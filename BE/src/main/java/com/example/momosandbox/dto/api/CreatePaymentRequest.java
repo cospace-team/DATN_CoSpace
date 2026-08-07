@@ -1,13 +1,15 @@
 package com.example.momosandbox.dto.api;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
+import java.util.UUID;
+
 @Data
-public class MomoCreatePaymentRequest {
+public class CreatePaymentRequest {
 
     @JsonProperty("booking_id")
-    @NotBlank
-    private String bookingId;
+    @NotNull
+    private UUID bookingId;
 }

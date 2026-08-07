@@ -1,44 +1,41 @@
 package com.example.momosandbox.dto.api;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.example.momosandbox.entity.PaymentStatus;
 import lombok.Builder;
 import lombok.Data;
+import java.util.UUID;
 
 @Data
 @Builder
 public class PaymentDto {
 
-    private String id;
+    private UUID id;
 
-    @JsonProperty("booking_id")
-    private String bookingId;
+    private UUID bookingId;
 
-    @JsonProperty("user_id")
-    private String userId;
+    private UUID userId;
+
+
 
     private String provider;
 
     private String method;
 
-    @JsonProperty("order_id")
     private String orderId;
 
-    @JsonProperty("request_id")
     private String requestId;
 
     private long amount;
 
-    private String status;
+    private PaymentStatus status;
 
-    @JsonProperty("pay_url")
     private String payUrl;
 
-    @JsonProperty("provider_trans_id")
-    private String providerTransId;
+    private String gatewayTransactionId;
 
-    @JsonProperty("paid_at")
     private String paidAt;
+    
+    private String refundedAt;
 
-    @JsonProperty("created_at")
     private String createdAt;
 }

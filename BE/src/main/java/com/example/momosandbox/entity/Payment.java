@@ -15,6 +15,14 @@ import lombok.NoArgsConstructor;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.UUID;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import org.hibernate.annotations.Type;
+import io.hypersistence.utils.hibernate.type.basic.PostgreSQLEnumType;
+
 
 @Data
 @NoArgsConstructor
@@ -34,8 +42,8 @@ public class Payment {
     @Column(name = "booking_id", nullable = false)
     private UUID bookingId;
 
-    @Column(name = "user_id", nullable = false, length = 64)
-    private String userId;
+    @Column(name = "user_id", nullable = false)
+    private UUID userId;
 
     @Column(name = "provider", nullable = false, length = 16)
     private String provider;
@@ -52,17 +60,21 @@ public class Payment {
     @Column(name = "amount", nullable = false)
     private long amount;
 
-    @Column(name = "status", nullable = false, length = 32)
-    private String status;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", length = 32, nullable = false)
+    private PaymentStatus status;
 
     @Column(name = "pay_url", length = 2048)
     private String payUrl;
 
-    @Column(name = "provider_trans_id", length = 64)
-    private String providerTransId;
+    @Column(name = "gateway_transaction_id", length = 64)
+    private String gatewayTransactionId;
 
     @Column(name = "paid_at")
     private OffsetDateTime paidAt;
+    
+    @Column(name = "refunded_at")
+    private OffsetDateTime refundedAt;
 
     @Column(name = "raw_callback", columnDefinition = "text")
     private String rawCallback;
@@ -85,8 +97,8 @@ public class Payment {
         if (updatedAt == null) {
             updatedAt = createdAt;
         }
-        if (status == null || status.isBlank()) {
-            status = "initiated";
+        if (status == null) {
+            status = PaymentStatus.INITIATED;
         }
     }
 
