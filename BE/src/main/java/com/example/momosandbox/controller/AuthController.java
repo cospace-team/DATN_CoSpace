@@ -22,6 +22,20 @@ public class AuthController {
 
     private final AuthService authService;
 
+    @PostMapping("/dev-login")
+    public ResponseEntity<?> devLogin(@RequestBody Map<String, String> request) {
+        try {
+            String roleStr = request.get("role");
+            AuthResponse response = authService.devLogin(roleStr);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                    "error", "bad_request",
+                    "message", e.getMessage()
+            ));
+        }
+    }
+
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
         try {

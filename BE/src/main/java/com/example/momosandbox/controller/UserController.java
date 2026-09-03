@@ -2,6 +2,7 @@ package com.example.momosandbox.controller;
 
 import com.example.momosandbox.dto.api.ChangePasswordRequest;
 import com.example.momosandbox.dto.api.UserProfileDto;
+import com.example.momosandbox.dto.api.WalkinUserCreateRequest;
 import com.example.momosandbox.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -10,11 +11,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -67,6 +71,18 @@ public class UserController {
                     "message", e.getMessage()
             ));
         }
+    }
+
+    @GetMapping("/search")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('staff', 'branch_admin', 'super_admin')")
+    public ResponseEntity<List<UserProfileDto>> searchUsers(@RequestParam("q") String query) {
+        return ResponseEntity.ok(userService.searchUsers(query));
+    }
+
+    @PostMapping("/walkin")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('staff', 'branch_admin')")
+    public ResponseEntity<UserProfileDto> createWalkinUser(@Valid @RequestBody WalkinUserCreateRequest req) {
+        return ResponseEntity.ok(userService.createWalkinUser(req));
     }
 
     private UUID requireUserId(Jwt jwt) {

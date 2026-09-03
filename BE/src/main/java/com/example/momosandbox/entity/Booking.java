@@ -90,6 +90,11 @@ public class Booking {
     @Column(name = "payment_deadline_at")
     private OffsetDateTime paymentDeadlineAt;
 
+    @Enumerated(EnumType.STRING)
+    @Type(PostgreSQLEnumType.class)
+    @Column(name = "source", columnDefinition = "booking_source", nullable = false)
+    private BookingSource source;
+
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
@@ -105,6 +110,9 @@ public class Booking {
         }
         if (status == null) {
             status = BookingStatus.PENDING_PAYMENT;
+        }
+        if (source == null) {
+            source = BookingSource.web;
         }
         if (createdAt == null) {
             createdAt = now;

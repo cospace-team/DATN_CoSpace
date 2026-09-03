@@ -41,7 +41,7 @@ public class StaffDashboardService {
                 .mapToLong(Booking::getTotalAmount)
                 .sum();
 
-        int activeCheckinsCount = checkinLogRepository.findActiveCheckinsByBranchId(branchId).size();
+        int activeCheckinsCount = bookingRepository.countByBranchIdAndStatus(branchId, BookingStatus.CHECKED_IN);
 
         // Get workspace counts for the branch
         // For MVP, we need to join through floors or use a custom query.

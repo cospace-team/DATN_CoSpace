@@ -171,7 +171,7 @@ export const pricePolicies: PricePolicy[] = [
 export interface Booking {
   id: string; booking_code: string; user_id: string; workspace_id: string;
   branch_id: string; start_at: string; end_at: string;
-  duration_unit: 'hour' | 'day' | 'week' | 'month'; unit_count: number;
+  duration_unit: 'hour' | 'day' | 'week' | 'month'; durationUnit?: 'hour' | 'day' | 'week' | 'month'; unit?: 'hour' | 'day' | 'week' | 'month'; unit_count: number;
   status: 'pending_payment' | 'confirmed' | 'checked_in' | 'completed' | 'canceled' | 'expired';
   subtotal_amount: number; discount_amount: number; addon_amount: number;
   total_amount: number; payment_deadline_at: string | null;
@@ -182,13 +182,13 @@ const now = new Date();
 const h = (offset: number) => new Date(now.getTime() + offset * 3600000).toISOString();
 
 export const bookings: Booking[] = [
-  { id: 'bk-0001', booking_code: 'WH-A3K7P2', user_id: 'user-0001', workspace_id: 'ws-0001', branch_id: 'branch-0001', start_at: h(-2), end_at: h(1), duration_unit: 'hour', unit_count: 3, status: 'checked_in', subtotal_amount: 180000, discount_amount: 0, addon_amount: 30000, total_amount: 210000, payment_deadline_at: null, source: 'web', created_at: h(-3) },
-  { id: 'bk-0002', booking_code: 'WH-B9M4T6', user_id: 'user-0001', workspace_id: 'ws-0009', branch_id: 'branch-0001', start_at: h(24), end_at: h(26), duration_unit: 'hour', unit_count: 2, status: 'confirmed', subtotal_amount: 400000, discount_amount: 0, addon_amount: 0, total_amount: 400000, payment_deadline_at: null, source: 'web', created_at: h(-1) },
-  { id: 'bk-0003', booking_code: 'WH-C2R8V5', user_id: 'user-0002', workspace_id: 'ws-0002', branch_id: 'branch-0001', start_at: h(2), end_at: h(5), duration_unit: 'hour', unit_count: 3, status: 'pending_payment', subtotal_amount: 180000, discount_amount: 0, addon_amount: 0, total_amount: 180000, payment_deadline_at: h(0.25), source: 'web', created_at: h(0) },
-  { id: 'bk-0004', booking_code: 'WH-D7N3Q1', user_id: 'user-0001', workspace_id: 'ws-0011', branch_id: 'branch-0001', start_at: h(-72), end_at: h(-70), duration_unit: 'hour', unit_count: 2, status: 'completed', subtotal_amount: 1600000, discount_amount: 200000, addon_amount: 50000, total_amount: 1450000, payment_deadline_at: null, source: 'web', created_at: h(-96) },
-  { id: 'bk-0005', booking_code: 'WH-E4L6W8', user_id: 'user-0005', workspace_id: 'ws-0003', branch_id: 'branch-0001', start_at: h(3), end_at: h(6), duration_unit: 'hour', unit_count: 3, status: 'confirmed', subtotal_amount: 180000, discount_amount: 0, addon_amount: 15000, total_amount: 195000, payment_deadline_at: null, source: 'mobile', created_at: h(-5) },
-  { id: 'bk-0006', booking_code: 'WH-F1S9X3', user_id: 'user-0002', workspace_id: 'ws-0014', branch_id: 'branch-0002', start_at: h(-48), end_at: h(-46), duration_unit: 'hour', unit_count: 2, status: 'canceled', subtotal_amount: 100000, discount_amount: 0, addon_amount: 0, total_amount: 100000, payment_deadline_at: null, source: 'web', created_at: h(-72) },
-  { id: 'bk-0007', booking_code: 'WH-G5H2Y7', user_id: 'user-0001', workspace_id: 'ws-0004', branch_id: 'branch-0001', start_at: h(48), end_at: h(50), duration_unit: 'hour', unit_count: 2, status: 'pending_payment', subtotal_amount: 120000, discount_amount: 0, addon_amount: 0, total_amount: 120000, payment_deadline_at: h(0.2), source: 'web', created_at: h(-0.1) },
+  { id: 'bk-0001', booking_code: 'WH-A3K7P2', user_id: 'user-0001', workspace_id: 'ws-0001', branch_id: 'branch-0001', start_at: h(-2), end_at: h(1), duration_unit: 'hour', durationUnit: 'hour', unit_count: 3, status: 'checked_in', subtotal_amount: 180000, discount_amount: 0, addon_amount: 30000, total_amount: 210000, payment_deadline_at: null, source: 'web', created_at: h(-3) },
+  { id: 'bk-0002', booking_code: 'WH-B9M4T6', user_id: 'user-0001', workspace_id: 'ws-0009', branch_id: 'branch-0001', start_at: h(24), end_at: h(26), duration_unit: 'hour', durationUnit: 'hour', unit_count: 2, status: 'confirmed', subtotal_amount: 400000, discount_amount: 0, addon_amount: 0, total_amount: 400000, payment_deadline_at: null, source: 'web', created_at: h(-1) },
+  { id: 'bk-0003', booking_code: 'WH-C2R8V5', user_id: 'user-0002', workspace_id: 'ws-0002', branch_id: 'branch-0001', start_at: h(2), end_at: h(5), duration_unit: 'hour', durationUnit: 'hour', unit_count: 3, status: 'pending_payment', subtotal_amount: 180000, discount_amount: 0, addon_amount: 0, total_amount: 180000, payment_deadline_at: h(0.25), source: 'web', created_at: h(0) },
+  { id: 'bk-0004', booking_code: 'WH-D7N3Q1', user_id: 'user-0001', workspace_id: 'ws-0011', branch_id: 'branch-0001', start_at: h(-72), end_at: h(-70), duration_unit: 'hour', durationUnit: 'hour', unit_count: 2, status: 'completed', subtotal_amount: 1600000, discount_amount: 200000, addon_amount: 50000, total_amount: 1450000, payment_deadline_at: null, source: 'web', created_at: h(-96) },
+  { id: 'bk-0005', booking_code: 'WH-E4L6W8', user_id: 'user-0005', workspace_id: 'ws-0003', branch_id: 'branch-0001', start_at: h(3), end_at: h(6), duration_unit: 'hour', durationUnit: 'hour', unit_count: 3, status: 'confirmed', subtotal_amount: 180000, discount_amount: 0, addon_amount: 15000, total_amount: 195000, payment_deadline_at: null, source: 'mobile', created_at: h(-5) },
+  { id: 'bk-0006', booking_code: 'WH-F1S9X3', user_id: 'user-0002', workspace_id: 'ws-0014', branch_id: 'branch-0002', start_at: h(-48), end_at: h(-46), duration_unit: 'hour', durationUnit: 'hour', unit_count: 2, status: 'canceled', subtotal_amount: 100000, discount_amount: 0, addon_amount: 0, total_amount: 100000, payment_deadline_at: null, source: 'web', created_at: h(-72) },
+  { id: 'bk-0007', booking_code: 'WH-G5H2Y7', user_id: 'user-0001', workspace_id: 'ws-0004', branch_id: 'branch-0001', start_at: h(48), end_at: h(50), duration_unit: 'hour', durationUnit: 'hour', unit_count: 2, status: 'pending_payment', subtotal_amount: 120000, discount_amount: 0, addon_amount: 0, total_amount: 120000, payment_deadline_at: h(0.2), source: 'web', created_at: h(-0.1) },
 ];
 
 // ── Payments ──
@@ -223,17 +223,17 @@ export const checkinLogs: CheckinLog[] = [
 export interface ExtraService {
   id: string; code: string; name: string;
   service_type: 'drink' | 'meal' | 'printing' | 'other';
-  duration_unit: string; price: number; is_active: boolean;
+  duration_unit: string; unit?: string; price: number; is_active: boolean;
 }
 
 export const extraServices: ExtraService[] = [
-  { id: 'es-01', code: 'COFFEE', name: 'Cà phê đặc biệt', service_type: 'drink', duration_unit: 'ly', price: 35000, is_active: true },
-  { id: 'es-02', code: 'TEA', name: 'Trà sen', service_type: 'drink', duration_unit: 'ly', price: 25000, is_active: true },
-  { id: 'es-03', code: 'LUNCH', name: 'Cơm trưa văn phòng', service_type: 'meal', duration_unit: 'phần', price: 55000, is_active: true },
-  { id: 'es-04', code: 'PRINT_BW', name: 'In trắng đen', service_type: 'printing', duration_unit: 'trang', price: 500, is_active: true },
-  { id: 'es-05', code: 'PRINT_COLOR', name: 'In màu', service_type: 'printing', duration_unit: 'trang', price: 2000, is_active: true },
-  { id: 'es-06', code: 'LOCKER', name: 'Tủ khóa cá nhân', service_type: 'other', duration_unit: 'ngày', price: 20000, is_active: true },
-  { id: 'es-07', code: 'SMOOTHIE', name: 'Sinh tố trái cây', service_type: 'drink', duration_unit: 'ly', price: 40000, is_active: false },
+  { id: 'es-01', code: 'COFFEE', name: 'Cà phê đặc biệt', service_type: 'drink', duration_unit: 'ly', unit: 'ly', price: 35000, is_active: true },
+  { id: 'es-02', code: 'TEA', name: 'Trà sen', service_type: 'drink', duration_unit: 'ly', unit: 'ly', price: 25000, is_active: true },
+  { id: 'es-03', code: 'LUNCH', name: 'Cơm trưa văn phòng', service_type: 'meal', duration_unit: 'phần', unit: 'phần', price: 55000, is_active: true },
+  { id: 'es-04', code: 'PRINT_BW', name: 'In trắng đen', service_type: 'printing', duration_unit: 'trang', unit: 'trang', price: 500, is_active: true },
+  { id: 'es-05', code: 'PRINT_COLOR', name: 'In màu', service_type: 'printing', duration_unit: 'trang', unit: 'trang', price: 2000, is_active: true },
+  { id: 'es-06', code: 'LOCKER', name: 'Tủ khóa cá nhân', service_type: 'other', duration_unit: 'ngày', unit: 'ngày', price: 20000, is_active: true },
+  { id: 'es-07', code: 'SMOOTHIE', name: 'Sinh tố trái cây', service_type: 'drink', duration_unit: 'ly', unit: 'ly', price: 40000, is_active: false },
 ];
 
 // ── Booking Services ──

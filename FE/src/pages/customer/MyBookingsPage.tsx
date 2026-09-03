@@ -101,7 +101,7 @@ const MyBookingsPage: React.FC = () => {
                 <div className={`mt-5 grid grid-cols-2 gap-4 sm:grid-cols-4 p-4 rounded-full border border-border ${isSelected ? 'bg-card' : 'bg-muted/50'}`}>
                   <div><p className="text-[10px] font-medium  text-foreground/70">Mã booking</p><p className="text-sm font-mono font-semibold mt-1">{b.booking_code}</p></div>
                   <div><p className="text-[10px] font-medium  text-foreground/70">Bắt đầu</p><p className="text-sm font-medium mt-1">{formatDateTime(b.start_at)}</p></div>
-                  <div><p className="text-[10px] font-medium  text-foreground/70">Thời lượng</p><p className="text-sm font-medium mt-1">{b.unit_count} {durationUnitLabel[b.unit]?.toLowerCase()}</p></div>
+                  <div><p className="text-[10px] font-medium  text-foreground/70">Thời lượng</p><p className="text-sm font-medium mt-1">{b.unit_count} {durationUnitLabel[b.duration_unit]?.toLowerCase()}</p></div>
                   <div><p className="text-[10px] font-medium  text-foreground/70">Tổng tiền</p><p className="text-sm font-semibold text-foreground mt-1">{formatVND(b.total_amount)}</p></div>
                 </div>
               </div>

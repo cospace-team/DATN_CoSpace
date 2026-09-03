@@ -104,6 +104,7 @@ public class SecurityConfig {
                                                                 new AntPathRequestMatcher("/api/payments/momo/return"),
                                                                 new AntPathRequestMatcher("/api/auth/register"),
                                                                 new AntPathRequestMatcher("/api/auth/login"),
+                                                                new AntPathRequestMatcher("/api/auth/dev-login"),
                                                                 new AntPathRequestMatcher("/api/auth/refresh"),
                                                                 new AntPathRequestMatcher("/h2-console/**"),
                                                                 new AntPathRequestMatcher("/error"))

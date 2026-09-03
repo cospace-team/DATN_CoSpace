@@ -114,8 +114,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const accessToken = localStorage.getItem("workhub_access_token");
         
         if (storedUser && accessToken) {
-          setUser(JSON.parse(storedUser));
-          setBackendStatus("ok");
+          let isExpired = false;
+          try {
+            const payload = JSON.parse(atob(accessToken.split('.')[1]));
+            if (payload.exp && payload.exp * 1000 < Date.now()) {
+              isExpired = true;
+            }
+          } catch (e) {
+            isExpired = true;
+          }
+
+          if (isExpired) {
+            localStorage.removeItem("workhub_user");
+            localStorage.removeItem("workhub_access_token");
+            localStorage.removeItem("workhub_refresh_token");
+            setBackendStatus("idle");
+          } else {
+            setUser(JSON.parse(storedUser));
+            setBackendStatus("ok");
+          }
         } else {
           setBackendStatus("idle");
         }
@@ -325,16 +342,60 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setBackendStatus("idle");
   }, []);
 
-  const devLoginAs = useCallback((role: UserRole) => {
-    setUser(DEV_MOCK_USERS[role]);
-    setBackendStatus("ok");
-    setIsLoading(false);
+  const devLoginAs = useCallback(async (role: UserRole) => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/dev-login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role })
+      });
+      if (!response.ok) throw new Error("Dev login failed");
+      const data = await response.json();
+      if (data.data?.user && data.data?.accessToken) {
+        const mappedUser = mapBackendUser(data.data.user);
+        localStorage.setItem("workhub_user", JSON.stringify(mappedUser));
+        localStorage.setItem("workhub_access_token", data.data.accessToken);
+        if (data.data.refreshToken) {
+          localStorage.setItem("workhub_refresh_token", data.data.refreshToken);
+        }
+        setUser(mappedUser);
+        setBackendStatus("ok");
+      }
+    } catch (error) {
+      console.error("Dev login error", error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  const devLoginAsBranchAdmin = useCallback(() => {
-    setUser(DEV_BRANCH_ADMIN_USER);
-    setBackendStatus("ok");
-    setIsLoading(false);
+  const devLoginAsBranchAdmin = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/dev-login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: "admin" })
+      });
+      if (!response.ok) throw new Error("Dev login failed");
+      const data = await response.json();
+      if (data.data?.user && data.data?.accessToken) {
+        const mappedUser = mapBackendUser(data.data.user);
+        localStorage.setItem("workhub_user", JSON.stringify(mappedUser));
+        localStorage.setItem("workhub_access_token", data.data.accessToken);
+        if (data.data.refreshToken) {
+          localStorage.setItem("workhub_refresh_token", data.data.refreshToken);
+        }
+        setUser(mappedUser);
+        setBackendStatus("ok");
+      }
+    } catch (error) {
+      console.error("Dev login error", error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   const value = useMemo<AuthContextValue>(

@@ -57,6 +57,36 @@ public class AuthService {
         return createAuthResponse(user, "Đăng nhập thành công.");
     }
 
+    public AuthResponse devLogin(String roleStr) {
+        if (roleStr == null || roleStr.isBlank()) {
+            throw new IllegalArgumentException("Vai trò không được để trống.");
+        }
+        User.Role role;
+        try {
+            role = User.Role.valueOf(roleStr.toLowerCase());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Vai trò không hợp lệ.");
+        }
+
+        User user = userRepository.findFirstByRole(role)
+                .orElseGet(() -> {
+                    User newUser = User.builder()
+                            .email("dev_" + role.name() + "@dev.local")
+                            .password(passwordEncoder.encode("123456"))
+                            .fullName("Mock " + role.name())
+                            .role(role)
+                            .status(User.Status.active)
+                            .build();
+                    
+                    if (role == User.Role.staff || role == User.Role.admin) {
+                        newUser.setBranchId(UUID.fromString("10000000-0000-0000-0000-000000000001"));
+                    }
+                    return userRepository.save(newUser);
+                });
+
+        return createAuthResponse(user, "Dev login thành công.");
+    }
+
     @org.springframework.transaction.annotation.Transactional
     public User syncGoogleUser(org.springframework.security.oauth2.jwt.Jwt jwt) {
         String email = jwt.getClaimAsString("email");

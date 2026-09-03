@@ -94,6 +94,40 @@ public class UserService {
         userRepository.save(user);
     }
 
+    @Transactional(readOnly = true)
+    public java.util.List<UserProfileDto> searchUsers(String query) {
+        if (query == null || query.trim().isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+        return userRepository.searchUsers(query.trim()).stream()
+                .map(user -> {
+                    Profile profile = profileRepository.findById(user.getId())
+                            .orElseGet(() -> Profile.builder().userId(user.getId()).contactPublic(false).build());
+                    return convertToDto(user, profile);
+                })
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    @Transactional
+    public UserProfileDto createWalkinUser(com.example.momosandbox.dto.api.WalkinUserCreateRequest req) {
+        User user = User.builder()
+                .email("walkin_" + UUID.randomUUID().toString().substring(0, 8) + "@walkin.local")
+                .fullName(req.getFullName())
+                .phone(req.getPhone())
+                .role(User.Role.customer)
+                .status(User.Status.active)
+                .build();
+        user = userRepository.save(user);
+
+        Profile profile = Profile.builder()
+                .userId(user.getId())
+                .contactPublic(false)
+                .build();
+        profileRepository.save(profile);
+
+        return convertToDto(user, profile);
+    }
+
     private UserProfileDto convertToDto(User user, Profile profile) {
         return UserProfileDto.builder()
                 .id(user.getId())

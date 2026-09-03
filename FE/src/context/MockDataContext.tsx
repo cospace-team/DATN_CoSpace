@@ -73,7 +73,7 @@ interface CreateBookingParams {
   branchId: string;
   startAt: string;
   endAt: string;
-  durationUnit: Booking['durationUnit'];
+  durationUnit: Booking['duration_unit'];
   unitCount: number;
   paymentMethod: 'momo' | 'cash';
   source?: Booking['source'];

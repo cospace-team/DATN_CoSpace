@@ -25,6 +25,8 @@ import java.util.stream.Collectors;
 import com.example.momosandbox.repository.UserRepository;
 import com.example.momosandbox.repository.CheckinLogRepository;
 
+import com.example.momosandbox.entity.BookingSource;
+
 @Service
 public class BookingService {
 
@@ -38,8 +40,10 @@ public class BookingService {
     private final BranchEntityRepository branchEntityRepository;
     private final UserRepository userRepository;
     private final CheckinLogRepository checkinLogRepository;
+    private final jakarta.persistence.EntityManager entityManager;
+    private final com.example.momosandbox.repository.WorkspaceMaintenanceRepository workspaceMaintenanceRepository;
 
-    public BookingService(BookingRepository bookingRepository, PaymentRepository paymentRepository, PricingService pricingService, WorkspaceEntityRepository workspaceEntityRepository, BranchEntityRepository branchEntityRepository, UserRepository userRepository, CheckinLogRepository checkinLogRepository) {
+    public BookingService(BookingRepository bookingRepository, PaymentRepository paymentRepository, PricingService pricingService, WorkspaceEntityRepository workspaceEntityRepository, BranchEntityRepository branchEntityRepository, UserRepository userRepository, CheckinLogRepository checkinLogRepository, jakarta.persistence.EntityManager entityManager, com.example.momosandbox.repository.WorkspaceMaintenanceRepository workspaceMaintenanceRepository) {
         this.bookingRepository = bookingRepository;
         this.paymentRepository = paymentRepository;
         this.pricingService = pricingService;
@@ -47,10 +51,23 @@ public class BookingService {
         this.branchEntityRepository = branchEntityRepository;
         this.userRepository = userRepository;
         this.checkinLogRepository = checkinLogRepository;
+        this.entityManager = entityManager;
+        this.workspaceMaintenanceRepository = workspaceMaintenanceRepository;
     }
 
     @Transactional
     public BookingDto createBooking(UUID userId, BookingCreateRequest req) {
+        return createBookingInternal(userId, req, BookingSource.web);
+    }
+
+    @Transactional
+    public BookingDto createWalkinBooking(UUID staffId, UUID customerId, BookingCreateRequest req) {
+        // Staff should check branch matching etc.
+        // For now, assuming staff has permission.
+        return createBookingInternal(customerId, req, BookingSource.counter);
+    }
+
+    private BookingDto createBookingInternal(UUID userId, BookingCreateRequest req, BookingSource source) {
         if (userId == null) {
             throw new IllegalArgumentException("Missing user id");
         }
@@ -64,14 +81,49 @@ public class BookingService {
             throw new IllegalArgumentException("unit_count must be >= 1");
         }
 
+        // Advisory Lock to prevent race condition
+        String lockKeyStr = "booking:" + req.getWorkspaceId().toString();
+        entityManager.createNativeQuery("SELECT pg_advisory_xact_lock(hashtext(:key))")
+                .setParameter("key", lockKeyStr)
+                .getSingleResult();
+
+        // Overlap Booking Check
+        OffsetDateTime startOffset = req.getStartAt().withOffsetSameInstant(ZoneOffset.UTC);
+        OffsetDateTime endOffset = req.getEndAt().withOffsetSameInstant(ZoneOffset.UTC);
+
+        List<BookingStatus> activeStatuses = java.util.Arrays.asList(
+                BookingStatus.PENDING_PAYMENT, 
+                BookingStatus.CONFIRMED, 
+                BookingStatus.CHECKED_IN
+        );
+        
+        List<Booking> overlappingBookings = bookingRepository.findOverlappingBookings(
+                req.getWorkspaceId(), startOffset, endOffset, activeStatuses);
+                
+        if (!overlappingBookings.isEmpty()) {
+            throw new IllegalArgumentException("Vị trí đã có người đặt trong khoảng thời gian này.");
+        }
+        
+        List<com.example.momosandbox.entity.MaintenanceStatus> activeMaintenances = java.util.Arrays.asList(
+                com.example.momosandbox.entity.MaintenanceStatus.active,
+                com.example.momosandbox.entity.MaintenanceStatus.scheduled
+        );
+        
+        List<com.example.momosandbox.entity.WorkspaceMaintenanceEntity> overlappingMaintenances = workspaceMaintenanceRepository.findOverlappingMaintenances(
+                req.getWorkspaceId(), startOffset.toZonedDateTime(), endOffset.toZonedDateTime(), activeMaintenances);
+                
+        if (!overlappingMaintenances.isEmpty()) {
+            throw new IllegalArgumentException("Vị trí đang được bảo trì trong khoảng thời gian này.");
+        }
+
         DurationUnit unit = req.getUnit();
         if (unit == null) {
             throw new IllegalArgumentException("unit is required");
         }
         long unitPrice = pricingService.getUnitPriceVnd(req.getBranchId(), req.getWorkspaceTypeId(), unit.name());
         long subtotal = unitPrice * (long) req.getUnitCount();
-        long taxAmount = 0; // TODO: Implement tax calculation
-        long serviceFeeAmount = 0; // TODO: Implement service fee calculation
+        long taxAmount = 0;
+        long serviceFeeAmount = 0;
         long totalAmount = subtotal + taxAmount + serviceFeeAmount;
 
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
@@ -84,6 +136,7 @@ public class BookingService {
                 .workspaceTypeId(req.getWorkspaceTypeId())
                 .branchId(req.getBranchId())
                 .status(BookingStatus.PENDING_PAYMENT)
+                .source(source)
                 .startAt(req.getStartAt())
                 .endAt(req.getEndAt())
                 .unit(unit)
@@ -141,6 +194,61 @@ public class BookingService {
                 .stream()
                 .map(this::toDto)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<com.example.momosandbox.dto.api.WorkspaceBookingStatusDto> getWorkspaceBookingStatus(UUID branchId, String dateStr) {
+        OffsetDateTime todayStart;
+        if (dateStr == null || dateStr.isBlank()) {
+            todayStart = OffsetDateTime.now(ZoneOffset.UTC).withHour(0).withMinute(0).withSecond(0).withNano(0);
+        } else {
+            // parse dateStr assuming format "yyyy-MM-dd"
+            java.time.LocalDate date = java.time.LocalDate.parse(dateStr);
+            todayStart = date.atStartOfDay(ZoneOffset.UTC).toOffsetDateTime();
+        }
+        OffsetDateTime todayEnd = todayStart.plusDays(1);
+
+        // Fetch all workspaces in the branch
+        List<WorkspaceEntity> workspaces = workspaceEntityRepository.findWorkspacesByBranchId(branchId);
+
+        // Fetch all active/scheduled maintenances for this branch
+        List<com.example.momosandbox.entity.WorkspaceMaintenanceEntity> activeMaintenances = workspaceMaintenanceRepository.findAllByBranchIdOrderByCreatedAtDesc(branchId).stream()
+                .filter(m -> m.getStatus() == com.example.momosandbox.entity.MaintenanceStatus.active || m.getStatus() == com.example.momosandbox.entity.MaintenanceStatus.scheduled)
+                .collect(Collectors.toList());
+
+        // Fetch all bookings for this branch in the requested date
+        List<Booking> todayBookings = bookingRepository.findByBranchIdAndStartAtBetweenOrderByStartAtAsc(branchId, todayStart, todayEnd);
+
+        return workspaces.stream().map(ws -> {
+            com.example.momosandbox.dto.api.WorkspaceBookingStatusDto dto = new com.example.momosandbox.dto.api.WorkspaceBookingStatusDto();
+            dto.setWorkspaceId(ws.getId());
+            dto.setName(ws.getName());
+            dto.setCode(ws.getCode());
+            dto.setWorkspaceStatus(ws.getStatus());
+            dto.setWorkspaceTypeId(ws.getWorkspaceTypeId() != null ? ws.getWorkspaceTypeId().toString() : null);
+
+            activeMaintenances.stream()
+                    .filter(m -> m.getWorkspaceId().equals(ws.getId()))
+                    .findFirst()
+                    .ifPresent(m -> {
+                        com.example.momosandbox.dto.api.MaintenanceResponseDto mDto = new com.example.momosandbox.dto.api.MaintenanceResponseDto();
+                        mDto.setId(m.getId());
+                        mDto.setWorkspaceId(m.getWorkspaceId());
+                        mDto.setStartAt(m.getStartAt());
+                        mDto.setEndAt(m.getEndAt());
+                        mDto.setReason(m.getReason());
+                        mDto.setStatus(m.getStatus());
+                        dto.setActiveMaintenance(mDto);
+                    });
+
+            List<BookingDto> wsBookings = todayBookings.stream()
+                    .filter(b -> b.getWorkspaceId().equals(ws.getId()))
+                    .map(this::toDto)
+                    .collect(Collectors.toList());
+            dto.setTodayBookings(wsBookings);
+
+            return dto;
+        }).collect(Collectors.toList());
     }
 
     private com.example.momosandbox.dto.api.BookingWithDetailsDto toBookingWithDetailsDto(Booking b) {

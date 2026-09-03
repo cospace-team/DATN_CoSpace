@@ -96,24 +96,25 @@ public class PaymentService {
     }
 
     @Transactional
-    public CashCreatePaymentResponse createCashPayment(UUID userId, UUID bookingId) {
-        BookingDto bookingDto = bookingService.getMyBooking(userId, bookingId);
+    public CashCreatePaymentResponse createCashPayment(UUID staffId, UUID bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
 
         Payment payment = Payment.builder()
                 .id(UUID.randomUUID())
-                .bookingId(bookingDto.getId())
-                .userId(userId)
+                .bookingId(booking.getId())
+                .userId(booking.getUserId()) // Assign payment to the customer
                 .provider("cash")
                 .method("cash")
                 .orderId(generateGatewayOrderId())
                 .requestId(UUID.randomUUID().toString())
-                .amount(bookingDto.getTotalAmount())
+                .amount(booking.getTotalAmount())
                 .status(PaymentStatus.PAID)
                 .paidAt(OffsetDateTime.now(ZoneOffset.UTC))
                 .build();
         paymentRepository.save(payment);
 
-        confirmBooking(bookingDto.getId());
+        confirmBooking(booking.getId());
 
         return toCashCreateResponse(payment);
     }

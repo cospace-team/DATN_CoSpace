@@ -62,7 +62,7 @@ const BAServicesPage: React.FC = () => {
   };
 
   const openEdit = (s: ExtraService) => {
-    setForm({ code: s.code, name: s.name, service_type: s.service_type, unit: s.unit, price: String(s.price), is_active: s.is_active });
+    setForm({ code: s.code, name: s.name, service_type: s.service_type, unit: s.duration_unit || s.unit || '', price: String(s.price), is_active: s.is_active });
     setErrors({});
     setModal({ type: 'edit', service: s });
   };
@@ -89,6 +89,7 @@ const BAServicesPage: React.FC = () => {
         code: form.code.toUpperCase(),
         name: form.name,
         service_type: form.service_type,
+        duration_unit: form.unit,
         unit: form.unit,
         price,
         is_active: form.is_active,
@@ -180,7 +181,7 @@ const BAServicesPage: React.FC = () => {
 
               <div className="mt-4 flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-muted-foreground">Giá / {s.unit}</p>
+                  <p className="text-xs text-muted-foreground">Giá / {s.duration_unit || s.unit}</p>
                   <p className="text-lg font-bold text-primary">{formatVND(s.price)}</p>
                 </div>
                 <p className="font-mono text-xs text-muted-foreground">{s.code}</p>
