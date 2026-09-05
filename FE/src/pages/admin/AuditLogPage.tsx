@@ -1,7 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { FiSearch, FiCode, FiChevronDown, FiFilter, FiX, FiEye, FiShield, FiCalendar, FiGlobe } from 'react-icons/fi';
 import { auditLogs, getUser, users } from '../../data/mockData';
 import { formatDateTime } from '../../utils/formatters';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
 const AuditLogPage: React.FC = () => {
   const [search, setSearch] = useState('');
@@ -10,15 +12,59 @@ const AuditLogPage: React.FC = () => {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [liveLogs, setLiveLogs] = useState<any[] | null>(null);
 
-  const uniqueActions = useMemo(() => [...new Set(auditLogs.map(l => l.action))], []);
-  const actorUsers = useMemo(() => {
-    const ids = [...new Set(auditLogs.map(l => l.actor_user_id))];
-    return ids.map(id => ({ id, name: getUser(id)?.full_name || id }));
+  useEffect(() => {
+    const fetchAuditLogs = async () => {
+      try {
+        const token = localStorage.getItem('workhub_access_token');
+        if (!token) return;
+        const res = await fetch(`${API_BASE_URL}/api/admin/audit-logs?size=100`, {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          }
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json.content && Array.isArray(json.content) && json.content.length > 0) {
+            setLiveLogs(json.content);
+          }
+        }
+      } catch (err) {
+        console.warn('Cannot fetch live audit logs, using fallback:', err);
+      }
+    };
+    fetchAuditLogs();
   }, []);
 
+  const logsSource = useMemo(() => {
+    if (liveLogs && liveLogs.length > 0) {
+      return liveLogs.map(l => ({
+        id: l.id,
+        actor_user_id: l.userId || 'system',
+        actor_role: 'system',
+        action: l.action,
+        target_table: l.entityName || '',
+        target_id: l.entityId || '',
+        metadata: l.newValues || l.oldValues || {},
+        old_values: l.oldValues,
+        new_values: l.newValues,
+        ip_address: l.ipAddress || '127.0.0.1',
+        created_at: l.createdAt
+      }));
+    }
+    return auditLogs;
+  }, [liveLogs]);
+
+  const uniqueActions = useMemo(() => [...new Set(logsSource.map(l => l.action))], [logsSource]);
+  const actorUsers = useMemo(() => {
+    const ids = [...new Set(logsSource.map(l => l.actor_user_id))];
+    return ids.map(id => ({ id, name: getUser(id)?.full_name || id }));
+  }, [logsSource]);
+
   const filtered = useMemo(() =>
-    auditLogs.filter(l => {
+    logsSource.filter(l => {
       if (userFilter !== 'all' && l.actor_user_id !== userFilter) return false;
       if (actionFilter !== 'all' && l.action !== actionFilter) return false;
       if (search && !l.action.toLowerCase().includes(search.toLowerCase()) && !l.target_table.toLowerCase().includes(search.toLowerCase())) return false;
@@ -32,7 +78,7 @@ const AuditLogPage: React.FC = () => {
       }
       return true;
     }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
-    [search, userFilter, actionFilter, dateFrom, dateTo]
+    [logsSource, search, userFilter, actionFilter, dateFrom, dateTo]
   );
 
   const actionColor: Record<string, string> = {

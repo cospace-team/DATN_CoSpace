@@ -15,6 +15,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { MockDataProvider } from "./context/MockDataContext";
 import { Button } from "./components/ui/button";
 import { Logo } from "./components/ui/Logo";
+import { NotificationBell } from "./components/notifications/NotificationBell";
 import {
   FiMapPin,
   FiCalendar,
@@ -365,6 +366,8 @@ const AppShell: React.FC = () => {
             </span>
 
             <div className="w-px h-5 bg-border hidden sm:block" />
+
+            <NotificationBell />
 
             <Button
               variant="ghost"
