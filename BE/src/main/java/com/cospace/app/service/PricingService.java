@@ -1,9 +1,13 @@
 package com.cospace.app.service;
 
+import com.cospace.app.entity.DurationUnit;
+import com.cospace.app.entity.PricePolicy;
+import com.cospace.app.repository.PricePolicyRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -11,9 +15,12 @@ public class PricingService {
 
     private static final String DEFAULT_BRANCH = "*";
 
+    private final PricePolicyRepository pricePolicyRepository;
     private final Map<PriceKey, Long> unitPricesVnd = new HashMap<>();
 
-    public PricingService() {
+    public PricingService(PricePolicyRepository pricePolicyRepository) {
+        this.pricePolicyRepository = pricePolicyRepository;
+
         // Defaults (aligned with FE mockData pricePolicies)
         put(DEFAULT_BRANCH, "wst-desk", "hour", 50_000L);
         put(DEFAULT_BRANCH, "wst-desk", "day", 250_000L);
@@ -44,6 +51,29 @@ public class PricingService {
 
     public long getUnitPriceVnd(UUID branchId, String workspaceTypeId, String unit) {
         String normalizedUnit = normalizeUnit(unit);
+
+        // 1. Try DB lookup first
+        if (workspaceTypeId != null) {
+            try {
+                UUID typeUuid = UUID.fromString(workspaceTypeId);
+                DurationUnit unitEnum = DurationUnit.valueOf(normalizedUnit.toLowerCase());
+
+                if (branchId != null) {
+                    Optional<PricePolicy> branchPolicy = pricePolicyRepository
+                            .findByBranchIdAndWorkspaceTypeIdAndDurationUnitAndIsActiveTrue(branchId, typeUuid, unitEnum);
+                    if (branchPolicy.isPresent()) {
+                        return branchPolicy.get().getPrice();
+                    }
+                }
+
+                Optional<PricePolicy> globalPolicy = pricePolicyRepository
+                        .findByBranchIdIsNullAndWorkspaceTypeIdAndDurationUnitAndIsActiveTrue(typeUuid, unitEnum);
+                if (globalPolicy.isPresent()) {
+                    return globalPolicy.get().getPrice();
+                }
+            } catch (Exception ignored) {
+            }
+        }
         String b = (branchId == null) ? DEFAULT_BRANCH : branchId.toString();
         String t = (workspaceTypeId == null) ? "" : workspaceTypeId;
 

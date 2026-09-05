@@ -25,7 +25,14 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
+@org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
 public class SecurityConfig {
+
+        private final SupabaseJwtAuthenticationConverter jwtAuthenticationConverter;
+
+        public SecurityConfig(SupabaseJwtAuthenticationConverter jwtAuthenticationConverter) {
+                this.jwtAuthenticationConverter = jwtAuthenticationConverter;
+        }
 
         @Value("${app.jwt.secret:defaultSecretKeyWhichIsVeryLongAndSecureForLocalAuth1234!@#}")
         private String jwtSecret;
@@ -109,9 +116,12 @@ public class SecurityConfig {
                                                                 new AntPathRequestMatcher("/h2-console/**"),
                                                                 new AntPathRequestMatcher("/error"))
                                                 .permitAll()
+                                                .requestMatchers("/api/staff/**").hasAnyRole("STAFF", "BRANCH_ADMIN", "SUPER_ADMIN", "ADMIN", "staff", "branch_admin", "admin")
+                                                .requestMatchers("/api/branch-admin/**").hasAnyRole("BRANCH_ADMIN", "SUPER_ADMIN", "ADMIN", "branch_admin", "admin")
+                                                .requestMatchers("/api/admin/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "super_admin", "admin")
                                                 .anyRequest().authenticated())
                                 .oauth2ResourceServer(oauth2 -> oauth2
-                                                .jwt(jwt -> jwt.decoder(jwtDecoder()))
+                                                .jwt(jwt -> jwt.decoder(jwtDecoder()).jwtAuthenticationConverter(jwtAuthenticationConverter))
                                                 .authenticationEntryPoint((request, response, authException) -> {
                                                         response.setStatus(401);
                                                         response.setContentType("application/json;charset=UTF-8");
