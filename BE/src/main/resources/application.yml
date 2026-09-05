@@ -9,7 +9,7 @@ spring:
       - optional:file:.env[.properties]
       - optional:file:BE/.env[.properties]
   application:
-    name: momo-sandbox
+    name: cospace-api
   devtools:
     restart:
       enabled: true
@@ -37,9 +37,7 @@ spring:
         format_sql: true
   sql:
     init:
-      mode: always
-      encoding: UTF-8
-      continue-on-error: true
+      mode: never
   security:
     oauth2:
       resourceserver:
@@ -65,4 +63,4 @@ app:
 logging:
   level:
     root: INFO
-    com.example.momosandbox: DEBUG
+    com.cospace.app: DEBUG

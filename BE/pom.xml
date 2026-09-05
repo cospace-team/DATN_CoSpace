@@ -4,11 +4,11 @@
     xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.example</groupId>
-    <artifactId>momo-sandbox</artifactId>
+    <groupId>com.cospace</groupId>
+    <artifactId>cospace-api</artifactId>
     <version>1.0.0</version>
-    <name>MoMo Sandbox Demo</name>
-    <description>Demo MoMo sandbox với Spring Boot</description>
+    <name>CoSpace API</name>
+    <description>Hệ thống quản lý Co-Working Space</description>
 
     <properties>
         <java.version>17</java.version>
