@@ -47,4 +47,8 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
     int countByUserIdAndStatus(UUID userId, BookingStatus status);
 
     List<Booking> findByBranchIdAndStatus(UUID branchId, BookingStatus status);
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("SELECT b FROM Booking b WHERE b.id = :id")
+    Optional<Booking> findByIdWithLock(@org.springframework.data.repository.query.Param("id") UUID id);
 }

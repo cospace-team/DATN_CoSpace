@@ -38,7 +38,7 @@ public class CheckinService {
 
     @Transactional
     public CheckinLogDto checkin(UUID staffId, UUID bookingId, String note) {
-        Booking booking = bookingRepository.findById(bookingId)
+        Booking booking = bookingRepository.findByIdWithLock(bookingId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thông tin đặt chỗ"));
 
         // 1. Validate branch matching if staff is bound to a specific branch
@@ -106,7 +106,7 @@ public class CheckinService {
         }
         checkinLog = checkinLogRepository.save(checkinLog);
 
-        Booking booking = bookingRepository.findById(checkinLog.getBookingId())
+        Booking booking = bookingRepository.findByIdWithLock(checkinLog.getBookingId())
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thông tin đặt chỗ"));
 
         // If contract and still within valid period, maintain status CHECKED_IN for tomorrow

@@ -37,7 +37,9 @@ spring:
         format_sql: true
   sql:
     init:
-      mode: never
+      mode: always
+      encoding: UTF-8
+      continue-on-error: true
   security:
     oauth2:
       resourceserver:

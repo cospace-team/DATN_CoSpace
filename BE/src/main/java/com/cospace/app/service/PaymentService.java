@@ -97,7 +97,7 @@ public class PaymentService {
 
     @Transactional
     public CashCreatePaymentResponse createCashPayment(UUID staffId, UUID bookingId) {
-        Booking booking = bookingRepository.findById(bookingId)
+        Booking booking = bookingRepository.findByIdWithLock(bookingId)
                 .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
 
         Payment payment = Payment.builder()
@@ -167,8 +167,16 @@ public class PaymentService {
     }
 
     private void confirmBooking(UUID bookingId) {
-        Booking booking = bookingRepository.findById(bookingId)
+        Booking booking = bookingRepository.findByIdWithLock(bookingId)
                 .orElseThrow(() -> new IllegalStateException("Booking not found for payment confirmation"));
+        
+        // Rule #26: Late Webhook (Ghost Payment) check
+        if (booking.getStatus() == BookingStatus.EXPIRED || booking.getStatus() == BookingStatus.CANCELLED) {
+            log.warn("Late payment received for booking {} with status {}. Needs refund processing.", 
+                    bookingId, booking.getStatus());
+            return;
+        }
+
         booking.setStatus(BookingStatus.CONFIRMED);
         bookingRepository.save(booking);
     }
