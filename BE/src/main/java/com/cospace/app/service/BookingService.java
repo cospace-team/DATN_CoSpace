@@ -37,17 +37,19 @@ public class BookingService {
     private final PaymentRepository paymentRepository;
     private final PricingService pricingService;
     private final WorkspaceEntityRepository workspaceEntityRepository;
+    private final com.cospace.app.repository.FloorRepository floorRepository;
     private final BranchEntityRepository branchEntityRepository;
     private final UserRepository userRepository;
     private final CheckinLogRepository checkinLogRepository;
     private final jakarta.persistence.EntityManager entityManager;
     private final com.cospace.app.repository.WorkspaceMaintenanceRepository workspaceMaintenanceRepository;
 
-    public BookingService(BookingRepository bookingRepository, PaymentRepository paymentRepository, PricingService pricingService, WorkspaceEntityRepository workspaceEntityRepository, BranchEntityRepository branchEntityRepository, UserRepository userRepository, CheckinLogRepository checkinLogRepository, jakarta.persistence.EntityManager entityManager, com.cospace.app.repository.WorkspaceMaintenanceRepository workspaceMaintenanceRepository) {
+    public BookingService(BookingRepository bookingRepository, PaymentRepository paymentRepository, PricingService pricingService, WorkspaceEntityRepository workspaceEntityRepository, com.cospace.app.repository.FloorRepository floorRepository, BranchEntityRepository branchEntityRepository, UserRepository userRepository, CheckinLogRepository checkinLogRepository, jakarta.persistence.EntityManager entityManager, com.cospace.app.repository.WorkspaceMaintenanceRepository workspaceMaintenanceRepository) {
         this.bookingRepository = bookingRepository;
         this.paymentRepository = paymentRepository;
         this.pricingService = pricingService;
         this.workspaceEntityRepository = workspaceEntityRepository;
+        this.floorRepository = floorRepository;
         this.branchEntityRepository = branchEntityRepository;
         this.userRepository = userRepository;
         this.checkinLogRepository = checkinLogRepository;
@@ -80,6 +82,22 @@ public class BookingService {
         if (req.getUnitCount() <= 0) {
             throw new IllegalArgumentException("unit_count must be >= 1");
         }
+
+        // Rule #33: Rate limit - Tối đa 3 đơn chờ thanh toán cho mỗi người dùng
+        int pendingCount = bookingRepository.countByUserIdAndStatus(userId, BookingStatus.PENDING_PAYMENT);
+        if (pendingCount >= 3) {
+            throw new IllegalStateException("Bạn đang có 3 đơn đặt chỗ chờ thanh toán. Vui lòng hoàn tất thanh toán hoặc hủy đơn cũ trước khi đặt tiếp.");
+        }
+
+        // Rule #42: Compute branchId server-side from Workspace -> Floor
+        WorkspaceEntity ws = workspaceEntityRepository.findById(req.getWorkspaceId())
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy không gian làm việc."));
+        com.cospace.app.entity.Floor floor = floorRepository.findById(ws.getFloorId())
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thông tin tầng của không gian làm việc."));
+        UUID computedBranchId = floor.getBranchId();
+        String computedWorkspaceTypeId = ws.getWorkspaceTypeId() != null 
+                ? ws.getWorkspaceTypeId().toString() 
+                : req.getWorkspaceTypeId();
 
         // Advisory Lock to prevent race condition
         String lockKeyStr = "booking:" + req.getWorkspaceId().toString();
@@ -120,7 +138,7 @@ public class BookingService {
         if (unit == null) {
             throw new IllegalArgumentException("unit is required");
         }
-        long unitPrice = pricingService.getUnitPriceVnd(req.getBranchId(), req.getWorkspaceTypeId(), unit.name());
+        long unitPrice = pricingService.getUnitPriceVnd(computedBranchId, computedWorkspaceTypeId, unit.name());
         long subtotal = unitPrice * (long) req.getUnitCount();
         long taxAmount = 0;
         long serviceFeeAmount = 0;
@@ -135,8 +153,8 @@ public class BookingService {
                 .bookingCode(generateBookingCode())
                 .userId(userId)
                 .workspaceId(req.getWorkspaceId())
-                .workspaceTypeId(req.getWorkspaceTypeId())
-                .branchId(req.getBranchId())
+                .workspaceTypeId(computedWorkspaceTypeId)
+                .branchId(computedBranchId)
                 .status(BookingStatus.PENDING_PAYMENT)
                 .source(source)
                 .isContract(isContract)

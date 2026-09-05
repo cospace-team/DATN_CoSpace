@@ -12,8 +12,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import io.hypersistence.utils.hibernate.type.basic.PostgreSQLEnumType;
-import org.hibernate.annotations.Type;
+
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -28,7 +27,13 @@ import java.util.UUID;
 public class User {
 
     public enum Status { active, suspended }
-    public enum Role { admin, staff, customer }
+    public enum Role { 
+        super_admin, 
+        branch_admin, 
+        staff, 
+        customer, 
+        admin // legacy compatibility
+    }
 
     @Id
     @Column(nullable = false, updatable = false)
@@ -51,14 +56,12 @@ public class User {
     private String avatarUrl;
 
     @Enumerated(EnumType.STRING)
-    @Type(PostgreSQLEnumType.class)
-    @Column(columnDefinition = "user_status", nullable = false, length = 20)
+    @Column(name = "status", nullable = false, length = 20)
     @Builder.Default
     private Status status = Status.active;
 
     @Enumerated(EnumType.STRING)
-    @Type(PostgreSQLEnumType.class)
-    @Column(columnDefinition = "user_role", nullable = false, length = 20)
+    @Column(name = "role", nullable = false, length = 20)
     @Builder.Default
     private Role role = Role.customer;
 

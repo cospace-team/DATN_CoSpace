@@ -44,5 +44,7 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
 
     int countByBranchIdAndStatus(UUID branchId, BookingStatus status);
 
+    int countByUserIdAndStatus(UUID userId, BookingStatus status);
+
     List<Booking> findByBranchIdAndStatus(UUID branchId, BookingStatus status);
 }
