@@ -72,7 +72,7 @@ public class PaymentController {
     }
 
     // Public endpoints for MoMo callbacks
-    @PostMapping("/momo/notify")
+    @PostMapping({"/momo/notify", "/momo/ipn", "/momo/webhook"})
     public ResponseEntity<Map<String, String>> momoIpn(@RequestBody Map<String, String> body) {
         log.info("Received MoMo IPN: {}", body);
         paymentService.handleMomoCallback(body);

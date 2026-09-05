@@ -186,6 +186,7 @@ const ProfilePage: React.FC = () => {
   // ── Tab 2: Networking States ──
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTagFilter, setSelectedTagFilter] = useState<string | null>(null);
+  const [partnersList, setPartnersList] = useState(MOCK_PARTNERS);
   const [selectedPartner, setSelectedPartner] = useState<typeof MOCK_PARTNERS[0] | null>(null);
 
   // ── Tab 3: Security & Password States ──
@@ -202,7 +203,7 @@ const ProfilePage: React.FC = () => {
   const stats = {
     totalBookings: 12,
     totalHours: 48,
-    matchedCount: MOCK_PARTNERS.length,
+    matchedCount: partnersList.length,
     tier: 'Gold Member',
     memberSince: 'Tháng 01/2026',
   };
@@ -248,6 +249,29 @@ const ProfilePage: React.FC = () => {
       }
     };
     fetchProfile();
+
+    // Fetch partner matching suggestions
+    const fetchPartners = async () => {
+      try {
+        const token = localStorage.getItem('workhub_access_token');
+        if (!token) return;
+        const res = await fetch('http://localhost:8080/api/matching/suggestions', {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          }
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json.data && Array.isArray(json.data) && json.data.length > 0) {
+            setPartnersList(json.data);
+          }
+        }
+      } catch (err) {
+        console.warn('Cannot fetch partner suggestions, fallback to demo data:', err);
+      }
+    };
+    fetchPartners();
   }, [user]);
 
   // ── Save Profile Handler ──
@@ -312,7 +336,7 @@ const ProfilePage: React.FC = () => {
   };
 
   // ── Filtered Partners ──
-  const filteredPartners = MOCK_PARTNERS.filter(partner => {
+  const filteredPartners = partnersList.filter(partner => {
     const matchesSearch =
       partner.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       partner.profession.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -552,7 +576,7 @@ const ProfilePage: React.FC = () => {
           <FiUsers className="h-4 w-4 text-indigo-500" />
           <span>Mạng lưới kết nối</span>
           <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
-            {MOCK_PARTNERS.length}
+            {partnersList.length}
           </span>
         </button>
 
