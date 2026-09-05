@@ -30,6 +30,12 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
 
     List<Booking> findByBranchIdAndStartAtBetweenOrderByStartAtAsc(UUID branchId, OffsetDateTime start, OffsetDateTime end);
 
+    @org.springframework.data.jpa.repository.Query("SELECT b FROM Booking b WHERE b.branchId = :branchId AND b.startAt < :end AND b.endAt > :start ORDER BY b.startAt ASC")
+    List<Booking> findBookingsInInterval(
+            @org.springframework.data.repository.query.Param("branchId") UUID branchId, 
+            @org.springframework.data.repository.query.Param("start") OffsetDateTime start, 
+            @org.springframework.data.repository.query.Param("end") OffsetDateTime end);
+
     @org.springframework.data.jpa.repository.Query("SELECT b FROM Booking b WHERE b.workspaceId = :workspaceId AND b.startAt < :endAt AND b.endAt > :startAt AND b.status IN :statuses")
     List<Booking> findOverlappingBookings(@org.springframework.data.repository.query.Param("workspaceId") UUID workspaceId, 
                                           @org.springframework.data.repository.query.Param("startAt") OffsetDateTime startAt, 
@@ -37,4 +43,6 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
                                           @org.springframework.data.repository.query.Param("statuses") List<BookingStatus> statuses);
 
     int countByBranchIdAndStatus(UUID branchId, BookingStatus status);
+
+    List<Booking> findByBranchIdAndStatus(UUID branchId, BookingStatus status);
 }

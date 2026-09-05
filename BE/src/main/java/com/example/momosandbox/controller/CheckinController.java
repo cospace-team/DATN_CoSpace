@@ -38,10 +38,12 @@ public class CheckinController {
     @PostMapping("/{id}/checkout")
     public CheckinLogDto checkout(
             @AuthenticationPrincipal Jwt jwt,
-            @PathVariable("id") UUID checkinId) {
+            @PathVariable("id") UUID checkinId,
+            @RequestParam(value = "note", required = false) String note) {
         UUID staffId = requireSubject(jwt);
-        return checkinService.checkout(staffId, checkinId);
+        return checkinService.checkout(staffId, checkinId, note);
     }
+
 
     @GetMapping("/active")
     public List<BookingWithDetailsDto> getActiveCheckins(

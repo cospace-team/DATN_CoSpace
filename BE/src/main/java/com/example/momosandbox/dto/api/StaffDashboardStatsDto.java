@@ -15,4 +15,18 @@ public class StaffDashboardStatsDto {
     private int availableWs;
     private int maintenanceWs;
     private int occupancyRate;
+    private int totalCapacity;
+    private int activeGuests;
+    private int totalWs;
+    private java.util.List<ChartDataPoint> chartData;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ChartDataPoint {
+        private String label;
+        private int guests;
+        private long revenue;
+    }
 }

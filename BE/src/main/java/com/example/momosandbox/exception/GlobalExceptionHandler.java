@@ -30,6 +30,22 @@ public class GlobalExceptionHandler {
         ));
     }
 
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, String>> handleDataIntegrityViolation(org.springframework.dao.DataIntegrityViolationException ex) {
+        logger.warn("Data integrity violation: {}", ex.getMessage());
+        String msg = "Dữ liệu xung đột hoặc không hợp lệ trên hệ thống.";
+        String exMsg = ex.getMessage() != null ? ex.getMessage().toLowerCase() : "";
+        if (exMsg.contains("exclusion constraint") || exMsg.contains("bookings_workspace_id_start_at_end_at_excl") || exMsg.contains("no_overlapping_maintenance")) {
+            msg = "Không gian này đã có người đặt hoặc đang trong thời gian bảo trì. Vui lòng chọn vị trí hoặc khung giờ khác.";
+        } else if (exMsg.contains("duplicate key") || exMsg.contains("unique constraint")) {
+            msg = "Dữ liệu đã tồn tại trong hệ thống (trùng mã hoặc thông tin duy nhất).";
+        }
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                "error", "DATA_CONFLICT",
+                "message", msg
+        ));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleException(Exception ex) {
         logger.error("Unhandled exception: ", ex);

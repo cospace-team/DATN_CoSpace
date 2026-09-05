@@ -29,16 +29,20 @@ public class StaffMaintenanceService {
     private final BookingRepository bookingRepository;
     private final EntityManager entityManager;
     private final WorkspaceEntityRepository workspaceEntityRepository;
+    private final com.example.momosandbox.repository.CheckinLogRepository checkinLogRepository;
 
     public StaffMaintenanceService(WorkspaceMaintenanceRepository maintenanceRepository,
                                    BookingRepository bookingRepository,
                                    EntityManager entityManager,
-                                   WorkspaceEntityRepository workspaceEntityRepository) {
+                                   WorkspaceEntityRepository workspaceEntityRepository,
+                                   com.example.momosandbox.repository.CheckinLogRepository checkinLogRepository) {
         this.maintenanceRepository = maintenanceRepository;
         this.bookingRepository = bookingRepository;
         this.entityManager = entityManager;
         this.workspaceEntityRepository = workspaceEntityRepository;
+        this.checkinLogRepository = checkinLogRepository;
     }
+
 
     @Transactional
     public MaintenanceResponseDto createMaintenance(UUID staffId, MaintenanceRequestDto request) {
@@ -55,9 +59,18 @@ public class StaffMaintenanceService {
                 .setParameter("key", lockKeyStr)
                 .getSingleResult();
 
-        // 2. Auto-Cancel Overlapping Bookings (Rule 35)
+        // 2. Check for Overlapping Active/Scheduled Maintenances
+        List<MaintenanceStatus> activeMaintenanceStatuses = Arrays.asList(MaintenanceStatus.active, MaintenanceStatus.scheduled);
+        List<WorkspaceMaintenanceEntity> overlappingMaintenances = maintenanceRepository.findOverlappingMaintenances(
+                request.getWorkspaceId(), request.getStartAt(), request.getEndAt(), activeMaintenanceStatuses);
+        if (!overlappingMaintenances.isEmpty()) {
+            throw new IllegalArgumentException("Vị trí này đã có lịch bảo trì khác trong khoảng thời gian đã chọn.");
+        }
+
+        // 3. Auto-Cancel Overlapping Bookings (Rule 35)
         OffsetDateTime startOffset = request.getStartAt().withZoneSameInstant(ZoneOffset.UTC).toOffsetDateTime();
         OffsetDateTime endOffset = request.getEndAt().withZoneSameInstant(ZoneOffset.UTC).toOffsetDateTime();
+        OffsetDateTime nowUtc = OffsetDateTime.now(ZoneOffset.UTC);
         
         List<BookingStatus> activeStatuses = Arrays.asList(
                 BookingStatus.PENDING_PAYMENT, 
@@ -74,12 +87,21 @@ public class StaffMaintenanceService {
                 // Note: For confirmed bookings, refund logic should ideally be triggered here.
             } else if (b.getStatus() == BookingStatus.CHECKED_IN) {
                 b.setStatus(BookingStatus.COMPLETED); // Early checkout
-                // Note: Early checkout refund logic should ideally be triggered here.
+                if (nowUtc.isBefore(b.getEndAt())) {
+                    b.setEndAt(nowUtc);
+                }
+                // Close active checkin log to prevent orphaned seated guest records
+                checkinLogRepository.findActiveCheckinByBookingId(b.getId()).ifPresent(cl -> {
+                    cl.setCheckoutAt(nowUtc);
+                    cl.setNote((cl.getNote() != null ? cl.getNote() + " | " : "") + "Tự động check-out do bảo trì đột xuất");
+                    checkinLogRepository.save(cl);
+                });
             }
         }
+
         bookingRepository.saveAll(overlappingBookings);
 
-        // 3. Create Maintenance record
+        // 4. Create Maintenance record
         WorkspaceMaintenanceEntity maintenance = new WorkspaceMaintenanceEntity();
         maintenance.setWorkspaceId(request.getWorkspaceId());
         maintenance.setStartAt(request.getStartAt());
@@ -131,6 +153,10 @@ public class StaffMaintenanceService {
         WorkspaceMaintenanceEntity maintenance = maintenanceRepository.findById(maintenanceId)
                 .orElseThrow(() -> new IllegalArgumentException("Maintenance not found"));
         
+        java.time.ZonedDateTime now = java.time.ZonedDateTime.now();
+        if (now.isBefore(maintenance.getEndAt())) {
+            maintenance.setEndAt(now);
+        }
         maintenance.setStatus(MaintenanceStatus.done);
         maintenanceRepository.save(maintenance);
         return mapToDto(maintenance, 0);
@@ -141,6 +167,10 @@ public class StaffMaintenanceService {
         WorkspaceMaintenanceEntity maintenance = maintenanceRepository.findById(maintenanceId)
                 .orElseThrow(() -> new IllegalArgumentException("Maintenance not found"));
                 
+        java.time.ZonedDateTime now = java.time.ZonedDateTime.now();
+        if (now.isBefore(maintenance.getEndAt())) {
+            maintenance.setEndAt(now);
+        }
         // Instead of hard delete, we can set to canceled to unlock workspace if it was a mistake.
         maintenance.setStatus(MaintenanceStatus.canceled);
         maintenanceRepository.save(maintenance);

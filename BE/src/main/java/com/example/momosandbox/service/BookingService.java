@@ -128,6 +128,8 @@ public class BookingService {
 
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
 
+        boolean isContract = (unit == DurationUnit.week || unit == DurationUnit.month);
+
         Booking booking = Booking.builder()
                 .id(UUID.randomUUID())
                 .bookingCode(generateBookingCode())
@@ -137,8 +139,10 @@ public class BookingService {
                 .branchId(req.getBranchId())
                 .status(BookingStatus.PENDING_PAYMENT)
                 .source(source)
+                .isContract(isContract)
                 .startAt(req.getStartAt())
                 .endAt(req.getEndAt())
+
                 .unit(unit)
                 .unitCount(req.getUnitCount())
                 .pricePerUnit(unitPrice)
@@ -187,14 +191,17 @@ public class BookingService {
 
     @Transactional(readOnly = true)
     public List<BookingDto> getBranchTodayBookings(UUID branchId) {
-        OffsetDateTime todayStart = OffsetDateTime.now(ZoneOffset.UTC).withHour(0).withMinute(0).withSecond(0).withNano(0);
-        OffsetDateTime todayEnd = todayStart.plusDays(1);
+        java.time.ZoneId vnZone = java.time.ZoneId.of("Asia/Ho_Chi_Minh");
+        java.time.ZonedDateTime todayVn = java.time.ZonedDateTime.now(vnZone).withHour(0).withMinute(0).withSecond(0).withNano(0);
+        OffsetDateTime todayStart = todayVn.toOffsetDateTime().withOffsetSameInstant(ZoneOffset.UTC);
+        OffsetDateTime todayEnd = todayVn.plusDays(1).toOffsetDateTime().withOffsetSameInstant(ZoneOffset.UTC);
         
         return bookingRepository.findByBranchIdAndStartAtBetweenOrderByStartAtAsc(branchId, todayStart, todayEnd)
                 .stream()
                 .map(this::toDto)
                 .collect(Collectors.toList());
     }
+
 
     @Transactional(readOnly = true)
     public List<com.example.momosandbox.dto.api.WorkspaceBookingStatusDto> getWorkspaceBookingStatus(UUID branchId, String dateStr) {
@@ -216,8 +223,8 @@ public class BookingService {
                 .filter(m -> m.getStatus() == com.example.momosandbox.entity.MaintenanceStatus.active || m.getStatus() == com.example.momosandbox.entity.MaintenanceStatus.scheduled)
                 .collect(Collectors.toList());
 
-        // Fetch all bookings for this branch in the requested date
-        List<Booking> todayBookings = bookingRepository.findByBranchIdAndStartAtBetweenOrderByStartAtAsc(branchId, todayStart, todayEnd);
+        // Fetch all bookings for this branch overlapping the requested date interval
+        List<Booking> todayBookings = bookingRepository.findBookingsInInterval(branchId, todayStart, todayEnd);
 
         return workspaces.stream().map(ws -> {
             com.example.momosandbox.dto.api.WorkspaceBookingStatusDto dto = new com.example.momosandbox.dto.api.WorkspaceBookingStatusDto();
@@ -251,7 +258,7 @@ public class BookingService {
         }).collect(Collectors.toList());
     }
 
-    private com.example.momosandbox.dto.api.BookingWithDetailsDto toBookingWithDetailsDto(Booking b) {
+    public com.example.momosandbox.dto.api.BookingWithDetailsDto toBookingWithDetailsDto(Booking b) {
         BookingDto bookingDto = toDto(b);
         
         com.example.momosandbox.dto.api.UserProfileDto customer = userRepository.findById(b.getUserId())
@@ -295,7 +302,7 @@ public class BookingService {
                 .build();
     }
 
-    private BookingDto toDto(Booking b) {
+    public BookingDto toDto(Booking b) {
         Optional<Payment> latestPaymentOpt = paymentRepository.findTopByBookingIdOrderByCreatedAtDesc(b.getId());
         
         String workspaceName = workspaceEntityRepository.findById(b.getWorkspaceId())
@@ -306,12 +313,23 @@ public class BookingService {
                 .map(BranchEntity::getName)
                 .orElse(null);
 
+        String customerName = userRepository.findById(b.getUserId())
+                .map(com.example.momosandbox.entity.User::getFullName)
+                .orElse(null);
+
+        String customerPhone = userRepository.findById(b.getUserId())
+                .map(com.example.momosandbox.entity.User::getPhone)
+                .orElse(null);
+
         BookingDto.BookingDtoBuilder builder = BookingDto.builder()
                 .id(b.getId())
                 .bookingCode(b.getBookingCode())
                 .userId(b.getUserId())
+                .customerName(customerName)
+                .customerPhone(customerPhone)
                 .workspaceId(b.getWorkspaceId())
                 .workspaceName(workspaceName)
+
                 .workspaceTypeId(b.getWorkspaceTypeId())
                 .branchId(b.getBranchId())
                 .branchName(branchName)
@@ -320,6 +338,7 @@ public class BookingService {
                 .endAt(b.getEndAt().toString())
                 .unit(b.getUnit())
                 .unitCount(b.getUnitCount())
+                .isContract(b.isContract())
                 .pricePerUnit(b.getPricePerUnit())
                 .subtotalAmount(b.getSubtotalAmount())
                 .discountAmount(b.getDiscountAmount())
@@ -336,6 +355,7 @@ public class BookingService {
 
         return builder.build();
     }
+
 
     @Transactional
     public BookingDto cancelBooking(UUID userId, UUID bookingId) {

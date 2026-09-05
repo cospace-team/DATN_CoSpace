@@ -17,12 +17,36 @@ export interface BookingWithDetailsDto {
   activeCheckin: CheckinLogDto | null;
 }
 
+export interface BranchTodayBookingDto {
+  id: string;
+  bookingCode: string;
+  userId: string;
+  customerName?: string;
+  customerPhone?: string;
+  workspaceId: string;
+  workspaceName?: string;
+  branchId: string;
+  startAt: string;
+  endAt: string;
+  status: string;
+  totalAmount: number;
+  type?: string;
+}
+
 export interface StaffDashboardStatsDto {
   revenue: number;
   activeCheckinsCount: number;
   availableWs: number;
   maintenanceWs: number;
   occupancyRate: number;
+  totalCapacity: number;
+  activeGuests: number;
+  totalWs: number;
+  chartData: {
+    label: string;
+    guests: number;
+    revenue: number;
+  }[];
 }
 
 export interface MaintenanceResponseDto {
@@ -124,7 +148,7 @@ export const staffApi = {
     return res.json();
   },
 
-  getBranchTodayBookings: async (branchId: string): Promise<any[]> => {
+  getBranchTodayBookings: async (branchId: string): Promise<BranchTodayBookingDto[]> => {
     const res = await fetch(`${API_BASE_URL}/api/bookings/branch-today?branchId=${branchId}`, {
       headers: getAuthHeaders()
     });
@@ -149,8 +173,12 @@ export const staffApi = {
     return res.json();
   },
 
-  checkout: async (checkinId: string): Promise<CheckinLogDto> => {
-    const res = await fetch(`${API_BASE_URL}/api/checkins/${checkinId}/checkout`, {
+  checkout: async (checkinId: string, note?: string): Promise<CheckinLogDto> => {
+    let url = `${API_BASE_URL}/api/checkins/${checkinId}/checkout`;
+    if (note && note.trim()) {
+      url += `?note=${encodeURIComponent(note.trim())}`;
+    }
+    const res = await fetch(url, {
       method: 'POST',
       headers: getAuthHeaders()
     });
@@ -163,6 +191,7 @@ export const staffApi = {
     return res.json();
   },
 
+
   getActiveCheckins: async (branchId: string): Promise<BookingWithDetailsDto[]> => {
     const res = await fetch(`${API_BASE_URL}/api/checkins/active?branchId=${branchId}`, {
       headers: getAuthHeaders()
@@ -171,8 +200,10 @@ export const staffApi = {
     return res.json();
   },
 
-  getDashboardStats: async (branchId: string): Promise<StaffDashboardStatsDto> => {
-    const res = await fetch(`${API_BASE_URL}/api/staff/dashboard/stats?branchId=${branchId}`, {
+  getDashboardStats: async (branchId: string, filter?: string): Promise<StaffDashboardStatsDto> => {
+    let url = `${API_BASE_URL}/api/staff/dashboard/stats?branchId=${branchId}`;
+    if (filter) url += `&filter=${filter}`;
+    const res = await fetch(url, {
       headers: getAuthHeaders()
     });
     if (!res.ok) throw new Error('Failed to fetch stats');

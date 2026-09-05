@@ -250,18 +250,16 @@ CREATE INDEX IF NOT EXISTS idx_bookings_user_status ON bookings (user_id, status
 CREATE INDEX IF NOT EXISTS idx_bookings_status ON bookings (status);
 CREATE INDEX IF NOT EXISTS idx_bookings_branch_time ON bookings (branch_id, start_at DESC);
 
--- Add exclusion constraint to prevent double bookings
+-- Add exclusion constraint to prevent double bookings (active statuses only)
 DO $$
 BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'bookings_workspace_id_start_at_end_at_excl'
-    ) THEN
-        ALTER TABLE bookings
-        ADD CONSTRAINT bookings_workspace_id_start_at_end_at_excl EXCLUDE USING gist (
-            workspace_id WITH =,
-            tstzrange(start_at, end_at) WITH &&
-        );
-    END IF;
+    ALTER TABLE bookings DROP CONSTRAINT IF EXISTS bookings_workspace_id_start_at_end_at_excl;
+    ALTER TABLE bookings
+    ADD CONSTRAINT bookings_workspace_id_start_at_end_at_excl EXCLUDE USING gist (
+        workspace_id WITH =,
+        tstzrange(start_at, end_at) WITH &&
+    )
+    WHERE (status IN ('PENDING_PAYMENT', 'CONFIRMED', 'CHECKED_IN', 'pending_payment', 'confirmed', 'checked_in'));
 END $$;
 
 CREATE TABLE IF NOT EXISTS checkin_logs (

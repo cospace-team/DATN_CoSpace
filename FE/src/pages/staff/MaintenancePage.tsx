@@ -6,10 +6,13 @@ import type { FloorResponse } from '../../lib/spaceApi';
 import FloorPlanViewer from '../../components/floor-plan/FloorPlanViewer';
 import type { FloorLayout } from '../../types/floorPlan';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../components/Toast';
 
 const MaintenancePage: React.FC = () => {
+  const { showToast } = useToast();
   const { user } = useAuth();
-  const branchId = user?.branchId || '33333333-3333-3333-3333-333333333333';
+  const branchId = user?.branchId || 'b1000000-0000-0000-0000-000000000001';
+
 
   const [workspaces, setWorkspaces] = useState<WorkspaceMaintenanceStatusDto[]>([]);
   const [floors, setFloors] = useState<FloorResponse[]>([]);
@@ -106,9 +109,10 @@ const MaintenancePage: React.FC = () => {
       setIsModalOpen(false);
       setSelectedWs(null);
       setReason('');
+      showToast('Đã tạo báo cáo hư hỏng và khóa bàn thành công!', 'success');
       fetchWorkspaces();
     } catch (error: any) {
-      alert('Lỗi tạo bảo trì: ' + error.message);
+      showToast('Lỗi tạo bảo trì: ' + (error.message || 'Không thể tạo bảo trì'), 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -118,9 +122,10 @@ const MaintenancePage: React.FC = () => {
     try {
       await staffApi.completeMaintenance(maintenanceId);
       setUnlockModalWs(null);
+      showToast('Đã hoàn tất bảo trì và mở khóa không gian thành công!', 'success');
       fetchWorkspaces();
     } catch (error: any) {
-      alert('Lỗi: ' + error.message);
+      showToast('Lỗi khi hoàn tất bảo trì: ' + (error.message || 'Thao tác thất bại'), 'error');
     }
   };
 
@@ -129,9 +134,10 @@ const MaintenancePage: React.FC = () => {
     try {
       await staffApi.deleteMaintenance(maintenanceId);
       setUnlockModalWs(null);
+      showToast('Đã hủy bảo trì và mở khóa không gian!', 'info');
       fetchWorkspaces();
     } catch (error: any) {
-      alert('Lỗi: ' + error.message);
+      showToast('Lỗi khi hủy bảo trì: ' + (error.message || 'Thao tác thất bại'), 'error');
     }
   };
 

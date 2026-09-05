@@ -24,7 +24,8 @@ public class StaffDashboardController {
     @GetMapping("/stats")
     public StaffDashboardStatsDto getStats(
             @AuthenticationPrincipal Jwt jwt,
-            @RequestParam("branchId") UUID branchId) {
-        return staffDashboardService.getDashboardStats(branchId);
+            @RequestParam("branchId") UUID branchId,
+            @RequestParam(value = "filter", defaultValue = "day") String filter) {
+        return staffDashboardService.getDashboardStats(branchId, filter);
     }
 }

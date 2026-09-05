@@ -66,6 +66,11 @@ public class Booking {
     @Column(name = "unit_count", nullable = false)
     private int unitCount;
 
+    @Column(name = "is_contract", nullable = false)
+    @Builder.Default
+    private boolean isContract = false;
+
+
     @Column(name = "price_per_unit", nullable = false)
     private long pricePerUnit;
 

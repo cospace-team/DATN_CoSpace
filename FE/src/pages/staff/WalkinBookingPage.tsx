@@ -119,9 +119,28 @@ const WalkinBookingPage: React.FC = () => {
 
   // Pricing calculations
   const duration = durationHours;
-  const wsPrice = selectedWorkspaceId ? 50000 : 0; // TODO: Get price from pricing endpoint
+  const selectedWsInfo = React.useMemo(() => {
+    if (!selectedWorkspaceId) return null;
+    return workspacesStatus.find(w => w.workspaceId === selectedWorkspaceId);
+  }, [selectedWorkspaceId, workspacesStatus]);
+
+  const wsPrice = React.useMemo(() => {
+    if (!selectedWsInfo) return 0;
+    const typeId = (selectedWsInfo.workspaceTypeId || '').toLowerCase();
+    const wsName = (selectedWsInfo.name || '').toLowerCase();
+    if (typeId.includes('meeting') || typeId === 'a1000000-0000-0000-0000-000000000002' || wsName.includes('meeting') || wsName.includes('phòng họp')) {
+      return 200000;
+    }
+    if (typeId.includes('private') || typeId === 'a1000000-0000-0000-0000-000000000003' || wsName.includes('private')) {
+      return 100000;
+    }
+    // Standard desk
+    return currentBranchId === 'branch-0001' || currentBranchId === 'b1000000-0000-0000-0000-000000000001' ? 60000 : 50000;
+  }, [selectedWsInfo, currentBranchId]);
+
   const subtotal = wsPrice * duration;
   const total = subtotal;
+
 
   const currentFloor = floors.find((f) => f.id === selectedFloorId);
   

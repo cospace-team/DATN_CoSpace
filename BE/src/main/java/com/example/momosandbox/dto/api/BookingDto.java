@@ -14,8 +14,11 @@ public class BookingDto {
     private UUID id;
     private String bookingCode;
     private UUID userId;
+    private String customerName;
+    private String customerPhone;
     private UUID workspaceId;
     private String workspaceName;
+
     private String workspaceTypeId;
     private UUID branchId;
     private String branchName;
@@ -24,6 +27,8 @@ public class BookingDto {
     private String endAt;
     private DurationUnit unit;
     private int unitCount;
+    private Boolean isContract;
+
 
     // Price Snapshot
     private long pricePerUnit;

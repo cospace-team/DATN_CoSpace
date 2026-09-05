@@ -38,8 +38,8 @@ const DEV_MOCK_USERS: Record<UserRole, AuthUser> = {
     fullName: "Trần Nhân Viên",
     avatarUrl: "",
     role: "staff",
-    branchId: "33333333-3333-3333-3333-333333333333",
-    branchName: "WorkHub Quận 1",
+    branchId: "b1000000-0000-0000-0000-000000000001",
+    branchName: "CoSpace Nguyễn Huệ - Innovation Hub",
   },
   admin: {
     id: "dev-admin-001",
@@ -58,9 +58,10 @@ const DEV_BRANCH_ADMIN_USER: AuthUser = {
   fullName: "Phạm Chi Nhánh Q1",
   avatarUrl: "",
   role: "admin",
-  branchId: "33333333-3333-3333-3333-333333333333",
-  branchName: "WorkHub Quận 1",
+  branchId: "b1000000-0000-0000-0000-000000000001",
+  branchName: "CoSpace Nguyễn Huệ - Innovation Hub",
 };
+
 
 interface AuthContextValue {
   user: AuthUser | null;
