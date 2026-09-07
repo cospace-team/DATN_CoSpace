@@ -205,8 +205,22 @@ export const workspaceTypeApi = {
     ),
 };
 
+/* ─── Branch Response (public listing) ─── */
+
+export interface BranchResponse {
+  id: string;
+  code: string;
+  name: string;
+  address: string;
+  city: string;
+  status: string;
+}
+
 /* ─── Customer Space APIs ─── */
 export const customerSpaceApi = {
+  listBranches: () =>
+    apiFetch<BranchResponse[]>(`${API}/api/customer/spaces/branches`),
+
   listFloors: (branchId: string) =>
     apiFetch<FloorResponse[]>(`${API}/api/customer/spaces/branches/${branchId}/floors`),
 
@@ -215,4 +229,3 @@ export const customerSpaceApi = {
       `${API}/api/customer/spaces/branches/${branchId}/floors/${floorId}/workspaces`
     ),
 };
-

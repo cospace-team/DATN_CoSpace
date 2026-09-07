@@ -185,7 +185,10 @@ public class BranchAdminSpaceController {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy người dùng."));
 
-        if (user.getRole() != User.Role.admin || user.getBranchId() == null) {
+        boolean isAuthorized = user.getRole() == User.Role.branch_admin 
+                || user.getRole() == User.Role.admin 
+                || user.getRole() == User.Role.super_admin;
+        if (!isAuthorized || user.getBranchId() == null) {
             throw new AccessDeniedException("Bạn không có quyền quản lý chi nhánh.");
         }
 

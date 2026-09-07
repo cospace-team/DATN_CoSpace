@@ -2,13 +2,15 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { 
   FiHash, FiCheckCircle, FiAlertCircle, FiLogOut, FiClock, 
   FiInbox, FiSearch, FiUser, FiMapPin, FiCalendar, FiDollarSign, 
-  FiCheck, FiAlertTriangle, FiRefreshCw, FiX, FiTag, FiPhone, FiInfo
+  FiCheck, FiAlertTriangle, FiRefreshCw, FiX, FiTag, FiPhone, FiInfo,
+  FiCamera
 } from 'react-icons/fi';
 import { formatTime, bookingStatusLabel, bookingStatusColor } from '../../utils/formatters';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { useLocation } from 'react-router-dom';
 import { staffApi, BookingWithDetailsDto } from '../../api/staffApi';
 import { useAuth } from '../../context/AuthContext';
+import QrScannerModal from '../../components/QrScannerModal';
 
 export interface CheckinItemMeta {
   durationMinutes: number;
@@ -26,8 +28,8 @@ export type BookingWithMeta = BookingWithDetailsDto & {
 const CheckInPage: React.FC = () => {
   const location = useLocation();
   const { user } = useAuth();
-  const branchId = user?.branchId || 'b1000000-0000-0000-0000-000000000001';
-  const branchName = user?.branchName || 'CoSpace Nguyễn Huệ - Innovation Hub';
+  const branchId = user?.branchId || '';
+  const branchName = user?.branchName || '';
   
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
@@ -47,6 +49,9 @@ const CheckInPage: React.FC = () => {
   const [selectedCheckoutItem, setSelectedCheckoutItem] = useState<BookingWithMeta | null>(null);
   const [checkoutNote, setCheckoutNote] = useState('');
   const [checkoutSubmitting, setCheckoutSubmitting] = useState(false);
+
+  // QR Scanner Modal State
+  const [showQrScanner, setShowQrScanner] = useState(false);
 
 
   // Ticker đồng hồ thời gian thực
@@ -299,25 +304,40 @@ const CheckInPage: React.FC = () => {
                 <input 
                   type="text" 
                   value={code} 
-                  onChange={e => setCode(e.target.value.toUpperCase())} 
+                  onChange={e => {
+                    let val = e.target.value.toUpperCase();
+                    // Auto-detect CHECKIN_ prefix (from gun scanner pasting QR data)
+                    if (val.startsWith('CHECKIN_')) {
+                      val = val.substring('CHECKIN_'.length);
+                    }
+                    setCode(val);
+                  }} 
                   placeholder="VD: WH-76PDE8"
                   className="input-field !pl-12 !h-14 font-mono text-xl tracking-widest uppercase bg-muted/50 focus:bg-background text-center font-bold shadow-inner" 
                   onKeyDown={e => e.key === 'Enter' && handleSearchTicket(code)} 
                 />
               </div>
-              <button 
-                onClick={() => handleSearchTicket(code)} 
-                disabled={!code.trim() || loading} 
-                className="btn btn-primary w-full justify-center !h-13 shadow-lg shadow-primary/20 text-base font-bold transition-all"
-              >
-                {loading && !searchedBooking ? (
-                  <span className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <>
-                    <FiSearch className="mr-2 h-5 w-5" /> Kiểm tra vé
-                  </>
-                )}
-              </button>
+              <div className="grid grid-cols-2 gap-3">
+                <button 
+                  onClick={() => setShowQrScanner(true)} 
+                  className="btn btn-secondary justify-center !h-13 text-base font-bold transition-all border-2 border-dashed hover:border-primary hover:text-primary"
+                >
+                  <FiCamera className="mr-2 h-5 w-5" /> Quét QR
+                </button>
+                <button 
+                  onClick={() => handleSearchTicket(code)} 
+                  disabled={!code.trim() || loading} 
+                  className="btn btn-primary justify-center !h-13 shadow-lg shadow-primary/20 text-base font-bold transition-all"
+                >
+                  {loading && !searchedBooking ? (
+                    <span className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <FiSearch className="mr-2 h-5 w-5" /> Kiểm tra
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
 
             {searchError && (
@@ -684,6 +704,17 @@ const CheckInPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* QR Scanner Modal */}
+      <QrScannerModal
+        isOpen={showQrScanner}
+        onClose={() => setShowQrScanner(false)}
+        onScanSuccess={(scannedCode) => {
+          setShowQrScanner(false);
+          setCode(scannedCode);
+          handleSearchTicket(scannedCode);
+        }}
+      />
     </div>
   );
 };

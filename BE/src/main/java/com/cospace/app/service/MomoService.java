@@ -109,7 +109,7 @@ public class MomoService {
             String autoCapture) {
         try {
             String amount = String.valueOf(amountValue);
-            String requestType = "captureWallet";
+            String requestType = "payWithMethod";
             String extraData = "";
 
             // Tạo raw signature theo thứ tự của MoMo

@@ -2,6 +2,8 @@ package com.cospace.app.service;
 
 import com.cospace.app.dto.api.CashCreatePaymentResponse;
 import com.cospace.app.dto.api.MomoCreatePaymentResponse;
+import com.cospace.app.dto.api.PayosCreatePaymentResponse;
+import com.cospace.app.dto.api.PayosWebhookDto;
 import com.cospace.app.dto.api.PaymentDto;
 import com.cospace.app.dto.api.BookingDto;
 import com.cospace.app.entity.Booking;
@@ -39,13 +41,15 @@ public class PaymentService {
     private final BookingRepository bookingRepository;
     private final BookingService bookingService;
     private final MomoService momoService;
+    private final PayosService payosService;
     private final ObjectMapper objectMapper;
 
-    public PaymentService(PaymentRepository paymentRepository, BookingRepository bookingRepository, BookingService bookingService, MomoService momoService) {
+    public PaymentService(PaymentRepository paymentRepository, BookingRepository bookingRepository, BookingService bookingService, MomoService momoService, PayosService payosService) {
         this.paymentRepository = paymentRepository;
         this.bookingRepository = bookingRepository;
         this.bookingService = bookingService;
         this.momoService = momoService;
+        this.payosService = payosService;
         this.objectMapper = new ObjectMapper();
     }
 
@@ -93,6 +97,48 @@ public class PaymentService {
         paymentRepository.save(payment);
 
         return toMomoCreateResponse(payment, "Vui lòng thanh toán qua MoMo trong vòng 15 phút");
+    }
+
+    @Transactional
+    public PayosCreatePaymentResponse createPayosPayment(UUID userId, UUID bookingId, String idempotencyKey) {
+        if (idempotencyKey != null && !idempotencyKey.isBlank()) {
+            Optional<Payment> existingPayment = paymentRepository.findTopByBookingIdAndStatusInOrderByCreatedAtDesc(
+                    bookingId, List.of(PaymentStatus.INITIATED, PaymentStatus.PENDING));
+            if (existingPayment.isPresent()) {
+                log.warn("Idempotent request: Found existing pending payment {} for booking {}", existingPayment.get().getId(), bookingId);
+                return toPayosCreateResponse(existingPayment.get(), null, null, "Giao dịch đang được xử lý.");
+            }
+        }
+
+        BookingDto booking = bookingService.getMyBooking(userId, bookingId);
+
+        long orderCode = (System.currentTimeMillis() % 1000000000L) * 1000 + (RANDOM.nextInt(900) + 100);
+        String orderId = "PAYOS-" + orderCode;
+
+        Payment payment = Payment.builder()
+                .id(UUID.randomUUID())
+                .bookingId(booking.getId())
+                .userId(userId)
+                .provider("payos")
+                .method("vietqr")
+                .orderId(orderId)
+                .requestId(UUID.randomUUID().toString())
+                .amount(booking.getTotalAmount())
+                .status(PaymentStatus.INITIATED)
+                .build();
+        paymentRepository.save(payment);
+
+        String description = "BK " + booking.getBookingCode();
+        Map<String, Object> payosRes = payosService.createPaymentLink(orderCode, payment.getAmount(), description);
+
+        String checkoutUrl = Objects.toString(payosRes.get("checkoutUrl"), "");
+        String qrCode = Objects.toString(payosRes.get("qrCode"), "");
+
+        payment.setStatus(PaymentStatus.PENDING);
+        payment.setPayUrl(checkoutUrl);
+        paymentRepository.save(payment);
+
+        return toPayosCreateResponse(payment, orderCode, qrCode, "Tạo liên kết thanh toán PayOS VietQR thành công.");
     }
 
     @Transactional
@@ -157,6 +203,94 @@ public class PaymentService {
             payment.setStatus(PaymentStatus.FAILED);
         }
         paymentRepository.save(payment);
+    }
+
+    @Transactional
+    public void handlePayosWebhook(PayosWebhookDto webhookDto) {
+        if (webhookDto == null || webhookDto.getData() == null) {
+            throw new IllegalArgumentException("Payload PayOS webhook không hợp lệ");
+        }
+
+        if (!payosService.verifyWebhookSignature(webhookDto.getData(), webhookDto.getSignature())) {
+            log.warn("PayOS webhook signature mismatch! Data: {}, Signature: {}", webhookDto.getData(), webhookDto.getSignature());
+            throw new IllegalArgumentException("Chữ ký PayOS không hợp lệ");
+        }
+
+        Object orderCodeObj = webhookDto.getData().get("orderCode");
+        if (orderCodeObj == null) {
+            throw new IllegalArgumentException("Missing orderCode in PayOS webhook");
+        }
+
+        String orderCodeStr = String.valueOf(orderCodeObj);
+        Payment payment = paymentRepository.findByOrderId("PAYOS-" + orderCodeStr)
+                .or(() -> paymentRepository.findByOrderId(orderCodeStr))
+                .orElseThrow(() -> new IllegalArgumentException("Payment not found for orderCode=" + orderCodeStr));
+
+        if (payment.getStatus() == PaymentStatus.PAID) {
+            log.info("Payment {} is already paid. Ignoring PayOS webhook.", payment.getId());
+            return;
+        }
+
+        String code = Objects.toString(webhookDto.getData().get("code"), webhookDto.getCode());
+        payment.setGatewayTransactionId(Objects.toString(webhookDto.getData().get("reference"), ""));
+        payment.setRawCallback(safeJson(webhookDto));
+
+        if ("00".equals(code) || "0".equals(code)) {
+            payment.setStatus(PaymentStatus.PAID);
+            payment.setPaidAt(OffsetDateTime.now(ZoneOffset.UTC));
+            confirmBooking(payment.getBookingId());
+            log.info("PayOS payment {} marked as PAID for booking {}", payment.getId(), payment.getBookingId());
+        } else {
+            payment.setStatus(PaymentStatus.FAILED);
+        }
+        paymentRepository.save(payment);
+    }
+
+    @Transactional
+    public boolean handlePayosReturn(Map<String, String> params) {
+        String orderCodeStr = params.getOrDefault("orderCode", "");
+        if (orderCodeStr.isBlank()) {
+            return false;
+        }
+        String status = params.getOrDefault("status", "");
+        String code = params.getOrDefault("code", "");
+        String cancel = params.getOrDefault("cancel", "false");
+
+        boolean isPaid = ("PAID".equalsIgnoreCase(status) || "00".equals(code)) && !"true".equalsIgnoreCase(cancel);
+        Payment payment = paymentRepository.findByOrderId("PAYOS-" + orderCodeStr)
+                .or(() -> paymentRepository.findByOrderId(orderCodeStr))
+                .orElse(null);
+
+        if (payment != null) {
+            payment.setRawCallback(safeJson(params));
+            if (isPaid) {
+                if (payment.getStatus() != PaymentStatus.PAID) {
+                    payment.setStatus(PaymentStatus.PAID);
+                    payment.setPaidAt(OffsetDateTime.now(ZoneOffset.UTC));
+                    paymentRepository.save(payment);
+                    confirmBooking(payment.getBookingId());
+                }
+                return true;
+            } else if ("true".equalsIgnoreCase(cancel) || "CANCELLED".equalsIgnoreCase(status)) {
+                payment.setStatus(PaymentStatus.FAILED);
+                paymentRepository.save(payment);
+            }
+        }
+        return isPaid;
+    }
+
+    @Transactional
+    public void confirmPaymentByOrderCode(String orderCode) {
+        String orderId = orderCode.startsWith("PAYOS-") ? orderCode : "PAYOS-" + orderCode;
+        Payment payment = paymentRepository.findByOrderId(orderId)
+                .or(() -> paymentRepository.findByOrderId(orderCode))
+                .orElseThrow(() -> new IllegalArgumentException("Payment not found for orderCode: " + orderCode));
+
+        payment.setStatus(PaymentStatus.PAID);
+        payment.setPaidAt(OffsetDateTime.now(ZoneOffset.UTC));
+        paymentRepository.save(payment);
+
+        confirmBooking(payment.getBookingId());
     }
     
     @Transactional(readOnly = true)
@@ -226,6 +360,21 @@ public class PaymentService {
                 .amount(p.getAmount())
                 .status(p.getStatus())
                 .paidAt(p.getPaidAt() == null ? null : p.getPaidAt().toString())
+                .build();
+    }
+
+    private PayosCreatePaymentResponse toPayosCreateResponse(Payment p, Long orderCode, String qrCode, String message) {
+        return PayosCreatePaymentResponse.builder()
+                .paymentId(p.getId())
+                .bookingId(p.getBookingId())
+                .orderCode(orderCode)
+                .orderId(p.getOrderId())
+                .provider(p.getProvider())
+                .checkoutUrl(p.getPayUrl())
+                .qrCode(qrCode)
+                .amount(p.getAmount())
+                .status(p.getStatus())
+                .message(message)
                 .build();
     }
 

@@ -44,6 +44,7 @@ import {
   customerSpaceApi,
   type FloorResponse,
   type WorkspaceResponse,
+  type BranchResponse,
 } from "../../lib/spaceApi";
 import { bookingApi, type BookingResponse } from "../../lib/bookingApi";
 import { useToast } from "../../components/Toast";
@@ -98,6 +99,7 @@ const ZONES: ZoneConfig[] = [
   },
 ];
 
+/* Branch alias mapping — kept for backward compat with old URLs (e.g. ?branchId=branch-1) */
 const PUBLIC_BRANCH_ALIASES: Record<string, string> = {
   "branch-1": "b1000000-0000-0000-0000-000000000001",
   "branch-2": "b2000000-0000-0000-0000-000000000002",
@@ -108,7 +110,7 @@ const PUBLIC_BRANCH_ALIASES: Record<string, string> = {
 };
 
 const resolveBranchId = (id: string): string => {
-  if (!id) return "b1000000-0000-0000-0000-000000000001";
+  if (!id) return '';
   return PUBLIC_BRANCH_ALIASES[id] ?? id;
 };
 
@@ -660,12 +662,45 @@ const ExplorePage: React.FC = () => {
 
   const [showTags, setShowTags] = useState(false);
 
+  // API-loaded branches (with mock fallback)
+  const [apiBranches, setApiBranches] = useState<Array<{id: string; code: string; name: string; address: string; status: string}>>([]);
+
   // Database-loaded floors, workspaces and user bookings
   const [dbFloors, setDbFloors] = useState<FloorResponse[]>([]);
   const [dbWorkspaces, setDbWorkspaces] = useState<WorkspaceResponse[]>([]);
   const [realBookings, setRealBookings] = useState<BookingResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+
+  // Load branches from API on mount, fallback to mock
+  useEffect(() => {
+    let active = true;
+    const loadBranches = async () => {
+      try {
+        const data = await customerSpaceApi.listBranches();
+        if (active && data && data.length > 0) {
+          setApiBranches(data);
+          // If no branch selected yet, pick first from API
+          if (!selectedBranch) {
+            setSelectedBranch(data[0].id);
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to load branches from API, using mock data:', err);
+        // Keep using mock branches from mockData
+      }
+    };
+    loadBranches();
+    return () => { active = false; };
+  }, []);
+
+  // Merged branch list: prefer API data, fallback to mock
+  const activeBranches = useMemo(() => {
+    if (apiBranches.length > 0) {
+      return apiBranches.filter(b => b.status === 'active');
+    }
+    return branches.filter(b => b.status === 'active');
+  }, [apiBranches]);
 
   // Fetch real bookings from API to update availability colors on map
   useEffect(() => {
@@ -1141,9 +1176,7 @@ const ExplorePage: React.FC = () => {
             }}
             className="appearance-none bg-card border border-border rounded-2xl px-4 py-2 pr-10 text-xs font-medium text-foreground cursor-pointer shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
           >
-            {branches
-              .filter((b) => b.status === "active")
-              .map((b) => (
+            {activeBranches.map((b) => (
                 <option key={b.id} value={b.id}>
                   {b.name}
                 </option>

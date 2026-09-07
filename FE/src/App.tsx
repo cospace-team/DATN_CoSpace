@@ -46,6 +46,7 @@ import LandingPage from "./pages/LandingPage";
 import LocationsPage from "./pages/LocationPage";
 import ExplorePage from "./pages/customer/ExplorePage";
 import BookingCheckoutPage from "./pages/customer/BookingCheckoutPage";
+import VietQrCheckoutPage from "./pages/customer/VietQrCheckoutPage";
 import BookingHistoryPage from "./pages/customer/BookingHistoryPage";
 import ProfilePage from "./pages/customer/ProfilePage";
 import OperationsDashboardPage from "./pages/staff/OperationsDashboardPage";
@@ -409,6 +410,7 @@ const AppShell: React.FC = () => {
                 <>
                   <Route path="/customer/explore" element={<ExplorePage />} />
                   <Route path="/customer/checkout" element={<BookingCheckoutPage />} />
+                  <Route path="/customer/payment/vietqr" element={<VietQrCheckoutPage />} />
                   <Route path="/customer/history" element={<BookingHistoryPage />} />
                   <Route path="/customer/profile" element={<ProfilePage />} />
                 </>

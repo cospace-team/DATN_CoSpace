@@ -17,7 +17,7 @@ const WalkinBookingPage: React.FC = () => {
   const { showToast } = useToast();
   const { user } = useAuth();
   
-  const currentBranchId = user?.branchId || 'branch-0001';
+  const currentBranchId = user?.branchId || '';
 
   // State: Data
   const [floors, setFloors] = useState<FloorResponse[]>([]);
@@ -135,7 +135,7 @@ const WalkinBookingPage: React.FC = () => {
       return 100000;
     }
     // Standard desk
-    return currentBranchId === 'branch-0001' || currentBranchId === 'b1000000-0000-0000-0000-000000000001' ? 60000 : 50000;
+    return 60000;
   }, [selectedWsInfo, currentBranchId]);
 
   const subtotal = wsPrice * duration;

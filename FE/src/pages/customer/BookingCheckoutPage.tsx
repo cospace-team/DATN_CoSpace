@@ -32,7 +32,7 @@ const PUBLIC_BRANCH_ALIASES: Record<string, string> = {
 };
 
 const resolveBranchId = (id?: string | null): string => {
-  if (!id) return 'b1000000-0000-0000-0000-000000000001';
+  if (!id) return '';
   return PUBLIC_BRANCH_ALIASES[id] ?? id;
 };
 
@@ -67,7 +67,8 @@ const BookingCheckoutPage: React.FC = () => {
     : Math.max(1, endHour - startHour);
 
   const [isProcessing, setIsProcessing] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'momo' | 'cash'>('momo');
+  const [activeBooking, setActiveBooking] = useState<any | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<'payos' | 'momo' | 'cash'>('payos');
   
   // 15-Minute Expiration Countdown
   const [timeLeft, setTimeLeft] = useState(15 * 60); // 900 seconds
@@ -130,22 +131,44 @@ const BookingCheckoutPage: React.FC = () => {
         endAtDate.setHours(endHour, 0, 0, 0);
       }
 
-      const bookingRes = await bookingApi.createBooking({
-        branchId: resolveBranchId(workspace.branch_id || workspace.branchId),
-        workspaceId: workspace.id,
-        workspaceTypeId: workspace.workspace_type_id || workspace.workspaceTypeId || 'wst-desk',
-        startAt: startAtDate.toISOString(),
-        endAt: endAtDate.toISOString(),
-        unit: bookingDurationUnit,
-        unitCount: unitCount,
-        services,
-        source: 'web',
-      });
+      let bookingRes = activeBooking;
+      if (!bookingRes) {
+        bookingRes = await bookingApi.createBooking({
+          branchId: resolveBranchId(workspace.branch_id || workspace.branchId),
+          workspaceId: workspace.id,
+          workspaceTypeId: workspace.workspace_type_id || workspace.workspaceTypeId || 'wst-desk',
+          startAt: startAtDate.toISOString(),
+          endAt: endAtDate.toISOString(),
+          unit: bookingDurationUnit,
+          unitCount: unitCount,
+          services,
+          source: 'web',
+        });
+        setActiveBooking(bookingRes);
+      }
 
+      // 2. Handle Payment Flow
       if (paymentMethod === 'cash') {
-        const cashRes = await bookingApi.createCashPayment(bookingRes.id);
-        if (cashRes.success) {
-          showToast('Đặt chỗ thành công (Tiền mặt)!', 'success');
+        showToast(`Đặt chỗ thành công! Vui lòng thanh toán tiền mặt tại quầy (Mã: ${bookingRes.bookingCode})`, 'success');
+        navigate('/customer/history', { 
+          state: { 
+            message: `Đặt chỗ thành công! Mã đơn của bạn là ${bookingRes.bookingCode}. Vui lòng thanh toán tại quầy khi nhận chỗ.`,
+            newBookingCode: bookingRes.bookingCode,
+            branchName: state.branchName || "CoSpace Chi nhánh",
+          } 
+        });
+        setIsProcessing(false);
+        return;
+      }
+
+      if (paymentMethod === 'payos') {
+        showToast('Đang kết nối cổng thanh toán VietQR (PayOS)...', 'info');
+        const payosRes = await bookingApi.createPayosPayment(bookingRes.id, total);
+
+        if (payosRes.checkoutUrl && payosRes.checkoutUrl.startsWith('http')) {
+          window.location.href = payosRes.checkoutUrl;
+        } else {
+          showToast('Tạo yêu cầu thanh toán VietQR thành công!', 'success');
           navigate('/customer/history', { 
             state: { 
               message: `Đặt chỗ thành công! Mã đơn của bạn là ${bookingRes.bookingCode}.`,
@@ -153,22 +176,19 @@ const BookingCheckoutPage: React.FC = () => {
               branchName: state.branchName || "CoSpace Chi nhánh",
             } 
           });
-        } else {
-          showToast(cashRes.message, 'error');
         }
         setIsProcessing(false);
         return;
       }
 
-      // 2. Request MoMo Sandbox Payment API & redirect directly to MoMo Gateway page
+      // 3. Request MoMo Sandbox Payment API & redirect to MoMo Gateway
+      showToast('Đang chuyển hướng sang cổng thanh toán MoMo Sandbox...', 'info');
       const momoRes = await bookingApi.createMomoPayment(bookingRes.id, total);
 
       if (momoRes.payUrl && momoRes.payUrl.startsWith('http')) {
-        showToast('Đang chuyển hướng sang cổng thanh toán MoMo Sandbox...', 'info');
         window.location.href = momoRes.payUrl;
       } else {
-        // Fallback for offline/mock mode
-        showToast('Đặt chỗ thành công (Chế độ Sandbox)!', 'success');
+        showToast('Đặt chỗ thành công!', 'success');
         navigate('/customer/history', { 
           state: { 
             message: `Đặt chỗ thành công! Mã đơn của bạn là ${bookingRes.bookingCode}.`,
@@ -179,7 +199,7 @@ const BookingCheckoutPage: React.FC = () => {
       }
 
     } catch (err: any) {
-      showToast(err.message || 'Lỗi xử lý thanh toán MoMo', 'error');
+      showToast(err.message || 'Lỗi xử lý đặt chỗ / thanh toán', 'error');
       setIsProcessing(false);
     }
   };
@@ -320,6 +340,37 @@ const BookingCheckoutPage: React.FC = () => {
             </h3>
             
             <div className="space-y-4">
+              {/* PayOS VietQR Option */}
+              <label className={`flex items-center justify-between p-4 rounded-3xl border-4 cursor-pointer transition-all ${
+                paymentMethod === 'payos' ? 'border-[#0052cc] bg-blue-50/20 dark:bg-blue-950/20 shadow-sm' : 'border-border hover:-translate-y-1 hover:shadow-sm'
+              }`}>
+                <div className="flex items-center gap-4">
+                  <input 
+                    type="radio" 
+                    name="payment" 
+                    value="payos" 
+                    checked={paymentMethod === 'payos'} 
+                    onChange={() => setPaymentMethod('payos')} 
+                    className="w-5 h-5 accent-[#0052cc]" 
+                  />
+                  <div className="h-12 w-12 rounded-3xl bg-[#0052cc] flex items-center justify-center shadow-sm text-white font-bold text-xs tracking-tight">
+                    VietQR
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-lg block text-foreground">Chuyển khoản VietQR (PayOS)</span>
+                      <span className="text-[10px] font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-800">
+                        Khuyên dùng
+                      </span>
+                    </div>
+                    <span className="text-xs font-medium text-foreground/70">Mã QR động mọi ngân hàng · Có nút giả lập thanh toán</span>
+                  </div>
+                </div>
+                <div className={`h-8 w-8 rounded-full border flex items-center justify-center ${paymentMethod === 'payos' ? 'bg-[#0052cc] border-[#0052cc] text-white' : 'border-border/50 text-transparent'}`}>
+                  <FiCheckCircle className="h-5 w-5 font-semibold" />
+                </div>
+              </label>
+
               <label className={`flex items-center justify-between p-4 rounded-3xl border-4 cursor-pointer transition-all ${
                 paymentMethod === 'momo' ? 'border-[#A50064] bg-muted/5 shadow-sm' : 'border-border hover:-translate-y-1 hover:shadow-sm'
               }`}>

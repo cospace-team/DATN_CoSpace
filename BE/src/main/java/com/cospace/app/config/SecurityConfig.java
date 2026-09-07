@@ -106,13 +106,20 @@ public class SecurityConfig {
                                                 .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                                                 .requestMatchers(
                                                                 new AntPathRequestMatcher("/momo/**"),
+                                                                new AntPathRequestMatcher("/payos/**"),
                                                                 new AntPathRequestMatcher("/api/health"),
                                                                 new AntPathRequestMatcher("/api/payments/momo/ipn"),
                                                                 new AntPathRequestMatcher("/api/payments/momo/return"),
+                                                                new AntPathRequestMatcher("/api/payments/payos/ipn"),
+                                                                new AntPathRequestMatcher("/api/payments/payos/webhook"),
+                                                                new AntPathRequestMatcher("/api/payments/payos/notify"),
+                                                                new AntPathRequestMatcher("/api/payments/payos/return"),
+                                                                new AntPathRequestMatcher("/api/payments/payos/simulate"),
                                                                 new AntPathRequestMatcher("/api/auth/register"),
                                                                 new AntPathRequestMatcher("/api/auth/login"),
                                                                 new AntPathRequestMatcher("/api/auth/dev-login"),
                                                                 new AntPathRequestMatcher("/api/auth/refresh"),
+                                                                new AntPathRequestMatcher("/api/customer/spaces/branches"),
                                                                 new AntPathRequestMatcher("/h2-console/**"),
                                                                 new AntPathRequestMatcher("/error"))
                                                 .permitAll()

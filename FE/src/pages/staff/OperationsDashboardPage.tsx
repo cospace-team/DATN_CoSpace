@@ -13,8 +13,8 @@ import { staffApi, StaffDashboardStatsDto, BranchTodayBookingDto } from '../../a
 const OperationsDashboardPage: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const branchId = user?.branchId || 'b1000000-0000-0000-0000-000000000001';
-  const branchName = user?.branchName || 'CoSpace Nguyễn Huệ - Innovation Hub';
+  const branchId = user?.branchId || '';
+  const branchName = user?.branchName || '';
 
   const [activeTab, setActiveTab] = useState<'all' | 'incoming' | 'seated' | 'completed'>('all');
   const [searchTerm, setSearchTerm] = useState('');

@@ -54,6 +54,14 @@ momo:
   return-url: "http://localhost:8080/api/payments/momo/return"
   notify-url: "http://localhost:8080/api/payments/momo/ipn"
 
+payos:
+  endpoint: ${PAYOS_ENDPOINT:https://api-merchant.payos.vn}
+  client-id: ${PAYOS_CLIENT_ID:demo-client-id}
+  api-key: ${PAYOS_API_KEY:demo-api-key}
+  checksum-key: ${PAYOS_CHECKSUM_KEY:demo-checksum-key}
+  return-url: ${PAYOS_RETURN_URL:http://localhost:8080/api/payments/payos/return}
+  cancel-url: ${PAYOS_CANCEL_URL:http://localhost:5173/customer/checkout}
+
 app:
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173}

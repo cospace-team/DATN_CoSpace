@@ -50,6 +50,19 @@ export interface MomoCreatePaymentResponse {
   message: string;
 }
 
+export interface PayosCreatePaymentResponse {
+  paymentId: string;
+  bookingId: string;
+  orderCode: number;
+  orderId: string;
+  provider: string;
+  checkoutUrl: string;
+  qrCode?: string;
+  amount: number;
+  status: string;
+  message: string;
+}
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
 async function getAuthHeader(): Promise<HeadersInit> {
@@ -184,80 +197,53 @@ export const bookingApi = {
   },
 
   /**
-   * Request MoMo Payment URL from real MoMo Sandbox API
+   * Request MoMo Payment URL from Spring Boot MoMo API
    */
   async createMomoPayment(bookingId: string, amount: number): Promise<MomoCreatePaymentResponse> {
-    const orderId = `MOMO-${bookingId.slice(0, 8)}-${Date.now()}`;
-    const requestId = `REQ-${Date.now()}`;
+    const headers = await getAuthHeader();
+    const res = await fetch(`${API_BASE_URL}/api/payments/momo/create`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ booking_id: bookingId, amount: Math.round(amount) }),
+    });
 
-    // Path 1: Try authenticated Spring Boot API /api/payments/momo/create
-    try {
-      const headers = await getAuthHeader();
-      const res = await fetch(`${API_BASE_URL}/api/payments/momo/create`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ booking_id: bookingId, amount: Math.round(amount) }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data.payUrl) {
-          sessionStorage.removeItem(CACHE_KEY); // Invalidate cache
-          return {
-            payUrl: data.payUrl,
-            qrCodeUrl: `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(data.payUrl)}`,
-            orderId: data.orderId || orderId,
-            resultCode: 0,
-            message: 'Tạo liên kết MoMo Sandbox thành công',
-          };
-        }
-      }
-    } catch (err) {
-      console.warn('[bookingApi] Authenticated /api/payments/momo/create unavailable, falling back to direct /momo/create:', err);
-    }
-
-    // Path 2: Try public MoMo Sandbox controller API /momo/create
-    try {
-      const res = await fetch(`${API_BASE_URL}/momo/create`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          partnerName: 'CoSpace',
-          orderId: orderId,
-          orderInfo: `Thanh toan dat cho CoSpace ${bookingId}`,
-          amount: Math.round(amount),
-          requestId: requestId,
-          autoCapture: 'true',
-        }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
+    if (res.ok) {
+      const data = await res.json();
+      if (data.payUrl) {
         sessionStorage.removeItem(CACHE_KEY); // Invalidate cache
         return {
-          payUrl: data.payUrl || data.deeplink || '#',
-          deeplink: data.deeplink,
-          qrCodeUrl: data.qrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(data.payUrl || orderId)}`,
-          orderId: data.orderId || orderId,
-          resultCode: data.resultCode ?? data.errorCode ?? 0,
-          message: data.message || 'Tạo giao dịch MoMo Sandbox thành công',
+          payUrl: data.payUrl,
+          qrCodeUrl: `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(data.payUrl)}`,
+          orderId: data.orderId || `MOMO-${bookingId.slice(0, 8)}`,
+          resultCode: 0,
+          message: data.message || 'Tạo liên kết MoMo Sandbox thành công',
         };
       }
-      const errText = await res.text();
-      console.error('[bookingApi] MoMo API failed:', errText);
-    } catch (err: any) {
-      console.warn('[bookingApi] Direct /momo/create endpoint offline:', err.message);
     }
 
-    // Path 3: Offline fallback payload
-    sessionStorage.removeItem(CACHE_KEY); // Invalidate cache
-    return {
-      payUrl: `https://test-payment.momo.vn/v2/gateway/pay?s=mock_${orderId}`,
-      qrCodeUrl: `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=MOMO_SANDBOX_${orderId}`,
-      orderId: orderId,
-      resultCode: 0,
-      message: 'MoMo Sandbox Mode Active',
-    };
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.message || `Lỗi kết nối cổng thanh toán MoMo (${res.status})`);
+  },
+
+  /**
+   * Request PayOS (VietQR) Payment URL from Spring Boot PayOS API
+   */
+  async createPayosPayment(bookingId: string, amount: number): Promise<PayosCreatePaymentResponse> {
+    const headers = await getAuthHeader();
+    const res = await fetch(`${API_BASE_URL}/api/payments/payos/create`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ booking_id: bookingId, amount: Math.round(amount) }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      sessionStorage.removeItem(CACHE_KEY); // Invalidate cache
+      return data;
+    }
+
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.message || `Lỗi kết nối cổng thanh toán PayOS (${res.status})`);
   },
 
   /**

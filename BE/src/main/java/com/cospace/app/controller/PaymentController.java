@@ -3,6 +3,8 @@ package com.cospace.app.controller;
 import com.cospace.app.dto.api.CashCreatePaymentResponse;
 import com.cospace.app.dto.api.CreatePaymentRequest;
 import com.cospace.app.dto.api.MomoCreatePaymentResponse;
+import com.cospace.app.dto.api.PayosCreatePaymentResponse;
+import com.cospace.app.dto.api.PayosWebhookDto;
 import com.cospace.app.dto.api.PaymentDto;
 import com.cospace.app.service.PaymentService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -54,6 +56,15 @@ public class PaymentController {
         return paymentService.createMomoPayment(userId, req.getBookingId(), idempotencyKey);
     }
 
+    @PostMapping("/payos/create")
+    public PayosCreatePaymentResponse createPayosPayment(
+            @AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody CreatePaymentRequest req,
+            @RequestHeader(name = "Idempotency-Key", required = false) String idempotencyKey) {
+        UUID userId = requireSubject(jwt);
+        return paymentService.createPayosPayment(userId, req.getBookingId(), idempotencyKey);
+    }
+
     @PostMapping("/cash/create")
     @PreAuthorize("hasAnyRole('staff', 'branch_admin')")
     public CashCreatePaymentResponse createCashPayment(
@@ -95,8 +106,8 @@ public class PaymentController {
             message = "Lỗi xác thực thanh toán.";
         }
 
-        // Always redirect the user back to FE to show immediate feedback.
-        String redirectUrl = frontendBaseUrl + "/payment/result" +
+        // Redirect the user back to FE booking history to show immediate feedback.
+        String redirectUrl = frontendBaseUrl + "/customer/history" +
                 "?orderId=" + url(orderId) +
                 "&resultCode=" + url(resultCode) +
                 "&message=" + url(message);
@@ -104,6 +115,46 @@ public class PaymentController {
         return ResponseEntity.status(HttpStatus.FOUND)
                 .header(HttpHeaders.LOCATION, redirectUrl)
                 .build();
+    }
+
+    @PostMapping({"/payos/notify", "/payos/ipn", "/payos/webhook"})
+    public ResponseEntity<Map<String, Object>> payosWebhook(@RequestBody PayosWebhookDto body) {
+        log.info("Received PayOS webhook: {}", body);
+        paymentService.handlePayosWebhook(body);
+        return ResponseEntity.ok(Map.of("code", "00", "desc", "success"));
+    }
+
+    @GetMapping("/payos/return")
+    public ResponseEntity<Void> payosReturn(@RequestParam Map<String, String> allParams) {
+        log.info("Received PayOS return params: {}", allParams);
+        String orderCode = allParams.getOrDefault("orderCode", "");
+        String status = allParams.getOrDefault("status", "");
+        boolean success = false;
+        try {
+            success = paymentService.handlePayosReturn(allParams);
+        } catch (Exception ex) {
+            log.error("Error handling PayOS return: {}", ex.getMessage());
+        }
+
+        String redirectUrl = frontendBaseUrl + "/customer/history" +
+                "?orderId=" + url("PAYOS-" + orderCode) +
+                "&status=" + url(success ? "PAID" : (status.isBlank() ? "CANCELLED" : status)) +
+                "&message=" + url(success ? "Thanh toán VietQR qua PayOS thành công!" : "Giao dịch thanh toán PayOS kết thúc.");
+
+        return ResponseEntity.status(HttpStatus.FOUND)
+                .header(HttpHeaders.LOCATION, redirectUrl)
+                .build();
+    }
+
+    @PostMapping("/payos/simulate")
+    public ResponseEntity<Map<String, Object>> simulatePayosPayment(@RequestBody Map<String, Object> body) {
+        String orderCode = Objects.toString(body.get("orderCode"), "");
+        if (orderCode.isBlank()) {
+            throw new IllegalArgumentException("orderCode is required for simulation");
+        }
+        log.info("Simulating PayOS payment confirmation for orderCode: {}", orderCode);
+        paymentService.confirmPaymentByOrderCode(orderCode);
+        return ResponseEntity.ok(Map.of("success", true, "message", "Đã xác nhận thanh toán PayOS thành công (Mô phỏng)"));
     }
 
     private String url(String value) {

@@ -11,7 +11,7 @@ import { useToast } from '../../components/Toast';
 const MaintenancePage: React.FC = () => {
   const { showToast } = useToast();
   const { user } = useAuth();
-  const branchId = user?.branchId || 'b1000000-0000-0000-0000-000000000001';
+  const branchId = user?.branchId || '';
 
 
   const [workspaces, setWorkspaces] = useState<WorkspaceMaintenanceStatusDto[]>([]);

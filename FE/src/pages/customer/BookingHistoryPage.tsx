@@ -11,6 +11,8 @@ import {
   FiCoffee,
   FiDownload,
   FiRefreshCw,
+  FiCopy,
+  FiCheck,
 } from "react-icons/fi";
 import { Button } from "../../components/ui/button";
 import { formatVND } from "../../utils/formatters";
@@ -66,6 +68,8 @@ const BookingHistoryPage: React.FC = () => {
   );
   const [showCancelModal, setShowCancelModal] = useState<string | null>(null);
   const [showQrModal, setShowQrModal] = useState<any | null>(null);
+  const [copiedCode, setCopiedCode] = useState(false);
+  const [downloadingQr, setDownloadingQr] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(
     state?.message || null,
   );
@@ -75,10 +79,42 @@ const BookingHistoryPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [apiLoaded, setApiLoaded] = useState(false);
 
-  // Parse MoMo Return URL parameters
+  const handleDownloadQr = async (code: string) => {
+    setDownloadingQr(true);
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=CHECKIN_${code}`;
+    try {
+      const res = await fetch(qrUrl);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = `cospace-qr-${code}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+    } catch {
+      window.open(qrUrl, "_blank");
+    } finally {
+      setDownloadingQr(false);
+    }
+  };
+
+  const handleCopyCode = async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopiedCode(true);
+      setTimeout(() => setCopiedCode(false), 2000);
+    } catch (e) {
+      console.warn("Clipboard copy failed", e);
+    }
+  };
+
+  // Parse MoMo & PayOS Return URL parameters
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const resultCode = params.get("resultCode");
+    const status = params.get("status");
     const message = params.get("message");
 
     if (resultCode !== null) {
@@ -90,7 +126,15 @@ const BookingHistoryPage: React.FC = () => {
             "Thanh toán MoMo thất bại hoặc người dùng đã hủy giao dịch.",
         );
       }
-      // Clean up URL without reloading the page
+      window.history.replaceState({}, document.title, location.pathname);
+    } else if (status !== null) {
+      if (status === "PAID") {
+        setSuccessMessage(message || "Thanh toán VietQR qua PayOS thành công!");
+      } else {
+        setErrorMessage(
+          message || "Giao dịch PayOS đã kết thúc hoặc bị hủy.",
+        );
+      }
       window.history.replaceState({}, document.title, location.pathname);
     }
   }, [location.search]);
@@ -440,24 +484,62 @@ const BookingHistoryPage: React.FC = () => {
             </div>
 
             {/* QR Image */}
-            <div className="p-4 bg-card rounded-2xl border border-border inline-block shadow-sm mb-6 ">
+            <div className="p-4 bg-card rounded-2xl border border-border inline-block shadow-sm mb-4">
               <img
                 src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=CHECKIN_${showQrModal.code}`}
                 alt="QR Pass"
-                className="w-48 h-48 mx-auto"
+                className="w-48 h-48 mx-auto rounded-lg"
               />
             </div>
 
-            <div className="bg-muted/50 p-4 rounded-2xl border border-border border-dashed mb-6">
-              <p className="text-xs font-medium text-muted-foreground leading-relaxed">
-                Đưa mã QR này cho lễ tân tại quầy hoặc máy quét kiosk để làm thủ
-                tục <strong className="text-foreground">Check-in</strong>.
+            {/* Quick Actions: Download & Copy */}
+            <div className="grid grid-cols-2 gap-2 mb-4">
+              <button
+                type="button"
+                onClick={() => handleDownloadQr(showQrModal.code)}
+                disabled={downloadingQr}
+                className="btn btn-secondary text-xs py-2 px-3 justify-center border border-border hover:border-primary hover:text-primary transition-colors flex items-center gap-1.5 font-bold"
+              >
+                <FiDownload className="h-3.5 w-3.5" />
+                <span>{downloadingQr ? "Đang tải..." : "Tải ảnh QR"}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleCopyCode(showQrModal.code)}
+                className="btn btn-secondary text-xs py-2 px-3 justify-center border border-border hover:border-primary hover:text-primary transition-colors flex items-center gap-1.5 font-bold"
+              >
+                {copiedCode ? (
+                  <>
+                    <FiCheck className="h-3.5 w-3.5 text-green-600" />
+                    <span className="text-green-600">Đã chép mã!</span>
+                  </>
+                ) : (
+                  <>
+                    <FiCopy className="h-3.5 w-3.5" />
+                    <span>Sao chép mã</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            <div className="bg-muted/50 p-3.5 rounded-2xl border border-border border-dashed mb-4 text-left">
+              <p className="text-[11px] font-medium text-muted-foreground leading-relaxed">
+                💡 <strong className="text-foreground">Mẹo Demo:</strong> Nhấn{" "}
+                <kbd className="px-1.5 py-0.5 font-mono text-[10px] font-bold bg-card border border-border rounded shadow-xs">
+                  Win + Shift + S
+                </kbd>{" "}
+                để chụp mã QR này, sau đó qua tab Lễ tân nhấn{" "}
+                <kbd className="px-1.5 py-0.5 font-mono text-[10px] font-bold bg-card border border-border rounded shadow-xs">
+                  Ctrl + V
+                </kbd>{" "}
+                để quét tức thì!
               </p>
             </div>
 
             <button
               onClick={() => setShowQrModal(null)}
-              className="w-full py-4 rounded-full bg-slate-900 text-white font-semibold tracking-tight border border-border shadow-sm hover:translate-y-1 hover:shadow-none transition-all"
+              className="w-full py-3.5 rounded-full bg-slate-900 text-white font-semibold tracking-tight border border-border shadow-sm hover:translate-y-0.5 hover:shadow-none transition-all text-sm"
             >
               Đóng thẻ
             </button>

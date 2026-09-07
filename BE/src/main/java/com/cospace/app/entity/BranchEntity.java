@@ -2,13 +2,15 @@ package com.cospace.app.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
+import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -19,6 +21,8 @@ import java.util.UUID;
 @Entity
 @Table(name = "branches")
 public class BranchEntity {
+
+    public enum BranchStatus { active, inactive }
 
     @Id
     @Column(nullable = false, updatable = false)
@@ -38,6 +42,17 @@ public class BranchEntity {
 
     @Column(nullable = false, length = 50)
     private String timezone;
+
+    @Column(name = "open_time")
+    private LocalTime openTime;
+
+    @Column(name = "close_time")
+    private LocalTime closeTime;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 32)
+    @Builder.Default
+    private BranchStatus status = BranchStatus.active;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
