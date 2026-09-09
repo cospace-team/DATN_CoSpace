@@ -44,7 +44,10 @@ import {
   customerSpaceApi,
   type FloorResponse,
   type WorkspaceResponse,
+  type BranchResponse,
 } from "../../lib/spaceApi";
+import { bookingApi, type BookingResponse } from "../../lib/bookingApi";
+import { useToast } from "../../components/Toast";
 import FloorPlanViewer from "../../components/floor-plan/FloorPlanViewer";
 import type { FloorLayout } from "../../types/floorPlan";
 
@@ -96,22 +99,19 @@ const ZONES: ZoneConfig[] = [
   },
 ];
 
+/* Branch alias mapping — kept for backward compat with old URLs (e.g. ?branchId=branch-1) */
 const PUBLIC_BRANCH_ALIASES: Record<string, string> = {
-  "branch-1": "branch-0001",
-  "branch-2": "branch-0002",
-  "branch-3": "branch-0003",
-  "branch-4": "branch-0004",
+  "branch-1": "b1000000-0000-0000-0000-000000000001",
+  "branch-2": "b2000000-0000-0000-0000-000000000002",
+  "branch-3": "b3000000-0000-0000-0000-000000000003",
+  "branch-0001": "b1000000-0000-0000-0000-000000000001",
+  "branch-0002": "b2000000-0000-0000-0000-000000000002",
+  "branch-0003": "b3000000-0000-0000-0000-000000000003",
 };
 
-const normalizeBranchId = (id: string): string =>
-  PUBLIC_BRANCH_ALIASES[id] ?? id;
-
-const resolveBranchId = (id: string): string | null => {
-  const normalized = normalizeBranchId(id);
-  if (normalized === "branch-0001") {
-    return "7c27278b-eeba-462f-9720-23849d1c3703";
-  }
-  return null;
+const resolveBranchId = (id: string): string => {
+  if (!id) return '';
+  return PUBLIC_BRANCH_ALIASES[id] ?? id;
 };
 
 const toMockFloorResponse = (floorId: string): FloorResponse | null => {
@@ -162,19 +162,44 @@ const mapDbWsTypeIdToMock = (dbWsTypeId: string): string => {
 };
 
 /* ── Booking Panel (shared between desktop sidebar and mobile bottom sheet) ── */
+type DurationUnitMode = 'hour' | 'day' | 'week';
+
+const UNIT_LABELS: Record<DurationUnitMode, string> = {
+  hour: 'Giờ',
+  day: 'Ngày',
+  week: 'Tuần',
+};
+
+/** Returns midnight (local) of a Date */
+const toMidnight = (d: Date): Date => {
+  const r = new Date(d);
+  r.setHours(0, 0, 0, 0);
+  return r;
+};
+
+/** Count calendar days between two midnight-dates (inclusive start, exclusive end) */
+const daysDiff = (from: Date, to: Date): number =>
+  Math.max(1, Math.round((to.getTime() - from.getTime()) / 86_400_000));
+
 const BookingPanel: React.FC<{
   ws: Workspace;
   wsType: any;
   wsAvail: string | null;
   selectedWs: string;
   selectedHour: number;
+  initialEndHour: number;
+  selectedDate: Date;
   getPrice: () => any;
   onClose: () => void;
+  onChangeStartHour: (hour: number) => void;
+  checkAvailability?: (startHour: number, endHour: number, endDate: Date, unit: string) => string;
   onBookNow: (
     endHour: number,
     services: Record<string, number>,
     subtotal: number,
     addonTotal: number,
+    endDate: Date,
+    durationUnit: DurationUnitMode,
   ) => void;
 }> = ({
   ws,
@@ -182,20 +207,32 @@ const BookingPanel: React.FC<{
   wsAvail,
   selectedWs,
   selectedHour,
+  initialEndHour,
+  selectedDate,
   getPrice,
   onClose,
+  onChangeStartHour,
+  checkAvailability,
   onBookNow,
 }) => {
   const price = getPrice();
   const ZONES_REF = ZONES;
 
-  const [endHour, setEndHour] = useState(Math.min(selectedHour + 2, 22));
+  const [endHour, setEndHour] = useState(initialEndHour);
   const [services, setServices] = useState<Record<string, number>>({});
+  const [durationUnit, setDurationUnit] = useState<DurationUnitMode>('hour');
+  const [endDate, setEndDate] = useState<Date>(toMidnight(selectedDate));
 
   useEffect(() => {
-    setEndHour(Math.max(selectedHour + 1, Math.min(selectedHour + 2, 22)));
+    let validEndHour = initialEndHour;
+    if (validEndHour <= selectedHour) {
+      validEndHour = selectedHour + 1;
+    }
+    setEndHour(validEndHour);
     setServices({});
-  }, [selectedHour, selectedWs]);
+    setDurationUnit('hour');
+    setEndDate(toMidnight(selectedDate));
+  }, [selectedHour, initialEndHour, selectedWs, selectedDate]);
 
   const handleServiceChange = (id: string, isChecked: boolean) => {
     setServices((prev) => {
@@ -227,13 +264,40 @@ const BookingPanel: React.FC<{
     },
   ];
 
-  const duration = Math.max(1, endHour - selectedHour);
-  const subtotal = duration * (price?.price || 0);
+  // Calculate unitCount based on selected durationUnit
+  const unitCount = useMemo(() => {
+    if (durationUnit === 'hour') return Math.max(1, endHour - selectedHour);
+    if (durationUnit === 'day') return daysDiff(toMidnight(selectedDate), endDate);
+    // week
+    return Math.max(1, Math.round(daysDiff(toMidnight(selectedDate), endDate) / 7));
+  }, [durationUnit, endHour, selectedHour, selectedDate, endDate]);
+
+  const subtotal = unitCount * (price?.price || 0);
   const addonTotal = Object.keys(services).reduce((sum, id) => {
     const s = MOCK_SERVICES.find((x) => x.id === id);
     return sum + (s?.price || 0);
   }, 0);
   const total = subtotal + addonTotal;
+
+  // Min end-date for date pickers (= start date + 1 day for day, + 7 days for week)
+  const minEndDate = useMemo(() => {
+    const d = toMidnight(selectedDate);
+    d.setDate(d.getDate() + (durationUnit === 'week' ? 7 : 1));
+    return d;
+  }, [selectedDate, durationUnit]);
+
+  // Ensure endDate stays valid when switching unit or startDate changes
+  useEffect(() => {
+    if (durationUnit !== 'hour' && endDate < minEndDate) {
+      setEndDate(new Date(minEndDate));
+    }
+  }, [durationUnit, minEndDate, endDate]);
+
+  const toInputDate = (d: Date) => d.toISOString().slice(0, 10);
+
+  const currentAvail = checkAvailability 
+    ? checkAvailability(selectedHour, endHour, endDate, durationUnit) 
+    : wsAvail;
 
   return (
     <div className="p-5">
@@ -251,12 +315,12 @@ const BookingPanel: React.FC<{
 
       {/* Status badge */}
       <span
-        className={`badge ${wsAvail === "available" ? "badge-success" : wsAvail === "booked" ? "badge-danger" : "badge-neutral"}`}
+        className={`badge ${currentAvail === "available" ? "badge-success" : currentAvail?.startsWith("booked") ? "badge-danger" : "badge-neutral"}`}
       >
-        {wsAvail === "available"
+        {currentAvail === "available"
           ? <><span className="inline-block h-2 w-2 rounded-full bg-emerald-50 dark:bg-emerald-950/30 dark:bg-emerald-950/300 mr-1" /> Trống</>
-          : wsAvail === "booked"
-            ? <><span className="inline-block h-2 w-2 rounded-full bg-red-50 dark:bg-red-950/30 dark:bg-red-950/300 mr-1" /> Đã đặt</>
+          : currentAvail?.startsWith("booked")
+            ? <><span className="inline-block h-2 w-2 rounded-full bg-red-50 dark:bg-red-950/30 dark:bg-red-950/300 mr-1" /> Đã đặt {currentAvail.split('|').length === 3 ? `(${currentAvail.split('|')[1]}h-${currentAvail.split('|')[2]}h)` : ''}</>
             : <><span className="inline-block h-2 w-2 rounded-full bg-slate-400 mr-1" /> Bảo trì</>}
       </span>
 
@@ -310,48 +374,119 @@ const BookingPanel: React.FC<{
           </div>
         )}
 
+        {/* Duration unit toggle */}
+        <div className="rounded-2xl bg-[var(--bg-surface-hover)] p-3">
+          <p className="text-xs text-[var(--text-tertiary)] mb-2">Loại thời gian đặt</p>
+          <div className="flex gap-1 bg-[var(--border-subtle)] rounded-xl p-0.5">
+            {(['hour', 'day', 'week'] as DurationUnitMode[]).map((u) => (
+              <button
+                key={u}
+                onClick={() => setDurationUnit(u)}
+                className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all ${
+                  durationUnit === u
+                    ? 'bg-card text-foreground shadow-sm'
+                    : 'text-[var(--text-tertiary)] hover:text-foreground'
+                }`}
+              >
+                {UNIT_LABELS[u]}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Time selection */}
         <div className="rounded-2xl bg-[var(--bg-surface-hover)] p-3">
           <p className="text-xs text-[var(--text-tertiary)] mb-2">Thời gian</p>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label
-                htmlFor={`start-time-${selectedWs}`}
-                className="text-xs text-[var(--text-secondary)]"
-              >
-                Bắt đầu
-              </label>
-              <input
-                id={`start-time-${selectedWs}`}
-                type="time"
-                defaultValue={`${String(selectedHour).padStart(2, "0")}:00`}
-                className="input-field mt-1 text-sm"
-              />
+
+          {durationUnit === 'hour' ? (
+            /* ── Hour mode: same-day start/end hour ── */
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label
+                  htmlFor={`start-time-${selectedWs}`}
+                  className="text-xs text-[var(--text-secondary)]"
+                >
+                  Bắt đầu
+                </label>
+                <select
+                  id={`start-time-${selectedWs}`}
+                  value={selectedHour}
+                  onChange={(e) => onChangeStartHour(Number(e.target.value))}
+                  className="input-field mt-1 text-sm bg-transparent border-b border-border focus:outline-none w-full"
+                >
+                  {Array.from({ length: 17 }, (_, i) => i + 6).map((h) => (
+                    <option key={h} value={h}>
+                      {String(h).padStart(2, '0')}:00
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label
+                  htmlFor={`end-time-${selectedWs}`}
+                  className="text-xs text-[var(--text-secondary)]"
+                >
+                  Kết thúc
+                </label>
+                <select
+                  id={`end-time-${selectedWs}`}
+                  value={endHour}
+                  onChange={(e) => setEndHour(Number(e.target.value))}
+                  className="input-field mt-1 text-sm bg-transparent border-b border-border focus:outline-none w-full"
+                >
+                  {Array.from(
+                    { length: 23 - selectedHour },
+                    (_, i) => selectedHour + i + 1,
+                  ).map((h) => (
+                    <option key={h} value={h}>
+                      {String(h).padStart(2, '0')}:00
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-            <div>
-              <label
-                htmlFor={`end-time-${selectedWs}`}
-                className="text-xs text-[var(--text-secondary)]"
-              >
-                Kết thúc
-              </label>
-              <select
-                id={`end-time-${selectedWs}`}
-                value={endHour}
-                onChange={(e) => setEndHour(Number(e.target.value))}
-                className="input-field mt-1 text-sm bg-transparent border-b border-border focus:outline-none w-full"
-              >
-                {Array.from(
-                  { length: 23 - selectedHour },
-                  (_, i) => selectedHour + i + 1,
-                ).map((h) => (
-                  <option key={h} value={h}>
-                    {String(h).padStart(2, "0")}:00
-                  </option>
-                ))}
-              </select>
+          ) : (
+            /* ── Day / Week mode: date-range picker ── */
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-xs text-[var(--text-secondary)]">Ngày bắt đầu</label>
+                <input
+                  type="date"
+                  value={toInputDate(toMidnight(selectedDate))}
+                  className="input-field mt-1 text-sm w-full"
+                  readOnly
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor={`end-date-${selectedWs}`}
+                  className="text-xs text-[var(--text-secondary)]"
+                >
+                  Ngày kết thúc
+                </label>
+                <input
+                  id={`end-date-${selectedWs}`}
+                  type="date"
+                  value={toInputDate(endDate)}
+                  min={toInputDate(minEndDate)}
+                  onChange={(e) => {
+                    const d = new Date(e.target.value + 'T00:00:00');
+                    if (!isNaN(d.getTime())) setEndDate(d);
+                  }}
+                  className="input-field mt-1 text-sm w-full"
+                />
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Summary line */}
+          <p className="mt-2 text-xs text-[var(--text-tertiary)]">
+            {durationUnit === 'hour'
+              ? `${Math.max(1, endHour - selectedHour)} giờ`
+              : durationUnit === 'day'
+              ? `${unitCount} ngày`
+              : `${unitCount} tuần (≈ ${unitCount * 7} ngày)`}
+          </p>
         </div>
 
         {/* Add-on services */}
@@ -394,21 +529,21 @@ const BookingPanel: React.FC<{
       </div>
 
       {/* Book button */}
-      {wsAvail === "available" && (
+      {currentAvail === "available" && (
         <button
           className="btn btn-primary w-full mt-5"
-          onClick={() => onBookNow(endHour, services, subtotal, addonTotal)}
+          onClick={() => onBookNow(endHour, services, subtotal, addonTotal, endDate, durationUnit)}
         >
           <FiCheck className="h-4 w-4" /> Đặt chỗ ngay
         </button>
       )}
-      {wsAvail === "booked" && (
+      {currentAvail?.startsWith("booked") && (
         <div className="mt-5 rounded-2xl bg-[var(--state-danger-bg)] border border-[var(--state-danger-border)] p-3 text-center">
           <p className="text-sm font-semibold text-[var(--state-danger)]">
-            Đã được đặt
+            Đã được đặt {currentAvail.split('|').length === 3 ? `từ ${currentAvail.split('|')[1]}h đến ${currentAvail.split('|')[2]}h` : ''}
           </p>
           <p className="text-xs text-[var(--text-secondary)] mt-1">
-            Thử chọn khung giờ khác
+            Thử chọn khung giờ hoặc ngày khác
           </p>
         </div>
       )}
@@ -421,20 +556,21 @@ const ExplorePage: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>("map");
   const navigate = useNavigate();
   const location = useLocation();
+  const { showToast } = useToast();
 
   // Retrieve initial branch ID from search params (?branchId=...) or navigation state
   const initialBranchId = useMemo(() => {
     const params = new URLSearchParams(location.search);
     const qBranchId = params.get("branchId");
     const normalizedQueryBranchId = qBranchId
-      ? normalizeBranchId(qBranchId)
+      ? resolveBranchId(qBranchId)
       : "";
     if (normalizedQueryBranchId) {
       return normalizedQueryBranchId;
     }
     const stateBranchId = (location.state as { branchId?: string })?.branchId;
     const normalizedStateBranchId = stateBranchId
-      ? normalizeBranchId(stateBranchId)
+      ? resolveBranchId(stateBranchId)
       : "";
     if (normalizedStateBranchId) {
       return normalizedStateBranchId;
@@ -442,25 +578,144 @@ const ExplorePage: React.FC = () => {
     return branches[0]?.id || "";
   }, [location.search, location.state]);
 
-  const [selectedBranch, setSelectedBranch] = useState(initialBranchId);
-  const [selectedFloor, setSelectedFloor] = useState("");
+  const [selectedBranch, setSelectedBranch] = useState(() => {
+    return initialBranchId || sessionStorage.getItem("selectedBranch") || branches[0]?.id || "";
+  });
+
+  // Restore selectedFloor and selectedWs from URL search params or sessionStorage
+  const [selectedFloor, setSelectedFloor] = useState(() => {
+    const params = new URLSearchParams(location.search);
+    return params.get("floorId") || sessionStorage.getItem("selectedFloorId") || "";
+  });
 
   // Sync state if initial branch selection changes
   useEffect(() => {
-    setSelectedBranch(initialBranchId);
-    setSelectedFloor("");
+    if (initialBranchId) {
+      setSelectedBranch(initialBranchId);
+    }
   }, [initialBranchId]);
 
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [selectedHour, setSelectedHour] = useState(new Date().getHours());
-  const [selectedWs, setSelectedWs] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const saved = sessionStorage.getItem("selectedDate");
+    return saved ? new Date(saved) : new Date();
+  });
+  
+  const [selectedHour, setSelectedHour] = useState(() => {
+    const saved = sessionStorage.getItem("selectedHour");
+    return saved ? Number(saved) : new Date().getHours();
+  });
+  
+  const [selectedEndHour, setSelectedEndHour] = useState<number | null>(() => {
+    const saved = sessionStorage.getItem("selectedEndHour");
+    return saved ? Number(saved) : null;
+  });
+  
+  // Persist states to sessionStorage
+  useEffect(() => {
+    sessionStorage.setItem("selectedBranch", selectedBranch);
+  }, [selectedBranch]);
+
+  useEffect(() => {
+    sessionStorage.setItem("selectedFloorId", selectedFloor);
+  }, [selectedFloor]);
+
+  useEffect(() => {
+    sessionStorage.setItem("selectedDate", selectedDate.toISOString());
+  }, [selectedDate]);
+
+  useEffect(() => {
+    sessionStorage.setItem("selectedHour", String(selectedHour));
+  }, [selectedHour]);
+
+  useEffect(() => {
+    if (selectedEndHour !== null) {
+      sessionStorage.setItem("selectedEndHour", String(selectedEndHour));
+    } else {
+      sessionStorage.removeItem("selectedEndHour");
+    }
+  }, [selectedEndHour]);
+  const [isDraggingTime, setIsDraggingTime] = useState(false);
+  const [dragStartHour, setDragStartHour] = useState<number | null>(null);
+
+  useEffect(() => {
+    const handleMouseUp = () => setIsDraggingTime(false);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => window.removeEventListener("mouseup", handleMouseUp);
+  }, []);
+
+  const [selectedWs, setSelectedWsState] = useState<string | null>(() => {
+    const params = new URLSearchParams(location.search);
+    return params.get("wsId") || sessionStorage.getItem("selectedWsId") || null;
+  });
+
+  const setSelectedWs = useCallback((wsId: string | null) => {
+    setSelectedWsState(wsId);
+    setSelectedEndHour(null); // Reset range selection on new workspace
+    if (wsId) {
+      sessionStorage.setItem("selectedWsId", wsId);
+    } else {
+      sessionStorage.removeItem("selectedWsId");
+    }
+  }, []);
+
+
+
   const [showTags, setShowTags] = useState(false);
 
-  // Database-loaded floors and workspaces
+  // API-loaded branches (with mock fallback)
+  const [apiBranches, setApiBranches] = useState<Array<{id: string; code: string; name: string; address: string; status: string}>>([]);
+
+  // Database-loaded floors, workspaces and user bookings
   const [dbFloors, setDbFloors] = useState<FloorResponse[]>([]);
   const [dbWorkspaces, setDbWorkspaces] = useState<WorkspaceResponse[]>([]);
+  const [realBookings, setRealBookings] = useState<BookingResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+
+  // Load branches from API on mount, fallback to mock
+  useEffect(() => {
+    let active = true;
+    const loadBranches = async () => {
+      try {
+        const data = await customerSpaceApi.listBranches();
+        if (active && data && data.length > 0) {
+          setApiBranches(data);
+          // If no branch selected yet, pick first from API
+          if (!selectedBranch) {
+            setSelectedBranch(data[0].id);
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to load branches from API, using mock data:', err);
+        // Keep using mock branches from mockData
+      }
+    };
+    loadBranches();
+    return () => { active = false; };
+  }, []);
+
+  // Merged branch list: prefer API data, fallback to mock
+  const activeBranches = useMemo(() => {
+    if (apiBranches.length > 0) {
+      return apiBranches.filter(b => b.status === 'active');
+    }
+    return branches.filter(b => b.status === 'active');
+  }, [apiBranches]);
+
+  // Fetch real bookings from API to update availability colors on map
+  useEffect(() => {
+    const fetchApiBookings = async () => {
+      try {
+        const data = await bookingApi.getMyBookings();
+        if (data && Array.isArray(data)) {
+          setRealBookings(data);
+        }
+      } catch (err) {
+        console.warn("Failed to load user bookings for availability map:", err);
+      }
+    };
+    fetchApiBookings();
+  }, []);
 
   // Load floors when selected branch changes
   useEffect(() => {
@@ -474,7 +729,9 @@ const ExplorePage: React.FC = () => {
           const data = await customerSpaceApi.listFloors(resolvedId);
           if (active) {
             setDbFloors(data);
-            setSelectedFloor(data.length > 0 ? data[0].id : "");
+            const savedFloorId = sessionStorage.getItem("selectedFloorId");
+            const hasSaved = savedFloorId && data.some((f) => f.id === savedFloorId);
+            setSelectedFloor(hasSaved ? savedFloorId : (data.length > 0 ? data[0].id : ""));
           }
           return;
         }
@@ -588,14 +845,15 @@ const ExplorePage: React.FC = () => {
         svg_element_id: ws.svgElementId,
         status: ws.status,
         floor_id: currentFloor,
+        branch_id: resolveBranchId(selectedBranch),
       };
     });
-  }, [dbWorkspaces, currentFloor]);
+  }, [dbWorkspaces, currentFloor, selectedBranch]);
 
   const floorWorkspaces = mappedWorkspaces;
 
   const getWsAvailability = useCallback(
-    (wsId: string, checkDate?: Date, checkHour?: number) => {
+    (wsId: string, checkDate?: Date, checkHour?: number, checkEndDate?: Date, checkEndHour?: number) => {
       const ws = mappedWorkspaces.find((w) => w.id === wsId || w.mockId === wsId);
       if (!ws) return "unassigned";
       if (
@@ -606,21 +864,60 @@ const ExplorePage: React.FC = () => {
 
       const targetDate = checkDate || selectedDate;
       const targetHour = checkHour !== undefined ? checkHour : selectedHour;
+      
+      const checkTimeStart = new Date(targetDate);
+      checkTimeStart.setHours(targetHour, 0, 0, 0);
 
-      const activeBooking = bookings.find((b) => {
+      let checkTimeEnd = new Date(checkTimeStart);
+      checkTimeEnd.setHours(targetHour + 1, 0, 0, 0);
+      
+      if (checkEndDate || checkEndHour !== undefined) {
+         if (checkEndDate) {
+             checkTimeEnd = new Date(checkEndDate);
+             if (checkEndHour !== undefined) {
+                 checkTimeEnd.setHours(checkEndHour, 0, 0, 0);
+             } else {
+                 checkTimeEnd.setHours(23, 59, 59, 999);
+             }
+         } else if (checkEndHour !== undefined) {
+             checkTimeEnd = new Date(targetDate);
+             checkTimeEnd.setHours(checkEndHour, 0, 0, 0);
+         }
+      }
+
+      // Check mock static bookings
+      const activeMockBooking = bookings.find((b) => {
         if (b.workspace_id !== ws.id && b.workspace_id !== ws.mockId)
           return false;
-        if (["canceled", "expired", "completed"].includes(b.status))
+        if (["canceled", "expired", "completed"].includes(b.status.toLowerCase()))
           return false;
         const start = new Date(b.start_at);
         const end = new Date(b.end_at);
-        const check = new Date(targetDate);
-        check.setHours(targetHour, 0, 0, 0);
-        return check >= start && check < end;
+        return checkTimeStart < end && start < checkTimeEnd;
       });
-      return activeBooking ? "booked" : "available";
+
+      if (activeMockBooking) {
+        return `booked|${new Date(activeMockBooking.start_at).getHours()}|${new Date(activeMockBooking.end_at).getHours()}`;
+      }
+
+      // Check real DB bookings fetched from API
+      const activeRealBooking = realBookings.find((b) => {
+        if (b.workspaceId !== ws.id && b.workspaceId !== ws.mockId)
+          return false;
+        const st = (b.status || "").toLowerCase();
+        if (["canceled", "expired", "completed"].includes(st))
+          return false;
+        const start = new Date(b.startAt);
+        const end = new Date(b.endAt);
+        return checkTimeStart < end && start < checkTimeEnd;
+      });
+
+      if (activeRealBooking) {
+        return `booked|${new Date(activeRealBooking.startAt).getHours()}|${new Date(activeRealBooking.endAt).getHours()}`;
+      }
+      return "available";
     },
-    [mappedWorkspaces, selectedDate, selectedHour],
+    [mappedWorkspaces, selectedDate, selectedHour, realBookings],
   );
 
   const selectedWsData = selectedWs
@@ -668,16 +965,53 @@ const ExplorePage: React.FC = () => {
     services: Record<string, number>,
     subtotal: number,
     addonTotal: number,
+    endDate: Date,
+    durationUnit: DurationUnitMode,
   ) => {
     if (!selectedWsData) return;
+    
+    // Check if the selected date and time is in the past
+    const now = new Date();
+    now.setMinutes(0, 0, 0); // Allow booking for the current hour even if minutes have passed
+
+    const startAtDate = new Date(selectedDate);
+    startAtDate.setHours(selectedHour, 0, 0, 0);
+    if (startAtDate < now) {
+      showToast("Không thể đặt chỗ trong quá khứ. Vui lòng chọn khung giờ khác.", "error");
+      return;
+    }
+
+    if (durationUnit === 'hour' && endHour <= selectedHour) {
+      showToast("Giờ kết thúc phải lớn hơn giờ bắt đầu!", "error");
+      return;
+    }
+
+    const avail = getWsAvailability(selectedWsData.id, selectedDate, selectedHour, endDate, durationUnit === 'hour' ? endHour : undefined);
+    
+    if (avail?.startsWith('booked') || avail === 'booked') {
+        const parts = avail.split('|');
+        if (parts.length === 3) {
+            showToast(`Khoảng thời gian này đã có người đặt (${parts[1]}h-${parts[2]}h), vui lòng chọn khoảng thời gian hoặc vị trí khác.`, "error");
+        } else {
+            showToast("Khoảng thời gian này đã có người đặt, vui lòng chọn khoảng thời gian hoặc vị trí khác.", "error");
+        }
+        return;
+    }
+
     const price = getPrice(selectedWsData.workspace_type_id);
+    const branchObj = branches.find((b) => b.id === selectedBranch);
+    const branchName = branchObj ? branchObj.name : "CoSpace Chi nhánh";
+
     navigate("/customer/checkout", {
       state: {
         workspace: selectedWsData,
         workspaceType: selectedWsType,
+        branchName: branchName,
         date: selectedDate,
         hour: selectedHour,
         endHour: endHour,
+        endDate: endDate,
+        durationUnit: durationUnit,
         services: services,
         subtotal: subtotal,
         addonTotal: addonTotal,
@@ -820,7 +1154,10 @@ const ExplorePage: React.FC = () => {
             min={6}
             max={22}
             value={selectedHour}
-            onChange={(e) => setSelectedHour(Number(e.target.value))}
+            onChange={(e) => {
+              setSelectedHour(Number(e.target.value));
+              setSelectedEndHour(null);
+            }}
             className="w-24 h-2 accent-[#2563EB] cursor-pointer"
             aria-label="Chọn giờ"
           />
@@ -839,9 +1176,7 @@ const ExplorePage: React.FC = () => {
             }}
             className="appearance-none bg-card border border-border rounded-2xl px-4 py-2 pr-10 text-xs font-medium text-foreground cursor-pointer shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
           >
-            {branches
-              .filter((b) => b.status === "active")
-              .map((b) => (
+            {activeBranches.map((b) => (
                 <option key={b.id} value={b.id}>
                   {b.name}
                 </option>
@@ -889,7 +1224,11 @@ const ExplorePage: React.FC = () => {
                       layout={parsedLayout}
                       selectedWsId={selectedWs}
                       onSelectWorkspace={(wsId) => setSelectedWs(wsId)}
-                      getAvailability={(wsId) => getWsAvailability(wsId)}
+                      getAvailability={(wsId) => {
+                        const avail = getWsAvailability(wsId);
+                        if (avail?.startsWith('booked')) return 'booked';
+                        return avail as "maintenance" | "available" | "unassigned";
+                      }}
                     />
                   ) : (
                     <div className="flex flex-col items-center justify-center p-12 text-center bg-card border border-border rounded-2xl max-w-md shadow-sm">
@@ -1153,19 +1492,48 @@ const ExplorePage: React.FC = () => {
                                 <div
                                   key={h}
                                   className="flex-1 border-r last:border-r-0 border-border p-1.5 cursor-pointer hover:bg-card/50 transition-colors"
-                                  onClick={() => {
-                                    setSelectedHour(h);
-                                    setSelectedWs(ws.id);
+                                  onMouseDown={() => {
+                                    if (avail === "available") {
+                                      setIsDraggingTime(true);
+                                      setDragStartHour(h);
+                                      setSelectedHour(h);
+                                      setSelectedEndHour(h + 1);
+                                      setSelectedWs(ws.id);
+                                    } else {
+                                      setSelectedHour(h);
+                                      setSelectedWs(ws.id);
+                                    }
+                                  }}
+                                  onMouseEnter={() => {
+                                    if (isDraggingTime && dragStartHour !== null && ws.id === selectedWs) {
+                                      if (avail === "available") {
+                                        let allAvail = true;
+                                        const start = Math.min(dragStartHour, h);
+                                        const end = Math.max(dragStartHour, h);
+                                        for (let i = start; i <= end; i++) {
+                                          if (getWsAvailability(ws.id, selectedDate, i) !== "available") {
+                                            allAvail = false;
+                                            break;
+                                          }
+                                        }
+                                        if (allAvail) {
+                                          setSelectedHour(start);
+                                          setSelectedEndHour(end + 1);
+                                        }
+                                      }
+                                    }
                                   }}
                                 >
                                   <div
                                     className={`w-full h-8 rounded-full border border-border ${
-                                      avail === "available"
-                                        ? "bg-emerald-400"
-                                        : avail === "booked"
-                                          ? "bg-rose-400"
-                                          : "bg-slate-300"
-                                    } transition-colors hover:opacity-80`}
+                                      (ws.id === selectedWs && h >= selectedHour && h < (selectedEndHour || selectedHour + 1))
+                                        ? "bg-[var(--brand-primary)] shadow-[0_0_10px_rgba(37,99,235,0.4)] scale-[1.05]"
+                                        : avail === "available"
+                                          ? "bg-emerald-400"
+                                          : avail === "booked"
+                                            ? "bg-rose-400"
+                                            : "bg-slate-300"
+                                    } transition-all hover:opacity-80`}
                                   />
                                 </div>
                               );
@@ -1193,8 +1561,12 @@ const ExplorePage: React.FC = () => {
                 wsAvail={selectedWsAvail}
                 selectedWs={selectedWs}
                 selectedHour={selectedHour}
+                initialEndHour={selectedEndHour || Math.min(selectedHour + 1, 22)}
+                selectedDate={selectedDate}
                 getPrice={() => getPrice(selectedWsData.workspace_type_id)}
                 onClose={() => setSelectedWs(null)}
+                onChangeStartHour={(h) => setSelectedHour(h)}
+                checkAvailability={(stH, endH, endD, unit) => getWsAvailability(selectedWs, selectedDate, stH, endD, unit === 'hour' ? endH : undefined)}
                 onBookNow={handleBookNow}
               />
             </div>
@@ -1213,8 +1585,12 @@ const ExplorePage: React.FC = () => {
                   wsAvail={selectedWsAvail}
                   selectedWs={selectedWs}
                   selectedHour={selectedHour}
+                  initialEndHour={selectedEndHour || Math.min(selectedHour + 1, 22)}
+                  selectedDate={selectedDate}
                   getPrice={() => getPrice(selectedWsData.workspace_type_id)}
                   onClose={() => setSelectedWs(null)}
+                  onChangeStartHour={(h) => setSelectedHour(h)}
+                  checkAvailability={(stH, endH, endD, unit) => getWsAvailability(selectedWs, selectedDate, stH, endD, unit === 'hour' ? endH : undefined)}
                   onBookNow={handleBookNow}
                 />
               </div>

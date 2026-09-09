@@ -15,6 +15,7 @@
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "framer-motion": "^11.0.0",
+        "html5-qrcode": "^2.3.8",
         "react": "^18.3.1",
         "react-dom": "^18.3.1",
         "react-icons": "^4.12.0",

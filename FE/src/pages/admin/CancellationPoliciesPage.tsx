@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FiPlus, FiEdit2, FiTrash2, FiShield, FiCheck, FiX, FiAlertTriangle, FiArrowRight, FiSave } from 'react-icons/fi';
 import { cancellationPolicies } from '../../data/mockData';
 import type { CancellationPolicy } from '../../data/mockData';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
 interface RuleRow {
   id: string;
@@ -13,11 +15,36 @@ interface RuleRow {
 }
 
 const CancellationPoliciesPage: React.FC = () => {
-  const [policies] = useState<CancellationPolicy[]>(cancellationPolicies);
+  const [policies, setPolicies] = useState<CancellationPolicy[]>(cancellationPolicies);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showRuleBuilder, setShowRuleBuilder] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<CancellationPolicy | null>(null);
   const [newRules, setNewRules] = useState<RuleRow[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    const fetchPolicies = async () => {
+      try {
+        const token = localStorage.getItem('workhub_access_token');
+        if (!token) return;
+        const res = await fetch(`${API_BASE_URL}/api/admin/cancellation-policies`, {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          }
+        });
+        if (res.ok) {
+          const list = await res.json();
+          if (Array.isArray(list) && list.length > 0) {
+            setPolicies(list);
+          }
+        }
+      } catch (err) {
+        console.warn('Cannot fetch cancellation policies, fallback to mock data:', err);
+      }
+    };
+    fetchPolicies();
+  }, []);
 
   const addNewRule = () => {
     setNewRules(prev => [...prev, {

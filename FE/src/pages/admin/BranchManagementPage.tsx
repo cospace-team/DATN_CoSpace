@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { FiMapPin, FiGrid, FiPlus, FiEdit2, FiTrash2, FiX, FiCheck, FiAlertTriangle } from 'react-icons/fi';
-import { branches as branchData, workspaceTypes as wsTypeData, getFloorsByBranch } from '../../data/mockData';
+import React, { useState, useEffect } from 'react';
+import { FiMapPin, FiGrid, FiPlus, FiEdit2, FiTrash2, FiX, FiCheck, FiAlertTriangle, FiRefreshCw } from 'react-icons/fi';
+import { branches as branchMockData, workspaceTypes as wsTypeData, getFloorsByBranch } from '../../data/mockData';
 import type { Branch, WorkspaceType } from '../../data/mockData';
+import { customerSpaceApi, type BranchResponse } from '../../lib/spaceApi';
 
 /* ── Slide-over Panel ── */
 const SlideOver: React.FC<{ open: boolean; onClose: () => void; title: string; children: React.ReactNode }> = ({ open, onClose, title, children }) => {
@@ -58,8 +59,36 @@ const BranchManagementPage: React.FC = () => {
   const [editItem, setEditItem] = useState<Branch | WorkspaceType | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ type: string; name: string; id: string } | null>(null);
 
+  // API-loaded branches with mock fallback
+  const [branchList, setBranchList] = useState<Array<{id: string; code: string; name: string; address: string; city: string; status: string}>>([]);
+  const [branchLoading, setBranchLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    const loadBranches = async () => {
+      setBranchLoading(true);
+      try {
+        const data = await customerSpaceApi.listBranches();
+        if (active && data && data.length > 0) {
+          setBranchList(data);
+        } else if (active) {
+          // Fallback to mock data
+          setBranchList(branchMockData.map(b => ({ id: b.id, code: b.code, name: b.name, address: b.address, city: b.city, status: b.status })));
+        }
+      } catch {
+        if (active) {
+          setBranchList(branchMockData.map(b => ({ id: b.id, code: b.code, name: b.name, address: b.address, city: b.city, status: b.status })));
+        }
+      } finally {
+        if (active) setBranchLoading(false);
+      }
+    };
+    loadBranches();
+    return () => { active = false; };
+  }, []);
+
   const openAdd = (mode: 'branch' | 'type') => { setSlideMode(mode); setEditItem(null); setSlideOpen(true); };
-  const openEdit = (mode: 'branch' | 'type', item: Branch | WorkspaceType) => { setSlideMode(mode); setEditItem(item); setSlideOpen(true); };
+  const openEdit = (mode: 'branch' | 'type', item: any) => { setSlideMode(mode); setEditItem(item); setSlideOpen(true); };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -88,7 +117,12 @@ const BranchManagementPage: React.FC = () => {
 
           {/* Branch Cards */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {branchData.map(b => (
+            {branchLoading ? (
+              <div className="col-span-full flex items-center justify-center py-12 gap-3 text-muted-foreground">
+                <FiRefreshCw className="h-5 w-5 animate-spin" />
+                <span className="text-sm font-medium">Đang tải chi nhánh...</span>
+              </div>
+            ) : branchList.map(b => (
               <div key={b.id}
                 className="bg-card rounded-3xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow card-interactive group">
                 <div className="flex items-start justify-between">

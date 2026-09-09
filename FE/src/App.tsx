@@ -15,6 +15,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { MockDataProvider } from "./context/MockDataContext";
 import { Button } from "./components/ui/button";
 import { Logo } from "./components/ui/Logo";
+import { NotificationBell } from "./components/notifications/NotificationBell";
 import {
   FiMapPin,
   FiCalendar,
@@ -45,6 +46,7 @@ import LandingPage from "./pages/LandingPage";
 import LocationsPage from "./pages/LocationPage";
 import ExplorePage from "./pages/customer/ExplorePage";
 import BookingCheckoutPage from "./pages/customer/BookingCheckoutPage";
+import VietQrCheckoutPage from "./pages/customer/VietQrCheckoutPage";
 import BookingHistoryPage from "./pages/customer/BookingHistoryPage";
 import ProfilePage from "./pages/customer/ProfilePage";
 import OperationsDashboardPage from "./pages/staff/OperationsDashboardPage";
@@ -366,6 +368,8 @@ const AppShell: React.FC = () => {
 
             <div className="w-px h-5 bg-border hidden sm:block" />
 
+            <NotificationBell />
+
             <Button
               variant="ghost"
               size="icon"
@@ -406,6 +410,7 @@ const AppShell: React.FC = () => {
                 <>
                   <Route path="/customer/explore" element={<ExplorePage />} />
                   <Route path="/customer/checkout" element={<BookingCheckoutPage />} />
+                  <Route path="/customer/payment/vietqr" element={<VietQrCheckoutPage />} />
                   <Route path="/customer/history" element={<BookingHistoryPage />} />
                   <Route path="/customer/profile" element={<ProfilePage />} />
                 </>

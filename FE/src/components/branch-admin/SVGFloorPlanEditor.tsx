@@ -161,7 +161,7 @@ const SVGFloorPlanEditor: React.FC<Props> = ({
         el.style.stroke = strokeColor;
         el.style.strokeWidth = strokeWidth;
         el.style.cursor = 'pointer';
-        el.style.transition = 'fill 150ms, stroke 150ms, stroke-width 150ms';
+        el.style.transition = 'fill 150ms, stroke 150ms, strokeWidth 150ms';
 
         el.onmouseenter = () => setHoveredId(id);
         el.onmouseleave = () => setHoveredId(null);

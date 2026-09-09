@@ -29,8 +29,8 @@ export const Logo: React.FC<LogoProps> = ({
         <circle cx="26" cy="14" r="3" fill="white" />
         <circle cx="14" cy="26" r="3" fill="white" />
         <circle cx="26" cy="26" r="3" fill="white" />
-        <path d="M14 14L26 26" stroke="white" stroke-width="1.5" />
-        <path d="M26 14L14 26" stroke="white" stroke-width="1.5" />
+        <path d="M14 14L26 26" stroke="white" strokeWidth="1.5" />
+        <path d="M26 14L14 26" stroke="white" strokeWidth="1.5" />
       </svg>
 
       {/* Logo Text: "CoSpace" */}

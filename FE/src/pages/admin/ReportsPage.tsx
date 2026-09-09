@@ -1,43 +1,113 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { FiBarChart2, FiDownload, FiPieChart, FiTrendingUp, FiDollarSign, FiCalendar, FiCheckCircle, FiXCircle, FiArrowUpRight, FiChevronDown, FiFilter, FiMapPin } from 'react-icons/fi';
 import { branches, bookings, payments } from '../../data/mockData';
 import { formatVND } from '../../utils/formatters';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
 const ReportsPage: React.FC = () => {
   const [branchFilter, setBranchFilter] = useState('all');
   const [dateFrom, setDateFrom] = useState('2026-01-01');
   const [dateTo, setDateTo] = useState('2026-04-30');
+  const [overviewData, setOverviewData] = useState<any>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
-  const totalRevenue = payments.filter(p => p.status === 'paid').reduce((s, p) => s + p.amount, 0);
-  const totalBookings = bookings.length;
-  const completedBookings = bookings.filter(b => b.status === 'completed').length;
-  const canceledBookings = bookings.filter(b => b.status === 'canceled').length;
+  useEffect(() => {
+    const fetchOverview = async () => {
+      try {
+        const token = localStorage.getItem('workhub_access_token');
+        const branchParam = branchFilter !== 'all' ? `&branchId=${branchFilter}` : '';
+        const res = await fetch(`${API_BASE_URL}/api/reports/overview?dateFrom=${dateFrom}&dateTo=${dateTo}${branchParam}`, {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setOverviewData(data);
+        }
+      } catch (err) {
+        console.warn('Cannot fetch live report data, using fallback state:', err);
+      }
+    };
+    fetchOverview();
+  }, [branchFilter, dateFrom, dateTo]);
+
+  const handleExportCsv = async () => {
+    setIsExporting(true);
+    try {
+      const token = localStorage.getItem('workhub_access_token');
+      const branchParam = branchFilter !== 'all' ? `&branchId=${branchFilter}` : '';
+      const res = await fetch(`${API_BASE_URL}/api/reports/export/csv?dateFrom=${dateFrom}&dateTo=${dateTo}${branchParam}`, {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        }
+      });
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `cospace_report_${dateFrom}_${dateTo}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+        return;
+      }
+    } catch (e) {
+      console.warn('Backend export failed, generating local CSV:', e);
+    } finally {
+      setIsExporting(false);
+    }
+
+    // Fallback CSV export
+    const csvContent = '\uFEFFMã đặt chỗ,Chi nhánh,Thời gian,Số tiền (VND),Trạng thái\n' +
+      bookings.map(b => `${b.id},${b.branch_id},${b.start_at},${b.total_amount},${b.status}`).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `cospace_report_fallback.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const totalRevenue = overviewData?.totalRevenue ?? payments.filter(p => p.status === 'paid').reduce((s, p) => s + p.amount, 0);
+  const totalBookings = overviewData?.totalBookings ?? bookings.length;
+  const completedBookings = overviewData?.completedBookings ?? bookings.filter(b => b.status === 'completed').length;
+  const canceledBookings = overviewData?.canceledBookings ?? bookings.filter(b => b.status === 'canceled').length;
 
   const statCards = [
     { icon: FiDollarSign, label: 'Tổng doanh thu', value: formatVND(totalRevenue), delta: '+12.5%', gradient: 'from-emerald-500 to-teal-500', bgGlow: 'bg-emerald-50 dark:bg-emerald-950/300/10', color: 'text-emerald-600 dark:text-emerald-400' },
-    { icon: FiCalendar, label: 'Tổng booking', value: String(totalBookings), delta: '+8.2%', gradient: 'from-blue-500 to-indigo-500', bgGlow: 'bg-blue-50 dark:bg-blue-950/300/10', color: 'text-blue-600 dark:text-blue-400 dark:text-blue-400' },
+    { icon: FiCalendar, label: 'Tổng booking', value: String(totalBookings), delta: '+8.2%', gradient: 'from-blue-500 to-indigo-500', bgGlow: 'bg-blue-50 dark:bg-blue-950/300/10', color: 'text-blue-600 dark:text-blue-400' },
     { icon: FiCheckCircle, label: 'Hoàn thành', value: String(completedBookings), delta: '+15%', gradient: 'from-violet-500 to-purple-500', bgGlow: 'bg-violet-500/10', color: 'text-violet-600 dark:text-violet-400' },
     { icon: FiXCircle, label: 'Đã hủy', value: String(canceledBookings), delta: '-2.1%', gradient: 'from-rose-500 to-pink-500', bgGlow: 'bg-rose-500/10', color: 'text-rose-600 dark:text-rose-400' },
   ];
 
-  const byType = [
+  const defaultByType = [
     { type: 'Bàn làm việc', count: 5, revenue: 450000, color: 'from-blue-500 to-indigo-500' },
     { type: 'Phòng họp', count: 2, revenue: 800000, color: 'from-violet-500 to-purple-500' },
     { type: 'Văn phòng riêng', count: 1, revenue: 1450000, color: 'from-emerald-500 to-teal-500' },
   ];
-  const maxRevType = Math.max(...byType.map(t => t.revenue));
+  const byType = (overviewData?.byType && overviewData.byType.length > 0) ? overviewData.byType : defaultByType;
+  const maxRevType = Math.max(1, ...byType.map((t: any) => t.revenue));
 
-  const months = ['T1', 'T2', 'T3', 'T4'];
-  const monthlyRevenue = [2800000, 3500000, 4200000, totalRevenue];
-  const maxRev = Math.max(...monthlyRevenue);
+  const months = overviewData?.months ?? ['T1', 'T2', 'T3', 'T4'];
+  const monthlyRevenue = overviewData?.monthlyRevenue ?? [2800000, 3500000, 4200000, totalRevenue];
+  const maxRev = Math.max(1, ...monthlyRevenue);
 
-  const branchComparison = useMemo(() =>
+  const defaultBranchComparison = useMemo(() =>
     branches.map(b => {
       const bBookings = bookings.filter(bk => bk.branch_id === b.id);
       const bRevenue = bBookings.filter(bk => ['completed', 'checked_in'].includes(bk.status)).reduce((s, bk) => s + bk.total_amount, 0);
       const rate = bBookings.length > 0 ? Math.round((bBookings.filter(bk => bk.status === 'completed').length / bBookings.length) * 100) : 0;
       return { ...b, bookingCount: bBookings.length, revenue: bRevenue, rate };
     }), []);
+  const branchComparison = (overviewData?.branchComparison && overviewData.branchComparison.length > 0) ? overviewData.branchComparison : defaultBranchComparison;
+
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -48,7 +118,13 @@ const ReportsPage: React.FC = () => {
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Báo cáo</p>
             <h1 className="text-2xl font-semibold tracking-tight text-foreground mt-1">Phân tích & Thống kê</h1>
           </div>
-          <button className="btn btn-secondary btn-sm"><FiDownload className="h-4 w-4" /> Xuất CSV</button>
+          <button 
+            onClick={handleExportCsv} 
+            disabled={isExporting}
+            className="btn btn-secondary btn-sm">
+            <FiDownload className={`h-4 w-4 ${isExporting ? 'animate-bounce' : ''}`} /> 
+            {isExporting ? 'Đang xuất...' : 'Xuất CSV'}
+          </button>
         </div>
 
         {/* Filter Controls */}
@@ -104,7 +180,7 @@ const ReportsPage: React.FC = () => {
             <FiTrendingUp className="h-4 w-4 text-primary" /> Doanh thu theo tháng
           </h2>
           <div className="flex items-end gap-4 h-52">
-            {months.map((m, i) => (
+            {months.map((m: string, i: number) => (
               <div key={m} className="flex-1 flex flex-col items-center gap-2 group cursor-pointer">
                 <span className="text-xs font-semibold text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
                   {formatVND(monthlyRevenue[i])}
@@ -126,7 +202,7 @@ const ReportsPage: React.FC = () => {
             <FiPieChart className="h-4 w-4 text-primary" /> Doanh thu theo loại workspace
           </h2>
           <div className="space-y-5">
-            {byType.map(t => (
+            {byType.map((t: any) => (
               <div key={t.type} className="group">
                 <div className="flex items-center justify-between mb-2">
                   <span className="font-medium text-sm">{t.type}</span>
@@ -154,7 +230,7 @@ const ReportsPage: React.FC = () => {
           <table className="data-table">
             <thead><tr><th>Chi nhánh</th><th>Tổng booking</th><th>Doanh thu</th><th>Tỷ lệ hoàn thành</th></tr></thead>
             <tbody>
-              {branchComparison.map(b => (
+              {branchComparison.map((b: any) => (
                 <tr key={b.id}>
                   <td>
                     <div className="flex items-center gap-2">

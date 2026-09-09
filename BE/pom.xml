@@ -4,11 +4,11 @@
     xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.example</groupId>
-    <artifactId>momo-sandbox</artifactId>
+    <groupId>com.cospace</groupId>
+    <artifactId>cospace-api</artifactId>
     <version>1.0.0</version>
-    <name>MoMo Sandbox Demo</name>
-    <description>Demo MoMo sandbox với Spring Boot</description>
+    <name>CoSpace API</name>
+    <description>Hệ thống quản lý Co-Working Space</description>
 
     <properties>
         <java.version>17</java.version>
@@ -76,6 +76,14 @@
             <version>4.0.0</version>
         </dependency>
         
+        <!-- Spring Boot DevTools -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-devtools</artifactId>
+            <scope>runtime</scope>
+            <optional>true</optional>
+        </dependency>
+
         <!-- JJWT for local auth -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
@@ -102,6 +110,30 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <version>${spring.boot.version}</version>
+                <configuration>
+                    <excludes>
+                        <exclude>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.11.0</version>
+                <configuration>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>1.18.30</version> <!-- Fallback to a standard version if managed version isn't loaded -->
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
             </plugin>
         </plugins>
     </build>

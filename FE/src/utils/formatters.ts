@@ -14,6 +14,12 @@ export const formatDateTime = (iso: string): string => {
   return `${formatDate(iso)} ${formatTime(iso)}`;
 };
 
+export const formatDateTimeLocal = (date: Date): string => {
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
+
+
 export const generateBookingCode = (): string => {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let code = 'WH-';

@@ -50,18 +50,26 @@ Agent tự động chuyển đổi hành vi dựa trên ngữ cảnh hoặc khi 
 
 ## 📏 Quy Tắc Ứng Xử (Rules)
 
-### Nguyên tắc chung (Karpathy's Guidelines)
-1. **Think Before Coding**: Không giả định hay giấu sự mơ hồ. Trình bày rõ các phương án lựa chọn.
-2. **Simplicity First (Tinh gọn)**: Chỉ viết lượng code TỐI THIỂU để giải quyết bài toán. Tránh speculate features.
-3. **Surgical Changes**: Chỉ sửa đổi những file thực sự cần. Tự dọn dẹp các biến/import thừa sau khi hoàn tất.
-4. **Đọc trước, code sau**: Luôn tham chiếu [SYSTEM_SPEC.md](file:///d:/DA/docs/SYSTEM_SPEC.md) và Database Schema trước khi code.
-5. **Document-first**: Cập nhật tài liệu specs/API trước khi code, đặc biệt là các thay đổi liên quan đến DB.
+### 💬 Phong cách giao tiếp (Scannable & No-Fluff — *từ Caveman & I Have ADHD*)
+- **TL;DR First**: Luôn đưa tóm tắt ngắn gọn/kết luận chính lên đầu phản hồi.
+- **Scannable Layout**: Trình bày bằng bullet points, **in đậm** từ khóa và thuật ngữ quan trọng. Tránh viết đoạn văn xuôi dài gây mỏi mắt.
+- **No-Fluff**: Bỏ qua các câu chào hỏi, xã giao rườm rà. Đi thẳng vào giải pháp kỹ thuật, code diff và câu hỏi trọng tâm.
+
+### ⚙️ Kỷ luật kỹ thuật (Engineering Discipline)
+1. **Think Before Coding**: Không giả định hay đoán mò. Làm rõ yêu cầu và cân nhắc phương án trước khi code.
+2. **Simplicity First**: Viết lượng code tối thiểu để giải quyết bài toán. Tránh over-engineering.
+3. **Surgical Changes**: Chỉ sửa đổi những file thực sự liên quan. Tự dọn dẹp các biến và import thừa sau khi hoàn tất.
+4. **Context First**: Luôn đọc kỹ tài liệu đặc tả (specs) và Database Schema trước khi code.
+5. **Document First**: Cập nhật tài liệu specs/API trước khi code, đặc biệt là các thay đổi liên quan đến DB.
+6. **Verification Gate**: Bắt buộc phải kiểm thử/xác thực (chạy test, gọi API hoặc test kịch bản) trước khi bàn giao. Không bao giờ coi task hoàn tất nếu chưa được verify.
+7. **Type Safety**: Tuyệt đối không dùng `any`. Luôn định nghĩa rõ kiểu dữ liệu cho Props, State và API DTO.
+8. **Web Performance**: Hạn chế re-render thừa, kiểm soát kích thước bundle, áp dụng phân trang/virtualization cho danh sách dữ liệu lớn.
 
 ### Quy ước Database
 - **ID**: Luôn dùng UUID (`gen_random_uuid()`).
 - **Timestamp**: Luôn dùng `timestamptz`, mặc định `now()`.
-- **Tiền tệ**: `numeric(12,2)` đại diện cho VND.
-- **Enum**: Sử dụng PostgreSQL custom ENUM types, không dùng varchar thông thường.
+- **Tiền tệ**: `numeric(12,2)` đại diện cho VND, ánh xạ `BigDecimal` trong backend Java.
+- **Enum / Status**: Các trường mới ưu tiên dùng VARCHAR(20..32) kết hợp Java Enum (@Enumerated(EnumType.STRING)). Các trường cũ giữ nguyên theo schema hiện có.
 - **Naming**: snake_case cho table và column.
 - **Patterns**: Constraint đặt tên dạng `check_<table>_<rule>` hoặc `fk_<table>_<ref>`.
 
@@ -76,12 +84,12 @@ Agent tự động chuyển đổi hành vi dựa trên ngữ cảnh hoặc khi 
 
 | Mục đích | Tài liệu |
 |---|---|
-| Nghiệp vụ & Core Rules chính | [SYSTEM_SPEC.md](file:///d:/DA/docs/SYSTEM_SPEC.md) |
-| Đặc tả Core Rules & Gotchas | **[SYSTEM_SPEC.md §7 (Quy Tắc & Ràng Buộc)](file:///d:/DA/docs/SYSTEM_SPEC.md#L521)** |
-| Kế hoạch sprint & test checklist | [DEVELOPMENT_PLAN.md](file:///d:/DA/docs/DEVELOPMENT_PLAN.md) |
-| Database schema | [20240101000000_core_schema.sql](file:///d:/DA/database/migrations/20240101000000_core_schema.sql) |
-| Tập lệnh SQL Tests | [test_full_workflows.sql](file:///d:/DA/database/tests/test_full_workflows.sql) |
-| Bảng thuật ngữ | [glossary.md](file:///d:/DA/docs/glossary.md) |
-| Đặc tả Use Cases | [docs/use_cases/](file:///d:/DA/docs/use_cases) |
-| API Contracts | [docs/api-contracts/](file:///d:/DA/docs/api-contracts) |
-| Tiến độ Sprint hiện tại | [task.md](file:///d:/DA/task.md) |
+| Nghiệp vụ & Core Rules chính | [docs/SYSTEM_SPEC.md](docs/SYSTEM_SPEC.md) |
+| Đặc tả Core Rules & Gotchas | [docs/SYSTEM_SPEC.md §7](docs/SYSTEM_SPEC.md#L521) |
+| Kế hoạch sprint & test checklist | [docs/DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md) |
+| Database schema | [database/migrations/20240101000000_core_schema.sql](database/migrations/20240101000000_core_schema.sql) |
+| Tập lệnh SQL Tests | [database/tests/test_full_workflows.sql](database/tests/test_full_workflows.sql) |
+| Bảng thuật ngữ | [docs/glossary.md](docs/glossary.md) |
+| Đặc tả Use Cases | [docs/use_cases/](docs/use_cases) |
+| API Contracts | [docs/api-contracts/](docs/api-contracts) |
+| Tiến độ Sprint hiện tại | [task.md](task.md) |

@@ -1,93 +1,285 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  FiUser, FiClock, FiMapPin, FiCoffee,
-  FiDollarSign, FiSearch, FiPlus, FiCheckCircle,
-  FiCheck, FiUserPlus, FiMaximize, FiCreditCard, FiZap
+  FiUser, FiClock, FiMapPin,
+  FiDollarSign, FiSearch, FiCheckCircle,
+  FiCheck, FiUserPlus, FiMaximize, FiCreditCard, FiZap,
+  FiMap, FiList
 } from 'react-icons/fi';
-import { users, workspaces, extraServices, getWorkspace, floors, workspaceMaintenances } from '../../data/mockData';
-import { formatVND } from '../../utils/formatters';
 import { useToast } from '../../components/Toast';
+import { useAuth } from '../../context/AuthContext';
+import { staffApi, WorkspaceBookingStatusDto } from '../../api/staffApi';
+import { formatVND, formatDateTimeLocal } from '../../utils/formatters';
+import type { FloorResponse } from '../../lib/spaceApi';
+import FloorPlanViewer from '../../components/floor-plan/FloorPlanViewer';
+import type { FloorLayout } from '../../types/floorPlan';
 
 const WalkinBookingPage: React.FC = () => {
   const { showToast } = useToast();
+  const { user } = useAuth();
+  
+  const currentBranchId = user?.branchId || '';
+
+  // State: Data
+  const [floors, setFloors] = useState<FloorResponse[]>([]);
+  const [workspacesStatus, setWorkspacesStatus] = useState<WorkspaceBookingStatusDto[]>([]);
+  const [selectedFloorId, setSelectedFloorId] = useState('');
+  const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
 
   // Step 1: Customer Info
   const [phoneSearch, setPhoneSearch] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [isNewUser, setIsNewUser] = useState(false);
   const [newUserName, setNewUserName] = useState('');
+  const [newUserPhone, setNewUserPhone] = useState('');
 
   // Step 2: Time & Space
-  const [startHour, setStartHour] = useState('08:00');
-  const [endHour, setEndHour] = useState('11:00');
-  const [selectedFloorId, setSelectedFloorId] = useState('floor-001');
-  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState('');
+  const [durationHours, setDurationHours] = useState<number>(1);
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(null);
   const [autoCheckIn, setAutoCheckIn] = useState(true);
-
-  // Step 3: Add-on Services
-  const [selectedServices, setSelectedServices] = useState<{ id: string; quantity: number }[]>([]);
 
   // Step 4: Payment
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'momo' | 'card'>('cash');
   const [isSuccess, setIsSuccess] = useState(false);
   const [createdBookingCode, setCreatedBookingCode] = useState('');
+  
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Customer search logic
-  const handleSearchUser = () => {
-    if (!phoneSearch.trim()) return;
-    const found = users.find(u => u.phone === phoneSearch || u.full_name.toLowerCase().includes(phoneSearch.toLowerCase()));
-    if (found) {
-      setSelectedUser(found);
-      setIsNewUser(false);
-      showToast(`Đã chọn khách hàng: ${found.full_name}`, 'info');
-    } else {
-      setSelectedUser(null);
-      setIsNewUser(true);
-      showToast('Số điện thoại chưa có trên hệ thống, vui lòng tạo hồ sơ mới', 'info');
+  const fetchData = async () => {
+    try {
+      const [floorsRes, statusRes] = await Promise.all([
+        staffApi.getFloors(currentBranchId),
+        staffApi.getWorkspaceBookingStatus(currentBranchId)
+      ]);
+      setFloors(floorsRes);
+      if (floorsRes.length > 0 && !selectedFloorId) {
+        setSelectedFloorId(floorsRes[0].id);
+      }
+      setWorkspacesStatus(statusRes);
+    } catch (err: any) {
+      showToast(err.message || 'Lỗi khi tải dữ liệu', 'error');
     }
   };
 
-  // Pricing calculations
-  const duration = Math.max(1, parseInt(endHour) - parseInt(startHour));
-  const wsPrice = selectedWorkspaceId ? 50000 : 0;
-  const subtotal = wsPrice * duration;
-  const servicesTotal = selectedServices.reduce((sum, s) => {
-    const svc = extraServices.find(e => e.id === s.id);
-    return sum + (svc ? svc.price * s.quantity : 0);
-  }, 0);
-  const total = subtotal + servicesTotal;
+  useEffect(() => {
+    fetchData();
+  }, [currentBranchId]);
 
-  const handleConfirm = () => {
+  // Customer search logic
+  const handleSearchUser = async () => {
+    if (!phoneSearch.trim()) return;
+    try {
+      const results = await staffApi.searchUsers(phoneSearch);
+      if (results.length > 0) {
+        setSearchResults(results);
+        setSelectedUser(null);
+        setIsNewUser(false);
+        if (results.length === 1) {
+            handleSelectUser(results[0]);
+        }
+      } else {
+        setSearchResults([]);
+        setSelectedUser(null);
+        setIsNewUser(true);
+        const isPhone = /^\d+$/.test(phoneSearch.trim());
+        if (isPhone) {
+          setNewUserPhone(phoneSearch);
+          setNewUserName('');
+        } else {
+          setNewUserName(phoneSearch);
+          setNewUserPhone('');
+        }
+        showToast('Không tìm thấy khách hàng, vui lòng tạo hồ sơ mới', 'info');
+      }
+    } catch (err: any) {
+      showToast(err.message || 'Lỗi khi tìm kiếm khách hàng', 'error');
+    }
+  };
+
+  const handleSelectUser = (user: any) => {
+      setSelectedUser(user);
+      setSearchResults([]);
+      setIsNewUser(false);
+      showToast(`Đã chọn khách hàng: ${user.fullName}`, 'info');
+  };
+
+  const handleCreateNewUserClick = () => {
+      setSelectedUser(null);
+      setSearchResults([]);
+      setIsNewUser(true);
+      const isPhone = /^\d+$/.test(phoneSearch.trim());
+      if (isPhone) {
+        setNewUserPhone(phoneSearch);
+        setNewUserName('');
+      } else {
+        setNewUserName(phoneSearch);
+        setNewUserPhone('');
+      }
+  };
+
+  // Pricing calculations
+  const duration = durationHours;
+  const selectedWsInfo = React.useMemo(() => {
+    if (!selectedWorkspaceId) return null;
+    return workspacesStatus.find(w => w.workspaceId === selectedWorkspaceId);
+  }, [selectedWorkspaceId, workspacesStatus]);
+
+  const wsPrice = React.useMemo(() => {
+    if (!selectedWsInfo) return 0;
+    const typeId = (selectedWsInfo.workspaceTypeId || '').toLowerCase();
+    const wsName = (selectedWsInfo.name || '').toLowerCase();
+    if (typeId.includes('meeting') || typeId === 'a1000000-0000-0000-0000-000000000002' || wsName.includes('meeting') || wsName.includes('phòng họp')) {
+      return 200000;
+    }
+    if (typeId.includes('private') || typeId === 'a1000000-0000-0000-0000-000000000003' || wsName.includes('private')) {
+      return 100000;
+    }
+    // Standard desk
+    return 60000;
+  }, [selectedWsInfo, currentBranchId]);
+
+  const subtotal = wsPrice * duration;
+  const total = subtotal;
+
+
+  const currentFloor = floors.find((f) => f.id === selectedFloorId);
+  
+  const currentLayout = React.useMemo<FloorLayout | null>(() => {
+    if (!currentFloor?.layoutJson) return null;
+    try { return JSON.parse(currentFloor.layoutJson) as FloorLayout; }
+    catch { return null; }
+  }, [currentFloor?.layoutJson]);
+
+  const checkOverlap = (wsId: string, checkStart: Date, checkEnd: Date) => {
+    const ws = workspacesStatus.find(w => w.workspaceId === wsId);
+    if (!ws) return false;
+    if (ws.workspaceStatus === 'maintenance' || ws.activeMaintenance) return true;
+
+    return ws.todayBookings.some(b => {
+      if (['canceled', 'completed', 'expired'].includes(b.status?.toLowerCase())) return false;
+      const bStart = new Date(b.startAt);
+      const bEnd = new Date(b.endAt);
+      return checkStart < bEnd && bStart < checkEnd;
+    });
+  };
+
+  const getAvailability = React.useCallback((wsId: string) => {
+    const ws = workspacesStatus.find(w => w.workspaceId === wsId);
+    if (!ws) return 'unassigned';
+    
+    if (ws.workspaceStatus === 'maintenance' || ws.activeMaintenance) return 'maintenance';
+    
+    const now = new Date();
+    const end = new Date(now.getTime() + durationHours * 60 * 60 * 1000);
+    const isBooked = checkOverlap(wsId, now, end);
+    if (isBooked) return 'booked';
+    
+    return 'available';
+  }, [workspacesStatus, durationHours]);
+
+  const handleSelectWorkspace = (wsId: string | null) => {
+    if (!wsId) return;
+    const ws = workspacesStatus.find(w => w.workspaceId === wsId);
+    if (!ws) return;
+    
+    if (ws.workspaceStatus === 'maintenance' || ws.activeMaintenance) {
+      showToast('Vị trí này đang bảo trì!', 'error');
+      return;
+    }
+    
+    const now = new Date();
+    const end = new Date(now.getTime() + durationHours * 60 * 60 * 1000);
+    if (checkOverlap(wsId, now, end)) {
+      showToast('Vị trí này đã có người đặt trong khung giờ này!', 'error');
+      return;
+    }
+
+    setSelectedWorkspaceId(wsId);
+  };
+
+  const handleConfirm = async () => {
     if ((!selectedUser && !newUserName) || !selectedWorkspaceId) {
       showToast('Vui lòng nhập thông tin khách hàng và chọn bàn làm việc!', 'error');
       return;
     }
-    const code = 'WH-WK' + Math.random().toString(36).substring(2, 6).toUpperCase();
-    setCreatedBookingCode(code);
-    setIsSuccess(true);
-    showToast(`Đã tạo booking tại quầy thành công: ${code}`, 'success');
+    
+    setIsSubmitting(true);
+    
+    try {
+      const st = new Date();
+      const et = new Date(st.getTime() + durationHours * 60 * 60 * 1000);
+
+      const wsStatus = workspacesStatus.find(w => w.workspaceId === selectedWorkspaceId);
+      const wsTypeId = wsStatus?.workspaceTypeId;
+
+      if (!wsTypeId) {
+        showToast('Không tìm thấy thông tin loại bàn (Workspace Type) hợp lệ!', 'error');
+        setIsSubmitting(false);
+        return;
+      }
+
+      const bookingPayload = {
+        branchId: currentBranchId,
+        workspaceId: selectedWorkspaceId,
+        workspaceTypeId: wsTypeId,
+        startAt: st.toISOString(),
+        endAt: et.toISOString(),
+        unit: 'hour',
+        unitCount: duration,
+        customerId: selectedUser?.id,
+        customerName: isNewUser ? newUserName : undefined,
+        customerPhone: isNewUser ? newUserPhone : undefined,
+      };
+      
+      const booking = await staffApi.createWalkinBooking(bookingPayload);
+      
+      if (paymentMethod === 'cash') {
+        await staffApi.createCashPayment(booking.id);
+      } else {
+        showToast("Hiện tại Walk-in chỉ hỗ trợ Tiền mặt, hệ thống tự động ghi nhận thanh toán Tiền mặt", "info");
+        await staffApi.createCashPayment(booking.id);
+      }
+      
+      if (autoCheckIn) {
+        await staffApi.checkin(booking.id, "Auto check-in từ quầy");
+      }
+      
+      setCreatedBookingCode(booking.bookingCode);
+      setIsSuccess(true);
+      showToast(`Đã tạo booking tại quầy thành công: ${booking.bookingCode}`, 'success');
+      
+      // Refresh status
+      await fetchData();
+
+    } catch (err: any) {
+      showToast(err.message || 'Lỗi khi tạo booking. Có thể đã trùng lịch!', 'error');
+      // Refresh status just in case
+      await fetchData();
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleReset = () => {
     setPhoneSearch('');
+    setSearchResults([]);
     setSelectedUser(null);
     setIsNewUser(false);
     setNewUserName('');
-    setStartHour('08:00');
-    setEndHour('11:00');
-    setSelectedWorkspaceId('');
-    setSelectedServices([]);
+    setNewUserPhone('');
+    setDurationHours(1);
+    setSelectedWorkspaceId(null);
     setPaymentMethod('cash');
     setIsSuccess(false);
   };
 
   if (isSuccess) {
-    const wsName = getWorkspace(selectedWorkspaceId)?.name || 'Chỗ ngồi';
-    const customerName = selectedUser?.full_name || newUserName || 'Khách vãng lai';
+    const wsName = workspacesStatus.find(w => w.workspaceId === selectedWorkspaceId)?.name || 'Chỗ ngồi';
+    const customerName = selectedUser?.fullName || newUserName || 'Khách vãng lai';
 
     return (
       <div className="flex flex-col items-center justify-center min-h-[70vh] text-center p-6 animate-fade-scale-in">
-        <div className="w-20 h-20 bg-emerald-50 dark:bg-emerald-950/300/10 text-emerald-500 rounded-3xl flex items-center justify-center mb-4 border border-emerald-500/30 shadow-xl">
+        <div className="w-20 h-20 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-500 rounded-3xl flex items-center justify-center mb-4 border border-emerald-500/30 shadow-xl">
           <FiCheckCircle className="h-10 w-10" />
         </div>
         <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-primary/10 text-primary border border-primary/20">
@@ -101,7 +293,7 @@ const WalkinBookingPage: React.FC = () => {
         </p>
 
         {autoCheckIn && (
-          <div className="mt-3 px-4 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/300/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold flex items-center gap-2">
+          <div className="mt-3 px-4 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold flex items-center gap-2">
             <FiZap className="h-4 w-4" /> Đã tự động kích hoạt Check-in nhận vị trí ngay.
           </div>
         )}
@@ -115,13 +307,23 @@ const WalkinBookingPage: React.FC = () => {
     );
   }
 
+  // Lọc workspace của tầng hiện tại cho list view
+  const currentFloorWorkspaces = workspacesStatus.filter(ws => {
+    // Ideally we should have floorId in WorkspaceBookingStatusDto, 
+    // but for now let's just show all or match by layout logic.
+    // Since we don't have floorId in DTO, list view might show all workspaces,
+    // which is fine for branch level, or we need to add floorId to the backend.
+    // For now, let's just show all in list view.
+    return true;
+  });
+
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-24">
+    <div className="space-y-6 max-w-7xl mx-auto pb-24">
       {/* Top Banner Header */}
       <div className="rounded-2xl border border-border bg-card p-6 shadow-sm flex items-center justify-between">
         <h1 className="text-xl font-bold font-heading text-foreground">Tạo Booking Walk-in Tại Quầy</h1>
         <span className="text-xs font-mono font-bold px-3 py-1.5 rounded-xl bg-primary/10 text-primary border border-primary/20">
-          QUẬN 1 POS
+          {currentBranchId.substring(0, 8).toUpperCase()} POS
         </span>
       </div>
 
@@ -140,7 +342,12 @@ const WalkinBookingPage: React.FC = () => {
                 <input
                   type="text"
                   value={phoneSearch}
-                  onChange={e => setPhoneSearch(e.target.value)}
+                  onChange={e => {
+                    setPhoneSearch(e.target.value);
+                    if (e.target.value === '') {
+                        setSearchResults([]);
+                    }
+                  }}
                   placeholder="Nhập SĐT hoặc Tên khách hàng để tìm..."
                   className="input-field !pl-10 text-sm"
                   onKeyDown={e => e.key === 'Enter' && handleSearchUser()}
@@ -149,54 +356,109 @@ const WalkinBookingPage: React.FC = () => {
               <button onClick={handleSearchUser} className="btn btn-secondary px-4 text-xs font-bold">
                 Tìm kiếm
               </button>
+              <button onClick={handleCreateNewUserClick} className="btn border border-border bg-card hover:bg-muted text-foreground px-4 text-xs font-bold whitespace-nowrap">
+                + Tạo mới
+              </button>
             </div>
 
+            {searchResults.length > 1 && !selectedUser && (
+              <div className="border border-border rounded-xl overflow-hidden mt-2 bg-card">
+                <div className="bg-muted/50 px-3 py-2 text-xs font-bold text-muted-foreground border-b border-border">
+                  Tìm thấy {searchResults.length} kết quả. Vui lòng chọn khách hàng:
+                </div>
+                <div className="max-h-48 overflow-y-auto">
+                  {searchResults.map(user => (
+                    <button 
+                      key={user.id} 
+                      onClick={() => handleSelectUser(user)}
+                      className="w-full flex items-center justify-between p-3 border-b border-border last:border-0 hover:bg-primary/5 transition text-left"
+                    >
+                      <div>
+                        <p className="font-bold text-sm text-foreground">{user.fullName}</p>
+                        <p className="text-xs text-muted-foreground font-mono mt-0.5">{user.phone} · {user.email}</p>
+                      </div>
+                      <span className="text-xs font-bold text-primary px-3 py-1 bg-primary/10 rounded-lg">Chọn</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {selectedUser && (
-              <div className="p-4 rounded-xl bg-primary/10 border border-primary/30 flex justify-between items-center animate-fade-scale-in">
+              <div className="p-4 rounded-xl bg-primary/10 border border-primary/30 flex justify-between items-center animate-fade-scale-in mt-2 relative">
                 <div>
-                  <p className="font-bold text-sm text-primary">{selectedUser.full_name}</p>
+                  <p className="font-bold text-sm text-primary">{selectedUser.fullName}</p>
                   <p className="text-xs text-muted-foreground font-mono">{selectedUser.phone} · {selectedUser.email}</p>
                 </div>
-                <span className="badge badge-success text-[10px] font-bold">Hồ sơ có sẵn</span>
+                <div className="flex flex-col items-end gap-2">
+                  <span className="badge badge-success text-[10px] font-bold">Hồ sơ có sẵn</span>
+                  <button onClick={() => setSelectedUser(null)} className="text-xs font-bold text-muted-foreground hover:text-destructive underline">Hủy chọn</button>
+                </div>
               </div>
             )}
 
             {isNewUser && !selectedUser && (
-              <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/300/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 space-y-2 animate-fade-scale-in">
-                <p className="text-xs font-bold flex items-center gap-2">
-                  <FiUserPlus className="h-4 w-4" /> Khách hàng mới — Tạo hồ sơ nhanh:
-                </p>
-                <input
-                  type="text"
-                  value={newUserName}
-                  onChange={e => setNewUserName(e.target.value)}
-                  placeholder="Nhập Họ và Tên đầy đủ của khách..."
-                  className="input-field text-sm bg-card text-foreground"
-                />
+              <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-500/30 text-amber-700 dark:text-amber-400 space-y-2 animate-fade-scale-in mt-2">
+                <div className="flex justify-between items-center">
+                  <p className="text-xs font-bold flex items-center gap-2">
+                    <FiUserPlus className="h-4 w-4" /> Tạo mới khách vãng lai:
+                  </p>
+                  <button onClick={() => setIsNewUser(false)} className="text-[10px] font-bold underline hover:text-amber-800">Hủy</button>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <input
+                    type="text"
+                    value={newUserName}
+                    onChange={e => setNewUserName(e.target.value)}
+                    placeholder="Họ và Tên đầy đủ..."
+                    className="input-field text-sm bg-card text-foreground border-amber-200 focus:border-amber-500"
+                  />
+                  <input
+                    type="text"
+                    value={newUserPhone}
+                    onChange={e => setNewUserPhone(e.target.value)}
+                    placeholder="Số điện thoại..."
+                    className="input-field text-sm bg-card text-foreground border-amber-200 focus:border-amber-500"
+                  />
+                </div>
               </div>
             )}
           </div>
 
           {/* STEP 2: Time & Floor Space Selection */}
           <div className="rounded-2xl border border-border bg-card p-6 shadow-sm space-y-4">
-            <h2 className="font-bold flex items-center gap-2 text-base text-foreground font-heading border-b border-border pb-3">
-              <FiClock className="text-primary h-5 w-5" /> 2. Thời gian & Vị trí làm việc
-            </h2>
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <h2 className="font-bold flex items-center gap-2 text-base text-foreground font-heading">
+                <FiClock className="text-primary h-5 w-5" /> 2. Thời gian & Vị trí làm việc
+              </h2>
+              <div className="flex bg-muted p-1 rounded-lg">
+                <button 
+                  onClick={() => setViewMode('map')}
+                  className={`flex items-center justify-center gap-2 px-3 py-1 rounded-md text-xs font-medium transition-colors ${viewMode === 'map' ? 'bg-background shadow-sm text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+                >
+                  <FiMap /> Bản đồ
+                </button>
+                <button 
+                  onClick={() => setViewMode('list')}
+                  className={`flex items-center justify-center gap-2 px-3 py-1 rounded-md text-xs font-medium transition-colors ${viewMode === 'list' ? 'bg-background shadow-sm text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+                >
+                  <FiList /> Bảng
+                </button>
+              </div>
+            </div>
             
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-1">Giờ bắt đầu (Hôm nay)</label>
-                <select value={startHour} onChange={e => setStartHour(e.target.value)} className="input-field text-sm font-semibold">
-                  {['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00'].map(h => (
-                    <option key={h} value={h}>{h}</option>
-                  ))}
-                </select>
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-1">Giờ bắt đầu</label>
+                <div className="input-field text-sm font-semibold flex items-center text-muted-foreground bg-muted/50 h-10">
+                  Ngay lúc này (Real-time)
+                </div>
               </div>
               <div>
-                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-1">Giờ kết thúc</label>
-                <select value={endHour} onChange={e => setEndHour(e.target.value)} className="input-field text-sm font-semibold">
-                  {['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'].map(h => (
-                    <option key={h} value={h}>{h}</option>
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-1">Thời lượng (Giờ)</label>
+                <select value={durationHours} onChange={e => {setDurationHours(parseInt(e.target.value)); setSelectedWorkspaceId(null);}} className="input-field text-sm font-semibold h-10">
+                  {[1, 2, 3, 4, 5, 8, 12].map(h => (
+                    <option key={h} value={h}>{h} giờ (Đến khoảng {new Date(new Date().getTime() + h * 60 * 60 * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})})</option>
                   ))}
                 </select>
               </div>
@@ -205,111 +467,108 @@ const WalkinBookingPage: React.FC = () => {
             <div className="pt-2">
               <div className="flex items-center justify-between mb-3">
                 <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                  <FiMapPin className="text-primary" /> Chọn sơ đồ Tầng
+                  <FiMapPin className="text-primary" /> Chọn vị trí ({viewMode === 'map' ? 'Sơ đồ Tầng' : 'Danh sách'})
                 </label>
-                <div className="flex gap-1.5">
-                  {floors.filter(f => f.branch_id === 'branch-0001').map(f => (
-                    <button 
-                      key={f.id} 
-                      onClick={() => setSelectedFloorId(f.id)}
-                      className={`px-3 py-1 text-xs font-bold rounded-xl transition ${
-                        selectedFloorId === f.id ? 'bg-primary text-white shadow-md' : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                      }`}
-                    >
-                      {f.name}
-                    </button>
-                  ))}
-                </div>
+                {viewMode === 'map' && (
+                  <div className="flex gap-1.5 overflow-x-auto">
+                    {floors.map(f => (
+                      <button 
+                        key={f.id} 
+                        onClick={() => { setSelectedFloorId(f.id); setSelectedWorkspaceId(null); }}
+                        className={`px-3 py-1 text-xs font-bold rounded-xl transition whitespace-nowrap ${
+                          selectedFloorId === f.id ? 'bg-primary text-white shadow-md' : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                        }`}
+                      >
+                        {f.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
               
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
-                {workspaces.filter(w => w.floor_id === selectedFloorId).map(ws => {
-                  const isMaintenance = workspaceMaintenances.some(m => m.workspace_id === ws.id && m.status === 'active');
-                  const isSelected = selectedWorkspaceId === ws.id;
-                  
-                  let btnClass = "p-3 rounded-xl border text-center transition flex flex-col items-center justify-center min-h-[85px] relative overflow-hidden ";
-                  if (isMaintenance) {
-                    btnClass += "border-red-500/30 bg-red-50 dark:bg-red-950/300/10 text-red-400 cursor-not-allowed opacity-60";
-                  } else if (isSelected) {
-                    btnClass += "border-primary bg-primary/10 ring-2 ring-primary text-primary font-bold shadow-md shadow-primary/10";
-                  } else {
-                    btnClass += "border-border hover:border-primary/50 text-foreground bg-card";
-                  }
-
-                  return (
-                    <button 
-                      key={ws.id} 
-                      disabled={isMaintenance}
-                      onClick={() => setSelectedWorkspaceId(ws.id)}
-                      className={btnClass}
-                    >
-                      <p className="font-bold text-sm font-heading">{ws.name}</p>
-                      {isMaintenance ? (
-                        <span className="text-[9px] font-mono font-bold mt-1 text-red-500 uppercase tracking-wider">Bảo trì</span>
-                      ) : (
-                        <span className="text-[11px] text-muted-foreground font-mono mt-1 font-semibold">50k/h</span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          {/* STEP 3: Extra Services */}
-          <div className="rounded-2xl border border-border bg-card p-6 shadow-sm space-y-4">
-            <h2 className="font-bold flex items-center gap-2 text-base text-foreground font-heading border-b border-border pb-3">
-              <FiCoffee className="text-primary h-5 w-5" /> 3. Dịch vụ ăn uống & Tiện ích kèm theo
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {extraServices.slice(0, 4).map(svc => {
-                const selected = selectedServices.find(s => s.id === svc.id);
-                return (
-                  <div key={svc.id} className="p-3.5 rounded-xl border border-border bg-muted/20 flex justify-between items-center">
-                    <div>
-                      <p className="font-bold text-xs text-foreground">{svc.name}</p>
-                      <p className="text-[11px] text-muted-foreground font-mono">{formatVND(svc.price)} / {svc.unit}</p>
+              {viewMode === 'map' ? (
+                <div className="rounded-xl border border-border bg-card h-[450px] overflow-hidden">
+                  {currentLayout ? (
+                    <FloorPlanViewer
+                      layout={currentLayout}
+                      selectedWsId={selectedWorkspaceId}
+                      onSelectWorkspace={handleSelectWorkspace}
+                      onElementClick={(el) => handleSelectWorkspace(el.workspaceId || null)}
+                      getAvailability={getAvailability}
+                      isAdmin={false}
+                    />
+                  ) : (
+                    <div className="h-full flex items-center justify-center text-muted-foreground">
+                      Tầng này chưa có bản đồ.
                     </div>
-                    {selected ? (
-                      <div className="flex items-center gap-2 bg-card p-1 rounded-xl border border-border">
-                        <button onClick={() => setSelectedServices(prev => prev.map(s => s.id === svc.id ? { ...s, quantity: Math.max(0, s.quantity - 1) } : s).filter(s => s.quantity > 0))} className="w-6 h-6 rounded-lg bg-muted flex items-center justify-center font-bold text-xs text-muted-foreground hover:text-foreground">-</button>
-                        <span className="text-xs font-mono font-bold w-4 text-center">{selected.quantity}</span>
-                        <button onClick={() => setSelectedServices(prev => prev.map(s => s.id === svc.id ? { ...s, quantity: s.quantity + 1 } : s))} className="w-6 h-6 rounded-lg bg-primary text-white flex items-center justify-center font-bold text-xs">+</button>
-                      </div>
-                    ) : (
-                      <button onClick={() => setSelectedServices([...selectedServices, { id: svc.id, quantity: 1 }])} className="px-3 py-1.5 rounded-xl border border-primary/30 text-primary hover:bg-primary/10 text-xs font-bold transition">
-                        + Thêm
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
+                  )}
+                </div>
+              ) : (
+                <div className="rounded-xl border border-border overflow-hidden">
+                  <table className="data-table text-sm">
+                    <thead>
+                      <tr>
+                        <th>Tên Không gian</th>
+                        <th>Trạng thái</th>
+                        <th className="text-right">Thao tác</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {currentFloorWorkspaces.map(ws => {
+                        const avail = getAvailability(ws.workspaceId);
+                        const isSelected = selectedWorkspaceId === ws.workspaceId;
+                        return (
+                          <tr key={ws.workspaceId} className={isSelected ? 'bg-primary/5' : ''}>
+                            <td className="font-medium text-foreground">{ws.name}</td>
+                            <td>
+                              {avail === 'available' ? (
+                                <span className="badge badge-success">Trống</span>
+                              ) : avail === 'booked' ? (
+                                <span className="badge badge-warning">Đã đặt</span>
+                              ) : (
+                                <span className="badge badge-outline text-red-500">Bảo trì</span>
+                              )}
+                            </td>
+                            <td className="text-right">
+                              <button
+                                disabled={avail !== 'available'}
+                                onClick={() => handleSelectWorkspace(ws.workspaceId)}
+                                className={`btn btn-sm ${isSelected ? 'btn-primary' : 'btn-outline'} ${avail !== 'available' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              >
+                                {isSelected ? 'Đã chọn' : 'Chọn'}
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
         </div>
 
         {/* Right Sidebar: POS Payment & Checkout Summary */}
-        <div>
-          <div className="rounded-2xl border border-border bg-card p-6 sticky top-24 shadow-lg space-y-5">
+        <div className="lg:block">
+          <div className="rounded-2xl border border-border bg-card p-6 lg:sticky lg:top-24 shadow-lg space-y-5 lg:max-h-[calc(100vh-120px)] overflow-y-auto">
             <h2 className="font-bold text-base uppercase tracking-wider text-muted-foreground font-heading">
               Tóm tắt POS & Thu tiền
             </h2>
             
+            <div className="p-3 bg-muted/40 rounded-xl border border-border mb-4">
+              <p className="text-xs text-muted-foreground font-bold mb-1">Vị trí đang chọn:</p>
+              <p className="text-sm font-bold text-primary">
+                {workspacesStatus.find(w => w.workspaceId === selectedWorkspaceId)?.name || 'Chưa chọn'}
+              </p>
+            </div>
+
             <div className="space-y-3 text-xs">
               <div className="flex justify-between text-muted-foreground">
                 <span>Tiền chỗ ({duration} giờ)</span>
                 <span className="font-mono font-semibold text-foreground">{formatVND(subtotal)}</span>
               </div>
-              {selectedServices.map(s => {
-                const svc = extraServices.find(e => e.id === s.id);
-                if (!svc) return null;
-                return (
-                  <div key={s.id} className="flex justify-between text-muted-foreground">
-                    <span>{svc.name} ×{s.quantity}</span>
-                    <span className="font-mono font-semibold text-foreground">{formatVND(svc.price * s.quantity)}</span>
-                  </div>
-                );
-              })}
+              
               <div className="pt-3 border-t border-border flex justify-between items-end">
                 <span className="font-bold text-sm">Tổng thu khách</span>
                 <span className="font-extrabold text-2xl text-primary font-mono">{formatVND(total)}</span>
@@ -317,38 +576,49 @@ const WalkinBookingPage: React.FC = () => {
             </div>
 
             {/* Payment Method Option */}
-            <div className="space-y-2">
+            <div className="space-y-3">
               <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Hình thức thanh toán</p>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="flex flex-col gap-2.5">
                 <button
                   type="button"
                   onClick={() => setPaymentMethod('cash')}
-                  className={`p-2.5 rounded-xl border text-center text-xs font-bold transition flex flex-col items-center gap-1 ${
-                    paymentMethod === 'cash' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/300/10 text-emerald-600 dark:text-emerald-400' : 'border-border text-muted-foreground'
+                  className={`p-3.5 rounded-xl border text-sm font-bold transition flex items-center justify-between gap-3 ${
+                    paymentMethod === 'cash' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'border-border text-muted-foreground hover:bg-muted/30'
                   }`}
                 >
-                  <FiDollarSign className="h-4 w-4" />
-                  <span>Tiền mặt</span>
+                  <div className="flex items-center gap-3">
+                    <FiDollarSign className="h-5 w-5" />
+                    <span>Tiền mặt</span>
+                  </div>
+                  {paymentMethod === 'cash' && <FiCheckCircle className="h-4 w-4" />}
                 </button>
                 <button
                   type="button"
                   onClick={() => setPaymentMethod('momo')}
-                  className={`p-2.5 rounded-xl border text-center text-xs font-bold transition flex flex-col items-center gap-1 ${
+                  className={`p-3.5 rounded-xl border text-sm font-bold transition flex items-center justify-between gap-3 opacity-50 cursor-not-allowed ${
                     paymentMethod === 'momo' ? 'border-[#A50064] bg-[#A50064]/10 text-[#A50064]' : 'border-border text-muted-foreground'
                   }`}
+                  disabled
+                  title="MoMo currently disabled for MVP Walk-in"
                 >
-                  <FiMaximize className="h-4 w-4" />
-                  <span>Ví MoMo</span>
+                  <div className="flex items-center gap-3">
+                    <FiMaximize className="h-5 w-5" />
+                    <span>Ví điện tử MoMo</span>
+                  </div>
                 </button>
                 <button
                   type="button"
                   onClick={() => setPaymentMethod('card')}
-                  className={`p-2.5 rounded-xl border text-center text-xs font-bold transition flex flex-col items-center gap-1 ${
+                  className={`p-3.5 rounded-xl border text-sm font-bold transition flex items-center justify-between gap-3 opacity-50 cursor-not-allowed ${
                     paymentMethod === 'card' ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground'
                   }`}
+                  disabled
+                  title="Card currently disabled for MVP Walk-in"
                 >
-                  <FiCreditCard className="h-4 w-4" />
-                  <span>Quẹt thẻ</span>
+                  <div className="flex items-center gap-3">
+                    <FiCreditCard className="h-5 w-5" />
+                    <span>Thẻ ATM / Tín dụng</span>
+                  </div>
                 </button>
               </div>
             </div>
@@ -365,12 +635,12 @@ const WalkinBookingPage: React.FC = () => {
             </label>
 
             <button 
-              disabled={(!selectedUser && !newUserName) || !selectedWorkspaceId} 
+              disabled={(!selectedUser && !newUserName) || !selectedWorkspaceId || isSubmitting} 
               onClick={handleConfirm}
               className="btn btn-primary w-full py-4 text-sm font-bold shadow-lg shadow-primary/25 rounded-xl"
             >
               <FiCheck className="h-4 w-4 mr-1.5" />
-              <span>Xác nhận & Thu tiền POS</span>
+              <span>{isSubmitting ? 'Đang xử lý...' : 'Xác nhận & Thu tiền POS'}</span>
             </button>
 
             {((!selectedUser && !newUserName) || !selectedWorkspaceId) && (

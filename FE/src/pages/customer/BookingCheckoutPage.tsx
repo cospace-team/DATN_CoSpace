@@ -18,6 +18,24 @@ const MOCK_SERVICES = [
   { id: 'printing', name: 'In ấn (50 trang)', price: 20000, icon: <FiPrinter /> },
 ];
 
+const PUBLIC_BRANCH_ALIASES: Record<string, string> = {
+  'branch-1': 'b1000000-0000-0000-0000-000000000001',
+  'branch-2': 'b2000000-0000-0000-0000-000000000002',
+  'branch-3': 'b3000000-0000-0000-0000-000000000003',
+  'branch-0001': 'b1000000-0000-0000-0000-000000000001',
+  'branch-0002': 'b2000000-0000-0000-0000-000000000002',
+  'branch-0003': 'b3000000-0000-0000-0000-000000000003',
+  'WH-Q1': 'b1000000-0000-0000-0000-000000000001',
+  'WH-Q7': 'b2000000-0000-0000-0000-000000000002',
+  'WH-TD': 'b3000000-0000-0000-0000-000000000003',
+  'CS-Q1': 'b1000000-0000-0000-0000-000000000001',
+};
+
+const resolveBranchId = (id?: string | null): string => {
+  if (!id) return '';
+  return PUBLIC_BRANCH_ALIASES[id] ?? id;
+};
+
 const BookingCheckoutPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -30,15 +48,27 @@ const BookingCheckoutPage: React.FC = () => {
   const date = (state?.date ? new Date(state.date) : new Date());
   const startHour = state?.hour || 9;
   const endHour = state?.endHour || 11;
+  // Multi-day support: endDate and durationUnit passed from BookingPanel
+  const rawEndDate = state?.endDate ? new Date(state.endDate) : null;
+  const bookingDurationUnit: 'hour' | 'day' | 'week' = state?.durationUnit || 'hour';
+  const endDate = rawEndDate && bookingDurationUnit !== 'hour' ? rawEndDate : new Date(date);
   const services = state?.services || {};
   const basePrice = state?.price?.price || 0;
-  const durationUnit = state?.price?.duration_unit || 'hour';
   const subtotal = state?.subtotal || 0;
   const addonTotal = state?.addonTotal || 0;
   const total = state?.total || 0;
 
+  // Derived display values
+  const isMultiDay = bookingDurationUnit !== 'hour';
+  const unitCount = isMultiDay
+    ? (bookingDurationUnit === 'week'
+        ? Math.max(1, Math.round(Math.abs(endDate.getTime() - date.getTime()) / (86_400_000 * 7)))
+        : Math.max(1, Math.round(Math.abs(endDate.getTime() - date.getTime()) / 86_400_000)))
+    : Math.max(1, endHour - startHour);
+
   const [isProcessing, setIsProcessing] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'momo'>('momo');
+  const [activeBooking, setActiveBooking] = useState<any | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<'payos' | 'momo' | 'cash'>('payos');
   
   // 15-Minute Expiration Countdown
   const [timeLeft, setTimeLeft] = useState(15 * 60); // 900 seconds
@@ -74,48 +104,102 @@ const BookingCheckoutPage: React.FC = () => {
     );
   }
 
-  const duration = Math.max(1, endHour - startHour);
-
   const handleCreateBooking = async () => {
     setIsProcessing(true);
     try {
-      // 1. Send API booking request
+      // 1. Build startAt/endAt based on durationUnit
       const startAtDate = new Date(date);
       startAtDate.setHours(startHour, 0, 0, 0);
-      const endAtDate = new Date(date);
-      endAtDate.setHours(endHour, 0, 0, 0);
 
-      const bookingRes = await bookingApi.createBooking({
-        branchId: workspace.branch_id || '7c27278b-eeba-462f-9720-23849d1c3703',
-        workspaceId: workspace.id,
-        workspaceTypeId: workspace.workspace_type_id,
-        startAt: startAtDate.toISOString(),
-        endAt: endAtDate.toISOString(),
-        unit: 'hour',
-        unitCount: duration,
-        services,
-        source: 'web',
-      });
+      const now = new Date();
+      now.setMinutes(0, 0, 0); // Allow booking for the current hour even if minutes have passed
+      
+      if (startAtDate < now) {
+        showToast('Không thể đặt chỗ trong quá khứ. Vui lòng chọn thời gian khác.', 'error');
+        setIsProcessing(false);
+        return;
+      }
 
-      // 2. Request MoMo Sandbox Payment API & redirect directly to MoMo Gateway page
+      let endAtDate: Date;
+      if (isMultiDay) {
+        // For day/week bookings: end at 23:59:59 of the selected end date
+        endAtDate = new Date(endDate);
+        endAtDate.setHours(23, 59, 59, 999);
+      } else {
+        // For hour bookings: same day, specified end hour
+        endAtDate = new Date(date);
+        endAtDate.setHours(endHour, 0, 0, 0);
+      }
+
+      let bookingRes = activeBooking;
+      if (!bookingRes) {
+        bookingRes = await bookingApi.createBooking({
+          branchId: resolveBranchId(workspace.branch_id || workspace.branchId),
+          workspaceId: workspace.id,
+          workspaceTypeId: workspace.workspace_type_id || workspace.workspaceTypeId || 'wst-desk',
+          startAt: startAtDate.toISOString(),
+          endAt: endAtDate.toISOString(),
+          unit: bookingDurationUnit,
+          unitCount: unitCount,
+          services,
+          source: 'web',
+        });
+        setActiveBooking(bookingRes);
+      }
+
+      // 2. Handle Payment Flow
+      if (paymentMethod === 'cash') {
+        showToast(`Đặt chỗ thành công! Vui lòng thanh toán tiền mặt tại quầy (Mã: ${bookingRes.bookingCode})`, 'success');
+        navigate('/customer/history', { 
+          state: { 
+            message: `Đặt chỗ thành công! Mã đơn của bạn là ${bookingRes.bookingCode}. Vui lòng thanh toán tại quầy khi nhận chỗ.`,
+            newBookingCode: bookingRes.bookingCode,
+            branchName: state.branchName || "CoSpace Chi nhánh",
+          } 
+        });
+        setIsProcessing(false);
+        return;
+      }
+
+      if (paymentMethod === 'payos') {
+        showToast('Đang kết nối cổng thanh toán VietQR (PayOS)...', 'info');
+        const payosRes = await bookingApi.createPayosPayment(bookingRes.id, total);
+
+        if (payosRes.checkoutUrl && payosRes.checkoutUrl.startsWith('http')) {
+          window.location.href = payosRes.checkoutUrl;
+        } else {
+          showToast('Tạo yêu cầu thanh toán VietQR thành công!', 'success');
+          navigate('/customer/history', { 
+            state: { 
+              message: `Đặt chỗ thành công! Mã đơn của bạn là ${bookingRes.bookingCode}.`,
+              newBookingCode: bookingRes.bookingCode,
+              branchName: state.branchName || "CoSpace Chi nhánh",
+            } 
+          });
+        }
+        setIsProcessing(false);
+        return;
+      }
+
+      // 3. Request MoMo Sandbox Payment API & redirect to MoMo Gateway
+      showToast('Đang chuyển hướng sang cổng thanh toán MoMo Sandbox...', 'info');
       const momoRes = await bookingApi.createMomoPayment(bookingRes.id, total);
 
       if (momoRes.payUrl && momoRes.payUrl.startsWith('http')) {
-        showToast('Đang chuyển hướng sang cổng thanh toán MoMo Sandbox...', 'info');
         window.location.href = momoRes.payUrl;
       } else {
-        // Fallback for offline/mock mode
-        showToast('Đặt chỗ thành công (Chế độ Sandbox)!', 'success');
+        showToast('Đặt chỗ thành công!', 'success');
         navigate('/customer/history', { 
           state: { 
             message: `Đặt chỗ thành công! Mã đơn của bạn là ${bookingRes.bookingCode}.`,
             newBookingCode: bookingRes.bookingCode,
+            branchName: state.branchName || "CoSpace Chi nhánh",
           } 
         });
       }
 
     } catch (err: any) {
-      showToast(err.message || 'Lỗi xử lý thanh toán MoMo', 'error');
+      showToast(err.message || 'Lỗi xử lý đặt chỗ / thanh toán', 'error');
       setIsProcessing(false);
     }
   };
@@ -182,7 +266,9 @@ const BookingCheckoutPage: React.FC = () => {
 
             <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-6 bg-card">
               <div className="space-y-2 p-4 bg-muted/50 rounded-3xl border border-border shadow-inner">
-                <p className="text-[10px] text-foreground  tracking-tight font-semibold">Ngày sử dụng</p>
+                <p className="text-[10px] text-foreground  tracking-tight font-semibold">
+                  {isMultiDay ? 'Từ ngày' : 'Ngày sử dụng'}
+                </p>
                 <p className="flex items-center gap-3 font-semibold text-lg text-foreground">
                   <div className="p-2 bg-card border border-border rounded-lg shadow-sm"><FiCalendar className="text-foreground h-5 w-5" /></div>
                   {date.toLocaleDateString('vi-VN')}
@@ -190,11 +276,27 @@ const BookingCheckoutPage: React.FC = () => {
               </div>
 
               <div className="space-y-2 p-4 bg-muted/50 rounded-3xl border border-border shadow-inner">
-                <p className="text-[10px] text-foreground  tracking-tight font-semibold">Khung giờ</p>
-                <div className="flex items-center gap-3 font-semibold text-lg text-foreground">
-                  <div className="p-2 bg-card border border-border rounded-lg shadow-sm"><FiClock className="text-foreground h-5 w-5" /></div>
-                  <span>{String(startHour).padStart(2, '0')}:00 → {String(endHour).padStart(2, '0')}:00</span>
-                </div>
+                {isMultiDay ? (
+                  <>
+                    <p className="text-[10px] text-foreground tracking-tight font-semibold">Đến ngày</p>
+                    <p className="flex items-center gap-3 font-semibold text-lg text-foreground">
+                      <div className="p-2 bg-card border border-border rounded-lg shadow-sm"><FiCalendar className="text-foreground h-5 w-5" /></div>
+                      {endDate.toLocaleDateString('vi-VN')}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {unitCount} {bookingDurationUnit === 'week' ? 'tuần' : 'ngày'}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-[10px] text-foreground  tracking-tight font-semibold">Khung giờ</p>
+                    <div className="flex items-center gap-3 font-semibold text-lg text-foreground">
+                      <div className="p-2 bg-card border border-border rounded-lg shadow-sm"><FiClock className="text-foreground h-5 w-5" /></div>
+                      <span>{String(startHour).padStart(2, '0')}:00 → {String(endHour).padStart(2, '0')}:00</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">{unitCount} giờ</p>
+                  </>
+                )}
               </div>
             </div>
           </section>
@@ -238,6 +340,37 @@ const BookingCheckoutPage: React.FC = () => {
             </h3>
             
             <div className="space-y-4">
+              {/* PayOS VietQR Option */}
+              <label className={`flex items-center justify-between p-4 rounded-3xl border-4 cursor-pointer transition-all ${
+                paymentMethod === 'payos' ? 'border-[#0052cc] bg-blue-50/20 dark:bg-blue-950/20 shadow-sm' : 'border-border hover:-translate-y-1 hover:shadow-sm'
+              }`}>
+                <div className="flex items-center gap-4">
+                  <input 
+                    type="radio" 
+                    name="payment" 
+                    value="payos" 
+                    checked={paymentMethod === 'payos'} 
+                    onChange={() => setPaymentMethod('payos')} 
+                    className="w-5 h-5 accent-[#0052cc]" 
+                  />
+                  <div className="h-12 w-12 rounded-3xl bg-[#0052cc] flex items-center justify-center shadow-sm text-white font-bold text-xs tracking-tight">
+                    VietQR
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-lg block text-foreground">Chuyển khoản VietQR (PayOS)</span>
+                      <span className="text-[10px] font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-800">
+                        Khuyên dùng
+                      </span>
+                    </div>
+                    <span className="text-xs font-medium text-foreground/70">Mã QR động mọi ngân hàng · Có nút giả lập thanh toán</span>
+                  </div>
+                </div>
+                <div className={`h-8 w-8 rounded-full border flex items-center justify-center ${paymentMethod === 'payos' ? 'bg-[#0052cc] border-[#0052cc] text-white' : 'border-border/50 text-transparent'}`}>
+                  <FiCheckCircle className="h-5 w-5 font-semibold" />
+                </div>
+              </label>
+
               <label className={`flex items-center justify-between p-4 rounded-3xl border-4 cursor-pointer transition-all ${
                 paymentMethod === 'momo' ? 'border-[#A50064] bg-muted/5 shadow-sm' : 'border-border hover:-translate-y-1 hover:shadow-sm'
               }`}>
@@ -259,6 +392,31 @@ const BookingCheckoutPage: React.FC = () => {
                   </div>
                 </div>
                 <div className={`h-8 w-8 rounded-full border flex items-center justify-center ${paymentMethod === 'momo' ? 'bg-[#A50064] border-[#A50064] text-white' : 'border-border/50 text-transparent'}`}>
+                  <FiCheckCircle className="h-5 w-5 font-semibold" />
+                </div>
+              </label>
+
+              <label className={`flex items-center justify-between p-4 rounded-3xl border-4 cursor-pointer transition-all ${
+                paymentMethod === 'cash' ? 'border-emerald-500 bg-muted/5 shadow-sm' : 'border-border hover:-translate-y-1 hover:shadow-sm'
+              }`}>
+                <div className="flex items-center gap-4">
+                  <input 
+                    type="radio" 
+                    name="payment" 
+                    value="cash" 
+                    checked={paymentMethod === 'cash'} 
+                    onChange={() => setPaymentMethod('cash')} 
+                    className="w-5 h-5 accent-emerald-500" 
+                  />
+                  <div className="h-12 w-12 rounded-3xl bg-emerald-500 flex items-center justify-center shadow-sm">
+                    <span className="text-white font-semibold text-[10px] tracking-tight">CASH</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-lg block text-foreground">Tiền mặt tại quầy</span>
+                    <span className="text-xs font-medium text-foreground/70">Thanh toán trực tiếp khi đến nơi</span>
+                  </div>
+                </div>
+                <div className={`h-8 w-8 rounded-full border flex items-center justify-center ${paymentMethod === 'cash' ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-border/50 text-transparent'}`}>
                   <FiCheckCircle className="h-5 w-5 font-semibold" />
                 </div>
               </label>
@@ -287,7 +445,7 @@ const BookingCheckoutPage: React.FC = () => {
             <div className="p-6 space-y-4">
               <div className="flex flex-col gap-2 p-4 bg-muted/50 rounded-3xl border border-border">
                 <div className="flex justify-between items-center text-sm font-medium text-foreground/70">
-                  <span className="">Tiền thuê ({formatVND(basePrice)}) × {duration}h</span>
+                  <span className="">Tiền thuê ({formatVND(basePrice)}) × {unitCount}{bookingDurationUnit === 'week' ? ' tuần' : bookingDurationUnit === 'day' ? ' ngày' : 'h'}</span>
                   <span className="font-semibold text-foreground font-mono text-lg">{formatVND(subtotal)}</span>
                 </div>
                 
