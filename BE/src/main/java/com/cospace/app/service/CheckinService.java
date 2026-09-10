@@ -109,6 +109,15 @@ public class CheckinService {
         Booking booking = bookingRepository.findByIdWithLock(checkinLog.getBookingId())
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thông tin đặt chỗ"));
 
+        // Validate branch matching if staff is bound to a specific branch (same rule as checkin)
+        if (staffId != null) {
+            userRepository.findById(staffId).ifPresent(staff -> {
+                if (staff.getBranchId() != null && !staff.getBranchId().equals(booking.getBranchId())) {
+                    throw new IllegalArgumentException("Nhân viên không thuộc chi nhánh của vé đặt chỗ này.");
+                }
+            });
+        }
+
         // If contract and still within valid period, maintain status CHECKED_IN for tomorrow
         if (booking.isContract() && now.isBefore(booking.getEndAt())) {
             booking.setStatus(BookingStatus.CHECKED_IN);

@@ -637,7 +637,7 @@ const BAWorkspacePage: React.FC = () => {
                               className={`px-2 py-1 rounded-lg text-xs font-semibold transition-all ${
                                 selectedWsId === ws.id
                                   ? 'bg-primary text-primary-foreground shadow-sm'
-                                  : 'bg-emerald-50 dark:bg-emerald-950/300/10 text-emerald-600 hover:bg-emerald-50 dark:bg-emerald-950/300/20'
+                                  : 'bg-success/10 text-success hover:bg-success/20'
                               }`}
                               title="Click để định vị trên sơ đồ"
                             >
@@ -928,17 +928,17 @@ const BAWorkspacePage: React.FC = () => {
       {showEditorPopup && currentFloor && (
         <div className="fixed inset-0 z-[60] flex flex-col bg-background animate-fade-in">
           {/* Popup Header */}
-          <div className="flex items-center justify-between px-6 py-3 border-b border-slate-800 bg-slate-950 shadow-sm shrink-0 text-slate-200">
+          <div className="flex items-center justify-between px-6 py-3 border-b border-border bg-card shadow-sm shrink-0 text-foreground">
             <div className="flex items-center gap-3">
-              <FiLayout className="h-5 w-5 text-violet-400" />
+              <FiLayout className="h-5 w-5 text-primary" />
               <div>
-                <h2 className="text-sm font-bold font-heading text-slate-100">Chỉnh sửa Layout — {currentFloor.name}</h2>
-                <p className="text-xs text-slate-400">Kéo thả elements từ panel trái để thiết kế, gán workspace từ panel phải</p>
+                <h2 className="text-sm font-bold font-heading text-foreground">Chỉnh sửa Layout — {currentFloor.name}</h2>
+                <p className="text-xs text-muted-foreground">Kéo thả elements từ panel trái để thiết kế, gán workspace từ panel phải</p>
               </div>
             </div>
             <button
               onClick={() => setShowEditorPopup(false)}
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 hover:text-white flex items-center gap-2 transition-all shadow-sm active:scale-95"
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-muted border border-border hover:bg-muted/70 text-foreground flex items-center gap-2 transition-all shadow-sm active:scale-95"
             >
               <FiX className="h-4 w-4" /> Đóng Editor
             </button>

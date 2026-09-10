@@ -2,6 +2,7 @@ package com.cospace.app.controller;
 
 import com.cospace.app.dto.api.BookingCreateRequest;
 import com.cospace.app.dto.api.BookingDto;
+import com.cospace.app.security.BranchAccessGuard;
 import com.cospace.app.service.BookingService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -24,9 +25,11 @@ import java.util.UUID;
 public class BookingController {
 
     private final BookingService bookingService;
+    private final BranchAccessGuard branchAccessGuard;
 
-    public BookingController(BookingService bookingService) {
+    public BookingController(BookingService bookingService, BranchAccessGuard branchAccessGuard) {
         this.bookingService = bookingService;
+        this.branchAccessGuard = branchAccessGuard;
     }
 
     @PostMapping
@@ -65,16 +68,16 @@ public class BookingController {
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable("code") String code,
             @org.springframework.web.bind.annotation.RequestParam("branchId") UUID branchId) {
-        // Staff/Branch Admin auth validation can be done in security config or here.
-        // Assuming branchId is passed as parameter to verify the booking belongs to their branch.
-        return bookingService.getBookingByCode(code, branchId);
+        UUID verifiedBranchId = branchAccessGuard.requireBranchAccess(jwt, branchId);
+        return bookingService.getBookingByCode(code, verifiedBranchId);
     }
 
     @GetMapping("/branch-today")
     public List<BookingDto> getBranchTodayBookings(
             @AuthenticationPrincipal Jwt jwt,
             @org.springframework.web.bind.annotation.RequestParam("branchId") UUID branchId) {
-        return bookingService.getBranchTodayBookings(branchId);
+        UUID verifiedBranchId = branchAccessGuard.requireBranchAccess(jwt, branchId);
+        return bookingService.getBranchTodayBookings(verifiedBranchId);
     }
 
     private UUID requireSubject(Jwt jwt) {

@@ -3,7 +3,10 @@ package com.cospace.app.controller;
 import com.cospace.app.entity.BookingCancellation;
 import com.cospace.app.entity.CancellationPolicy;
 import com.cospace.app.repository.CancellationPolicyRepository;
+import com.cospace.app.security.BranchAccessGuard;
+import com.cospace.app.service.AuditLogService;
 import com.cospace.app.service.CancellationService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +27,9 @@ public class CancellationPolicyController {
 
     private final CancellationPolicyRepository policyRepository;
     private final CancellationService cancellationService;
+    private final BranchAccessGuard branchAccessGuard;
+    private final AuditLogService auditLogService;
+    private final HttpServletRequest httpServletRequest;
 
     @GetMapping("/cancellation-policies")
     public ResponseEntity<List<CancellationPolicy>> getPolicies(
@@ -37,18 +43,34 @@ public class CancellationPolicyController {
     }
 
     @PostMapping("/cancellation-policies")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN', 'super_admin', 'admin')")
-    public ResponseEntity<CancellationPolicy> createPolicy(@RequestBody CancellationPolicy policy) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(policyRepository.save(policy));
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN', 'BRANCH_ADMIN', 'super_admin', 'admin', 'branch_admin')")
+    public ResponseEntity<CancellationPolicy> createPolicy(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestBody CancellationPolicy policy) {
+        // A branch admin may only create a policy scoped to their own branch — never a global
+        // one (branchId null) or one for another branch. super_admin may create either.
+        if (!branchAccessGuard.isSuperAdmin(jwt)) {
+            policy.setBranchId(branchAccessGuard.requireOwnBranch(jwt));
+        }
+        CancellationPolicy savedPolicy = policyRepository.save(policy);
+        auditLogService.log(httpServletRequest, UUID.fromString(jwt.getSubject()), "CREATE", "cancellation_policies", savedPolicy.getId(),
+                null, Map.of("name", savedPolicy.getName(), "ruleType", savedPolicy.getRuleType(), "refundPercent", savedPolicy.getRefundPercent()));
+        return ResponseEntity.status(HttpStatus.CREATED).body(savedPolicy);
     }
 
     @PutMapping("/cancellation-policies/{id}")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN', 'super_admin', 'admin')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN', 'BRANCH_ADMIN', 'super_admin', 'admin', 'branch_admin')")
     public ResponseEntity<CancellationPolicy> updatePolicy(
+            @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID id,
             @RequestBody CancellationPolicy updated) {
         CancellationPolicy existing = policyRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Chính sách hủy không tồn tại"));
+        // A branch admin may only edit a policy already scoped to their own branch — never the
+        // global defaults or another branch's override.
+        branchAccessGuard.requireAccessToBranch(jwt, existing.getBranchId());
+        Map<String, Object> oldValues = Map.of(
+                "name", existing.getName(), "refundPercent", existing.getRefundPercent(), "isActive", existing.isActive());
         existing.setName(updated.getName());
         existing.setRuleType(updated.getRuleType());
         existing.setMinValue(updated.getMinValue());
@@ -56,16 +78,22 @@ public class CancellationPolicyController {
         existing.setRefundPercent(updated.getRefundPercent());
         existing.setPriority(updated.getPriority());
         existing.setActive(updated.isActive());
-        return ResponseEntity.ok(policyRepository.save(existing));
+        CancellationPolicy saved = policyRepository.save(existing);
+        auditLogService.log(httpServletRequest, UUID.fromString(jwt.getSubject()), "UPDATE", "cancellation_policies", saved.getId(),
+                oldValues, Map.of("name", saved.getName(), "refundPercent", saved.getRefundPercent(), "isActive", saved.isActive()));
+        return ResponseEntity.ok(saved);
     }
 
     @DeleteMapping("/cancellation-policies/{id}")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN', 'super_admin', 'admin')")
-    public ResponseEntity<?> deletePolicy(@PathVariable UUID id) {
-        policyRepository.findById(id).ifPresent(p -> {
-            p.setActive(false);
-            policyRepository.save(p);
-        });
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN', 'BRANCH_ADMIN', 'super_admin', 'admin', 'branch_admin')")
+    public ResponseEntity<?> deletePolicy(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
+        CancellationPolicy existing = policyRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Chính sách hủy không tồn tại"));
+        branchAccessGuard.requireAccessToBranch(jwt, existing.getBranchId());
+        existing.setActive(false);
+        policyRepository.save(existing);
+        auditLogService.log(httpServletRequest, UUID.fromString(jwt.getSubject()), "DELETE", "cancellation_policies", existing.getId(),
+                Map.of("isActive", true), Map.of("isActive", false));
         return ResponseEntity.ok(Map.of("success", true, "message", "Chính sách đã được vô hiệu hóa."));
     }
 

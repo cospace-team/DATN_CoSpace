@@ -19,4 +19,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     @org.springframework.data.jpa.repository.Query("SELECT u FROM User u WHERE lower(u.fullName) LIKE lower(concat('%',:query,'%')) OR lower(u.email) LIKE lower(concat('%',:query,'%')) OR u.phone LIKE concat('%',:query,'%')")
     java.util.List<User> searchUsers(@org.springframework.data.repository.query.Param("query") String query);
+
+    java.util.List<User> findByBranchIdAndRole(UUID branchId, User.Role role);
+
+    boolean existsByEmailAndIdNot(String email, UUID id);
 }

@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { FiShield, FiPlus, FiX, FiCheck, FiGlobe, FiMapPin, FiAlertCircle } from 'react-icons/fi';
+import React, { useState, useEffect } from 'react';
+import { FiShield, FiPlus, FiX, FiCheck, FiGlobe, FiMapPin, FiAlertCircle, FiEdit2 } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
-import { cancellationPolicies as allPolicies, type CancellationPolicy } from '../../data/mockData';
-import { getEffectivePolicies } from '../../utils/policyResolver';
+import { staffApi, type CancellationPolicyDto } from '../../api/staffApi';
+
 
 const Modal: React.FC<{ title: string; onClose: () => void; children: React.ReactNode }> = ({
   title, onClose, children,
@@ -18,62 +18,110 @@ const Modal: React.FC<{ title: string; onClose: () => void; children: React.Reac
   </div>
 );
 
-const RULE_TYPE_LABEL: Record<CancellationPolicy['rule_type'], string> = {
+const RULE_TYPE_LABEL: Record<string, string> = {
   GRACE_HOURS: 'Trong vòng N giờ đầu',
   BEFORE_START_DAYS: 'Trước N ngày',
 };
+
 
 const BAPoliciesPage: React.FC = () => {
   const { user } = useAuth();
   const branchId = user!.branchId!;
 
-  const [localPolicies, setLocalPolicies] = useState<CancellationPolicy[]>(
-    allPolicies.filter((p) => p.branch_id === branchId)
-  );
-  const [modalOpen, setModalOpen] = useState(false);
-  const [form, setForm] = useState({
-    name: '',
-    rule_type: 'GRACE_HOURS' as CancellationPolicy['rule_type'],
-    min_value: '0',
-    max_value: '1',
-    refund_percent: '100',
-  });
+  const [allPolicies, setAllPolicies] = useState<CancellationPolicyDto[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [apiError, setApiError] = useState('');
 
+  useEffect(() => {
+    const load = async () => {
+      setIsLoading(true);
+      try {
+        const data = await staffApi.getCancellationPolicies(branchId);
+        setAllPolicies(data);
+      } catch (e: any) {
+        setApiError(e.message || 'Không thể tải chính sách.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    load();
+  }, [branchId]);
+
+  type ModalMode = { type: 'add' } | { type: 'edit'; policy: CancellationPolicyDto } | null;
+  const [modal, setModal] = useState<ModalMode>(null);
+  const emptyForm = { name: '', rule_type: 'GRACE_HOURS' as string, min_value: '0', max_value: '1', refund_percent: '100' };
+  const [form, setForm] = useState(emptyForm);
+
+  const localPolicies = allPolicies.filter(p => p.branchId === branchId && p.isActive);
+  const globalPolicies = allPolicies.filter(p => !p.branchId && p.isActive);
   const effectivePolicies = [
-    ...localPolicies.map((p) => ({ ...p, source: 'branch' as const })),
-    ...allPolicies
-      .filter((p) => !p.branch_id && p.is_active)
-      .map((p) => ({ ...p, source: 'global' as const })),
+    ...localPolicies.map(p => ({ ...p, source: 'branch' as const })),
+    ...globalPolicies.map(p => ({ ...p, source: 'global' as const })),
   ];
 
-  const savePolicy = () => {
-    if (!form.name.trim()) return;
-    const newPolicy: CancellationPolicy = {
-      id: `cp-local-${Date.now()}`,
-      name: form.name,
-      rule_type: form.rule_type,
-      min_value: parseInt(form.min_value) || 0,
-      max_value: parseInt(form.max_value) || 1,
-      refund_percent: parseFloat(form.refund_percent) || 0,
-      is_active: true,
-      branch_id: branchId,
-      workspace_type_id: null,
-    };
-    setLocalPolicies((prev) => [...prev, newPolicy]);
-    setModalOpen(false);
-    setForm({ name: '', rule_type: 'GRACE_HOURS', min_value: '0', max_value: '1', refund_percent: '100' });
+  const openAdd = () => {
+    setForm(emptyForm);
+    setApiError('');
+    setModal({ type: 'add' });
   };
 
-  const deactivatePolicy = (id: string) => {
-    setLocalPolicies((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, is_active: false } : p))
-    );
+  const openEdit = (p: CancellationPolicyDto) => {
+    setForm({
+      name: p.name,
+      rule_type: p.ruleType,
+      min_value: String(p.minValue),
+      max_value: String(p.maxValue),
+      refund_percent: String(p.refundPercent),
+    });
+    setApiError('');
+    setModal({ type: 'edit', policy: p });
+  };
+
+  const savePolicy = async () => {
+    if (!form.name.trim()) return;
+    const shared = {
+      name: form.name,
+      ruleType: form.rule_type,
+      minValue: parseInt(form.min_value) || 0,
+      maxValue: parseInt(form.max_value) || 1,
+      refundPercent: parseFloat(form.refund_percent) || 0,
+      isActive: true,
+    };
+    try {
+      if (modal?.type === 'edit') {
+        // The backend replaces every field from this payload (not a partial patch), so send the
+        // full record — priority/branchId carried over unchanged from the policy being edited.
+        const updated = await staffApi.updateCancellationPolicy(modal.policy.id, {
+          ...shared,
+          branchId: modal.policy.branchId,
+          priority: modal.policy.priority ?? 100,
+        });
+        setAllPolicies(prev => prev.map(p => p.id === updated.id ? updated : p));
+      } else {
+        const created = await staffApi.createCancellationPolicy({ ...shared, branchId });
+        setAllPolicies(prev => [...prev, created]);
+      }
+      setModal(null);
+      setForm(emptyForm);
+    } catch (e: any) {
+      setApiError(e.message || 'Lỗi khi lưu chính sách.');
+    }
+  };
+
+  const deactivatePolicy = async (id: string) => {
+    try {
+      await staffApi.deleteCancellationPolicy(id);
+      setAllPolicies(prev => prev.filter(p => p.id !== id));
+    } catch (e: any) {
+      setApiError(e.message || 'Lỗi khi xóa chính sách.');
+    }
   };
 
   const refundColor = (pct: number) =>
-    pct === 100 ? 'text-emerald-600 dark:text-emerald-400' :
-    pct >= 50 ? 'text-amber-600 dark:text-amber-400' :
-    'text-red-600 dark:text-red-400';
+    pct === 100 ? 'text-success' :
+    pct >= 50 ? 'text-warning' :
+    'text-destructive';
+
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -87,11 +135,17 @@ const BAPoliciesPage: React.FC = () => {
               Thêm chính sách riêng cho chi nhánh. Chính sách chi nhánh được ưu tiên hơn mặc định.
             </p>
           </div>
-          <button className="btn btn-primary btn-sm" onClick={() => setModalOpen(true)}>
+          <button className="btn btn-primary btn-sm" onClick={openAdd}>
             <FiPlus className="h-4 w-4" /> Thêm chính sách
           </button>
         </div>
       </div>
+
+      {apiError && (
+        <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          <FiAlertCircle className="h-4 w-4 shrink-0" />{apiError}
+        </div>
+      )}
 
       {/* Legend */}
       <div className="flex items-center gap-4 text-xs text-muted-foreground">
@@ -106,6 +160,13 @@ const BAPoliciesPage: React.FC = () => {
       </div>
 
       {/* Policy list */}
+      {isLoading ? (
+        <div className="bg-card rounded-3xl border border-border p-6 space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-12 bg-muted rounded-xl animate-pulse" />
+          ))}
+        </div>
+      ) : (
       <div className="bg-card rounded-3xl border border-border shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="data-table">
@@ -131,11 +192,11 @@ const BAPoliciesPage: React.FC = () => {
                 effectivePolicies.map((p) => (
                   <tr key={`${p.id}-${p.source}`}>
                     <td className="font-medium">{p.name}</td>
-                    <td className="text-muted-foreground">{RULE_TYPE_LABEL[p.rule_type]}</td>
-                    <td className="font-mono text-sm">{p.min_value} → {p.max_value}</td>
+                    <td className="text-muted-foreground">{RULE_TYPE_LABEL[p.ruleType]}</td>
+                    <td className="font-mono text-sm">{p.minValue} → {p.maxValue}</td>
                     <td className="text-center">
-                      <span className={`font-bold text-sm ${refundColor(p.refund_percent)}`}>
-                        {p.refund_percent}%
+                      <span className={`font-bold text-sm ${refundColor(p.refundPercent)}`}>
+                        {p.refundPercent}%
                       </span>
                     </td>
                     <td className="text-center">
@@ -150,6 +211,14 @@ const BAPoliciesPage: React.FC = () => {
                     </td>
                     <td className="text-right">
                       {p.source === 'branch' && (
+                        <div className="flex items-center justify-end gap-1">
+                        <button
+                          className="btn btn-ghost btn-sm p-1 hover:bg-primary/10 hover:text-primary"
+                          onClick={() => openEdit(p)}
+                          title="Chỉnh sửa chính sách"
+                        >
+                          <FiEdit2 className="h-3.5 w-3.5" />
+                        </button>
                         <button
                           className="btn btn-ghost btn-sm p-1 text-destructive hover:bg-destructive/10"
                           onClick={() => deactivatePolicy(p.id)}
@@ -157,6 +226,7 @@ const BAPoliciesPage: React.FC = () => {
                         >
                           <FiX className="h-3.5 w-3.5" />
                         </button>
+                        </div>
                       )}
                     </td>
                   </tr>
@@ -166,6 +236,7 @@ const BAPoliciesPage: React.FC = () => {
           </table>
         </div>
       </div>
+      )}
 
       {/* Info note */}
       <div className="flex items-start gap-2 text-sm text-muted-foreground rounded-lg border border-border bg-muted/50 p-4">
@@ -173,10 +244,15 @@ const BAPoliciesPage: React.FC = () => {
         <p>Chính sách hệ thống không thể xóa từ đây. Liên hệ Super Admin để thay đổi chính sách mặc định.</p>
       </div>
 
-      {/* Add modal */}
-      {modalOpen && (
-        <Modal title="Thêm chính sách hủy" onClose={() => setModalOpen(false)}>
+      {/* Add/Edit modal */}
+      {modal && (
+        <Modal title={modal.type === 'add' ? 'Thêm chính sách hủy' : 'Chỉnh sửa chính sách hủy'} onClose={() => setModal(null)}>
           <div className="space-y-4">
+            {apiError && (
+              <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-3 text-sm text-destructive">
+                <FiAlertCircle className="h-4 w-4 shrink-0" />{apiError}
+              </div>
+            )}
             <div>
               <label className="block text-sm font-medium mb-1.5">Tên chính sách <span className="text-destructive">*</span></label>
               <input
@@ -191,7 +267,7 @@ const BAPoliciesPage: React.FC = () => {
               <select
                 className="input-field"
                 value={form.rule_type}
-                onChange={(e) => setForm((p) => ({ ...p, rule_type: e.target.value as CancellationPolicy['rule_type'] }))}
+                onChange={(e) => setForm((p) => ({ ...p, rule_type: e.target.value }))}
               >
                 <option value="GRACE_HOURS">Trong vòng N giờ đầu</option>
                 <option value="BEFORE_START_DAYS">Trước N ngày bắt đầu</option>
@@ -215,7 +291,7 @@ const BAPoliciesPage: React.FC = () => {
                 onChange={(e) => setForm((p) => ({ ...p, refund_percent: e.target.value }))} />
             </div>
             <div className="flex gap-3 justify-end pt-2">
-              <button className="btn btn-secondary btn-sm" onClick={() => setModalOpen(false)}>Hủy</button>
+              <button className="btn btn-secondary btn-sm" onClick={() => setModal(null)}>Hủy</button>
               <button className="btn btn-primary btn-sm" onClick={savePolicy} disabled={!form.name.trim()}>
                 <FiCheck className="h-3.5 w-3.5" /> Lưu
               </button>

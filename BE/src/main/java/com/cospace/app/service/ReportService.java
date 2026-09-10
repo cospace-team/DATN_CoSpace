@@ -26,6 +26,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -33,6 +34,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -42,6 +44,15 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ReportService {
 
+    // CoSpace operates in Vietnam; a "day" or "month" boundary chosen by a branch admin
+    // (dateFrom/dateTo, or a booking's created_at grouped into a calendar month) must be
+    // interpreted in this zone, not UTC — otherwise every boundary is off by 7 hours and a
+    // booking made just after local midnight can land in the wrong day/month.
+    private static final ZoneId VN_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
+
+    private static final Set<BookingStatus> REVENUE_STATUSES = Set.of(
+            BookingStatus.COMPLETED, BookingStatus.CHECKED_IN, BookingStatus.CHECKED_OUT, BookingStatus.CONFIRMED);
+
     private final BookingRepository bookingRepository;
     private final PaymentRepository paymentRepository;
     private final BranchEntityRepository branchRepository;
@@ -50,8 +61,8 @@ public class ReportService {
 
     @Transactional(readOnly = true)
     public ReportOverviewDto getOverview(UUID branchId, LocalDate dateFrom, LocalDate dateTo) {
-        OffsetDateTime start = (dateFrom != null) ? dateFrom.atStartOfDay().atOffset(ZoneOffset.UTC) : null;
-        OffsetDateTime end = (dateTo != null) ? dateTo.atTime(LocalTime.MAX).atOffset(ZoneOffset.UTC) : null;
+        OffsetDateTime start = (dateFrom != null) ? vnStartOfDay(dateFrom) : null;
+        OffsetDateTime end = (dateTo != null) ? vnEndOfDay(dateTo) : null;
 
         List<Booking> allBookings = bookingRepository.findAll();
         List<BranchEntity> branches = branchRepository.findAll();
@@ -59,48 +70,75 @@ public class ReportService {
                 .collect(Collectors.toMap(wt -> wt.getId().toString(), Function.identity(), (a, b) -> a));
 
         // Filter bookings
-        List<Booking> filtered = allBookings.stream()
-                .filter(b -> branchId == null || b.getBranchId().equals(branchId))
+        List<Booking> branchBookings = allBookings.stream()
+                .filter(b -> branchId == null || branchId.equals(b.getBranchId()))
+                .toList();
+                
+        List<Booking> filtered = branchBookings.stream()
                 .filter(b -> start == null || (b.getCreatedAt() != null && !b.getCreatedAt().isBefore(start)))
                 .filter(b -> end == null || (b.getCreatedAt() != null && !b.getCreatedAt().isAfter(end)))
+                .toList();
+                
+        // Fetch all PAID payments for this branch for fallback
+        Set<UUID> branchBookingIds = branchBookings.stream().map(Booking::getId).collect(Collectors.toSet());
+        List<Payment> branchPayments = paymentRepository.findAll().stream()
+                .filter(p -> p.getStatus() == PaymentStatus.PAID)
+                .filter(p -> branchBookingIds.contains(p.getBookingId()))
                 .toList();
 
         int totalBookings = filtered.size();
         int completedBookings = (int) filtered.stream().filter(b -> b.getStatus() == BookingStatus.COMPLETED).count();
         int canceledBookings = (int) filtered.stream().filter(b -> b.getStatus() == BookingStatus.CANCELLED).count();
 
-        // Revenue from paid payments or completed/checked_in bookings
-        long totalRevenue = filtered.stream()
-                .filter(b -> b.getStatus() == BookingStatus.COMPLETED || b.getStatus() == BookingStatus.CHECKED_IN)
-                .mapToLong(Booking::getTotalAmount)
-                .sum();
+        // Revenue from paid payments or completed/checked_in bookings, applied via the same
+        // computeRevenue() helper as the monthly and by-type breakdowns below so all three
+        // numbers are derived from the exact same rule and can never disagree with each other.
+        long totalRevenue = computeRevenue(filtered, branchPayments, start, end);
 
-        // If no booking revenue, fallback to sum of paid payments in period
-        if (totalRevenue == 0) {
-            List<Payment> paidPayments = paymentRepository.findAll().stream()
-                    .filter(p -> p.getStatus() == PaymentStatus.PAID)
-                    .filter(p -> start == null || (p.getCreatedAt() != null && !p.getCreatedAt().isBefore(start)))
-                    .filter(p -> end == null || (p.getCreatedAt() != null && !p.getCreatedAt().isAfter(end)))
-                    .toList();
-            totalRevenue = paidPayments.stream().mapToLong(Payment::getAmount).sum();
+        // Determine the range of months to display
+        YearMonth startYM;
+        YearMonth endYM;
+        if (start != null && end != null) {
+            startYM = toVnYearMonth(start);
+            endYM = toVnYearMonth(end);
+        } else {
+            endYM = YearMonth.now(VN_ZONE);
+            startYM = endYM.minusMonths(5); // Default to last 6 months
+        }
+        
+        // Cap at 12 months to avoid UI overflow
+        if (java.time.temporal.ChronoUnit.MONTHS.between(startYM, endYM) > 11) {
+            startYM = endYM.minusMonths(11);
         }
 
-        // Monthly revenue for the last 4 months
         List<String> months = new ArrayList<>();
         List<Long> monthlyRevenue = new ArrayList<>();
-        YearMonth currentYM = YearMonth.now();
-        for (int i = 3; i >= 0; i--) {
-            YearMonth ym = currentYM.minusMonths(i);
+        
+        YearMonth ym = startYM;
+        while (!ym.isAfter(endYM)) {
             String label = "T" + ym.getMonthValue();
+            if (startYM.getYear() != endYM.getYear()) {
+                label += "/" + (ym.getYear() % 100);
+            }
             months.add(label);
-
-            long mRev = allBookings.stream()
-                    .filter(b -> branchId == null || b.getBranchId().equals(branchId))
-                    .filter(b -> b.getCreatedAt() != null && YearMonth.from(b.getCreatedAt()).equals(ym))
-                    .filter(b -> b.getStatus() == BookingStatus.COMPLETED || b.getStatus() == BookingStatus.CHECKED_IN)
-                    .mapToLong(Booking::getTotalAmount)
-                    .sum();
+            
+            // Scope both bookings and payments to this calendar month (in VN time) AND to the
+            // overall requested [start, end] window — the window can be narrower than a full
+            // month (e.g. a "this week" filter), and without this second filter the bucket would
+            // count the whole month's revenue while the KPI total above only counts the window,
+            // so the chart bars would never add up to the headline total.
+            final YearMonth currentYm = ym;
+            List<Booking> monthBookings = branchBookings.stream()
+                    .filter(b -> b.getCreatedAt() != null && toVnYearMonth(b.getCreatedAt()).equals(currentYm))
+                    .filter(b -> start == null || !b.getCreatedAt().isBefore(start))
+                    .filter(b -> end == null || !b.getCreatedAt().isAfter(end))
+                    .toList();
+            List<Payment> monthPayments = branchPayments.stream()
+                    .filter(p -> p.getCreatedAt() != null && toVnYearMonth(p.getCreatedAt()).equals(currentYm))
+                    .toList();
+            long mRev = computeRevenue(monthBookings, monthPayments, start, end);
             monthlyRevenue.add(mRev);
+            ym = ym.plusMonths(1);
         }
 
         // By workspace type breakdown
@@ -120,39 +158,47 @@ public class ReportService {
             WorkspaceType wt = typeMap.get(typeKey);
             String typeName = wt != null ? wt.getName() : "Không gian làm việc";
             int count = entry.getValue().size();
-            long rev = entry.getValue().stream()
-                    .filter(b -> b.getStatus() == BookingStatus.COMPLETED || b.getStatus() == BookingStatus.CHECKED_IN)
-                    .mapToLong(Booking::getTotalAmount)
-                    .sum();
+            Set<UUID> typeBookingIds = entry.getValue().stream().map(Booking::getId).collect(Collectors.toSet());
+            List<Payment> typePayments = branchPayments.stream()
+                    .filter(p -> typeBookingIds.contains(p.getBookingId()))
+                    .toList();
+            long rev = computeRevenue(entry.getValue(), typePayments, start, end);
             String color = colors[colorIdx % colors.length];
             colorIdx++;
 
             byType.add(new ReportOverviewDto.WorkspaceTypeStatDto(typeName, count, rev, color));
         }
 
-        // Branch Comparison
+        // Branch Comparison — only meaningful (and only allowed) for a system-wide view.
+        // When branchId is set the caller is scoped to a single branch (enforced by
+        // BranchAccessGuard.resolveReportBranchId at the controller), so comparing against every
+        // other branch's revenue would leak data the caller has no right to see.
         List<ReportOverviewDto.BranchComparisonDto> branchComparison = new ArrayList<>();
-        for (BranchEntity branch : branches) {
-            List<Booking> bBookings = allBookings.stream()
-                    .filter(b -> b.getBranchId().equals(branch.getId()))
-                    .toList();
-            int bCount = bBookings.size();
-            long bRev = bBookings.stream()
-                    .filter(b -> b.getStatus() == BookingStatus.COMPLETED || b.getStatus() == BookingStatus.CHECKED_IN)
-                    .mapToLong(Booking::getTotalAmount)
-                    .sum();
-            int compCount = (int) bBookings.stream().filter(b -> b.getStatus() == BookingStatus.COMPLETED).count();
-            int rate = bCount > 0 ? (int) Math.round(((double) compCount / bCount) * 100) : 0;
+        if (branchId == null) {
+            for (BranchEntity branch : branches) {
+                List<Booking> bBookings = allBookings.stream()
+                        .filter(b -> branch.getId().equals(b.getBranchId()))
+                        .toList();
+                int bCount = bBookings.size();
+                long bRev = bBookings.stream()
+                        .filter(b -> b.getStatus() == BookingStatus.COMPLETED || b.getStatus() == BookingStatus.CHECKED_IN)
+                        .mapToLong(Booking::getTotalAmount)
+                        .sum();
+                int compCount = (int) bBookings.stream().filter(b -> b.getStatus() == BookingStatus.COMPLETED).count();
+                int rate = bCount > 0 ? (int) Math.round(((double) compCount / bCount) * 100) : 0;
 
-            branchComparison.add(new ReportOverviewDto.BranchComparisonDto(
-                    branch.getId(),
-                    branch.getName(),
-                    branch.getCode(),
-                    bCount,
-                    bRev,
-                    rate
-            ));
+                branchComparison.add(new ReportOverviewDto.BranchComparisonDto(
+                        branch.getId(),
+                        branch.getName(),
+                        branch.getCode(),
+                        bCount,
+                        bRev,
+                        rate
+                ));
+            }
         }
+
+        log.info("Total Revenue: {}, Monthly Revenue: {}", totalRevenue, monthlyRevenue);
 
         return ReportOverviewDto.builder()
                 .totalRevenue(totalRevenue)
@@ -166,13 +212,49 @@ public class ReportService {
                 .build();
     }
 
+    /**
+     * Sums revenue for a given scope of bookings, using paid payments as a fallback ONLY when
+     * that same scope has no booking-derived revenue at all (e.g. legacy rows where
+     * {@code total_amount} was never populated). The fallback is always evaluated over the exact
+     * same {@code bookings} scope's payments — never the whole branch's — and always within the
+     * same {@code rangeStart}/{@code rangeEnd} window, so this can be called identically for the
+     * headline total, each monthly bucket, and each workspace-type slice without the three ever
+     * disagreeing with each other or double-counting revenue across sources.
+     */
+    private long computeRevenue(List<Booking> bookings, List<Payment> payments, OffsetDateTime rangeStart, OffsetDateTime rangeEnd) {
+        long bookingRevenue = bookings.stream()
+                .filter(b -> REVENUE_STATUSES.contains(b.getStatus()))
+                .mapToLong(Booking::getTotalAmount)
+                .sum();
+        if (bookingRevenue != 0) {
+            return bookingRevenue;
+        }
+        return payments.stream()
+                .filter(p -> rangeStart == null || (p.getCreatedAt() != null && !p.getCreatedAt().isBefore(rangeStart)))
+                .filter(p -> rangeEnd == null || (p.getCreatedAt() != null && !p.getCreatedAt().isAfter(rangeEnd)))
+                .mapToLong(Payment::getAmount)
+                .sum();
+    }
+
+    private OffsetDateTime vnStartOfDay(LocalDate date) {
+        return date.atStartOfDay(VN_ZONE).toOffsetDateTime().withOffsetSameInstant(ZoneOffset.UTC);
+    }
+
+    private OffsetDateTime vnEndOfDay(LocalDate date) {
+        return date.atTime(LocalTime.MAX).atZone(VN_ZONE).toOffsetDateTime().withOffsetSameInstant(ZoneOffset.UTC);
+    }
+
+    private YearMonth toVnYearMonth(OffsetDateTime dt) {
+        return YearMonth.from(dt.atZoneSameInstant(VN_ZONE));
+    }
+
     @Transactional(readOnly = true)
     public byte[] exportBookingsCsv(UUID branchId, LocalDate dateFrom, LocalDate dateTo) {
-        OffsetDateTime start = (dateFrom != null) ? dateFrom.atStartOfDay().atOffset(ZoneOffset.UTC) : null;
-        OffsetDateTime end = (dateTo != null) ? dateTo.atTime(LocalTime.MAX).atOffset(ZoneOffset.UTC) : null;
+        OffsetDateTime start = (dateFrom != null) ? vnStartOfDay(dateFrom) : null;
+        OffsetDateTime end = (dateTo != null) ? vnEndOfDay(dateTo) : null;
 
         List<Booking> list = bookingRepository.findAll().stream()
-                .filter(b -> branchId == null || b.getBranchId().equals(branchId))
+                .filter(b -> branchId == null || branchId.equals(b.getBranchId()))
                 .filter(b -> start == null || (b.getCreatedAt() != null && !b.getCreatedAt().isBefore(start)))
                 .filter(b -> end == null || (b.getCreatedAt() != null && !b.getCreatedAt().isAfter(end)))
                 .sorted(Comparator.comparing(Booking::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
@@ -204,9 +286,10 @@ public class ReportService {
                 String userPhone = u != null && u.getPhone() != null ? escapeCsv(u.getPhone()) : "";
                 String branchName = br != null ? escapeCsv(br.getName()) : "N/A";
 
-                String startAt = b.getStartAt() != null ? b.getStartAt().format(fmt) : "";
-                String endAt = b.getEndAt() != null ? b.getEndAt().format(fmt) : "";
-                String createdAt = b.getCreatedAt() != null ? b.getCreatedAt().format(fmt) : "";
+                // Timestamps are stored in UTC; render them in VN local time for the exported report.
+                String startAt = b.getStartAt() != null ? b.getStartAt().atZoneSameInstant(VN_ZONE).format(fmt) : "";
+                String endAt = b.getEndAt() != null ? b.getEndAt().atZoneSameInstant(VN_ZONE).format(fmt) : "";
+                String createdAt = b.getCreatedAt() != null ? b.getCreatedAt().atZoneSameInstant(VN_ZONE).format(fmt) : "";
                 String status = b.getStatus() != null ? b.getStatus().name() : "";
                 String source = b.getSource() != null ? b.getSource().name() : "";
 

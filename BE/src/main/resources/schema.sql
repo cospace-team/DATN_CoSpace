@@ -84,6 +84,13 @@ CREATE TABLE IF NOT EXISTS extra_services (
 );
 CREATE INDEX IF NOT EXISTS idx_extra_services_branch ON extra_services(branch_id);
 
+-- 9b. Extra services also need a short SKU-like code and a category used to pick a display
+-- icon on the branch-admin UI; these were missing from the table above (an older, superseded
+-- migration in database/migrations/ declared them as NOT NULL, but this file is what actually
+-- runs against the app's DB, so add them here instead).
+ALTER TABLE extra_services ADD COLUMN IF NOT EXISTS code VARCHAR(40) NOT NULL DEFAULT '';
+ALTER TABLE extra_services ADD COLUMN IF NOT EXISTS service_type VARCHAR(20) NOT NULL DEFAULT 'other';
+
 -- 10. Table 'booking_services' (Dịch vụ gọi thêm trong thời gian đặt chỗ - Running Tab)
 CREATE TABLE IF NOT EXISTS booking_services (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

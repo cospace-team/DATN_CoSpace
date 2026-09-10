@@ -2,6 +2,7 @@ package com.cospace.app.controller;
 
 import com.cospace.app.dto.api.BookingWithDetailsDto;
 import com.cospace.app.dto.api.CheckinLogDto;
+import com.cospace.app.security.BranchAccessGuard;
 import com.cospace.app.service.CheckinService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -21,9 +22,11 @@ import java.util.UUID;
 public class CheckinController {
 
     private final CheckinService checkinService;
+    private final BranchAccessGuard branchAccessGuard;
 
-    public CheckinController(CheckinService checkinService) {
+    public CheckinController(CheckinService checkinService, BranchAccessGuard branchAccessGuard) {
         this.checkinService = checkinService;
+        this.branchAccessGuard = branchAccessGuard;
     }
 
     @PostMapping("/booking/{bookingId}")
@@ -49,7 +52,8 @@ public class CheckinController {
     public List<BookingWithDetailsDto> getActiveCheckins(
             @AuthenticationPrincipal Jwt jwt,
             @RequestParam("branchId") UUID branchId) {
-        return checkinService.getActiveCheckins(branchId);
+        UUID verifiedBranchId = branchAccessGuard.requireBranchAccess(jwt, branchId);
+        return checkinService.getActiveCheckins(verifiedBranchId);
     }
 
     private UUID requireSubject(Jwt jwt) {

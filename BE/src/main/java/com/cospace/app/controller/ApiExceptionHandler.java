@@ -29,6 +29,17 @@ public class ApiExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
     }
 
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<Map<String, Object>> forbidden(org.springframework.security.access.AccessDeniedException ex) {
+        // Thrown directly by controllers/services (e.g. BranchAccessGuard) for a resource-level
+        // permission check, as opposed to method-security @PreAuthorize denials which Spring
+        // Security's own filter chain handles before ever reaching a controller method.
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("error", "forbidden");
+        body.put("message", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> validation(MethodArgumentNotValidException ex) {
         Map<String, Object> errors = new LinkedHashMap<>();

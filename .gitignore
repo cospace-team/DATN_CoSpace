@@ -61,3 +61,6 @@ report/*.acn
 report/*.glg
 report/*.glo
 report/*.ist
+
+# Local Claude Code agent tooling (skills, settings) - not part of the project
+.claude/

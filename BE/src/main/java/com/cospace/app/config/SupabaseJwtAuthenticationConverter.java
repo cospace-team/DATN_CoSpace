@@ -9,6 +9,7 @@ import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.InvalidBearerTokenException;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Component;
 
@@ -31,23 +32,36 @@ public class SupabaseJwtAuthenticationConverter implements Converter<Jwt, Abstra
         UUID branchId = null;
 
         // 1. Try DB lookup first for freshest authority
+        boolean suspended = false;
         if (sub != null) {
             try {
                 UUID userId = UUID.fromString(sub);
                 Optional<User> userOpt = userRepository.findById(userId);
                 if (userOpt.isPresent()) {
                     User user = userOpt.get();
-                    if (user.getRole() != null) {
-                        roleStr = user.getRole().name();
-                    }
-                    branchId = user.getBranchId();
-                    if (email == null) {
-                        email = user.getEmail();
+                    if (user.getStatus() == User.Status.suspended) {
+                        suspended = true;
+                    } else {
+                        if (user.getRole() != null) {
+                            roleStr = user.getRole().name();
+                        }
+                        branchId = user.getBranchId();
+                        if (email == null) {
+                            email = user.getEmail();
+                        }
                     }
                 }
             } catch (Exception e) {
                 log.debug("Error looking up user by subject {}: {}", sub, e.getMessage());
             }
+        }
+
+        // Enforce suspension immediately rather than only at the next login: this converter
+        // re-reads the user on every request, so a token issued before the account was suspended
+        // must stop working right away, not once it happens to expire. This must throw outside
+        // the lookup's own try/catch above, or it would just be logged and swallowed there.
+        if (suspended) {
+            throw new InvalidBearerTokenException("Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.");
         }
 
         // 2. Fallback to JWT claims
@@ -81,7 +95,6 @@ public class SupabaseJwtAuthenticationConverter implements Converter<Jwt, Abstra
                 break;
             case "branch_admin":
                 addRole(authorities, "BRANCH_ADMIN", "branch_admin");
-                addRole(authorities, "ADMIN", "admin");
                 addRole(authorities, "STAFF", "staff");
                 addRole(authorities, "CUSTOMER", "customer");
                 break;

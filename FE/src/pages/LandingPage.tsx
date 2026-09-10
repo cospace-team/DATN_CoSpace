@@ -1,13 +1,16 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { motion } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
 import { useMockData } from "../context/MockDataContext";
 import { formatVND } from "../utils/formatters";
 import { Button } from "../components/ui/button";
+import { Card } from "../components/ui/card";
+import { Badge } from "../components/ui/badge";
 import PublicNavbar from "../components/PublicNavbar";
 import { Logo } from "../components/ui/Logo";
-import { 
-  FiArrowRight, 
+import {
+  FiArrowRight,
   FiX,
   FiMapPin,
   FiClock,
@@ -80,6 +83,12 @@ const defaultBranchImages = [
   "https://images.unsplash.com/photo-1517502884422-41eaead166d4?auto=format&fit=crop&q=80&w=1200",
 ];
 
+// Shared scroll-reveal variants for section content
+const fadeUp = {
+  hidden: { opacity: 0, y: 24 },
+  visible: { opacity: 1, y: 0 },
+};
+
 const LandingPage: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
   const { branches, workspaceTypes, pricePolicies, workspaces, floors, users } = useMockData();
@@ -88,7 +97,7 @@ const LandingPage: React.FC = () => {
 
   const [activeCategory, setActiveCategory] = useState<"all" | "office" | "meeting">("all");
   const [selectedBranchId, setSelectedBranchId] = useState<string>("");
-  
+
   // Modals state
   const [isTourModalOpen, setIsTourModalOpen] = useState<boolean>(false);
   const [selectedBranchForDetail, setSelectedBranchForDetail] = useState<BranchCard | null>(null);
@@ -137,7 +146,7 @@ const LandingPage: React.FC = () => {
       const policy = pricePolicies.find(
         (p) => p.workspace_type_id === wt.id && p.is_active
       );
-      
+
       const priceLabel = policy
         ? `Từ ${formatVND(policy.price)}/${policy.duration_unit === 'hour' ? 'giờ' : policy.duration_unit === 'day' ? 'ngày' : 'tháng'}`
         : "Liên hệ báo giá";
@@ -180,8 +189,8 @@ const LandingPage: React.FC = () => {
     }
   }, [routerLocation]);
 
-  const filteredServices = activeCategory === "all" 
-    ? displayServices 
+  const filteredServices = activeCategory === "all"
+    ? displayServices
     : displayServices.filter(s => s.category === activeCategory);
 
   const selectedBranch = displayBranches.find(b => b.id === selectedBranchId) || displayBranches[0];
@@ -242,26 +251,32 @@ const LandingPage: React.FC = () => {
   }, [users]);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 scroll-smooth font-['Inter'] selection:bg-amber-500/30 selection:text-amber-900 dark:selection:text-amber-200 transition-colors duration-500">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 scroll-smooth font-['Inter'] selection:bg-primary/25 selection:text-primary transition-colors duration-500">
       <PublicNavbar />
 
-      {/* ── Hero Section (Pro Max Dark/Light Bento Glassmorphism) ── */}
+      {/* ── Hero Section ── */}
       <section className="relative pt-36 pb-24 px-6 max-w-7xl mx-auto overflow-hidden">
         {/* Glow Effects */}
-        <div className="absolute top-1/4 -left-32 w-[32rem] h-[32rem] bg-blue-500/20 dark:bg-blue-600/20 blur-[120px] rounded-full mix-blend-multiply dark:mix-blend-screen pointer-events-none" />
-        <div className="absolute bottom-1/4 -right-32 w-[32rem] h-[32rem] bg-amber-500/20 dark:bg-amber-500/15 blur-[120px] rounded-full mix-blend-multiply dark:mix-blend-screen pointer-events-none" />
-        
+        <div className="absolute top-1/4 -left-32 w-[32rem] h-[32rem] bg-primary/20 blur-[120px] rounded-full mix-blend-multiply dark:mix-blend-screen pointer-events-none" />
+        <div className="absolute bottom-1/4 -right-32 w-[32rem] h-[32rem] bg-secondary/20 dark:bg-secondary/15 blur-[120px] rounded-full mix-blend-multiply dark:mix-blend-screen pointer-events-none" />
+
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch relative z-10">
-          
+
           {/* Main Hero Copy - Glass Bento */}
-          <div className="lg:col-span-8 bg-white/70 dark:bg-white/5 backdrop-blur-2xl rounded-[2.5rem] p-10 md:p-16 border border-slate-200/60 dark:border-white/10 shadow-xl dark:shadow-2xl flex flex-col justify-center relative group overflow-hidden transition-all duration-500 hover:border-slate-300 dark:hover:border-white/20 hover:bg-white/90 dark:hover:bg-white/[0.07]">
+          <motion.div
+            className="lg:col-span-8"
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, ease: "easeOut" }}
+          >
+          <Card className="bg-white/70 dark:bg-white/5 backdrop-blur-2xl rounded-[2.5rem] p-10 md:p-16 border-slate-200/60 dark:border-white/10 shadow-xl dark:shadow-2xl flex flex-col justify-center relative group overflow-hidden transition-all duration-500 hover:border-slate-300 dark:hover:border-white/20 hover:bg-white/90 dark:hover:bg-white/[0.07] h-full">
             <div className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-slate-100/80 dark:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white text-xs font-semibold tracking-wide w-max mb-10">
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-500 dark:bg-amber-400 animate-pulse shadow-[0_0_12px_rgba(245,158,11,0.6)] dark:shadow-[0_0_12px_rgba(251,191,36,0.8)]" />
+              <span className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse shadow-[0_0_12px_rgba(59,130,246,0.6)] dark:shadow-[0_0_12px_rgba(96,165,250,0.8)]" />
               <span className="uppercase tracking-widest">CoSpace v4.0 Network</span>
             </div>
 
-            <h1 className="text-5xl md:text-7xl font-['Space_Grotesk'] font-bold tracking-tight text-slate-900 dark:text-white mb-6 leading-[1.05]">
-              Quản Lý & Đặt Chỗ <br className="hidden md:block"/> Không Gian <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-600 to-amber-400 dark:from-amber-400 dark:to-amber-200">Thông Minh.</span>
+            <h1 className="text-5xl md:text-7xl font-display font-bold tracking-tight text-slate-900 dark:text-white mb-6 leading-[1.05]">
+              Quản Lý & Đặt Chỗ <br className="hidden md:block"/> Không Gian <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">Thông Minh.</span>
             </h1>
 
             <p className="text-xl text-slate-600 dark:text-slate-400 mb-12 max-w-lg leading-relaxed font-light">
@@ -269,127 +284,177 @@ const LandingPage: React.FC = () => {
             </p>
 
             <div className="flex flex-wrap gap-4">
-              <Button 
+              <Button
                 onClick={() => handleBookingRedirect()}
-                className="bg-amber-500 hover:bg-amber-600 dark:hover:bg-amber-400 text-white dark:text-slate-900 px-9 py-7 rounded-full font-semibold text-lg transition-all duration-300 shadow-[0_0_24px_rgba(245,158,11,0.3)] dark:shadow-[0_0_24px_rgba(245,158,11,0.4)] hover:shadow-[0_0_32px_rgba(245,158,11,0.4)] dark:hover:shadow-[0_0_32px_rgba(245,158,11,0.6)] flex items-center gap-3 group/btn"
+                size="lg"
+                className="rounded-full px-9 py-7 text-lg shadow-[0_0_24px_hsl(var(--primary)/0.35)] hover:shadow-[0_0_32px_hsl(var(--primary)/0.5)] flex items-center gap-3 group/btn"
               >
                 Khám phá ngay
                 <FiArrowRight className="h-5 w-5 group-hover/btn:translate-x-1 transition-transform" />
               </Button>
-              <Button 
+              <Button
                 onClick={() => openTourModal()}
-                variant="outline" 
-                className="bg-white/50 dark:bg-white/5 border border-slate-300 dark:border-white/20 text-slate-700 dark:text-white hover:bg-slate-100 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:border-white/30 px-9 py-7 rounded-full font-semibold text-lg transition-all duration-300"
+                variant="outline"
+                size="lg"
+                className="bg-white/50 dark:bg-white/5 border-slate-300 dark:border-white/20 text-slate-700 dark:text-white hover:bg-slate-100 dark:hover:bg-white/10 hover:text-slate-900 rounded-full px-9 py-7 text-lg"
               >
                 Trải nghiệm 3D
               </Button>
             </div>
-          </div>
+          </Card>
+          </motion.div>
 
           {/* Right Side Stack - Glass Bento (Stats) */}
-          <div className="lg:col-span-4 flex flex-col gap-6">
-            <div className="bg-white/70 dark:bg-white/5 backdrop-blur-2xl rounded-[2.5rem] p-8 border border-slate-200/60 dark:border-white/10 shadow-xl dark:shadow-2xl flex-1 flex flex-col justify-center relative overflow-hidden group transition-all duration-500 hover:border-slate-300 dark:hover:border-white/20 hover:bg-white/90 dark:hover:bg-white/[0.07]">
+          <motion.div
+            className="lg:col-span-4 flex flex-col gap-6"
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.15, ease: "easeOut" }}
+          >
+            <Card className="bg-white/70 dark:bg-white/5 backdrop-blur-2xl rounded-[2.5rem] p-8 border-slate-200/60 dark:border-white/10 shadow-xl dark:shadow-2xl flex-1 flex flex-col justify-center relative overflow-hidden group transition-all duration-500 hover:border-slate-300 dark:hover:border-white/20 hover:bg-white/90 dark:hover:bg-white/[0.07]">
               <div className="relative z-10">
-                <p className="text-sm font-medium text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-3">Mạng lưới tin dùng</p>
+                <p className="text-sm font-medium text-primary uppercase tracking-wider mb-3">Mạng lưới tin dùng</p>
                 <div className="flex items-baseline gap-1">
-                  <p className="text-6xl font-['Space_Grotesk'] font-bold tracking-tight text-slate-900 dark:text-white">{activeCustomerCount}</p>
-                  <span className="text-amber-500 text-3xl font-bold">+</span>
+                  <p className="text-6xl font-display font-bold tracking-tight text-slate-900 dark:text-white">{activeCustomerCount}</p>
+                  <span className="text-primary text-3xl font-bold">+</span>
                 </div>
                 <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">Startups & Doanh nghiệp</p>
               </div>
-              <div className="absolute -bottom-12 -right-12 w-48 h-48 bg-amber-200/50 dark:bg-amber-500/20 rounded-full blur-[64px] group-hover:bg-amber-300/50 dark:group-hover:bg-amber-500/30 transition-colors duration-700" />
-            </div>
-            
-            <div className="bg-white/70 dark:bg-white/5 backdrop-blur-2xl rounded-[2.5rem] border border-slate-200/60 dark:border-white/10 shadow-xl dark:shadow-2xl flex-1 overflow-hidden relative group p-2">
+              <div className="absolute -bottom-12 -right-12 w-48 h-48 bg-primary/20 rounded-full blur-[64px] group-hover:bg-primary/30 transition-colors duration-700" />
+            </Card>
+
+            <Card className="bg-white/70 dark:bg-white/5 backdrop-blur-2xl rounded-[2.5rem] border-slate-200/60 dark:border-white/10 shadow-xl dark:shadow-2xl flex-1 overflow-hidden relative group p-2">
               <div className="w-full h-full rounded-[2rem] overflow-hidden relative">
-                <img 
-                  src={selectedBranch?.image || defaultBranchImages[0]} 
-                  alt="Workspace" 
+                <img
+                  src={selectedBranch?.image || defaultBranchImages[0]}
+                  alt="Workspace"
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-[1.5s] ease-in-out"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/30 dark:from-slate-950/90 dark:via-slate-950/20 to-transparent" />
                 <div className="absolute bottom-6 left-6 text-white right-6">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                    <span className="text-xs font-semibold tracking-wider uppercase text-emerald-400">Live</span>
+                    <span className="w-2 h-2 rounded-full bg-success" />
+                    <span className="text-xs font-semibold tracking-wider uppercase text-success">Live</span>
                   </div>
-                  <p className="font-['Space_Grotesk'] font-bold text-xl">{selectedBranch?.name || "CoSpace Center"}</p>
+                  <p className="font-display font-bold text-xl">{selectedBranch?.name || "CoSpace Center"}</p>
                   <div className="flex items-center gap-1.5 text-sm text-slate-200 dark:text-slate-300 mt-1">
-                    <FiMapPin className="text-amber-400" /> <span className="truncate">{selectedBranch?.address || "Hệ thống toàn quốc"}</span>
+                    <FiMapPin className="text-primary-foreground/80" /> <span className="truncate">{selectedBranch?.address || "Hệ thống toàn quốc"}</span>
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
+            </Card>
+          </motion.div>
 
         </div>
       </section>
 
       {/* ── Features Bento Grid ── */}
       <section id="features" className="py-24 px-6 max-w-7xl mx-auto">
-        <div className="mb-16 text-center max-w-3xl mx-auto">
-          <h2 className="text-4xl md:text-5xl font-['Space_Grotesk'] font-bold tracking-tight mb-6 text-slate-900 dark:text-white">Hệ sinh thái <span className="text-amber-600 dark:text-amber-400">công nghệ.</span></h2>
+        <motion.div
+          className="mb-16 text-center max-w-3xl mx-auto"
+          variants={fadeUp}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-80px" }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+        >
+          <h2 className="text-4xl md:text-5xl font-display font-bold tracking-tight mb-6 text-slate-900 dark:text-white">Hệ sinh thái <span className="text-primary">công nghệ.</span></h2>
           <p className="text-slate-600 dark:text-slate-400 text-lg md:text-xl font-light leading-relaxed">Kiến trúc module độc bản giúp bạn kiểm soát hoàn toàn trải nghiệm làm việc bằng những thao tác mượt mà nhất.</p>
-        </div>
+        </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Feature 1: Floor Plan (Spans 8 cols) */}
-          <div className="lg:col-span-8 bg-white/70 dark:bg-white/5 backdrop-blur-xl rounded-[2.5rem] p-8 md:p-12 border border-slate-200/60 dark:border-white/10 shadow-xl dark:shadow-2xl flex flex-col justify-between group overflow-hidden relative hover:bg-white/90 dark:hover:bg-white/[0.07] transition-colors duration-500 min-h-[400px]">
+          <motion.div
+            className="lg:col-span-8"
+            variants={fadeUp}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-80px" }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+          >
+          <Card className="bg-white/70 dark:bg-white/5 backdrop-blur-xl rounded-[2.5rem] p-8 md:p-12 border-slate-200/60 dark:border-white/10 shadow-xl dark:shadow-2xl flex flex-col justify-between group overflow-hidden relative hover:bg-white/90 dark:hover:bg-white/[0.07] transition-colors duration-500 min-h-[400px] h-full">
             <div className="relative z-10 w-full md:w-[50%] lg:w-[45%] pr-4">
-              <div className="w-14 h-14 bg-blue-100 dark:bg-blue-500/20 border border-blue-200 dark:border-blue-500/30 text-blue-600 dark:text-blue-400 rounded-2xl flex items-center justify-center mb-8 shadow-sm">
+              <div className="w-14 h-14 bg-primary/10 border border-primary/20 text-primary rounded-2xl flex items-center justify-center mb-8 shadow-sm">
                 <FiMapPin size={26} />
               </div>
-              <h3 className="text-3xl lg:text-4xl font-['Space_Grotesk'] font-bold mb-4 text-slate-900 dark:text-white">Sơ Đồ SVG <br className="hidden md:block"/> Động Tương Tác</h3>
+              <h3 className="text-3xl lg:text-4xl font-display font-bold mb-4 text-slate-900 dark:text-white">Sơ Đồ SVG <br className="hidden md:block"/> Động Tương Tác</h3>
               <p className="text-slate-600 dark:text-slate-400 text-lg leading-relaxed font-light">
                 Khám phá mặt bằng với thao tác kéo thả mượt mà. Hệ thống tự động đồng bộ trạng thái trống/bận của mỗi vị trí ngồi theo thời gian thực mà không cần tải lại trang.
               </p>
             </div>
-            
+
             {/* Real Floorplan Image */}
             <div className="absolute right-0 bottom-0 w-[70%] md:w-[55%] lg:w-[50%] h-[50%] md:h-[85%] translate-x-4 translate-y-4 md:translate-x-8 md:translate-y-8 rounded-tl-[3rem] overflow-hidden group-hover:-translate-y-2 group-hover:-translate-x-2 md:group-hover:-translate-y-4 md:group-hover:-translate-x-4 transition-all duration-700 ease-out shadow-[0_0_40px_rgba(0,0,0,0.1)] dark:shadow-[0_0_40px_rgba(0,0,0,0.4)] border-t-4 border-l-4 md:border-t-8 md:border-l-8 border-slate-50 dark:border-slate-800">
               <img src="https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&q=80&w=800" alt="Floor plan map" className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-blue-500/10 mix-blend-overlay"></div>
+              <div className="absolute inset-0 bg-primary/10 mix-blend-overlay"></div>
             </div>
-          </div>
+          </Card>
+          </motion.div>
 
           {/* Feature 2: MoMo Payment (Spans 4 cols) */}
-          <div className="lg:col-span-4 bg-amber-400 dark:bg-amber-500 rounded-[2.5rem] p-8 md:p-10 border border-amber-300 dark:border-amber-400 shadow-xl dark:shadow-2xl flex flex-col justify-between group overflow-hidden relative transition-transform duration-500 hover:-translate-y-2 min-h-[400px]">
+          <motion.div
+            className="lg:col-span-4"
+            variants={fadeUp}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-80px" }}
+            transition={{ duration: 0.6, delay: 0.08, ease: "easeOut" }}
+          >
+          <Card className="bg-primary rounded-[2.5rem] p-8 md:p-10 border-primary/60 shadow-xl dark:shadow-2xl flex flex-col justify-between group overflow-hidden relative transition-transform duration-500 hover:-translate-y-2 min-h-[400px] h-full">
             <div className="absolute top-0 right-0 w-64 h-64 bg-white/30 dark:bg-white/20 blur-[64px] rounded-full pointer-events-none z-0" />
-            <div className="absolute -bottom-16 -right-16 w-72 h-72 opacity-60 group-hover:opacity-100 group-hover:-rotate-6 transition-all duration-700 z-0 mix-blend-multiply dark:mix-blend-normal rounded-full overflow-hidden border-8 border-amber-300/50 shadow-2xl">
+            <div className="absolute -bottom-16 -right-16 w-72 h-72 opacity-60 group-hover:opacity-100 group-hover:-rotate-6 transition-all duration-700 z-0 mix-blend-multiply dark:mix-blend-normal rounded-full overflow-hidden border-8 border-white/30 shadow-2xl">
               <img src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&q=80&w=800" alt="Payment" className="w-full h-full object-cover" />
             </div>
             <div className="relative z-10 h-full flex flex-col">
-              <div className="w-14 h-14 bg-white/40 dark:bg-white/20 backdrop-blur-md text-slate-900 dark:text-white rounded-2xl flex items-center justify-center mb-8 border border-white/40 dark:border-white/20 shadow-sm">
+              <div className="w-14 h-14 bg-white/25 backdrop-blur-md text-white rounded-2xl flex items-center justify-center mb-8 border border-white/30 shadow-sm">
                 <FiZap size={26} />
               </div>
-              <h3 className="text-3xl font-['Space_Grotesk'] font-bold mb-4 text-slate-900">Thanh toán siêu tốc 1 chạm</h3>
-              <p className="text-amber-950/80 text-lg leading-relaxed mt-auto font-medium max-w-[80%]">
+              <h3 className="text-3xl font-display font-bold mb-4 text-white">Thanh toán siêu tốc 1 chạm</h3>
+              <p className="text-primary-foreground/90 text-lg leading-relaxed mt-auto font-medium max-w-[80%]">
                 Hoàn tất đơn đặt chỗ chỉ trong 3 giây qua ví MoMo.
               </p>
             </div>
-          </div>
+          </Card>
+          </motion.div>
 
           {/* Feature 3: Security Check-in (Spans 4 cols) */}
-          <div className="lg:col-span-4 bg-white/70 dark:bg-white/5 backdrop-blur-xl rounded-[2.5rem] p-8 md:p-10 border border-slate-200/60 dark:border-white/10 shadow-xl dark:shadow-2xl flex flex-col justify-between hover:bg-white/90 dark:hover:bg-white/[0.07] transition-all duration-500 group overflow-hidden relative hover:-translate-y-2 min-h-[400px]">
+          <motion.div
+            className="lg:col-span-4"
+            variants={fadeUp}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-80px" }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+          >
+          <Card className="bg-white/70 dark:bg-white/5 backdrop-blur-xl rounded-[2.5rem] p-8 md:p-10 border-slate-200/60 dark:border-white/10 shadow-xl dark:shadow-2xl flex flex-col justify-between hover:bg-white/90 dark:hover:bg-white/[0.07] transition-all duration-500 group overflow-hidden relative hover:-translate-y-2 min-h-[400px] h-full">
             <div className="absolute -bottom-12 -right-12 w-64 h-64 opacity-20 group-hover:opacity-60 transition-opacity duration-700 z-0 rounded-full overflow-hidden shadow-2xl">
               <img src="https://images.unsplash.com/photo-1512428559087-560fa5ceab42?auto=format&fit=crop&q=80&w=800" alt="QR Code" className="w-full h-full object-cover scale-110 group-hover:scale-100 transition-transform duration-700" />
             </div>
             <div className="relative z-10 h-full flex flex-col">
-              <div className="w-14 h-14 bg-emerald-100 dark:bg-emerald-500/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-400 rounded-2xl flex items-center justify-center mb-8 shadow-sm">
+              <div className="w-14 h-14 bg-success/10 border border-success/20 text-success rounded-2xl flex items-center justify-center mb-8 shadow-sm">
                 <FiShield size={26} />
               </div>
-              <h3 className="text-3xl font-['Space_Grotesk'] font-bold mb-4 text-slate-900 dark:text-white">QR Access Code</h3>
+              <h3 className="text-3xl font-display font-bold mb-4 text-slate-900 dark:text-white">QR Access Code</h3>
               <p className="text-slate-600 dark:text-slate-400 text-lg leading-relaxed mt-auto font-light max-w-[90%]">
                 Quét mã định danh để tự động check-in và kích hoạt nguồn điện không gian của bạn.
               </p>
             </div>
-          </div>
+          </Card>
+          </motion.div>
 
           {/* Feature 4: Community (Spans 8 cols) */}
-          <div className="lg:col-span-8 bg-blue-600 rounded-[2.5rem] p-8 md:p-12 border border-blue-500 shadow-xl dark:shadow-2xl flex flex-col justify-between overflow-hidden relative group hover:bg-blue-700 dark:hover:bg-blue-500 transition-colors duration-500 min-h-[400px]">
+          <motion.div
+            className="lg:col-span-8"
+            variants={fadeUp}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-80px" }}
+            transition={{ duration: 0.6, delay: 0.08, ease: "easeOut" }}
+          >
+          <Card className="bg-secondary rounded-[2.5rem] p-8 md:p-12 border-secondary/60 shadow-xl dark:shadow-2xl flex flex-col justify-between overflow-hidden relative group hover:brightness-105 transition-all duration-500 min-h-[400px] h-full">
             <div className="absolute inset-0 z-0">
               <img src="https://images.unsplash.com/photo-1543269865-cbf427effbad?auto=format&fit=crop&q=80&w=1200" alt="Community" className="w-full h-full object-cover opacity-20 group-hover:opacity-40 group-hover:scale-105 transition-all duration-[2s] ease-out mix-blend-luminosity" />
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-700/95 via-blue-700/80 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-r from-secondary/95 via-secondary/80 to-transparent" />
             </div>
             <div className="absolute -bottom-32 -right-32 w-[32rem] h-[32rem] bg-white/20 dark:bg-white/10 blur-[80px] rounded-full group-hover:scale-125 transition-transform duration-1000 ease-out pointer-events-none z-0" />
             <div className="relative z-10 flex flex-col md:flex-row gap-10 justify-between items-start md:items-center h-full">
@@ -397,41 +462,49 @@ const LandingPage: React.FC = () => {
                 <div className="w-14 h-14 bg-white/20 dark:bg-white/10 backdrop-blur-md text-white rounded-2xl flex items-center justify-center mb-8 border border-white/30 dark:border-white/20 shadow-sm">
                   <FiUsers size={26} />
                 </div>
-                <h3 className="text-3xl lg:text-4xl font-['Space_Grotesk'] font-bold mb-4 text-white">Cộng đồng Member <br/>với {branches.length} Chi Nhánh</h3>
-                <p className="text-blue-100 text-lg leading-relaxed font-light">
+                <h3 className="text-3xl lg:text-4xl font-display font-bold mb-4 text-white">Cộng đồng Member <br/>với {branches.length} Chi Nhánh</h3>
+                <p className="text-white/80 text-lg leading-relaxed font-light">
                   Mạng lưới {workspaces.length}+ vị trí phủ sóng. Tham gia hệ sinh thái kết nối, gặp gỡ nhà đầu tư và đối tác ngay tại không gian CoSpace.
                 </p>
               </div>
               <div className="flex flex-col gap-3 w-full md:w-auto">
                 {['Networking Events', 'Pitching Sessions', 'Tech Workshops'].map((tag, i) => (
                   <div key={tag} className={`bg-white/10 dark:bg-black/20 backdrop-blur-md px-6 py-4 rounded-2xl font-semibold border border-white/20 dark:border-white/10 text-white flex items-center gap-3 transform transition-transform duration-500 group-hover:translate-x-[-10px] hover:!bg-white/20`} style={{ transitionDelay: `${i * 100}ms` }}>
-                    <FiCheck className="text-amber-300 dark:text-amber-400 shrink-0" /> <span className="whitespace-nowrap">{tag}</span>
+                    <FiCheck className="text-white shrink-0" /> <span className="whitespace-nowrap">{tag}</span>
                   </div>
                 ))}
               </div>
             </div>
-          </div>
+          </Card>
+          </motion.div>
         </div>
       </section>
 
       {/* ── Services Catalog (Real Data Sync) ── */}
       <section id="services" className="py-24 px-6 max-w-7xl mx-auto border-t border-slate-200 dark:border-white/10 mt-10 relative">
-        <div className="absolute top-0 right-0 w-[40rem] h-[40rem] bg-blue-200/50 dark:bg-blue-600/10 blur-[120px] rounded-full mix-blend-multiply dark:mix-blend-screen pointer-events-none" />
-        
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-16 gap-8 relative z-10">
+        <div className="absolute top-0 right-0 w-[40rem] h-[40rem] bg-primary/10 blur-[120px] rounded-full mix-blend-multiply dark:mix-blend-screen pointer-events-none" />
+
+        <motion.div
+          className="flex flex-col md:flex-row justify-between items-start md:items-end mb-16 gap-8 relative z-10"
+          variants={fadeUp}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-80px" }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+        >
           <div className="max-w-2xl">
-            <h2 className="text-4xl md:text-5xl font-['Space_Grotesk'] font-bold tracking-tight text-slate-900 dark:text-white mb-4">Danh mục không gian</h2>
+            <h2 className="text-4xl md:text-5xl font-display font-bold tracking-tight text-slate-900 dark:text-white mb-4">Danh mục không gian</h2>
             <p className="text-slate-600 dark:text-slate-400 text-lg font-light">Giải pháp module hóa đáp ứng mọi quy mô đội ngũ.</p>
           </div>
 
           <div className="flex gap-2 bg-white/70 dark:bg-white/5 backdrop-blur-xl border border-slate-200 dark:border-white/10 p-2 rounded-full overflow-x-auto w-full md:w-auto shrink-0 hide-scrollbar">
             {["all", "office", "meeting"].map((cat) => (
-              <button 
+              <button
                 key={cat}
                 onClick={() => setActiveCategory(cat as any)}
                 className={`px-6 py-3 text-sm font-semibold rounded-full transition-all duration-300 whitespace-nowrap ${
-                  activeCategory === cat 
-                    ? "bg-amber-500 text-white dark:text-slate-900 shadow-[0_0_16px_rgba(245,158,11,0.3)]" 
+                  activeCategory === cat
+                    ? "bg-primary text-primary-foreground shadow-[0_0_16px_hsl(var(--primary)/0.3)]"
                     : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5"
                 }`}
               >
@@ -439,75 +512,99 @@ const LandingPage: React.FC = () => {
               </button>
             ))}
           </div>
-        </div>
+        </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 relative z-10">
-          {filteredServices.map((service) => (
-            <div key={service.id} className="bg-white dark:bg-white/5 backdrop-blur-xl rounded-[2rem] overflow-hidden border border-slate-200 dark:border-white/10 shadow-xl dark:shadow-xl hover:border-slate-300 dark:hover:border-white/20 transition-all duration-500 group flex flex-col hover:-translate-y-2">
+          {filteredServices.map((service, idx) => (
+            <motion.div
+              key={service.id}
+              variants={fadeUp}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-60px" }}
+              transition={{ duration: 0.5, delay: (idx % 3) * 0.08, ease: "easeOut" }}
+            >
+            <Card className="bg-white dark:bg-white/5 backdrop-blur-xl rounded-[2rem] overflow-hidden border-slate-200 dark:border-white/10 shadow-xl dark:shadow-xl hover:border-slate-300 dark:hover:border-white/20 transition-all duration-500 group flex flex-col hover:-translate-y-2 h-full">
               <div className="relative h-60 overflow-hidden bg-slate-100 dark:bg-slate-900 p-2">
                 <div className="w-full h-full rounded-[1.5rem] overflow-hidden relative">
-                  <img 
-                    src={service.image} 
-                    alt={service.title} 
+                  <img
+                    src={service.image}
+                    alt={service.title}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-[1.5s] ease-in-out"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/20 dark:from-slate-950 dark:via-slate-950/20 to-transparent opacity-80" />
                   {service.tag && (
-                    <span className="absolute top-4 left-4 bg-amber-500/90 backdrop-blur-md text-white dark:text-slate-900 px-4 py-1.5 rounded-full text-xs font-bold tracking-wider uppercase shadow-lg">
+                    <Badge className="absolute top-4 left-4 bg-primary/90 backdrop-blur-md text-primary-foreground px-4 py-1.5 text-xs font-bold tracking-wider uppercase shadow-lg border-transparent">
                       {service.tag}
-                    </span>
+                    </Badge>
                   )}
                   <div className="absolute bottom-4 left-4 right-4">
-                    <h3 className="text-2xl font-['Space_Grotesk'] font-bold text-white mb-1">{service.title}</h3>
+                    <h3 className="text-2xl font-display font-bold text-white mb-1">{service.title}</h3>
                     {service.price && (
-                      <p className="text-amber-400 font-bold text-lg">{service.price}</p>
+                      <p className="text-primary-foreground font-bold text-lg drop-shadow-sm">{service.price}</p>
                     )}
                   </div>
                 </div>
               </div>
               <div className="p-8 flex-1 flex flex-col bg-slate-50 dark:bg-white/[0.02]">
                 <p className="text-slate-600 dark:text-slate-400 text-base mb-8 flex-1 leading-relaxed font-light">{service.description}</p>
-                
+
                 <div className="space-y-4 mb-10">
-                  {service.features.map((feat, idx) => (
-                    <div key={idx} className="flex items-start gap-3 text-slate-700 dark:text-slate-300">
-                      <div className="mt-0.5 w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center shrink-0">
-                        <FiCheck className="text-emerald-600 dark:text-emerald-400 w-3 h-3" />
+                  {service.features.map((feat, fidx) => (
+                    <div key={fidx} className="flex items-start gap-3 text-slate-700 dark:text-slate-300">
+                      <div className="mt-0.5 w-5 h-5 rounded-full bg-success/10 flex items-center justify-center shrink-0">
+                        <FiCheck className="text-success w-3 h-3" />
                       </div>
                       <span className="leading-snug text-sm">{feat}</span>
                     </div>
                   ))}
                 </div>
 
-                <Button 
+                <Button
                   onClick={() => handleBookingRedirect()}
-                  className="w-full bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 text-slate-900 dark:text-white border border-slate-300 dark:border-white/10 rounded-2xl py-6 font-semibold transition-all duration-300"
+                  variant="outline"
+                  className="w-full rounded-2xl py-6 font-semibold"
                 >
                   Bắt đầu đặt chỗ
                 </Button>
               </div>
-            </div>
+            </Card>
+            </motion.div>
           ))}
         </div>
       </section>
 
       {/* ── Locations Hub (Real Data Sync) ── */}
       <section id="locations" className="py-24 px-6 max-w-7xl mx-auto border-t border-slate-200 dark:border-white/10 relative">
-        <div className="text-center mb-16 relative z-10">
-          <div className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-amber-100 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-amber-700 dark:text-amber-400 text-sm font-semibold tracking-wide w-max mb-6">
+        <motion.div
+          className="text-center mb-16 relative z-10"
+          variants={fadeUp}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-80px" }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+        >
+          <Badge variant="outline" className="inline-flex items-center gap-2.5 px-5 py-2.5 bg-primary/10 border-primary/20 text-primary text-sm font-semibold tracking-wide w-max mb-6">
             <FiMapPin /> {displayBranches.length} Chi nhánh khả dụng
-          </div>
-          <h2 className="text-4xl md:text-5xl font-['Space_Grotesk'] font-bold tracking-tight text-slate-900 dark:text-white mb-6">Bản đồ <span className="text-blue-600 dark:text-blue-400">cơ sở.</span></h2>
+          </Badge>
+          <h2 className="text-4xl md:text-5xl font-display font-bold tracking-tight text-slate-900 dark:text-white mb-6">Bản đồ <span className="text-primary">cơ sở.</span></h2>
           <p className="text-slate-600 dark:text-slate-400 text-lg font-light max-w-2xl mx-auto">Vị trí đắc địa tại các trung tâm kinh tế hàng đầu. Chọn cơ sở để khám phá layout 2D tương tác.</p>
-        </div>
+        </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 relative z-10">
-          {displayBranches.map((branch) => (
-            <div 
-              key={branch.id} 
-              className={`flex flex-col sm:flex-row gap-6 p-4 rounded-[2rem] border transition-all duration-300 cursor-pointer group ${
-                selectedBranchId === branch.id 
-                  ? "bg-white dark:bg-white/10 border-amber-500/50 shadow-[0_0_32px_rgba(245,158,11,0.1)] dark:shadow-[0_0_32px_rgba(245,158,11,0.15)]" 
+          {displayBranches.map((branch, idx) => (
+            <motion.div
+              key={branch.id}
+              variants={fadeUp}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-60px" }}
+              transition={{ duration: 0.5, delay: (idx % 2) * 0.08, ease: "easeOut" }}
+            >
+            <Card
+              className={`flex flex-col sm:flex-row gap-6 p-4 rounded-[2rem] transition-all duration-300 cursor-pointer group h-full ${
+                selectedBranchId === branch.id
+                  ? "bg-white dark:bg-white/10 border-primary/50 shadow-[0_0_32px_hsl(var(--primary)/0.12)]"
                   : "bg-white/60 dark:bg-white/5 border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 hover:bg-white/90 dark:hover:bg-white/[0.07]"
               }`}
               onClick={() => setSelectedBranchId(branch.id)}
@@ -516,105 +613,115 @@ const LandingPage: React.FC = () => {
                 <img src={branch.image} alt={branch.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-[2s] ease-in-out" />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent" />
                 <div className="absolute top-4 left-4">
-                  <span className="bg-black/50 backdrop-blur-md border border-white/20 dark:border-white/10 px-3 py-1.5 rounded-full text-xs font-bold tracking-wider uppercase text-white shadow-sm">
+                  <Badge className="bg-black/50 backdrop-blur-md border-white/20 dark:border-white/10 px-3 py-1.5 text-xs font-bold tracking-wider uppercase text-white shadow-sm">
                     {branch.tag}
-                  </span>
+                  </Badge>
                 </div>
               </div>
-              
+
               <div className="flex-1 flex flex-col justify-center py-4 pr-4">
-                <h3 className="text-2xl font-['Space_Grotesk'] font-bold text-slate-900 dark:text-white mb-3">{branch.name}</h3>
+                <h3 className="text-2xl font-display font-bold text-slate-900 dark:text-white mb-3">{branch.name}</h3>
                 <p className="text-slate-600 dark:text-slate-400 text-sm mb-6 leading-relaxed line-clamp-2 font-light">{branch.description}</p>
-                
+
                 <div className="flex flex-wrap gap-2 mb-8">
-                  {branch.badges.map((badge, idx) => (
-                    <span key={idx} className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 text-xs font-medium px-3 py-1.5 rounded-lg">
+                  {branch.badges.map((badge, bidx) => (
+                    <Badge key={bidx} variant="neutral" className="text-xs font-medium px-3 py-1.5">
                       {badge}
-                    </span>
+                    </Badge>
                   ))}
                 </div>
 
                 <div className="flex gap-3 mt-auto">
-                  <Button 
+                  <Button
                     onClick={(e) => { e.stopPropagation(); setSelectedBranchForDetail(branch); }}
                     variant="outline"
-                    className="flex-1 bg-transparent border border-slate-300 dark:border-white/20 text-slate-700 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl text-sm font-semibold dark:text-white transition-colors h-12"
+                    className="flex-1 rounded-xl text-sm font-semibold h-12"
                   >
                     Xem chi tiết
                   </Button>
-                  <Button 
+                  <Button
                     onClick={(e) => { e.stopPropagation(); handleBookingRedirect(branch.exploreBranchId); }}
-                    className="flex-1 bg-amber-500 hover:bg-amber-600 dark:hover:bg-amber-400 text-white dark:text-slate-900 rounded-xl text-sm font-bold transition-colors h-12"
+                    className="flex-1 rounded-xl text-sm font-bold h-12"
                   >
                     Booking
                   </Button>
                 </div>
               </div>
-            </div>
+            </Card>
+            </motion.div>
           ))}
         </div>
       </section>
 
       {/* ── Call to Action CTA (Glassmorphism) ── */}
-      <section className="py-32 px-6 max-w-5xl mx-auto relative">
-        <div className="absolute inset-0 bg-amber-500/20 dark:bg-amber-500/10 blur-[100px] rounded-full" />
-        <div className="bg-white/80 dark:bg-white/5 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-[3rem] p-12 md:p-20 text-center relative overflow-hidden shadow-2xl">
-          <div className="absolute inset-0 bg-noise opacity-[0.03] mix-blend-overlay pointer-events-none" />
+      <motion.section
+        className="py-32 px-6 max-w-5xl mx-auto relative"
+        variants={fadeUp}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-80px" }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+      >
+        <div className="absolute inset-0 bg-primary/20 dark:bg-primary/10 blur-[100px] rounded-full" />
+        <Card className="bg-white/80 dark:bg-white/5 backdrop-blur-2xl border-slate-200 dark:border-white/10 rounded-[3rem] p-12 md:p-20 text-center relative overflow-hidden shadow-2xl">
           <div className="relative z-10">
-            <h2 className="text-4xl md:text-6xl font-['Space_Grotesk'] font-bold tracking-tight mb-8 text-slate-900 dark:text-white">Khởi tạo không gian làm việc <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-600 to-amber-500 dark:from-amber-400 dark:to-amber-200">tương lai.</span></h2>
+            <h2 className="text-4xl md:text-6xl font-display font-bold tracking-tight mb-8 text-slate-900 dark:text-white">Khởi tạo không gian làm việc <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">tương lai.</span></h2>
             <p className="text-slate-600 dark:text-slate-400 text-xl mb-12 max-w-2xl mx-auto font-light">
               Hơn {displayBranches.length} chi nhánh với hệ thống quản lý Pro Max Edition đã sẵn sàng. Trải nghiệm sự khác biệt ngay hôm nay.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
-              <Button 
+              <Button
                 onClick={() => handleBookingRedirect()}
-                className="bg-amber-500 text-white dark:text-slate-900 hover:bg-amber-600 dark:hover:bg-amber-400 px-10 py-7 rounded-full font-bold text-lg shadow-[0_0_24px_rgba(245,158,11,0.3)] dark:shadow-[0_0_24px_rgba(245,158,11,0.4)] transition-all duration-300"
+                size="lg"
+                className="rounded-full px-10 py-7 text-lg font-bold shadow-[0_0_24px_hsl(var(--primary)/0.35)]"
               >
                 Mở ứng dụng Booking
               </Button>
-              <Button 
+              <Button
                 onClick={() => openTourModal()}
-                className="bg-slate-100 dark:bg-white/10 text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-white/20 border border-slate-300 dark:border-white/10 px-10 py-7 rounded-full font-bold text-lg transition-all duration-300 flex items-center gap-3 justify-center"
+                variant="secondary"
+                size="lg"
+                className="rounded-full px-10 py-7 text-lg font-bold flex items-center gap-3 justify-center"
               >
                 <FiPlay className="fill-current" /> Đặt lịch tham quan
               </Button>
             </div>
           </div>
-        </div>
-      </section>
+        </Card>
+      </motion.section>
 
       {/* ── Footer ── */}
       <footer className="bg-slate-100 dark:bg-slate-950 border-t border-slate-200 dark:border-white/5 py-20 relative overflow-hidden transition-colors duration-500">
         <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-slate-300 dark:via-white/10 to-transparent" />
         <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-12 gap-12 relative z-10">
           <div className="md:col-span-4">
-            <Logo iconClassName="h-8 w-8 text-amber-600 dark:text-amber-500" textClassName="text-2xl font-['Space_Grotesk'] font-bold tracking-tight text-slate-900 dark:text-white" />
+            <Logo iconClassName="h-8 w-8" textClassName="text-2xl font-display font-bold tracking-tight text-slate-900 dark:text-white" />
             <p className="text-base text-slate-600 dark:text-slate-400 mt-6 leading-relaxed max-w-sm font-light">
               Nền tảng quản lý không gian làm việc số thế hệ mới. Đơn giản hóa vận hành, tối ưu hóa trải nghiệm.
             </p>
           </div>
           <div className="md:col-span-3 md:col-start-6">
-            <h5 className="font-['Space_Grotesk'] font-bold text-slate-900 dark:text-white mb-6 uppercase tracking-wider text-sm">Giải pháp</h5>
+            <h5 className="font-display font-bold text-slate-900 dark:text-white mb-6 uppercase tracking-wider text-sm">Giải pháp</h5>
             <ul className="space-y-4 text-slate-600 dark:text-slate-400 font-light">
               {workspaceTypes.map(wt => (
                 <li key={wt.id}>
-                  <a className="hover:text-amber-600 dark:hover:text-amber-400 transition-colors" href="#services">{wt.name}</a>
+                  <a className="hover:text-primary transition-colors" href="#services">{wt.name}</a>
                 </li>
               ))}
             </ul>
           </div>
           <div className="md:col-span-2">
-            <h5 className="font-['Space_Grotesk'] font-bold text-slate-900 dark:text-white mb-6 uppercase tracking-wider text-sm">Chi nhánh</h5>
+            <h5 className="font-display font-bold text-slate-900 dark:text-white mb-6 uppercase tracking-wider text-sm">Chi nhánh</h5>
             <ul className="space-y-4 text-slate-600 dark:text-slate-400 font-light">
               {branches.slice(0, 4).map(b => (
                 <li key={b.id}>
-                  <a className="hover:text-amber-600 dark:hover:text-amber-400 transition-colors" href="#locations">{b.name}</a>
+                  <a className="hover:text-primary transition-colors" href="#locations">{b.name}</a>
                 </li>
               ))}
             </ul>
           </div>
           <div className="md:col-span-2">
-            <h5 className="font-['Space_Grotesk'] font-bold text-slate-900 dark:text-white mb-6 uppercase tracking-wider text-sm">Liên hệ</h5>
+            <h5 className="font-display font-bold text-slate-900 dark:text-white mb-6 uppercase tracking-wider text-sm">Liên hệ</h5>
             <div className="space-y-4 text-slate-600 dark:text-slate-400 font-light">
               <p className="flex items-center gap-2 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer">1900 3384</p>
               <p className="flex items-center gap-2 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer">hello@cospace.vn</p>
@@ -638,17 +745,17 @@ const LandingPage: React.FC = () => {
             >
               <FiX className="w-5 h-5" />
             </button>
-            <h3 className="text-3xl font-['Space_Grotesk'] font-bold text-slate-900 dark:text-white mb-3">Đặt lịch tham quan</h3>
+            <h3 className="text-3xl font-display font-bold text-slate-900 dark:text-white mb-3">Đặt lịch tham quan</h3>
             <p className="text-base text-slate-600 dark:text-slate-400 mb-8 font-light">Trực tiếp trải nghiệm không gian làm việc số.</p>
-            
+
             {submitted ? (
               <div className="py-10 text-center">
-                <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-500/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-6">
+                <div className="w-20 h-20 bg-success/10 border border-success/20 text-success rounded-full flex items-center justify-center mx-auto mb-6">
                   <FiCheck className="w-10 h-10" />
                 </div>
-                <h4 className="font-['Space_Grotesk'] font-bold text-slate-900 dark:text-white text-2xl mb-3">Thành công</h4>
+                <h4 className="font-display font-bold text-slate-900 dark:text-white text-2xl mb-3">Thành công</h4>
                 <p className="text-slate-600 dark:text-slate-400 text-base mb-8 font-light">Cộng sự CoSpace sẽ liên hệ với bạn trong 15 phút tới.</p>
-                <Button onClick={() => { setIsTourModalOpen(false); setSubmitted(false); }} className="w-full rounded-2xl py-6 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 text-slate-900 dark:text-white border border-slate-300 dark:border-white/10 font-bold">
+                <Button onClick={() => { setIsTourModalOpen(false); setSubmitted(false); }} variant="outline" className="w-full rounded-2xl py-6 font-bold">
                   Hoàn tất
                 </Button>
               </div>
@@ -661,7 +768,7 @@ const LandingPage: React.FC = () => {
                     placeholder="Nhập họ và tên..."
                     value={tourForm.name}
                     onChange={(e) => setTourForm({ ...tourForm, name: e.target.value })}
-                    className="w-full bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-white/10 p-4 rounded-xl text-base text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/50 transition-all"
+                    className="w-full bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-white/10 p-4 rounded-xl text-base text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all"
                     required
                   />
                 </div>
@@ -672,7 +779,7 @@ const LandingPage: React.FC = () => {
                     placeholder="09xx xxx xxx"
                     value={tourForm.phone}
                     onChange={handlePhoneChange}
-                    className="w-full bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-white/10 p-4 rounded-xl text-base text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/50 transition-all font-mono"
+                    className="w-full bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-white/10 p-4 rounded-xl text-base text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all font-mono"
                     required
                   />
                 </div>
@@ -681,7 +788,7 @@ const LandingPage: React.FC = () => {
                   <select
                     value={tourForm.branchId}
                     onChange={(e) => setTourForm({ ...tourForm, branchId: e.target.value })}
-                    className="w-full bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-white/10 p-4 rounded-xl text-base text-slate-900 dark:text-white focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/50 transition-all appearance-none"
+                    className="w-full bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-white/10 p-4 rounded-xl text-base text-slate-900 dark:text-white focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all appearance-none"
                   >
                     {displayBranches.map(b => (
                       <option key={b.id} value={b.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
@@ -690,7 +797,7 @@ const LandingPage: React.FC = () => {
                     ))}
                   </select>
                 </div>
-                <Button type="submit" className="w-full rounded-2xl mt-4 py-7 bg-amber-500 hover:bg-amber-600 dark:hover:bg-amber-400 text-white dark:text-slate-900 font-bold text-lg">
+                <Button type="submit" size="lg" className="w-full rounded-2xl mt-4 py-7 font-bold text-lg">
                   Xác nhận lịch hẹn
                 </Button>
               </form>
@@ -714,25 +821,25 @@ const LandingPage: React.FC = () => {
               <div className="absolute inset-0 bg-gradient-to-t from-white dark:from-slate-900 to-transparent" />
             </div>
             <div className="p-10 -mt-20 relative z-10 flex-1 overflow-y-auto">
-              <span className="bg-amber-500 text-white dark:text-slate-900 text-xs font-bold tracking-wider uppercase px-4 py-1.5 rounded-full mb-4 inline-block shadow-lg">
+              <Badge className="bg-primary text-primary-foreground text-xs font-bold tracking-wider uppercase px-4 py-1.5 mb-4 inline-block shadow-lg border-transparent">
                 {selectedBranchForDetail.tag}
-              </span>
-              <h3 className="text-4xl font-['Space_Grotesk'] font-bold text-slate-900 dark:text-white mb-3">{selectedBranchForDetail.name}</h3>
-              <p className="text-slate-600 dark:text-slate-300 text-base mb-8 font-light flex items-center gap-2"><FiMapPin className="text-amber-500 dark:text-amber-400" /> {selectedBranchForDetail.address}</p>
-              
+              </Badge>
+              <h3 className="text-4xl font-display font-bold text-slate-900 dark:text-white mb-3">{selectedBranchForDetail.name}</h3>
+              <p className="text-slate-600 dark:text-slate-300 text-base mb-8 font-light flex items-center gap-2"><FiMapPin className="text-primary" /> {selectedBranchForDetail.address}</p>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
                 {selectedBranchForDetail.features.map((feat, idx) => (
                   <div key={idx} className="flex items-center gap-3 text-sm text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-white/5 p-4 rounded-2xl border border-slate-200 dark:border-white/10">
-                    <FiCheck className="text-emerald-500 dark:text-emerald-400 shrink-0" />
+                    <FiCheck className="text-success shrink-0" />
                     <span className="font-light">{feat.text}</span>
                   </div>
                 ))}
               </div>
               <div className="flex flex-col sm:flex-row gap-4">
-                <Button onClick={() => { handleBookingRedirect(selectedBranchForDetail.exploreBranchId); setSelectedBranchForDetail(null); }} className="flex-1 rounded-2xl py-7 bg-amber-500 hover:bg-amber-600 dark:hover:bg-amber-400 text-white dark:text-slate-900 font-bold text-lg shadow-[0_0_24px_rgba(245,158,11,0.2)] dark:shadow-[0_0_24px_rgba(245,158,11,0.3)]">
+                <Button onClick={() => { handleBookingRedirect(selectedBranchForDetail.exploreBranchId); setSelectedBranchForDetail(null); }} size="lg" className="flex-1 rounded-2xl py-7 font-bold text-lg shadow-[0_0_24px_hsl(var(--primary)/0.25)]">
                   Mở Sơ Đồ Trực Tuyến
                 </Button>
-                <Button variant="outline" onClick={() => { openTourModal(selectedBranchForDetail.id); setSelectedBranchForDetail(null); }} className="flex-1 rounded-2xl py-7 bg-transparent hover:bg-slate-100 dark:hover:bg-white/5 text-slate-900 dark:text-white border-slate-300 dark:border-white/20 font-bold text-lg">
+                <Button variant="outline" size="lg" onClick={() => { openTourModal(selectedBranchForDetail.id); setSelectedBranchForDetail(null); }} className="flex-1 rounded-2xl py-7 font-bold text-lg">
                   Đặt lịch xem phòng
                 </Button>
               </div>

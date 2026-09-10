@@ -1,50 +1,50 @@
-import React, { useState } from 'react';
-import { FiUsers, FiEdit2, FiLock, FiPlus, FiSave, FiX, FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
+import React, { useState, useEffect } from 'react';
+import { FiUsers, FiEdit2, FiLock, FiUnlock, FiPlus, FiSave, FiX, FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
-import { users as allUsers, type User } from '../../data/mockData';
+import { staffApi, type BranchStaffDto } from '../../api/staffApi';
 
 const BAStaffPage: React.FC = () => {
   const { user } = useAuth();
   const branchId = user!.branchId!;
 
-  const [staffList, setStaffList] = useState<User[]>(
-    allUsers.filter((u) => u.role === 'staff' && u.branch_id === branchId)
-  );
+  const [staffList, setStaffList] = useState<BranchStaffDto[]>([]);
+  const [isLoadingList, setIsLoadingList] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      setIsLoadingList(true);
+      try {
+        const data = await staffApi.getStaff();
+        setStaffList(data);
+      } catch (e) {
+        console.error('Failed to load staff', e);
+      } finally {
+        setIsLoadingList(false);
+      }
+    };
+    load();
+  }, [branchId]);
 
   const [search, setSearch] = useState('');
-  
-  // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingStaff, setEditingStaff] = useState<User | null>(null);
-  
-  // Form State
-  const [formData, setFormData] = useState({
-    full_name: '',
-    email: '',
-    password: '',
-  });
+  const [editingStaff, setEditingStaff] = useState<BranchStaffDto | null>(null);
+  const [formData, setFormData] = useState({ full_name: '', email: '', password: '' });
   const [formError, setFormError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
-
-  // Confirmation Modal State
-  const [isConfirmLockOpen, setIsConfirmLockOpen] = useState(false);
-  const [staffToLock, setStaffToLock] = useState<User | null>(null);
+  const [isConfirmToggleOpen, setIsConfirmToggleOpen] = useState(false);
+  const [staffToToggle, setStaffToToggle] = useState<BranchStaffDto | null>(null);
 
   const filtered = staffList.filter(u => {
-    if (search && !u.full_name.toLowerCase().includes(search.toLowerCase()) && !u.email.toLowerCase().includes(search.toLowerCase())) return false;
+    if (search && !u.fullName.toLowerCase().includes(search.toLowerCase()) && !u.email.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
 
-  const handleOpenModal = (staff: User | null = null) => {
+  const handleOpenModal = (staff: BranchStaffDto | null = null) => {
     setFormError('');
     setSuccessMessage('');
     if (staff) {
       setEditingStaff(staff);
-      setFormData({
-        full_name: staff.full_name,
-        email: staff.email,
-        password: '',
-      });
+      setFormData({ full_name: staff.fullName, email: staff.email, password: '' });
     } else {
       setEditingStaff(null);
       setFormData({ full_name: '', email: '', password: '' });
@@ -52,60 +52,56 @@ const BAStaffPage: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError('');
-
     if (!formData.full_name || !formData.email || (!editingStaff && !formData.password)) {
       setFormError('Vui lòng điền đầy đủ thông tin bắt buộc.');
       return;
     }
-
-    // Check Duplicate Email (Constraint 6a)
-    const isDuplicate = staffList.some(u => u.email === formData.email && u.id !== editingStaff?.id);
-    if (isDuplicate) {
-      setFormError('Email này đã được sử dụng. Vui lòng chọn email khác.');
-      return;
+    try {
+      if (editingStaff) {
+        const updated = await staffApi.updateStaff(editingStaff.id, {
+          fullName: formData.full_name,
+          email: formData.email,
+          ...(formData.password ? { password: formData.password } : {}),
+        });
+        setStaffList(prev => prev.map(u => u.id === updated.id ? updated : u));
+        showSuccess('Cập nhật thông tin nhân viên thành công!');
+      } else {
+        const created = await staffApi.createStaff({
+          email: formData.email,
+          fullName: formData.full_name,
+          password: formData.password,
+        });
+        setStaffList(prev => [created, ...prev]);
+        showSuccess('Thêm nhân viên mới thành công!');
+      }
+      setIsModalOpen(false);
+    } catch (err: any) {
+      setFormError(err.message || 'Lỗi khi lưu nhân viên.');
     }
-
-    if (editingStaff) {
-      setStaffList(prev => prev.map(u => u.id === editingStaff.id ? { 
-        ...u, 
-        full_name: formData.full_name, 
-        email: formData.email
-      } : u));
-      showSuccess('Cập nhật thông tin nhân viên thành công!');
-    } else {
-      const newStaff: User = {
-        id: `user-${Date.now()}`,
-        email: formData.email,
-        full_name: formData.full_name,
-        phone: '', // Mặc định trống, có thể thêm field nếu cần
-        avatar_url: '',
-        status: 'active',
-        role: 'staff',
-        branch_id: branchId,
-        membership_tier: 'standard',
-        created_at: new Date().toISOString()
-      };
-      setStaffList([newStaff, ...staffList]);
-      showSuccess('Thêm nhân viên mới thành công!');
-    }
-    setIsModalOpen(false);
   };
 
-  const handleLockAccount = () => {
-    if (!staffToLock) return;
-    setStaffList(prev => prev.map(u => u.id === staffToLock.id ? { ...u, status: 'suspended' } : u));
-    setIsConfirmLockOpen(false);
-    setStaffToLock(null);
-    showSuccess('Đã khóa tài khoản nhân viên thành công.');
+  const handleToggleStatus = async () => {
+    if (!staffToToggle) return;
+    const newStatus = staffToToggle.status === 'active' ? 'suspended' : 'active';
+    try {
+      await staffApi.updateStaffStatus(staffToToggle.id, newStatus);
+      setStaffList(prev => prev.map(u => u.id === staffToToggle.id ? { ...u, status: newStatus } : u));
+      setIsConfirmToggleOpen(false);
+      setStaffToToggle(null);
+      showSuccess(newStatus === 'active' ? 'Đã mở khóa tài khoản thành công.' : 'Đã khóa tài khoản nhân viên thành công.');
+    } catch (err: any) {
+      setFormError(err.message || 'Lỗi khi thay đổi trạng thái tài khoản.');
+    }
   };
 
   const showSuccess = (msg: string) => {
     setSuccessMessage(msg);
     setTimeout(() => setSuccessMessage(''), 3000);
   };
+
 
   return (
     <div className="space-y-6 animate-fade-in relative">
@@ -126,6 +122,7 @@ const BAStaffPage: React.FC = () => {
               <FiUsers className="h-3.5 w-3.5" />
               {staffList.length} nhân viên ({staffList.filter((u) => u.status === 'active').length} hoạt động)
             </span>
+
           </div>
           <button onClick={() => handleOpenModal()} className="btn btn-primary btn-sm flex items-center gap-2">
             <FiPlus className="h-4 w-4" /> Thêm nhân viên
@@ -134,7 +131,13 @@ const BAStaffPage: React.FC = () => {
       </div>
 
       {/* Staff list */}
-      {staffList.length === 0 ? (
+      {isLoadingList ? (
+        <div className="bg-card rounded-3xl border border-border p-6 space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-12 bg-muted rounded-xl animate-pulse" />
+          ))}
+        </div>
+      ) : staffList.length === 0 ? (
         <div className="bg-card rounded-3xl border border-border shadow-sm p-10 flex flex-col items-center gap-3 text-muted-foreground">
           <FiUsers className="h-10 w-10 opacity-30" />
           <p className="text-sm font-medium">Chưa có nhân viên nào được phân công.</p>
@@ -156,10 +159,11 @@ const BAStaffPage: React.FC = () => {
                   <tr key={s.id} className="hover:bg-muted/30 transition-colors">
                     <td className="max-w-[200px]">
                       <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold shrink-0 shadow-sm">
-                          {s.full_name.charAt(0)}
+                        <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-primary-foreground text-sm font-bold shrink-0 shadow-sm">
+                          {s.fullName.charAt(0)}
                         </div>
-                        <span className="font-medium">{s.full_name}</span>
+                        <span className="font-medium">{s.fullName}</span>
+
                       </div>
                     </td>
                     <td className="text-muted-foreground text-sm">{s.email}</td>
@@ -174,13 +178,21 @@ const BAStaffPage: React.FC = () => {
                         <button onClick={() => handleOpenModal(s)} className="btn btn-ghost btn-sm text-muted-foreground hover:text-primary">
                           <FiEdit2 className="h-4 w-4" />
                         </button>
-                        {s.status === 'active' && (
+                        {s.status === 'active' ? (
                           <button 
-                            onClick={() => { setStaffToLock(s); setIsConfirmLockOpen(true); }} 
+                            onClick={() => { setStaffToToggle(s); setIsConfirmToggleOpen(true); }} 
                             className="btn btn-ghost btn-sm text-muted-foreground hover:text-destructive"
                             title="Khóa tài khoản"
                           >
                             <FiLock className="h-4 w-4" />
+                          </button>
+                        ) : (
+                          <button 
+                            onClick={() => { setStaffToToggle(s); setIsConfirmToggleOpen(true); }} 
+                            className="btn btn-ghost btn-sm text-muted-foreground hover:text-success"
+                            title="Mở khóa tài khoản"
+                          >
+                            <FiUnlock className="h-4 w-4" />
                           </button>
                         )}
                       </div>
@@ -195,7 +207,7 @@ const BAStaffPage: React.FC = () => {
 
       {/* Alert if no active staff */}
       {staffList.length > 0 && staffList.every((s) => s.status === 'suspended') && (
-        <div className="flex items-center gap-2 rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/30 px-4 py-3 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-400">
+        <div className="flex items-center gap-2 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
           <FiAlertCircle className="h-4 w-4 shrink-0" />
           Tất cả nhân viên đang bị tạm khóa. Chi nhánh không có ai trực.
         </div>
@@ -271,21 +283,24 @@ const BAStaffPage: React.FC = () => {
         </div>
       )}
 
-      {/* Confirm Lock Modal */}
-      {isConfirmLockOpen && staffToLock && (
+      {/* Confirm Toggle Modal */}
+      {isConfirmToggleOpen && staffToToggle && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4 animate-fade-in">
           <div className="bg-card w-full max-w-sm rounded-2xl shadow-xl border border-border p-6 text-center">
-            <div className="mx-auto w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
-              <FiLock className="h-6 w-6 text-destructive" />
+            <div className={`mx-auto w-12 h-12 rounded-full flex items-center justify-center mb-4 ${staffToToggle.status === 'active' ? 'bg-destructive/10' : 'bg-success/10'}`}>
+              {staffToToggle.status === 'active' ? <FiLock className="h-6 w-6 text-destructive" /> : <FiUnlock className="h-6 w-6 text-success" />}
             </div>
-            <h3 className="text-lg font-bold mb-2">Khóa tài khoản nhân viên?</h3>
+            <h3 className="text-lg font-bold mb-2">
+              {staffToToggle.status === 'active' ? 'Khóa tài khoản nhân viên?' : 'Mở khóa tài khoản nhân viên?'}
+            </h3>
             <p className="text-muted-foreground text-sm mb-6">
-              Bạn có chắc chắn muốn khóa tài khoản của <strong>{staffToLock.full_name}</strong>? Nhân viên này sẽ không thể đăng nhập vào hệ thống nữa.
+              Bạn có chắc chắn muốn {staffToToggle.status === 'active' ? 'khóa' : 'mở khóa'} tài khoản của <strong>{staffToToggle.fullName}</strong>?
+              {staffToToggle.status === 'active' ? ' Nhân viên này sẽ không thể đăng nhập vào hệ thống nữa.' : ' Nhân viên này sẽ có thể đăng nhập trở lại vào hệ thống.'}
             </p>
             <div className="flex gap-3">
-              <button onClick={() => setIsConfirmLockOpen(false)} className="flex-1 btn btn-ghost">Hủy</button>
-              <button onClick={handleLockAccount} className="flex-1 btn bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                Xác nhận Khóa
+              <button onClick={() => setIsConfirmToggleOpen(false)} className="flex-1 btn btn-ghost">Hủy</button>
+              <button onClick={handleToggleStatus} className={`flex-1 btn ${staffToToggle.status === 'active' ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : 'bg-success text-success-foreground hover:bg-success/90'}`}>
+                {staffToToggle.status === 'active' ? 'Xác nhận Khóa' : 'Xác nhận Mở khóa'}
               </button>
             </div>
           </div>

@@ -30,8 +30,17 @@ public class ExtraServiceEntity {
     @Column(name = "branch_id")
     private UUID branchId; // NULL means global service
 
+    @Column(nullable = false, length = 40)
+    @Builder.Default
+    private String code = "";
+
     @Column(nullable = false, length = 120)
     private String name;
+
+    // One of: drink, meal, printing, other — drives which icon the branch-admin UI shows.
+    @Column(name = "service_type", nullable = false, length = 20)
+    @Builder.Default
+    private String serviceType = "other";
 
     @Column(columnDefinition = "text")
     private String description;

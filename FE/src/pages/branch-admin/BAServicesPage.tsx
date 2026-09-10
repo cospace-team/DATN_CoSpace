@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FiCoffee, FiPrinter, FiPlus, FiX, FiCheck, FiEdit2, FiTrash2, FiAlertCircle } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
-import { extraServices as allServices, type ExtraService } from '../../data/mockData';
+import { staffApi, type ExtraServiceDto } from '../../api/staffApi';
 import { formatVND } from '../../utils/formatters';
+
 
 const Modal: React.FC<{ title: string; onClose: () => void; children: React.ReactNode }> = ({
   title, onClose, children,
@@ -18,31 +19,48 @@ const Modal: React.FC<{ title: string; onClose: () => void; children: React.Reac
   </div>
 );
 
-const TYPE_ICON: Record<ExtraService['service_type'], React.ReactNode> = {
+const TYPE_ICON: Record<string, React.ReactNode> = {
   drink: <FiCoffee className="h-4 w-4" />,
   meal: <span className="text-sm">🍽️</span>,
   printing: <FiPrinter className="h-4 w-4" />,
   other: <span className="text-sm">📦</span>,
 };
-const TYPE_LABEL: Record<ExtraService['service_type'], string> = {
+const TYPE_LABEL: Record<string, string> = {
   drink: 'Đồ uống', meal: 'Ăn uống', printing: 'In ấn', other: 'Khác',
 };
 
-type ModalMode = { type: 'add' } | { type: 'edit'; service: ExtraService } | null;
+type ModalMode = { type: 'add' } | { type: 'edit'; service: ExtraServiceDto } | null;
+
 
 const BAServicesPage: React.FC = () => {
   const { user } = useAuth();
   const branchId = user!.branchId!;
 
-  const [services, setServices] = useState<ExtraService[]>(
-    allServices.slice(0, 4).map((s) => ({ ...s }))
-  );
+  const [services, setServices] = useState<ExtraServiceDto[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [apiError, setApiError] = useState('');
+
+  useEffect(() => {
+    const load = async () => {
+      setIsLoading(true);
+      setApiError('');
+      try {
+        const data = await staffApi.getExtraServices(branchId);
+        setServices(data);
+      } catch (e: any) {
+        setApiError(e.message || 'Không thể tải dịch vụ.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    load();
+  }, [branchId]);
 
   const [modal, setModal] = useState<ModalMode>(null);
   const [form, setForm] = useState({
     code: '',
     name: '',
-    service_type: 'drink' as ExtraService['service_type'],
+    service_type: 'drink' as string,
     unit: '',
     price: '',
     is_active: true,
@@ -61,11 +79,12 @@ const BAServicesPage: React.FC = () => {
     setModal({ type: 'add' });
   };
 
-  const openEdit = (s: ExtraService) => {
-    setForm({ code: s.code, name: s.name, service_type: s.service_type, unit: s.duration_unit || s.unit || '', price: String(s.price), is_active: s.is_active });
+  const openEdit = (s: ExtraServiceDto) => {
+    setForm({ code: s.code, name: s.name, service_type: s.serviceType, unit: s.unit || '', price: String(s.price), is_active: s.isActive });
     setErrors({});
     setModal({ type: 'edit', service: s });
   };
+
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
@@ -79,48 +98,59 @@ const BAServicesPage: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const save = () => {
+  const save = async () => {
     if (!validate()) return;
-    
     const price = parseInt(form.price.replace(/\D/g, '')) || 0;
-    if (modal?.type === 'add') {
-      const newSvc: ExtraService = {
-        id: `es-local-${Date.now()}`,
-        code: form.code.toUpperCase(),
-        name: form.name,
-        service_type: form.service_type,
-        duration_unit: form.unit,
-        unit: form.unit,
-        price,
-        is_active: form.is_active,
-      };
-      setServices((prev) => [...prev, newSvc]);
-      showSuccess('Thêm dịch vụ thành công');
-    } else if (modal?.type === 'edit') {
-      setServices((prev) =>
-        prev.map((s) =>
-          s.id === modal.service.id
-            ? { ...s, code: form.code, name: form.name, service_type: form.service_type, unit: form.unit, price, is_active: form.is_active }
-            : s
-        )
-      );
-      showSuccess('Cập nhật dịch vụ thành công');
+    try {
+      if (modal?.type === 'add') {
+        const created = await staffApi.createExtraService({
+          code: form.code.toUpperCase(),
+          name: form.name,
+          serviceType: form.service_type,
+          unit: form.unit,
+          price,
+          isActive: form.is_active,
+          branchId,
+        });
+        setServices((prev) => [...prev, created]);
+        showSuccess('Thêm dịch vụ thành công');
+      } else if (modal?.type === 'edit') {
+        const updated = await staffApi.updateExtraService(modal.service.id, {
+          code: form.code.toUpperCase(),
+          name: form.name,
+          serviceType: form.service_type,
+          unit: form.unit,
+          price,
+          isActive: form.is_active,
+        });
+        setServices((prev) => prev.map((s) => s.id === updated.id ? updated : s));
+        showSuccess('Cập nhật dịch vụ thành công');
+      }
+    } catch (e: any) {
+      setApiError(e.message || 'Lỗi khi lưu dịch vụ.');
     }
     setModal(null);
   };
 
-  const toggleActive = (id: string) => {
-    setServices((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, is_active: !s.is_active } : s))
-    );
-  };
-
-  const deleteService = (id: string, name: string) => {
-    if (window.confirm(`Bạn có chắc chắn muốn xóa vĩnh viễn dịch vụ "${name}"? Hành động này không thể hoàn tác.`)) {
-      setServices(prev => prev.filter(s => s.id !== id));
-      showSuccess('Đã xóa dịch vụ');
+  const toggleActive = async (s: ExtraServiceDto) => {
+    try {
+      const updated = await staffApi.updateExtraService(s.id, { isActive: !s.isActive });
+      setServices((prev) => prev.map((x) => x.id === updated.id ? updated : x));
+    } catch (e: any) {
+      setApiError(e.message || 'Lỗi khi đổi trạng thái.');
     }
   };
+
+  const deleteService = async (id: string) => {
+    try {
+      await staffApi.deleteExtraService(id);
+      setServices((prev) => prev.filter((s) => s.id !== id));
+      showSuccess('Xóa dịch vụ thành công');
+    } catch (e: any) {
+      setApiError(e.message || 'Lỗi khi xóa dịch vụ.');
+    }
+  };
+
 
   return (
     <div className="space-y-6 animate-fade-in relative">
@@ -131,6 +161,12 @@ const BAServicesPage: React.FC = () => {
         </div>
       )}
 
+      {apiError && (
+        <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          <FiAlertCircle className="h-4 w-4 shrink-0" />{apiError}
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-card rounded-3xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow">
         <div className="flex items-center justify-between flex-wrap gap-4">
@@ -138,7 +174,7 @@ const BAServicesPage: React.FC = () => {
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Quản lý chi nhánh</p>
             <h1 className="text-2xl font-semibold tracking-tight text-foreground mt-1">Dịch vụ thêm</h1>
             <p className="text-sm font-medium text-muted-foreground mt-2">
-              {services.length} dịch vụ · {services.filter((s) => s.is_active).length} đang hoạt động
+              {services.length} dịch vụ · {services.filter((s) => s.isActive).length} đang hoạt động
             </p>
           </div>
           <button className="btn btn-primary btn-sm" onClick={openAdd}>
@@ -147,68 +183,73 @@ const BAServicesPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Service grid */}
-      {services.length === 0 ? (
+
+      {isLoading ? (
+        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
+          {[1,2,3].map(i => <div key={i} className="bg-card rounded-2xl border border-border p-5 animate-pulse h-40" />)}
+        </div>
+      ) : services.length === 0 ? (
         <div className="bg-card rounded-3xl border border-border shadow-sm p-10 flex flex-col items-center gap-3 text-muted-foreground">
           <FiCoffee className="h-10 w-10 opacity-30" />
           <p className="text-sm">Chưa có dịch vụ nào cho chi nhánh này.</p>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
           {services.map((s) => (
             <div
               key={s.id}
-              className={`rounded-xl border bg-card p-5 card-interactive transition-all duration-200 ${
-                s.is_active ? 'border-border' : 'border-border opacity-60'
+              className={`bg-card rounded-2xl border p-5 flex flex-col transition-all hover:shadow-md ${
+                s.isActive ? 'border-border' : 'border-border opacity-60'
               }`}
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2.5">
                   <div className={`flex h-10 w-10 items-center justify-center rounded-xl shrink-0 ${
-                    s.is_active ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
+                    s.isActive ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
                   }`}>
-                    {TYPE_ICON[s.service_type]}
+                    {TYPE_ICON[s.serviceType]}
                   </div>
                   <div>
                     <h3 className="font-semibold text-sm leading-tight">{s.name}</h3>
-                    <p className="text-xs text-muted-foreground">{TYPE_LABEL[s.service_type]}</p>
+                    <p className="text-xs text-muted-foreground">{TYPE_LABEL[s.serviceType]}</p>
                   </div>
                 </div>
-                <span className={`badge ${s.is_active ? 'badge-success' : 'badge-neutral'}`}>
-                  {s.is_active ? 'Bật' : 'Tắt'}
+                <span className={`badge ${s.isActive ? 'badge-success' : 'badge-neutral'}`}>
+                  {s.isActive ? 'Bật' : 'Tắt'}
                 </span>
               </div>
 
+
+
               <div className="mt-4 flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-muted-foreground">Giá / {s.duration_unit || s.unit}</p>
+                  <p className="text-xs text-muted-foreground">Giá / {s.unit}</p>
                   <p className="text-lg font-bold text-primary">{formatVND(s.price)}</p>
                 </div>
                 <p className="font-mono text-xs text-muted-foreground">{s.code}</p>
               </div>
 
+
               <div className="mt-4 flex gap-2">
-                <button
-                  className="btn btn-secondary btn-sm flex-1"
-                  onClick={() => openEdit(s)}
-                >
+                <button className="btn btn-secondary btn-sm flex-1" onClick={() => openEdit(s)}>
                   <FiEdit2 className="h-3.5 w-3.5" /> Sửa
                 </button>
                 <button
-                  className={`btn btn-sm ${s.is_active ? 'btn-ghost' : 'btn-primary'}`}
-                  onClick={() => toggleActive(s.id)}
-                  title={s.is_active ? 'Tắt dịch vụ' : 'Bật dịch vụ'}
+                  className={`btn btn-sm ${s.isActive ? 'btn-ghost' : 'btn-primary'}`}
+                  onClick={() => toggleActive(s)}
+                  title={s.isActive ? 'Tắt dịch vụ' : 'Bật dịch vụ'}
                 >
-                  {s.is_active ? <FiX className="h-3.5 w-3.5" /> : <FiCheck className="h-3.5 w-3.5" />}
+                  {s.isActive ? <FiX className="h-3.5 w-3.5" /> : <FiCheck className="h-3.5 w-3.5" />}
                 </button>
                 <button
                   className="btn btn-ghost btn-sm text-destructive hover:bg-destructive/10 px-2"
-                  onClick={() => deleteService(s.id, s.name)}
+                  onClick={() => deleteService(s.id)}
                   title="Xóa vĩnh viễn"
                 >
                   <FiTrash2 className="h-3.5 w-3.5" />
                 </button>
               </div>
+
             </div>
           ))}
         </div>
@@ -240,7 +281,7 @@ const BAServicesPage: React.FC = () => {
                 <select
                   className="input-field"
                   value={form.service_type}
-                  onChange={(e) => setForm((p) => ({ ...p, service_type: e.target.value as ExtraService['service_type'] }))}
+                onChange={(e) => setForm((p) => ({ ...p, service_type: e.target.value }))}
                 >
                   <option value="drink">Đồ uống</option>
                   <option value="meal">Ăn uống</option>

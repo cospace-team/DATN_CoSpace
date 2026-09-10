@@ -24,7 +24,7 @@ export const Logo: React.FC<LogoProps> = ({
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
       >
-        <rect width="40" height="40" rx="8" fill="#4F46E5" />
+        <rect width="40" height="40" rx="8" style={{ fill: "hsl(var(--primary))" }} />
         <circle cx="14" cy="14" r="3" fill="white" />
         <circle cx="26" cy="14" r="3" fill="white" />
         <circle cx="14" cy="26" r="3" fill="white" />
@@ -45,7 +45,7 @@ export const Logo: React.FC<LogoProps> = ({
           >
             Co
           </span>
-          <span className="text-[#4F46E5]">Space</span>
+          <span className={isDarkBackground ? "text-white" : "text-primary"}>Space</span>
         </span>
       )}
     </div>

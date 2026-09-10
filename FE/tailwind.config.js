@@ -67,6 +67,7 @@ module.exports = {
       fontFamily: {
         sans: ["Inter", "system-ui", "-apple-system", "sans-serif"],
         heading: ["Poppins", "Inter", "system-ui", "sans-serif"],
+        display: ["Space Grotesk", "Poppins", "Inter", "system-ui", "sans-serif"],
       },
       keyframes: {
         "accordion-down": {
