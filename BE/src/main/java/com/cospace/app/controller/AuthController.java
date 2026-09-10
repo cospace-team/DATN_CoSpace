@@ -22,15 +22,19 @@ public class AuthController {
 
     private final AuthService authService;
 
-    @PostMapping("/dev-login")
-    public ResponseEntity<?> devLogin(@RequestBody Map<String, String> request) {
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refresh(@RequestBody Map<String, String> request) {
         try {
-            String roleStr = request.get("role");
-            AuthResponse response = authService.devLogin(roleStr);
+            AuthResponse response = authService.refresh(request.get("refreshToken"));
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
-                    "error", "bad_request",
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
+                    "error", "unauthorized",
+                    "message", e.getMessage()
+            ));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                    "error", "forbidden",
                     "message", e.getMessage()
             ));
         }
@@ -83,7 +87,7 @@ public class AuthController {
     public ResponseEntity<?> sync(@org.springframework.security.core.annotation.AuthenticationPrincipal org.springframework.security.oauth2.jwt.Jwt jwt) {
         try {
             com.cospace.app.entity.User user = authService.syncGoogleUser(jwt);
-            return ResponseEntity.ok(user);
+            return ResponseEntity.ok(authService.toAuthUserDto(user));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
                     "error", "bad_request",

@@ -251,10 +251,11 @@ const BookingHistoryPage: React.FC = () => {
     setIsCanceling(true);
 
     try {
-      if (apiLoaded) {
-        await bookingApi.cancelBooking(showCancelModal);
-      }
-      
+      // Always go through the real API — never fake success locally. If the initial booking
+      // list load fell back to mock data, this call fails honestly instead of pretending the
+      // cancellation went through.
+      const result = await bookingApi.cancelBooking(showCancelModal);
+
       setBookings((prev) =>
         prev.map((b) =>
           b.id === showCancelModal ? { ...b, status: "cancelled" } : b,
@@ -262,8 +263,10 @@ const BookingHistoryPage: React.FC = () => {
       );
 
       setShowCancelModal(null);
-      setSuccessMessage("Yêu cầu hủy đơn đặt chỗ thành công.");
-      setTimeout(() => setSuccessMessage(null), 4000);
+      setSuccessMessage(
+        `Yêu cầu hủy đơn đặt chỗ thành công. Hoàn tiền: ${formatVND(result.refundAmount)} (${result.refundPercent}% theo chính sách hủy).`,
+      );
+      setTimeout(() => setSuccessMessage(null), 6000);
     } catch (err: any) {
       console.error("Failed to cancel booking:", err);
       setShowCancelModal(null);
@@ -621,18 +624,10 @@ const BookingHistoryPage: React.FC = () => {
                   {formatVND(selectedCancelBooking.totalAmount)}
                 </span>
               </div>
-              <div className="flex justify-between text-sm font-semibold text-foreground">
-                <span>Phí hủy (20%):</span>
-                <span className="font-mono">
-                  -{formatVND(selectedCancelBooking.totalAmount * 0.2)}
-                </span>
-              </div>
-              <div className="pt-3 border-t border-border/10 flex justify-between font-semibold text-lg text-foreground">
-                <span>Hoàn tiền thực nhận:</span>
-                <span className="font-mono">
-                  {formatVND(selectedCancelBooking.totalAmount * 0.8)}
-                </span>
-              </div>
+              <p className="text-xs font-medium text-foreground/70 leading-relaxed">
+                Số tiền hoàn lại sẽ được tính theo chính sách hủy đang áp dụng tại chi nhánh
+                (phụ thuộc thời điểm hủy so với giờ nhận chỗ) và hiển thị ngay sau khi bạn xác nhận.
+              </p>
             </div>
 
             <div className="flex gap-4">

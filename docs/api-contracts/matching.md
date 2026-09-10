@@ -63,26 +63,43 @@
 {
   "data": [
     {
-      "user": {
-        "id": "uuid_2",
-        "full_name": "Trần Văn B",
-        "avatar_url": "https://..."
-      },
-      "profile": {
-        "title": "Founder @ ABC Startup",
-        "bio": "Đang tìm kiếm Co-founder tech",
-        "contact_public": true,
-        "email": "tranb@abc.com", 
-        "phone": "0987654321"
-      },
-      "match_details": {
-        "total_score": 0.85,
-        "shared_skills": ["Frontend Dev", "React"],
-        "shared_interests": ["Startup"],
-        "is_same_branch": true
-      }
+      "id": "uuid_2",
+      "name": "Trần Văn B",
+      "profession": "Backend Engineer",
+      "company": "ABC Startup",
+      "avatar": "https://...",
+      "matchScore": 60,
+      "commonTags": ["Backend Dev", "EdTech", "AI / Machine Learning"],
+      "postTags": ["Backend Dev", "EdTech", "AI / Machine Learning"],
+      "matchReason": "Kết nối để cùng trao đổi về Backend, EdTech và ứng dụng AI/Machine Learning.",
+      "contactPublic": true,
+      "email": "tranb@abc.com",
+      "phone": "0987654321",
+      "bio": "Đang tìm kiếm Co-founder tech",
+      "linkedin": "https://...",
+      "github": null,
+      "isSameBranch": true
     }
   ]
 }
 ```
-*(Lưu ý: email/phone của user_2 chỉ hiển thị nếu `contact_public == true`)*
+*(Lưu ý: email/phone của user_2 chỉ hiển thị nếu `contactPublic == true`)*
+
+**Cách tính `matchScore` (0–100)**
+
+Ba tín hiệu, mỗi tín hiệu là độ trùng nhau giữa hai bên:
+
+| Tín hiệu | Trọng số | Nguồn |
+|---|---|---|
+| Kỹ năng (skills) | 0.5 | `profile_skills` |
+| Lĩnh vực quan tâm (interests) | 0.2 | `profile_interests` |
+| Chủ đề đã viết bài | 0.2 | `post_tags` của các bài đã publish ([community.md](community.md)) |
+
+- Điểm chỉ được **chuẩn hóa trên những tín hiệu mà cả hai bên thực sự có**. Nhờ vậy một thành viên chưa khai kỹ năng vẫn nhận được điểm có ý nghĩa từ nội dung họ đã viết, thay vì bị giới hạn ở 0.2.
+- Cùng chi nhánh: `+0.15`. Kết quả giới hạn ở 1.0 và quy đổi thành phần trăm (sàn 10%).
+- Ứng viên 0 điểm bị loại nếu người dùng có bất kỳ nhãn nào để so khớp.
+- `postTags` là các chủ đề người đó đã viết mà trùng với mối quan tâm của người xem.
+
+**`matchReason`** — một câu giải thích ngắn do Gemini viết cho vài gợi ý đầu bảng (một lần gọi cho cả danh sách). Nếu chưa cấu hình `GEMINI_API_KEY` hoặc gọi lỗi, hệ thống dùng câu sinh sẵn từ các nhãn chung, nên trường này **luôn có giá trị**.
+
+> Bản ghi cache tại `profile_match_scores` chỉ được ghi khi **cả hai** phía đã có dòng trong `profiles` (do ràng buộc khóa ngoại); thiếu thì bỏ qua việc ghi cache chứ không làm hỏng request.

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FiPlus, FiEdit2, FiTrash2, FiShield, FiCheck, FiX, FiAlertTriangle, FiArrowRight, FiSave } from 'react-icons/fi';
 import { cancellationPolicies } from '../../data/mockData';
 import type { CancellationPolicy } from '../../data/mockData';
+import { Skeleton } from '../../components/ui/Skeleton';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
@@ -21,9 +22,11 @@ const CancellationPoliciesPage: React.FC = () => {
   const [deleteConfirm, setDeleteConfirm] = useState<CancellationPolicy | null>(null);
   const [newRules, setNewRules] = useState<RuleRow[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchPolicies = async () => {
+      setIsLoading(true);
       try {
         const token = localStorage.getItem('workhub_access_token');
         if (!token) return;
@@ -41,6 +44,8 @@ const CancellationPoliciesPage: React.FC = () => {
         }
       } catch (err) {
         console.warn('Cannot fetch cancellation policies, fallback to mock data:', err);
+      } finally {
+        setIsLoading(false);
       }
     };
     fetchPolicies();
@@ -165,7 +170,11 @@ const CancellationPoliciesPage: React.FC = () => {
         <h2 className="font-semibold mb-4 flex items-center gap-2">
           <FiShield className="h-4 w-4 text-primary" />
           Chính sách hiện tại
-          <span className="text-xs text-muted-foreground font-normal">({policies.length} chính sách)</span>
+          {isLoading ? (
+            <Skeleton className="h-3 w-24" />
+          ) : (
+            <span className="text-xs text-muted-foreground font-normal">({policies.length} chính sách)</span>
+          )}
         </h2>
         <div className="overflow-x-auto">
           <table className="data-table">
@@ -173,7 +182,17 @@ const CancellationPoliciesPage: React.FC = () => {
               <tr><th>Tên</th><th>Loại quy tắc</th><th>Phạm vi giá trị</th><th>Hoàn tiền</th><th>Trạng thái</th><th></th></tr>
             </thead>
             <tbody>
-              {policies.map(cp => (
+              {isLoading && [...Array(4)].map((_, i) => (
+                <tr key={`skeleton-${i}`}>
+                  <td><Skeleton className="h-4 w-32" /></td>
+                  <td><Skeleton className="h-5 w-24 rounded-full" /></td>
+                  <td><Skeleton className="h-4 w-28" /></td>
+                  <td><Skeleton className="h-4 w-12" /></td>
+                  <td><Skeleton className="h-5 w-20 rounded-full" /></td>
+                  <td><Skeleton className="h-7 w-16" /></td>
+                </tr>
+              ))}
+              {!isLoading && policies.map(cp => (
                 <tr key={cp.id}>
                   <td className="font-medium">{cp.name}</td>
                   <td><span className="badge badge-info">{ruleTypeLabel[cp.rule_type]}</span></td>

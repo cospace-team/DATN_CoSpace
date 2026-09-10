@@ -34,6 +34,8 @@ import {
 } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../components/Toast';
+import { Skeleton } from '../../components/ui/Skeleton';
+import { Spinner } from '../../components/ui/Spinner';
 
 // ── BANNER THEMES ──
 const BANNER_THEMES = [
@@ -198,6 +200,7 @@ const ProfilePage: React.FC = () => {
   const [showOldPassword, setShowOldPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [isSavingPassword, setIsSavingPassword] = useState(false);
+  const [isLoadingPartners, setIsLoadingPartners] = useState(true);
 
   // ── Stats (Customer Mini Dashboard) ──
   const stats = {
@@ -252,6 +255,7 @@ const ProfilePage: React.FC = () => {
 
     // Fetch partner matching suggestions
     const fetchPartners = async () => {
+      setIsLoadingPartners(true);
       try {
         const token = localStorage.getItem('workhub_access_token');
         if (!token) return;
@@ -269,6 +273,8 @@ const ProfilePage: React.FC = () => {
         }
       } catch (err) {
         console.warn('Cannot fetch partner suggestions, fallback to demo data:', err);
+      } finally {
+        setIsLoadingPartners(false);
       }
     };
     fetchPartners();
@@ -478,7 +484,7 @@ const ProfilePage: React.FC = () => {
                     disabled={isSavingProfile}
                     className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm bg-emerald-600 text-white shadow-md hover:bg-emerald-700 transition-all disabled:opacity-50 cursor-pointer"
                   >
-                    <FiCheck className="h-4 w-4" />
+                    {isSavingProfile ? <Spinner size="sm" /> : <FiCheck className="h-4 w-4" />}
                     {isSavingProfile ? 'Đang lưu...' : 'Lưu thay đổi'}
                   </button>
                 </div>
@@ -1015,7 +1021,28 @@ const ProfilePage: React.FC = () => {
 
           {/* Partner Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {filteredPartners.map(partner => (
+            {isLoadingPartners && [...Array(4)].map((_, i) => (
+              <div key={`partner-skeleton-${i}`} className="bg-card border border-border rounded-3xl p-6 shadow-sm">
+                <div className="flex items-start justify-between gap-3 mb-4">
+                  <div className="flex items-center gap-3.5">
+                    <Skeleton className="h-14 w-14 rounded-2xl" />
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-3 w-24" />
+                    </div>
+                  </div>
+                  <Skeleton className="h-6 w-14 rounded-full" />
+                </div>
+                <Skeleton className="h-3 w-full mb-2" />
+                <Skeleton className="h-3 w-4/5 mb-4" />
+                <div className="flex gap-2">
+                  <Skeleton className="h-6 w-16 rounded-full" />
+                  <Skeleton className="h-6 w-20 rounded-full" />
+                  <Skeleton className="h-6 w-14 rounded-full" />
+                </div>
+              </div>
+            ))}
+            {!isLoadingPartners && filteredPartners.map(partner => (
               <div
                 key={partner.id}
                 className="bg-card border border-border rounded-3xl p-6 shadow-sm hover:shadow-md hover:border-primary/40 transition-all flex flex-col justify-between relative group"
@@ -1094,7 +1121,7 @@ const ProfilePage: React.FC = () => {
             ))}
           </div>
 
-          {filteredPartners.length === 0 && (
+          {!isLoadingPartners && filteredPartners.length === 0 && (
             <div className="text-center py-16 bg-card rounded-3xl border border-border">
               <FiUsers className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-50" />
               <h3 className="text-base font-bold text-foreground">Không tìm thấy đối tác phù hợp</h3>
@@ -1190,8 +1217,9 @@ const ProfilePage: React.FC = () => {
                 <button
                   type="submit"
                   disabled={isSavingPassword}
-                  className="px-6 py-2.5 bg-primary text-primary-foreground font-semibold rounded-xl text-sm hover:bg-primary/90 transition-all shadow-md active:scale-95 disabled:opacity-50 mt-2 cursor-pointer"
+                  className="inline-flex items-center gap-2 px-6 py-2.5 bg-primary text-primary-foreground font-semibold rounded-xl text-sm hover:bg-primary/90 transition-all shadow-md active:scale-95 disabled:opacity-50 mt-2 cursor-pointer"
                 >
+                  {isSavingPassword && <Spinner size="sm" />}
                   {isSavingPassword ? 'Đang cập nhật...' : 'Cập nhật mật khẩu'}
                 </button>
               </form>

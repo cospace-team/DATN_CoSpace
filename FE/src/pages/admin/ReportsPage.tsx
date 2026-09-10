@@ -2,6 +2,8 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { FiBarChart2, FiDownload, FiPieChart, FiTrendingUp, FiDollarSign, FiCalendar, FiCheckCircle, FiXCircle, FiArrowUpRight, FiChevronDown, FiFilter, FiMapPin } from 'react-icons/fi';
 import { branches, bookings, payments } from '../../data/mockData';
 import { formatVND } from '../../utils/formatters';
+import { Skeleton } from '../../components/ui/Skeleton';
+import { Spinner } from '../../components/ui/Spinner';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
@@ -11,9 +13,11 @@ const ReportsPage: React.FC = () => {
   const [dateTo, setDateTo] = useState('2026-04-30');
   const [overviewData, setOverviewData] = useState<any>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchOverview = async () => {
+      setIsLoading(true);
       try {
         const token = localStorage.getItem('workhub_access_token');
         const branchParam = branchFilter !== 'all' ? `&branchId=${branchFilter}` : '';
@@ -29,6 +33,8 @@ const ReportsPage: React.FC = () => {
         }
       } catch (err) {
         console.warn('Cannot fetch live report data, using fallback state:', err);
+      } finally {
+        setIsLoading(false);
       }
     };
     fetchOverview();
@@ -117,6 +123,11 @@ const ReportsPage: React.FC = () => {
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Báo cáo</p>
             <h1 className="text-2xl font-semibold tracking-tight text-foreground mt-1">Phân tích & Thống kê</h1>
+            {isLoading && (
+              <p className="mt-2 flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <Spinner size="sm" className="text-primary" /> Đang tải số liệu báo cáo...
+              </p>
+            )}
           </div>
           <button 
             onClick={handleExportCsv} 
@@ -153,7 +164,17 @@ const ReportsPage: React.FC = () => {
 
       {/* Stat Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {statCards.map(s => (
+        {isLoading && [...Array(4)].map((_, i) => (
+          <div key={`stat-skeleton-${i}`} className="bg-card rounded-3xl border border-border p-5 shadow-sm">
+            <Skeleton className="h-10 w-10 rounded-xl" />
+            <Skeleton className="mt-4 h-8 w-2/3" />
+            <div className="mt-3 flex items-center justify-between">
+              <Skeleton className="h-4 w-1/2" />
+              <Skeleton className="h-3 w-10" />
+            </div>
+          </div>
+        ))}
+        {!isLoading && statCards.map(s => (
           <div key={s.label} className="group relative overflow-hidden bg-card rounded-3xl border border-border p-5 shadow-sm hover:shadow-md transition-shadow transition-all duration-300 hover:border-primary/50 hover:shadow-lg">
             <div className={`absolute -top-8 -right-8 h-24 w-24 rounded-full ${s.bgGlow} blur-2xl transition-opacity group-hover:opacity-100 opacity-50`} />
             <div className="relative">
@@ -173,7 +194,10 @@ const ReportsPage: React.FC = () => {
       </div>
 
       {/* Charts Grid */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div
+        className={`grid gap-6 lg:grid-cols-2 transition-opacity duration-200 ${isLoading ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}
+        aria-busy={isLoading || undefined}
+      >
         {/* Line Chart (Monthly Revenue) */}
         <div className="bg-card rounded-3xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow">
           <h2 className="font-semibold flex items-center gap-2 mb-6">
@@ -230,7 +254,20 @@ const ReportsPage: React.FC = () => {
           <table className="data-table">
             <thead><tr><th>Chi nhánh</th><th>Tổng booking</th><th>Doanh thu</th><th>Tỷ lệ hoàn thành</th></tr></thead>
             <tbody>
-              {branchComparison.map((b: any) => (
+              {isLoading && [...Array(3)].map((_, i) => (
+                <tr key={`branch-skeleton-${i}`}>
+                  <td>
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-8 w-8 rounded-lg" />
+                      <Skeleton className="h-4 w-32" />
+                    </div>
+                  </td>
+                  <td><Skeleton className="h-4 w-12" /></td>
+                  <td><Skeleton className="h-4 w-24" /></td>
+                  <td><Skeleton className="h-4 w-16" /></td>
+                </tr>
+              ))}
+              {!isLoading && branchComparison.map((b: any) => (
                 <tr key={b.id}>
                   <td>
                     <div className="flex items-center gap-2">

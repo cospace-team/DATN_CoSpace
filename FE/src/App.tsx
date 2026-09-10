@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import {
   BrowserRouter,
   Routes,
@@ -17,6 +17,7 @@ import { Button } from "./components/ui/button";
 import { Logo } from "./components/ui/Logo";
 import { NotificationBell } from "./components/notifications/NotificationBell";
 import { ChatWidget } from "./components/chatbot/ChatWidget";
+import { SuspenseLoader } from "./components/SuspenseLoader";
 import {
   FiMapPin,
   FiCalendar,
@@ -41,36 +42,35 @@ import {
   FiGrid,
 } from "react-icons/fi";
 
-// ── Pages ──
-import LoginPage from "./pages/LoginPage";
-import LandingPage from "./pages/LandingPage";
-import LocationsPage from "./pages/LocationPage";
-import ExplorePage from "./pages/customer/ExplorePage";
-import BookingCheckoutPage from "./pages/customer/BookingCheckoutPage";
-import VietQrCheckoutPage from "./pages/customer/VietQrCheckoutPage";
-import BookingHistoryPage from "./pages/customer/BookingHistoryPage";
-import ProfilePage from "./pages/customer/ProfilePage";
-import OperationsDashboardPage from "./pages/staff/OperationsDashboardPage";
-import CheckInPage from "./pages/staff/CheckInPage";
-import MaintenancePage from "./pages/staff/MaintenancePage";
-import WalkinBookingPage from "./pages/staff/WalkinBookingPage";
-import AdminDashboardPage from "./pages/admin/AdminDashboardPage";
-import BranchManagementPage from "./pages/admin/BranchManagementPage";
-import PricingPage from "./pages/admin/PricingPage";
-import UserManagementPage from "./pages/admin/UserManagementPage";
-import CancellationPoliciesPage from "./pages/admin/CancellationPoliciesPage";
-
-import ExtraServicesPage from "./pages/admin/ExtraServicesPage";
-import AuditLogPage from "./pages/admin/AuditLogPage";
-import ReportsPage from "./pages/admin/ReportsPage";
-// ── Branch Admin Pages ──
-import BADashboardPage from "./pages/branch-admin/BADashboardPage";
-import BAWorkspacePage from "./pages/branch-admin/BAWorkspacePage";
-import BAPricingPage from "./pages/branch-admin/BAPricingPage";
-import BAPoliciesPage from "./pages/branch-admin/BAPoliciesPage";
-import BAStaffPage from "./pages/branch-admin/BAStaffPage";
-import BAMaintenancePage from "./pages/branch-admin/BAMaintenancePage";
-import BAServicesPage from "./pages/branch-admin/BAServicesPage";
+// ── Pages (lazy-loaded so route changes show the Suspense loader) ──
+const LoginPage = React.lazy(() => import("./pages/LoginPage"));
+const LandingPage = React.lazy(() => import("./pages/LandingPage"));
+const LocationsPage = React.lazy(() => import("./pages/LocationPage"));
+const ExplorePage = React.lazy(() => import("./pages/customer/ExplorePage"));
+const BookingCheckoutPage = React.lazy(() => import("./pages/customer/BookingCheckoutPage"));
+const VietQrCheckoutPage = React.lazy(() => import("./pages/customer/VietQrCheckoutPage"));
+const BookingHistoryPage = React.lazy(() => import("./pages/customer/BookingHistoryPage"));
+const CommunityPage = React.lazy(() => import("./pages/customer/CommunityPage"));
+const ProfilePage = React.lazy(() => import("./pages/customer/ProfilePage"));
+const OperationsDashboardPage = React.lazy(() => import("./pages/staff/OperationsDashboardPage"));
+const CheckInPage = React.lazy(() => import("./pages/staff/CheckInPage"));
+const MaintenancePage = React.lazy(() => import("./pages/staff/MaintenancePage"));
+const WalkinBookingPage = React.lazy(() => import("./pages/staff/WalkinBookingPage"));
+const AdminDashboardPage = React.lazy(() => import("./pages/admin/AdminDashboardPage"));
+const BranchManagementPage = React.lazy(() => import("./pages/admin/BranchManagementPage"));
+const PricingPage = React.lazy(() => import("./pages/admin/PricingPage"));
+const UserManagementPage = React.lazy(() => import("./pages/admin/UserManagementPage"));
+const CancellationPoliciesPage = React.lazy(() => import("./pages/admin/CancellationPoliciesPage"));
+const ExtraServicesPage = React.lazy(() => import("./pages/admin/ExtraServicesPage"));
+const AuditLogPage = React.lazy(() => import("./pages/admin/AuditLogPage"));
+const ReportsPage = React.lazy(() => import("./pages/admin/ReportsPage"));
+const BADashboardPage = React.lazy(() => import("./pages/branch-admin/BADashboardPage"));
+const BAWorkspacePage = React.lazy(() => import("./pages/branch-admin/BAWorkspacePage"));
+const BAPricingPage = React.lazy(() => import("./pages/branch-admin/BAPricingPage"));
+const BAPoliciesPage = React.lazy(() => import("./pages/branch-admin/BAPoliciesPage"));
+const BAStaffPage = React.lazy(() => import("./pages/branch-admin/BAStaffPage"));
+const BAMaintenancePage = React.lazy(() => import("./pages/branch-admin/BAMaintenancePage"));
+const BAServicesPage = React.lazy(() => import("./pages/branch-admin/BAServicesPage"));
 
 // ── Navigation config ──
 interface NavItem {
@@ -82,6 +82,7 @@ interface NavItem {
 const customerNav: NavItem[] = [
   { to: "/customer/explore", label: "Khám phá Không gian", icon: <FiMapPin className="h-4 w-4" /> },
   { to: "/customer/history", label: "Lịch sử", icon: <FiCalendar className="h-4 w-4" /> },
+  { to: "/customer/community", label: "Cộng đồng", icon: <FiUsers className="h-4 w-4" /> },
   { to: "/customer/profile", label: "Hồ sơ & Kết nối", icon: <FiUser className="h-4 w-4" /> },
 ];
 
@@ -167,13 +168,21 @@ const AppShell: React.FC = () => {
 
   // ── Public Routes ──
   if (location.pathname === "/" || location.pathname === "/locations") {
-    return <LandingPage />;
+    return (
+      <Suspense fallback={<SuspenseLoader fullScreen label="Đang tải trang..." />}>
+        <LandingPage />
+      </Suspense>
+    );
   }
 
   // ── Auth Check ──
   if (!isAuthenticated || !user) {
     if (location.pathname === "/login") {
-      return <LoginPage />;
+      return (
+        <Suspense fallback={<SuspenseLoader fullScreen label="Đang tải trang đăng nhập..." />}>
+          <LoginPage />
+        </Suspense>
+      );
     }
     return <Navigate to="/login" replace />;
   }
@@ -405,59 +414,62 @@ const AppShell: React.FC = () => {
           className="flex-1 overflow-y-auto px-6 py-6 bg-background mobile-main-content"
         >
           <ErrorBoundary>
-            <Routes>
-              {/* Customer */}
-              {user.role === 'customer' && (
-                <>
-                  <Route path="/customer/explore" element={<ExplorePage />} />
-                  <Route path="/customer/checkout" element={<BookingCheckoutPage />} />
-                  <Route path="/customer/payment/vietqr" element={<VietQrCheckoutPage />} />
-                  <Route path="/customer/history" element={<BookingHistoryPage />} />
-                  <Route path="/customer/profile" element={<ProfilePage />} />
-                </>
-              )}
+            <Suspense fallback={<SuspenseLoader label="Đang tải trang..." />}>
+              <Routes>
+                {/* Customer */}
+                {user.role === 'customer' && (
+                  <>
+                    <Route path="/customer/explore" element={<ExplorePage />} />
+                    <Route path="/customer/checkout" element={<BookingCheckoutPage />} />
+                    <Route path="/customer/payment/vietqr" element={<VietQrCheckoutPage />} />
+                    <Route path="/customer/history" element={<BookingHistoryPage />} />
+                    <Route path="/customer/community" element={<CommunityPage />} />
+                    <Route path="/customer/profile" element={<ProfilePage />} />
+                  </>
+                )}
 
-              {/* Staff */}
-              {user.role === 'staff' && (
-                <>
-                  <Route path="/staff/dashboard" element={<OperationsDashboardPage />} />
-                  <Route path="/staff/checkin" element={<CheckInPage />} />
-                  <Route path="/staff/maintenance" element={<MaintenancePage />} />
-                  <Route path="/staff/booking/new" element={<WalkinBookingPage />} />
-                </>
-              )}
+                {/* Staff */}
+                {user.role === 'staff' && (
+                  <>
+                    <Route path="/staff/dashboard" element={<OperationsDashboardPage />} />
+                    <Route path="/staff/checkin" element={<CheckInPage />} />
+                    <Route path="/staff/maintenance" element={<MaintenancePage />} />
+                    <Route path="/staff/booking/new" element={<WalkinBookingPage />} />
+                  </>
+                )}
 
-              {/* Super Admin */}
-              {isSuperAdmin && (
-                <>
-                  <Route path="/admin/dashboard"   element={<AdminDashboardPage />} />
-                  <Route path="/admin/branches"    element={<BranchManagementPage />} />
-                  <Route path="/admin/pricing"     element={<PricingPage />} />
-                  <Route path="/admin/users"       element={<UserManagementPage />} />
-                  <Route path="/admin/cancellation" element={<CancellationPoliciesPage />} />
+                {/* Super Admin */}
+                {isSuperAdmin && (
+                  <>
+                    <Route path="/admin/dashboard"   element={<AdminDashboardPage />} />
+                    <Route path="/admin/branches"    element={<BranchManagementPage />} />
+                    <Route path="/admin/pricing"     element={<PricingPage />} />
+                    <Route path="/admin/users"       element={<UserManagementPage />} />
+                    <Route path="/admin/cancellation" element={<CancellationPoliciesPage />} />
 
-                  <Route path="/admin/services"    element={<ExtraServicesPage />} />
-                  <Route path="/admin/audit"       element={<AuditLogPage />} />
-                  <Route path="/admin/reports"     element={<ReportsPage />} />
-                </>
-              )}
+                    <Route path="/admin/services"    element={<ExtraServicesPage />} />
+                    <Route path="/admin/audit"       element={<AuditLogPage />} />
+                    <Route path="/admin/reports"     element={<ReportsPage />} />
+                  </>
+                )}
 
-              {/* Branch Admin */}
-              {isBranchAdmin && (
-                <>
-                  <Route path="/branch-admin/dashboard"   element={<BADashboardPage />} />
-                  <Route path="/branch-admin/workspaces"  element={<BAWorkspacePage />} />
-                  <Route path="/branch-admin/pricing"     element={<BAPricingPage />} />
-                  <Route path="/branch-admin/policies"    element={<BAPoliciesPage />} />
-                  <Route path="/branch-admin/staff"       element={<BAStaffPage />} />
-                  <Route path="/branch-admin/maintenance" element={<BAMaintenancePage />} />
-                  <Route path="/branch-admin/services"    element={<BAServicesPage />} />
-                </>
-              )}
+                {/* Branch Admin */}
+                {isBranchAdmin && (
+                  <>
+                    <Route path="/branch-admin/dashboard"   element={<BADashboardPage />} />
+                    <Route path="/branch-admin/workspaces"  element={<BAWorkspacePage />} />
+                    <Route path="/branch-admin/pricing"     element={<BAPricingPage />} />
+                    <Route path="/branch-admin/policies"    element={<BAPoliciesPage />} />
+                    <Route path="/branch-admin/staff"       element={<BAStaffPage />} />
+                    <Route path="/branch-admin/maintenance" element={<BAMaintenancePage />} />
+                    <Route path="/branch-admin/services"    element={<BAServicesPage />} />
+                  </>
+                )}
 
-              {/* Default redirect */}
-              <Route path="*" element={<Navigate to={defaultRoute} replace />} />
-            </Routes>
+                {/* Default redirect */}
+                <Route path="*" element={<Navigate to={defaultRoute} replace />} />
+              </Routes>
+            </Suspense>
           </ErrorBoundary>
         </main>
 

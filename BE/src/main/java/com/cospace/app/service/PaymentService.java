@@ -129,7 +129,8 @@ public class PaymentService {
         paymentRepository.save(payment);
 
         String description = "BK " + booking.getBookingCode();
-        Map<String, Object> payosRes = payosService.createPaymentLink(orderCode, payment.getAmount(), description);
+        Map<String, Object> payosRes = payosService.createPaymentLink(
+                orderCode, payment.getAmount(), description, booking.getPaymentDeadlineAt());
 
         String checkoutUrl = Objects.toString(payosRes.get("checkoutUrl"), "");
         String qrCode = Objects.toString(payosRes.get("qrCode"), "");

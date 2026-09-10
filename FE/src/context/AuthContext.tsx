@@ -22,47 +22,6 @@ export interface AuthUser {
   phone?: string;
 }
 
-const DEV_MOCK_USERS: Record<UserRole, AuthUser> = {
-  customer: {
-    id: "dev-customer-001",
-    email: "customer@dev.local",
-    fullName: "Nguyễn Khách Hàng",
-    avatarUrl: "",
-    role: "customer",
-    branchId: null,
-    branchName: null,
-  },
-  staff: {
-    id: "dev-staff-001",
-    email: "staff@dev.local",
-    fullName: "Trần Nhân Viên",
-    avatarUrl: "",
-    role: "staff",
-    branchId: "b1000000-0000-0000-0000-000000000001",
-    branchName: "CoSpace Nguyễn Huệ - Innovation Hub",
-  },
-  admin: {
-    id: "dev-admin-001",
-    email: "admin@dev.local",
-    fullName: "Lê Quản Trị",
-    avatarUrl: "",
-    role: "admin",
-    branchId: null,
-    branchName: null,
-  },
-};
-
-const DEV_BRANCH_ADMIN_USER: AuthUser = {
-  id: "dev-branch-admin-001",
-  email: "branch.admin@dev.local",
-  fullName: "Phạm Chi Nhánh Q1",
-  avatarUrl: "",
-  role: "admin",
-  branchId: "b1000000-0000-0000-0000-000000000001",
-  branchName: "CoSpace Nguyễn Huệ - Innovation Hub",
-};
-
-
 interface AuthContextValue {
   user: AuthUser | null;
   isAuthenticated: boolean;
@@ -70,15 +29,11 @@ interface AuthContextValue {
   backendStatus: "idle" | "ok" | "error";
   loginWithGoogle: () => Promise<void>;
   registerWithEmail: (email: string, password: string, fullName: string, confirmPassword?: string, phone?: string) => Promise<void>;
-  verifyEmailCode: (email: string, code: string) => Promise<void>;
   loginWithEmail: (email: string, password: string) => Promise<void>;
-  resetPasswordForEmail: (email: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshProfileFromBackend: () => Promise<void>;
   updateProfile: (data: any) => Promise<any>;
   changePassword: (data: any) => Promise<void>;
-  devLoginAs: (role: UserRole) => void;
-  devLoginAsBranchAdmin: () => void;
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
@@ -103,33 +58,78 @@ const mapBackendUser = (dataUser: any): AuthUser => ({
   phone: dataUser.phone || "",
 });
 
+/** Expiry of a JWT in epoch milliseconds, or null if it can't be read. */
+const readTokenExpiry = (token: string): number | null => {
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return typeof payload.exp === "number" ? payload.exp * 1000 : null;
+  } catch {
+    return null;
+  }
+};
+
+const clearStoredSession = () => {
+  localStorage.removeItem("workhub_user");
+  localStorage.removeItem("workhub_access_token");
+  localStorage.removeItem("workhub_refresh_token");
+};
+
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [backendStatus, setBackendStatus] = useState<"idle" | "ok" | "error">("idle");
 
+  /**
+   * Trades the stored refresh token for a new access token. Access tokens live an hour, so
+   * without this a session would simply die mid-use and force the user to log in again.
+   */
+  const refreshSession = useCallback(async (): Promise<boolean> => {
+    const refreshToken = localStorage.getItem("workhub_refresh_token");
+    if (!refreshToken) return false;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshToken }),
+      });
+      if (!response.ok) return false;
+
+      const data = await response.json();
+      if (!data.data?.user || !data.data?.accessToken) return false;
+
+      const mappedUser = mapBackendUser(data.data.user);
+      localStorage.setItem("workhub_user", JSON.stringify(mappedUser));
+      localStorage.setItem("workhub_access_token", data.data.accessToken);
+      if (data.data.refreshToken) {
+        localStorage.setItem("workhub_refresh_token", data.data.refreshToken);
+      }
+      setUser(mappedUser);
+      setBackendStatus("ok");
+      return true;
+    } catch (error) {
+      console.error("Failed to refresh session", error);
+      return false;
+    }
+  }, []);
+
   useEffect(() => {
-    const bootstrap = () => {
+    const bootstrap = async () => {
       try {
         const storedUser = localStorage.getItem("workhub_user");
         const accessToken = localStorage.getItem("workhub_access_token");
-        
+
         if (storedUser && accessToken) {
-          let isExpired = false;
-          try {
-            const payload = JSON.parse(atob(accessToken.split('.')[1]));
-            if (payload.exp && payload.exp * 1000 < Date.now()) {
-              isExpired = true;
-            }
-          } catch (e) {
-            isExpired = true;
-          }
+          const expiry = readTokenExpiry(accessToken);
+          const isExpired = expiry === null || expiry < Date.now();
 
           if (isExpired) {
-            localStorage.removeItem("workhub_user");
-            localStorage.removeItem("workhub_access_token");
-            localStorage.removeItem("workhub_refresh_token");
-            setBackendStatus("idle");
+            // Try to recover the session before sending the user back to the login screen.
+            const recovered = await refreshSession();
+            if (!recovered) {
+              clearStoredSession();
+              setBackendStatus("idle");
+            }
           } else {
             setUser(JSON.parse(storedUser));
             setBackendStatus("ok");
@@ -145,7 +145,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     };
 
-    bootstrap();
+    void bootstrap();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session && (event === "SIGNED_IN" || event === "USER_UPDATED")) {
@@ -187,7 +187,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [refreshSession]);
+
+  // Renew the access token shortly before it expires so an active session never breaks mid-use.
+  // Each successful refresh replaces `user`, which re-runs this effect and schedules the next one.
+  useEffect(() => {
+    if (!user) return;
+    const accessToken = localStorage.getItem("workhub_access_token");
+    if (!accessToken || !localStorage.getItem("workhub_refresh_token")) return;
+
+    const expiry = readTokenExpiry(accessToken);
+    if (expiry === null) return;
+
+    const delay = Math.max(5_000, expiry - Date.now() - 60_000);
+    const timer = setTimeout(() => { void refreshSession(); }, delay);
+    return () => clearTimeout(timer);
+  }, [user, refreshSession]);
 
   const refreshProfileFromBackend = useCallback(async () => {
     const token = localStorage.getItem("workhub_access_token");
@@ -253,10 +268,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
        setUser(mappedUser);
        setBackendStatus("ok");
     }
-  }, []);
-
-  const verifyEmailCode = useCallback(async (email: string, code: string) => {
-    throw new Error("Chức năng này không cần thiết trên hệ thống hiện tại.");
   }, []);
 
   const loginWithEmail = useCallback(async (email: string, password: string) => {
@@ -326,10 +337,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, []);
 
-  const resetPasswordForEmail = useCallback(async (email: string) => {
-    throw new Error("Chức năng quên mật khẩu chưa được hỗ trợ.");
-  }, []);
-
   const logout = useCallback(async () => {
     try {
       await supabase.auth.signOut();
@@ -343,62 +350,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setBackendStatus("idle");
   }, []);
 
-  const devLoginAs = useCallback(async (role: UserRole) => {
-    setIsLoading(true);
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/dev-login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role })
-      });
-      if (!response.ok) throw new Error("Dev login failed");
-      const data = await response.json();
-      if (data.data?.user && data.data?.accessToken) {
-        const mappedUser = mapBackendUser(data.data.user);
-        localStorage.setItem("workhub_user", JSON.stringify(mappedUser));
-        localStorage.setItem("workhub_access_token", data.data.accessToken);
-        if (data.data.refreshToken) {
-          localStorage.setItem("workhub_refresh_token", data.data.refreshToken);
-        }
-        setUser(mappedUser);
-        setBackendStatus("ok");
-      }
-    } catch (error) {
-      console.error("Dev login error", error);
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  const devLoginAsBranchAdmin = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/dev-login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role: "admin" })
-      });
-      if (!response.ok) throw new Error("Dev login failed");
-      const data = await response.json();
-      if (data.data?.user && data.data?.accessToken) {
-        const mappedUser = mapBackendUser(data.data.user);
-        localStorage.setItem("workhub_user", JSON.stringify(mappedUser));
-        localStorage.setItem("workhub_access_token", data.data.accessToken);
-        if (data.data.refreshToken) {
-          localStorage.setItem("workhub_refresh_token", data.data.refreshToken);
-        }
-        setUser(mappedUser);
-        setBackendStatus("ok");
-      }
-    } catch (error) {
-      console.error("Dev login error", error);
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
@@ -407,15 +358,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       backendStatus,
       loginWithGoogle,
       registerWithEmail,
-      verifyEmailCode,
       loginWithEmail,
-      resetPasswordForEmail,
       logout,
       refreshProfileFromBackend,
       updateProfile,
       changePassword,
-      devLoginAs,
-      devLoginAsBranchAdmin,
     }),
     [
       user,
@@ -423,15 +370,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       backendStatus,
       loginWithGoogle,
       registerWithEmail,
-      verifyEmailCode,
       loginWithEmail,
-      resetPasswordForEmail,
       logout,
       refreshProfileFromBackend,
       updateProfile,
       changePassword,
-      devLoginAs,
-      devLoginAsBranchAdmin,
     ]
   );
 

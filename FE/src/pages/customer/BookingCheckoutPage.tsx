@@ -2,39 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FiChevronLeft, FiMapPin, FiCalendar, FiClock,
-  FiCheckCircle, FiCoffee, FiMonitor, FiPrinter,
-  FiAlertTriangle, FiMaximize, FiLock, FiExternalLink, FiX, FiCreditCard
+  FiCheckCircle, FiAlertTriangle, FiMaximize, FiLock, FiExternalLink, FiX, FiCreditCard
 } from 'react-icons/fi';
 import { formatVND, durationUnitLabel } from '../../utils/formatters';
 import { Button } from '../../components/ui/button';
 import { useAuth } from '../../context/AuthContext';
 import { bookingApi } from '../../lib/bookingApi';
 import { useToast } from '../../components/Toast';
-
-const MOCK_SERVICES = [
-  { id: 'coffee', name: 'Cà phê rang xay', price: 35000, icon: <FiCoffee /> },
-  { id: 'lunch', name: 'Cơm trưa văn phòng', price: 55000, icon: <FiCoffee /> },
-  { id: 'monitor', name: 'Màn hình phụ 24"', price: 50000, icon: <FiMonitor /> },
-  { id: 'printing', name: 'In ấn (50 trang)', price: 20000, icon: <FiPrinter /> },
-];
-
-const PUBLIC_BRANCH_ALIASES: Record<string, string> = {
-  'branch-1': 'b1000000-0000-0000-0000-000000000001',
-  'branch-2': 'b2000000-0000-0000-0000-000000000002',
-  'branch-3': 'b3000000-0000-0000-0000-000000000003',
-  'branch-0001': 'b1000000-0000-0000-0000-000000000001',
-  'branch-0002': 'b2000000-0000-0000-0000-000000000002',
-  'branch-0003': 'b3000000-0000-0000-0000-000000000003',
-  'WH-Q1': 'b1000000-0000-0000-0000-000000000001',
-  'WH-Q7': 'b2000000-0000-0000-0000-000000000002',
-  'WH-TD': 'b3000000-0000-0000-0000-000000000003',
-  'CS-Q1': 'b1000000-0000-0000-0000-000000000001',
-};
-
-const resolveBranchId = (id?: string | null): string => {
-  if (!id) return '';
-  return PUBLIC_BRANCH_ALIASES[id] ?? id;
-};
+import { ADDON_SERVICES as MOCK_SERVICES } from '../../data/addonServices';
+import { resolveBranchId } from '../../data/branchAliases';
 
 const BookingCheckoutPage: React.FC = () => {
   const location = useLocation();
@@ -69,23 +45,47 @@ const BookingCheckoutPage: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeBooking, setActiveBooking] = useState<any | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'payos' | 'momo' | 'cash'>('payos');
-  
-  // 15-Minute Expiration Countdown
-  const [timeLeft, setTimeLeft] = useState(15 * 60); // 900 seconds
+  const [holdExpired, setHoldExpired] = useState(false);
+
+  // Before a booking is created there's no real hold yet, so this is only an advisory display —
+  // the moment activeBooking.paymentDeadlineAt comes back from the server, the countdown re-syncs
+  // to that authoritative deadline so it can never drift from what the backend will actually expire.
+  const [softDeadline] = useState(() => Date.now() + 15 * 60 * 1000);
+  const [timeLeft, setTimeLeft] = useState(15 * 60);
 
   useEffect(() => {
-    if (timeLeft <= 0) return;
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => prev - 1);
-    }, 1000);
+    const deadlineMs = activeBooking?.paymentDeadlineAt
+      ? new Date(activeBooking.paymentDeadlineAt).getTime()
+      : softDeadline;
+
+    const tick = () => {
+      const remaining = Math.max(0, Math.round((deadlineMs - Date.now()) / 1000));
+      setTimeLeft(remaining);
+      if (remaining <= 0 && activeBooking) {
+        setHoldExpired(true);
+      }
+    };
+
+    tick();
+    const timer = setInterval(tick, 1000);
     return () => clearInterval(timer);
-  }, [timeLeft]);
+  }, [activeBooking, softDeadline]);
 
   const formatCountdown = (seconds: number) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   };
+
+  // Once the server-side hold actually expires, the backend's BookingExpiryScheduler releases the
+  // workspace within ~60s — send the customer back to Explore instead of leaving them on a stale
+  // checkout page for a booking that no longer holds the seat.
+  useEffect(() => {
+    if (!holdExpired) return;
+    showToast('Thời gian giữ chỗ đã hết hạn. Vui lòng chọn lại chỗ ngồi.', 'error');
+    const redirect = setTimeout(() => navigate('/customer/explore'), 3000);
+    return () => clearTimeout(redirect);
+  }, [holdExpired]);
 
   if (!workspace) {
     return (
@@ -105,6 +105,7 @@ const BookingCheckoutPage: React.FC = () => {
   }
 
   const handleCreateBooking = async () => {
+    if (holdExpired) return;
     setIsProcessing(true);
     try {
       // 1. Build startAt/endAt based on durationUnit

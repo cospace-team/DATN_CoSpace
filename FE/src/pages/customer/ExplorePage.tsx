@@ -21,8 +21,6 @@ import {
   FiMinus,
   FiMaximize2,
   FiChevronDown,
-  FiCoffee,
-  FiMonitor,
 } from "react-icons/fi";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
@@ -45,11 +43,14 @@ import {
   type FloorResponse,
   type WorkspaceResponse,
   type BranchResponse,
+  type PublicWorkspaceAvailability,
 } from "../../lib/spaceApi";
-import { bookingApi, type BookingResponse } from "../../lib/bookingApi";
 import { useToast } from "../../components/Toast";
 import FloorPlanViewer from "../../components/floor-plan/FloorPlanViewer";
 import type { FloorLayout } from "../../types/floorPlan";
+import { resolveBranchId } from "../../data/branchAliases";
+import { ADDON_SERVICES as MOCK_SERVICES } from "../../data/addonServices";
+import { Skeleton } from "../../components/ui/Skeleton";
 
 /* ── Types ── */
 type ViewMode = "map" | "day" | "grid" | "list";
@@ -98,21 +99,6 @@ const ZONES: ZoneConfig[] = [
     workspaceIds: ["ws-0009", "ws-0010", "ws-0013"],
   },
 ];
-
-/* Branch alias mapping — kept for backward compat with old URLs (e.g. ?branchId=branch-1) */
-const PUBLIC_BRANCH_ALIASES: Record<string, string> = {
-  "branch-1": "b1000000-0000-0000-0000-000000000001",
-  "branch-2": "b2000000-0000-0000-0000-000000000002",
-  "branch-3": "b3000000-0000-0000-0000-000000000003",
-  "branch-0001": "b1000000-0000-0000-0000-000000000001",
-  "branch-0002": "b2000000-0000-0000-0000-000000000002",
-  "branch-0003": "b3000000-0000-0000-0000-000000000003",
-};
-
-const resolveBranchId = (id: string): string => {
-  if (!id) return '';
-  return PUBLIC_BRANCH_ALIASES[id] ?? id;
-};
 
 const toMockFloorResponse = (floorId: string): FloorResponse | null => {
   const floor = mockFloors.find((f) => f.id === floorId);
@@ -242,27 +228,6 @@ const BookingPanel: React.FC<{
       return next;
     });
   };
-
-  const MOCK_SERVICES = [
-    {
-      id: "coffee",
-      icon: <FiCoffee className="h-3.5 w-3.5" />,
-      name: "Cà phê",
-      price: 35000,
-    },
-    {
-      id: "lunch",
-      icon: <FiCoffee className="h-3.5 w-3.5" />,
-      name: "Cơm trưa",
-      price: 55000,
-    },
-    {
-      id: "monitor",
-      icon: <FiMonitor className="h-3.5 w-3.5" />,
-      name: "Màn hình phụ",
-      price: 50000,
-    },
-  ];
 
   // Calculate unitCount based on selected durationUnit
   const unitCount = useMemo(() => {
@@ -668,8 +633,9 @@ const ExplorePage: React.FC = () => {
   // Database-loaded floors, workspaces and user bookings
   const [dbFloors, setDbFloors] = useState<FloorResponse[]>([]);
   const [dbWorkspaces, setDbWorkspaces] = useState<WorkspaceResponse[]>([]);
-  const [realBookings, setRealBookings] = useState<BookingResponse[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [branchAvailability, setBranchAvailability] = useState<PublicWorkspaceAvailability[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [workspacesLoading, setWorkspacesLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
 
   // Load branches from API on mount, fallback to mock
@@ -702,20 +668,31 @@ const ExplorePage: React.FC = () => {
     return branches.filter(b => b.status === 'active');
   }, [apiBranches]);
 
-  // Fetch real bookings from API to update availability colors on map
+  // Fetch branch-wide booking status (ALL customers, not just the current one) to color the
+  // availability map correctly — bookingApi.getMyBookings() only ever reflects the caller's own
+  // bookings, so a desk booked by someone else would otherwise still render as "available".
   useEffect(() => {
-    const fetchApiBookings = async () => {
+    let active = true;
+    const fetchAvailability = async () => {
       try {
-        const data = await bookingApi.getMyBookings();
-        if (data && Array.isArray(data)) {
-          setRealBookings(data);
+        const resolvedId = resolveBranchId(selectedBranch);
+        if (!resolvedId) return;
+        const from = new Date();
+        from.setHours(0, 0, 0, 0);
+        const to = new Date(from);
+        to.setDate(to.getDate() + 90); // 90-day lookahead covers realistic day/week bookings
+        const data = await customerSpaceApi.getBookingStatus(resolvedId, from, to);
+        if (active && Array.isArray(data)) {
+          setBranchAvailability(data);
         }
       } catch (err) {
-        console.warn("Failed to load user bookings for availability map:", err);
+        console.warn("Failed to load branch-wide availability map:", err);
+        if (active) setBranchAvailability([]);
       }
     };
-    fetchApiBookings();
-  }, []);
+    fetchAvailability();
+    return () => { active = false; };
+  }, [selectedBranch]);
 
   // Load floors when selected branch changes
   useEffect(() => {
@@ -781,10 +758,12 @@ const ExplorePage: React.FC = () => {
   useEffect(() => {
     if (!selectedFloor) {
       setDbWorkspaces([]);
+      setWorkspacesLoading(false);
       return;
     }
     let active = true;
     const loadWorkspaces = async () => {
+      setWorkspacesLoading(true);
       try {
         const resolvedBranchId = resolveBranchId(selectedBranch);
         if (resolvedBranchId) {
@@ -815,6 +794,8 @@ const ExplorePage: React.FC = () => {
             .filter((workspace): workspace is WorkspaceResponse => !!workspace);
           setDbWorkspaces(fallbackWorkspaces);
         }
+      } finally {
+        if (active) setWorkspacesLoading(false);
       }
     };
     loadWorkspaces();
@@ -900,24 +881,24 @@ const ExplorePage: React.FC = () => {
         return `booked|${new Date(activeMockBooking.start_at).getHours()}|${new Date(activeMockBooking.end_at).getHours()}`;
       }
 
-      // Check real DB bookings fetched from API
-      const activeRealBooking = realBookings.find((b) => {
-        if (b.workspaceId !== ws.id && b.workspaceId !== ws.mockId)
-          return false;
-        const st = (b.status || "").toLowerCase();
-        if (["canceled", "expired", "completed"].includes(st))
-          return false;
-        const start = new Date(b.startAt);
-        const end = new Date(b.endAt);
+      // Check branch-wide availability from API — covers bookings made by ANY customer, not
+      // just the current one (bookingApi.getMyBookings() only ever returns the caller's own).
+      const wsAvailability = branchAvailability.find(
+        (a) => a.workspaceId === ws.id || a.workspaceId === ws.mockId,
+      );
+      const activeBusySlot = wsAvailability?.busySlots.find((slot) => {
+        const start = new Date(slot.startAt);
+        const end = new Date(slot.endAt);
         return checkTimeStart < end && start < checkTimeEnd;
       });
 
-      if (activeRealBooking) {
-        return `booked|${new Date(activeRealBooking.startAt).getHours()}|${new Date(activeRealBooking.endAt).getHours()}`;
+      if (activeBusySlot) {
+        if (activeBusySlot.reason === "maintenance") return "maintenance";
+        return `booked|${new Date(activeBusySlot.startAt).getHours()}|${new Date(activeBusySlot.endAt).getHours()}`;
       }
       return "available";
     },
-    [mappedWorkspaces, selectedDate, selectedHour, realBookings],
+    [mappedWorkspaces, selectedDate, selectedHour, branchAvailability],
   );
 
   const selectedWsData = selectedWs
@@ -1281,7 +1262,19 @@ const ExplorePage: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {floorWorkspaces.map((ws) => {
+                    {(loading || workspacesLoading) &&
+                      [...Array(6)].map((_, i) => (
+                        <tr key={`ws-skeleton-${i}`} className="border-b border-border last:border-b-0">
+                          <td className="px-4 py-4"><Skeleton className="h-4 w-40" /></td>
+                          <td className="px-4 py-4"><Skeleton className="h-4 w-24" /></td>
+                          <td className="px-4 py-4"><Skeleton className="h-5 w-16 rounded-lg" /></td>
+                          <td className="px-4 py-4"><Skeleton className="h-4 w-8" /></td>
+                          <td className="px-4 py-4"><Skeleton className="h-6 w-16 rounded-full" /></td>
+                          <td className="px-4 py-4"><Skeleton className="h-4 w-20" /></td>
+                          <td className="px-4 py-4"><Skeleton className="h-8 w-20" /></td>
+                        </tr>
+                      ))}
+                    {!loading && !workspacesLoading && floorWorkspaces.map((ws) => {
                       const avail = getWsAvailability(
                         ws.id,
                         selectedDate,

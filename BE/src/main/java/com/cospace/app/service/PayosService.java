@@ -41,6 +41,18 @@ public class PayosService {
      * Returns a map containing: checkoutUrl, qrCode, orderCode, status
      */
     public Map<String, Object> createPaymentLink(long orderCode, long amount, String description) {
+        return createPaymentLink(orderCode, amount, description, null);
+    }
+
+    /**
+     * Create payment link via PayOS API
+     * @param paymentDeadlineAt ISO-8601 timestamp of the booking's hold expiry (nullable). In demo
+     *                          mode this is forwarded to the internal VietQR checkout screen so its
+     *                          countdown reflects the same deadline the backend will actually enforce,
+     *                          instead of a client-only timer that can drift from it.
+     * Returns a map containing: checkoutUrl, qrCode, orderCode, status
+     */
+    public Map<String, Object> createPaymentLink(long orderCode, long amount, String description, String paymentDeadlineAt) {
         String cleanDescription = sanitizeDescription(description);
         String returnUrl = payosConfig.getReturnUrl();
         String cancelUrl = payosConfig.getCancelUrl();
@@ -50,7 +62,10 @@ public class PayosService {
             log.info("PayOS is configured in DEMO mode. Routing to CoSpace VietQR Checkout screen.");
             String mockCheckoutUrl = frontendBaseUrl + "/customer/payment/vietqr?orderCode=" + orderCode +
                     "&amount=" + amount +
-                    "&description=" + java.net.URLEncoder.encode(cleanDescription, StandardCharsets.UTF_8);
+                    "&description=" + java.net.URLEncoder.encode(cleanDescription, StandardCharsets.UTF_8) +
+                    (paymentDeadlineAt != null && !paymentDeadlineAt.isBlank()
+                            ? "&paymentDeadlineAt=" + java.net.URLEncoder.encode(paymentDeadlineAt, StandardCharsets.UTF_8)
+                            : "");
             String mockQrCode = "https://img.vietqr.io/image/970422-0386868888-compact2.png?amount=" + amount + "&addInfo=" + java.net.URLEncoder.encode(cleanDescription, StandardCharsets.UTF_8) + "&accountName=COSPACE%20COWORKING";
             Map<String, Object> mockRes = new LinkedHashMap<>();
             mockRes.put("orderCode", orderCode);

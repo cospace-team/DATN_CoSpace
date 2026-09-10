@@ -7,34 +7,26 @@ import {
   FiLock, 
   FiUser, 
   FiPhone, 
-  FiEye, 
-  FiEyeOff, 
-  FiLoader, 
-  FiArrowLeft, 
-  FiZap, 
-  FiShield, 
+  FiEye,
+  FiEyeOff,
+  FiLoader,
+  FiZap,
   FiMapPin,
   FiX
 } from "react-icons/fi";
 
 const LoginPage: React.FC = () => {
-  const { 
-    loginWithGoogle, 
-    loginWithEmail, 
-    registerWithEmail, 
-    verifyEmailCode, 
-    resetPasswordForEmail, 
-    isLoading, 
-    devLoginAs, 
-    devLoginAsBranchAdmin 
+  const {
+    loginWithGoogle,
+    loginWithEmail,
+    registerWithEmail,
+    isLoading,
   } = useAuth();
 
-  const [view, setView] = useState<"login" | "forgot" | "register" | "verify_otp">("login");
+  const [view, setView] = useState<"login" | "register">("login");
   const [isSubmittingGoogle, setIsSubmittingGoogle] = useState(false);
   const [isSubmittingEmail, setIsSubmittingEmail] = useState(false);
   const [isSubmittingRegister, setIsSubmittingRegister] = useState(false);
-  const [isSubmittingForgot, setIsSubmittingForgot] = useState(false);
-  const [isSubmittingOtp, setIsSubmittingOtp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -45,7 +37,6 @@ const LoginPage: React.FC = () => {
   const [fullName, setFullName] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [phone, setPhone] = useState("");
-  const [otpCode, setOtpCode] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
 
   const handleGoogleLogin = async () => {
@@ -91,25 +82,6 @@ const LoginPage: React.FC = () => {
     }
   };
 
-  const handleVerifyOtpSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !otpCode) { 
-      setErrorMessage("Vui lòng nhập mã xác nhận."); 
-      return; 
-    }
-    setErrorMessage(null); 
-    setSuccessMessage(null); 
-    setIsSubmittingOtp(true);
-    try {
-      await verifyEmailCode(email, otpCode);
-      setSuccessMessage("Xác thực thành công!");
-    } catch (error) {
-      setErrorMessage(error instanceof Error && error.message ? error.message : "Mã xác nhận không hợp lệ hoặc đã hết hạn.");
-    } finally {
-      setIsSubmittingOtp(false);
-    }
-  };
-
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) { 
@@ -127,26 +99,7 @@ const LoginPage: React.FC = () => {
     }
   };
 
-  const handleForgotSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email) { 
-      setErrorMessage("Vui lòng nhập email của bạn."); 
-      return; 
-    }
-    setErrorMessage(null); 
-    setSuccessMessage(null); 
-    setIsSubmittingForgot(true);
-    try {
-      await resetPasswordForEmail(email);
-      setSuccessMessage("Hướng dẫn khôi phục mật khẩu đã được gửi đến email của bạn.");
-    } catch (error) {
-      setErrorMessage(error instanceof Error && error.message ? error.message : "Không thể gửi yêu cầu.");
-    } finally {
-      setIsSubmittingForgot(false);
-    }
-  };
-
-  const switchView = (v: "login" | "forgot" | "register" | "verify_otp") => {
+  const switchView = (v: "login" | "register") => {
     setView(v); 
     setErrorMessage(null); 
     setSuccessMessage(null);
@@ -242,32 +195,10 @@ const LoginPage: React.FC = () => {
 
           {/* View Headers */}
           <div className="text-center md:text-left space-y-2">
-            {view === "forgot" ? (
-              <>
-                <button 
-                  onClick={() => switchView("login")} 
-                  className="mb-6 flex items-center justify-center md:justify-start gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <FiArrowLeft className="w-4 h-4" /> Quay lại đăng nhập
-                </button>
-                <h2 className="text-3xl font-semibold tracking-tight text-foreground">Khôi phục mật khẩu</h2>
-                <p className="text-muted-foreground">Vui lòng nhập email của bạn để nhận liên kết khôi phục.</p>
-              </>
-            ) : isRegisterView ? (
+            {isRegisterView ? (
               <>
                 <h2 className="text-3xl font-semibold tracking-tight text-foreground">Tạo tài khoản</h2>
                 <p className="text-muted-foreground">Bắt đầu hành trình làm việc chung của bạn ngay hôm nay.</p>
-              </>
-            ) : view === "verify_otp" ? (
-              <>
-                <button 
-                  onClick={() => switchView("register")} 
-                  className="mb-6 flex items-center justify-center md:justify-start gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <FiArrowLeft className="w-4 h-4" /> Quay lại
-                </button>
-                <h2 className="text-3xl font-semibold tracking-tight text-foreground">Xác thực OTP</h2>
-                <p className="text-muted-foreground">Nhập mã xác nhận 8 chữ số đã được gửi tới email của bạn.</p>
               </>
             ) : (
               <>
@@ -292,36 +223,7 @@ const LoginPage: React.FC = () => {
           )}
 
           {/* ── Form Views ── */}
-          {view === "forgot" ? (
-            <form onSubmit={handleForgotSubmit} className="space-y-5">
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1.5" htmlFor="email">Địa chỉ Email</label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-muted-foreground">
-                    <FiMail className="w-5 h-5" />
-                  </span>
-                  <input 
-                    type="email" 
-                    id="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="block w-full rounded-xl border border-border bg-card px-4 py-3.5 pl-11 text-foreground placeholder:text-muted-foreground focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition-all duration-200 outline-none text-sm"
-                    placeholder="ten@congty.com" 
-                    required 
-                  />
-                </div>
-              </div>
-
-              <Button 
-                type="submit" 
-                disabled={isSubmittingForgot || isLoading} 
-                className="w-full py-3.5 bg-slate-900 hover:bg-secondary text-white font-medium rounded-full shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2"
-              >
-                {isSubmittingForgot && <FiLoader className="w-5 h-5 animate-spin" />}
-                {isSubmittingForgot ? "Đang gửi..." : "Gửi liên kết"}
-              </Button>
-            </form>
-          ) : isRegisterView ? (
+          {isRegisterView ? (
             <div className="space-y-6">
               <form onSubmit={handleRegisterSubmit} className="space-y-4">
                 <div>
@@ -459,38 +361,6 @@ const LoginPage: React.FC = () => {
                 <span>Tiếp tục với Google</span>
               </button>
             </div>
-          ) : view === "verify_otp" ? (
-            <form onSubmit={handleVerifyOtpSubmit} className="space-y-5">
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1.5">Mã OTP (8 chữ số)</label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-muted-foreground">
-                    <FiShield className="w-5 h-5" />
-                  </span>
-                  <input 
-                    type="text" 
-                    inputMode="numeric" 
-                    pattern="[0-9]*" 
-                    value={otpCode} 
-                    onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 8))} 
-                    className="block w-full rounded-xl border border-border bg-card px-4 py-3.5 pl-11 text-foreground font-mono tracking-widest text-lg placeholder:text-slate-300 focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition-all duration-200 outline-none"
-                    placeholder="••••••••" 
-                    maxLength={8} 
-                    required 
-                  />
-                </div>
-                <p className="mt-2 text-sm text-muted-foreground">Vui lòng kiểm tra hộp thư điện tử của bạn để lấy mã xác nhận.</p>
-              </div>
-
-              <Button 
-                type="submit" 
-                disabled={isSubmittingOtp || isLoading || otpCode.length !== 8} 
-                className="w-full py-3.5 bg-slate-900 hover:bg-secondary text-white font-medium rounded-full shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2"
-              >
-                {isSubmittingOtp && <FiLoader className="w-5 h-5 animate-spin" />}
-                {isSubmittingOtp ? "Đang xác thực..." : "Xác nhận"}
-              </Button>
-            </form>
           ) : (
             <div className="space-y-6">
               <form onSubmit={handleEmailLogin} className="space-y-5">
@@ -513,17 +383,8 @@ const LoginPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-sm font-medium text-foreground" htmlFor="login-password">Mật khẩu</label>
-                    <button 
-                      type="button" 
-                      onClick={() => switchView("forgot")} 
-                      className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
-                    >
-                      Quên mật khẩu?
-                    </button>
-                  </div>
-                  
+                  <label className="block text-sm font-medium text-foreground mb-1.5" htmlFor="login-password">Mật khẩu</label>
+
                   <div className="relative">
                     <span className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-muted-foreground">
                       <FiLock className="w-5 h-5" />
@@ -595,42 +456,6 @@ const LoginPage: React.FC = () => {
             </div>
           )}
 
-          {/* ── DEV: Quick role switcher ── */}
-          <div className="rounded-2xl border border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-950/30 p-5 mt-8 shadow-sm">
-            <p className="text-xs font-medium text-blue-600 dark:text-blue-400 mb-3 flex items-center justify-center gap-1">
-              <FiZap /> Developer Quick Login
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              <button 
-                type="button" 
-                onClick={() => devLoginAs("customer")} 
-                className="text-xs font-medium bg-card border border-blue-200 dark:border-blue-900/50 text-foreground py-2 rounded-lg hover:bg-blue-50 dark:bg-blue-950/30 transition-colors shadow-sm"
-              >
-                Customer
-              </button>
-              <button 
-                type="button" 
-                onClick={() => devLoginAsBranchAdmin()} 
-                className="text-xs font-medium bg-card border border-blue-200 dark:border-blue-900/50 text-foreground py-2 rounded-lg hover:bg-blue-50 dark:bg-blue-950/30 transition-colors shadow-sm"
-              >
-                Admin CN1
-              </button>
-              <button 
-                type="button" 
-                onClick={() => devLoginAs("staff")} 
-                className="text-xs font-medium bg-card border border-blue-200 dark:border-blue-900/50 text-foreground py-2 rounded-lg hover:bg-blue-50 dark:bg-blue-950/30 transition-colors shadow-sm"
-              >
-                Staff
-              </button>
-              <button 
-                type="button" 
-                onClick={() => devLoginAs("admin")} 
-                className="text-xs font-medium bg-blue-600 border border-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
-              >
-                Super Admin
-              </button>
-            </div>
-          </div>
         </div>
       </div>
     </div>

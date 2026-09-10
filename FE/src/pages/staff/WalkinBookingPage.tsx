@@ -12,6 +12,8 @@ import { formatVND, formatDateTimeLocal } from '../../utils/formatters';
 import type { FloorResponse } from '../../lib/spaceApi';
 import FloorPlanViewer from '../../components/floor-plan/FloorPlanViewer';
 import type { FloorLayout } from '../../types/floorPlan';
+import { Spinner } from '../../components/ui/Spinner';
+import { Skeleton } from '../../components/ui/Skeleton';
 
 const WalkinBookingPage: React.FC = () => {
   const { showToast } = useToast();
@@ -44,8 +46,11 @@ const WalkinBookingPage: React.FC = () => {
   const [createdBookingCode, setCreatedBookingCode] = useState('');
   
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingSpaces, setIsLoadingSpaces] = useState(true);
+  const [isSearchingUser, setIsSearchingUser] = useState(false);
 
   const fetchData = async () => {
+    setIsLoadingSpaces(true);
     try {
       const [floorsRes, statusRes] = await Promise.all([
         staffApi.getFloors(currentBranchId),
@@ -58,6 +63,8 @@ const WalkinBookingPage: React.FC = () => {
       setWorkspacesStatus(statusRes);
     } catch (err: any) {
       showToast(err.message || 'Lỗi khi tải dữ liệu', 'error');
+    } finally {
+      setIsLoadingSpaces(false);
     }
   };
 
@@ -68,6 +75,7 @@ const WalkinBookingPage: React.FC = () => {
   // Customer search logic
   const handleSearchUser = async () => {
     if (!phoneSearch.trim()) return;
+    setIsSearchingUser(true);
     try {
       const results = await staffApi.searchUsers(phoneSearch);
       if (results.length > 0) {
@@ -93,6 +101,8 @@ const WalkinBookingPage: React.FC = () => {
       }
     } catch (err: any) {
       showToast(err.message || 'Lỗi khi tìm kiếm khách hàng', 'error');
+    } finally {
+      setIsSearchingUser(false);
     }
   };
 
@@ -353,8 +363,14 @@ const WalkinBookingPage: React.FC = () => {
                   onKeyDown={e => e.key === 'Enter' && handleSearchUser()}
                 />
               </div>
-              <button onClick={handleSearchUser} className="btn btn-secondary px-4 text-xs font-bold">
-                Tìm kiếm
+              <button
+                onClick={handleSearchUser}
+                disabled={isSearchingUser}
+                aria-busy={isSearchingUser || undefined}
+                className="btn btn-secondary px-4 text-xs font-bold gap-1.5"
+              >
+                {isSearchingUser && <Spinner size="sm" />}
+                {isSearchingUser ? 'Đang tìm...' : 'Tìm kiếm'}
               </button>
               <button onClick={handleCreateNewUserClick} className="btn border border-border bg-card hover:bg-muted text-foreground px-4 text-xs font-bold whitespace-nowrap">
                 + Tạo mới
@@ -471,7 +487,10 @@ const WalkinBookingPage: React.FC = () => {
                 </label>
                 {viewMode === 'map' && (
                   <div className="flex gap-1.5 overflow-x-auto">
-                    {floors.map(f => (
+                    {isLoadingSpaces && [...Array(3)].map((_, i) => (
+                      <Skeleton key={`floor-skeleton-${i}`} className="h-7 w-20 rounded-xl" />
+                    ))}
+                    {!isLoadingSpaces && floors.map(f => (
                       <button 
                         key={f.id} 
                         onClick={() => { setSelectedFloorId(f.id); setSelectedWorkspaceId(null); }}
@@ -488,7 +507,12 @@ const WalkinBookingPage: React.FC = () => {
               
               {viewMode === 'map' ? (
                 <div className="rounded-xl border border-border bg-card h-[450px] overflow-hidden">
-                  {currentLayout ? (
+                  {isLoadingSpaces ? (
+                    <div className="h-full flex flex-col items-center justify-center gap-3 text-muted-foreground">
+                      <Spinner size="lg" className="text-primary" />
+                      <span className="text-sm font-medium">Đang tải sơ đồ tầng...</span>
+                    </div>
+                  ) : currentLayout ? (
                     <FloorPlanViewer
                       layout={currentLayout}
                       selectedWsId={selectedWorkspaceId}
@@ -514,7 +538,14 @@ const WalkinBookingPage: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {currentFloorWorkspaces.map(ws => {
+                      {isLoadingSpaces && [...Array(5)].map((_, i) => (
+                        <tr key={`ws-skeleton-${i}`}>
+                          <td><Skeleton className="h-4 w-40" /></td>
+                          <td><Skeleton className="h-5 w-20 rounded-full" /></td>
+                          <td className="text-right"><Skeleton className="ml-auto h-8 w-16" /></td>
+                        </tr>
+                      ))}
+                      {!isLoadingSpaces && currentFloorWorkspaces.map(ws => {
                         const avail = getAvailability(ws.workspaceId);
                         const isSelected = selectedWorkspaceId === ws.workspaceId;
                         return (
@@ -639,7 +670,7 @@ const WalkinBookingPage: React.FC = () => {
               onClick={handleConfirm}
               className="btn btn-primary w-full py-4 text-sm font-bold shadow-lg shadow-primary/25 rounded-xl"
             >
-              <FiCheck className="h-4 w-4 mr-1.5" />
+              {isSubmitting ? <Spinner size="sm" className="mr-1.5" /> : <FiCheck className="h-4 w-4 mr-1.5" />}
               <span>{isSubmitting ? 'Đang xử lý...' : 'Xác nhận & Thu tiền POS'}</span>
             </button>
 

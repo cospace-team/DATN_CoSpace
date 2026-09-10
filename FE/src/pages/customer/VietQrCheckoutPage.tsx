@@ -28,6 +28,7 @@ const VietQrCheckoutPage: React.FC = () => {
   const amountStr = searchParams.get('amount') || '0';
   const amount = parseInt(amountStr, 10) || 0;
   const description = searchParams.get('description') || `BK ${orderCode}`;
+  const paymentDeadlineAtParam = searchParams.get('paymentDeadlineAt');
 
   const bankName = "MB Bank (Ngân hàng TMCP Quân Đội)";
   const bankBin = "970422";
@@ -37,19 +38,35 @@ const VietQrCheckoutPage: React.FC = () => {
   // VietQR standard direct dynamic image URL
   const qrImageUrl = `https://img.vietqr.io/image/${bankBin}-${accountNumber}-compact2.png?amount=${amount}&addInfo=${encodeURIComponent(description)}&accountName=${encodeURIComponent(accountName)}`;
 
-  // 15-Minute Countdown Timer
-  const [timeLeft, setTimeLeft] = useState(15 * 60);
+  // Countdown timer — synced to the booking's real paymentDeadlineAt (passed through the checkout
+  // URL) whenever it's available, so this never drifts from the backend's actual hold expiry.
+  // Falls back to a 15-minute display-only timer if the deadline wasn't passed.
+  const [deadlineMs] = useState(() =>
+    paymentDeadlineAtParam ? new Date(paymentDeadlineAtParam).getTime() : Date.now() + 15 * 60 * 1000,
+  );
+  const [timeLeft, setTimeLeft] = useState(() => Math.max(0, Math.round((deadlineMs - Date.now()) / 1000)));
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [isSimulating, setIsSimulating] = useState(false);
   const [simulationDone, setSimulationDone] = useState(false);
+  const [expiredNotified, setExpiredNotified] = useState(false);
 
   useEffect(() => {
-    if (timeLeft <= 0) return;
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => prev - 1);
-    }, 1000);
+    const tick = () => {
+      setTimeLeft(Math.max(0, Math.round((deadlineMs - Date.now()) / 1000)));
+    };
+    tick();
+    const timer = setInterval(tick, 1000);
     return () => clearInterval(timer);
-  }, [timeLeft]);
+  }, [deadlineMs]);
+
+  // Once the hold actually expires server-side, stop letting the customer act on this page.
+  useEffect(() => {
+    if (timeLeft > 0 || simulationDone || expiredNotified) return;
+    setExpiredNotified(true);
+    showToast('Thời gian giữ chỗ đã hết hạn. Vui lòng đặt lại chỗ ngồi.', 'error');
+    const redirect = setTimeout(() => navigate('/customer/explore'), 3000);
+    return () => clearTimeout(redirect);
+  }, [timeLeft, simulationDone, expiredNotified]);
 
   const formatCountdown = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -65,7 +82,7 @@ const VietQrCheckoutPage: React.FC = () => {
   };
 
   const handleSimulatePayment = async () => {
-    if (isSimulating || simulationDone) return;
+    if (isSimulating || simulationDone || timeLeft <= 0) return;
     setIsSimulating(true);
 
     try {
@@ -256,7 +273,7 @@ const VietQrCheckoutPage: React.FC = () => {
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
               <button
                 onClick={handleSimulatePayment}
-                disabled={isSimulating || simulationDone}
+                disabled={isSimulating || simulationDone || timeLeft <= 0}
                 className={`flex-1 py-3 px-4 rounded-2xl font-semibold text-sm flex items-center justify-center gap-2 shadow-md transition-all ${
                   simulationDone
                     ? 'bg-emerald-600 text-white'

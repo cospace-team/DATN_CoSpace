@@ -27,4 +27,10 @@ public class PartnerSuggestionDto {
     private String linkedin;
     private String github;
     private boolean isSameBranch;
+
+    /** One-line, human-readable "why you two should meet" — written by Gemini when configured. */
+    private String matchReason;
+
+    /** Tags this person has written posts about that line up with the viewer. */
+    private List<String> postTags;
 }

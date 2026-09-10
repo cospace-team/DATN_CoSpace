@@ -49,9 +49,22 @@ public class SecurityConfig {
         @Bean
         public JwtDecoder jwtDecoder() {
                 // Local Decoder (HS384)
-                JwtDecoder localDecoder = NimbusJwtDecoder.withSecretKey(
+                NimbusJwtDecoder localNimbusDecoder = NimbusJwtDecoder.withSecretKey(
                         new SecretKeySpec(jwtSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA384")
                 ).macAlgorithm(org.springframework.security.oauth2.jose.jws.MacAlgorithm.HS384).build();
+
+                // A refresh token is signed with the same key and lives for 30 days, so without this
+                // it would work as a bearer token on every API. Only access tokens may authenticate.
+                localNimbusDecoder.setJwtValidator(new org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator<>(
+                        org.springframework.security.oauth2.jwt.JwtValidators.createDefault(),
+                        token -> com.cospace.app.util.JwtUtil.TOKEN_USE_REFRESH
+                                        .equals(token.getClaimAsString(com.cospace.app.util.JwtUtil.CLAIM_TOKEN_USE))
+                                ? org.springframework.security.oauth2.core.OAuth2TokenValidatorResult.failure(
+                                        new org.springframework.security.oauth2.core.OAuth2Error("invalid_token",
+                                                "Refresh token không dùng để gọi API.", null))
+                                : org.springframework.security.oauth2.core.OAuth2TokenValidatorResult.success()));
+
+                JwtDecoder localDecoder = localNimbusDecoder;
 
                 return new JwtDecoder() {
                         private JwtDecoder supabaseDecoder;
@@ -115,7 +128,6 @@ public class SecurityConfig {
                                                                 new AntPathRequestMatcher("/api/payments/payos/simulate"),
                                                                 new AntPathRequestMatcher("/api/auth/register"),
                                                                 new AntPathRequestMatcher("/api/auth/login"),
-                                                                new AntPathRequestMatcher("/api/auth/dev-login"),
                                                                 new AntPathRequestMatcher("/api/auth/refresh"),
                                                                 new AntPathRequestMatcher("/api/customer/spaces/branches"),
                                                                 new AntPathRequestMatcher("/h2-console/**"),

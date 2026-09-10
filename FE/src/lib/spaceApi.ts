@@ -216,6 +216,12 @@ export interface BranchResponse {
   status: string;
 }
 
+export interface PublicWorkspaceAvailability {
+  workspaceId: string;
+  status: "active" | "maintenance" | "inactive";
+  busySlots: Array<{ startAt: string; endAt: string; reason: "booking" | "maintenance" }>;
+}
+
 /* ─── Customer Space APIs ─── */
 export const customerSpaceApi = {
   listBranches: () =>
@@ -227,5 +233,14 @@ export const customerSpaceApi = {
   listWorkspaces: (branchId: string, floorId: string) =>
     apiFetch<WorkspaceResponse[]>(
       `${API}/api/customer/spaces/branches/${branchId}/floors/${floorId}/workspaces`
+    ),
+
+  /**
+   * Busy time ranges for every workspace in the branch, across ALL customers — unlike
+   * bookingApi.getMyBookings(), which only reflects the caller's own bookings.
+   */
+  getBookingStatus: (branchId: string, from: Date, to: Date) =>
+    apiFetch<PublicWorkspaceAvailability[]>(
+      `${API}/api/customer/spaces/branches/${branchId}/booking-status?from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(to.toISOString())}`
     ),
 };

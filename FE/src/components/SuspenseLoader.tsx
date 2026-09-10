@@ -1,11 +1,23 @@
 import React from 'react';
+import { Spinner } from './ui/Spinner';
 
-export const SuspenseLoader: React.FC = () => {
+interface SuspenseLoaderProps {
+  label?: string;
+  /** Use when the loader fills the whole viewport instead of a content area. */
+  fullScreen?: boolean;
+}
+
+export const SuspenseLoader: React.FC<SuspenseLoaderProps> = ({
+  label = 'Đang tải dữ liệu...',
+  fullScreen = false,
+}) => {
   return (
-    <div className="flex items-center justify-center min-h-[50vh] w-full">
-      <div className="flex flex-col items-center gap-3">
-        <div className="w-8 h-8 border-4 border-border border-t-blue-500 rounded-full animate-spin"></div>
-        <p className="text-sm font-medium text-muted-foreground">Đang tải dữ liệu...</p>
+    <div
+      className={`flex w-full items-center justify-center ${fullScreen ? 'min-h-screen bg-background' : 'min-h-[50vh]'}`}
+    >
+      <div className="flex flex-col items-center gap-3 animate-fade-in">
+        <Spinner size="lg" className="text-primary" />
+        <p className="text-sm font-medium text-muted-foreground">{label}</p>
       </div>
     </div>
   );

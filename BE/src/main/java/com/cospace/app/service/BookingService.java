@@ -276,6 +276,58 @@ public class BookingService {
         }).collect(Collectors.toList());
     }
 
+    /**
+     * Customer-facing availability: which time ranges a workspace is busy in, with no booking
+     * owner identity or pricing exposed (unlike {@link #getWorkspaceBookingStatus}, which is
+     * staff-only and carries customer PII).
+     */
+    @Transactional(readOnly = true)
+    public List<com.cospace.app.dto.api.PublicWorkspaceAvailabilityDto> getPublicWorkspaceAvailability(
+            UUID branchId, OffsetDateTime from, OffsetDateTime to) {
+        List<WorkspaceEntity> workspaces = workspaceEntityRepository.findWorkspacesByBranchId(branchId);
+
+        List<com.cospace.app.entity.WorkspaceMaintenanceEntity> maintenances =
+                workspaceMaintenanceRepository.findAllByBranchIdOrderByCreatedAtDesc(branchId).stream()
+                        .filter(m -> m.getStatus() == com.cospace.app.entity.MaintenanceStatus.active
+                                || m.getStatus() == com.cospace.app.entity.MaintenanceStatus.scheduled)
+                        .filter(m -> m.getStartAt().toOffsetDateTime().isBefore(to)
+                                && m.getEndAt().toOffsetDateTime().isAfter(from))
+                        .collect(Collectors.toList());
+
+        List<BookingStatus> activeStatuses = java.util.Arrays.asList(
+                BookingStatus.PENDING_PAYMENT, BookingStatus.CONFIRMED, BookingStatus.CHECKED_IN);
+
+        List<Booking> intervalBookings = bookingRepository.findBookingsInInterval(branchId, from, to).stream()
+                .filter(b -> activeStatuses.contains(b.getStatus()))
+                .collect(Collectors.toList());
+
+        return workspaces.stream().map(ws -> {
+            List<com.cospace.app.dto.api.PublicWorkspaceAvailabilityDto.BusySlot> slots = new java.util.ArrayList<>();
+
+            intervalBookings.stream()
+                    .filter(b -> b.getWorkspaceId().equals(ws.getId()))
+                    .forEach(b -> slots.add(com.cospace.app.dto.api.PublicWorkspaceAvailabilityDto.BusySlot.builder()
+                            .startAt(b.getStartAt())
+                            .endAt(b.getEndAt())
+                            .reason("booking")
+                            .build()));
+
+            maintenances.stream()
+                    .filter(m -> m.getWorkspaceId().equals(ws.getId()))
+                    .forEach(m -> slots.add(com.cospace.app.dto.api.PublicWorkspaceAvailabilityDto.BusySlot.builder()
+                            .startAt(m.getStartAt().toOffsetDateTime())
+                            .endAt(m.getEndAt().toOffsetDateTime())
+                            .reason("maintenance")
+                            .build()));
+
+            return com.cospace.app.dto.api.PublicWorkspaceAvailabilityDto.builder()
+                    .workspaceId(ws.getId())
+                    .status(ws.getStatus() != null ? ws.getStatus().name() : null)
+                    .busySlots(slots)
+                    .build();
+        }).collect(Collectors.toList());
+    }
+
     public com.cospace.app.dto.api.BookingWithDetailsDto toBookingWithDetailsDto(Booking b) {
         BookingDto bookingDto = toDto(b);
         

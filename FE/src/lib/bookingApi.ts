@@ -50,6 +50,17 @@ export interface MomoCreatePaymentResponse {
   message: string;
 }
 
+export interface BookingCancellationResponse {
+  id: string;
+  bookingId: string;
+  userId: string;
+  reason: string;
+  refundPercent: number;
+  refundAmount: number;
+  penaltyAmount: number;
+  refundStatus: string;
+}
+
 export interface PayosCreatePaymentResponse {
   paymentId: string;
   bookingId: string;
@@ -171,20 +182,22 @@ export const bookingApi = {
   },
 
   /**
-   * Cancel a booking
+   * Cancel a booking. Uses the policy-aware endpoint so the returned refund/penalty amounts
+   * reflect the branch's actual cancellation policy instead of a client-guessed number.
    */
-  async cancelBooking(bookingId: string): Promise<BookingResponse> {
+  async cancelBooking(bookingId: string, reason?: string): Promise<BookingCancellationResponse> {
     const token = localStorage.getItem("workhub_access_token");
     if (!token) {
       throw new Error('User is not authenticated.');
     }
 
-    const response = await fetch(`${API_BASE_URL}/api/bookings/${bookingId}/cancel`, {
+    const response = await fetch(`${API_BASE_URL}/api/bookings/${bookingId}/cancel-v2`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
       },
+      body: JSON.stringify({ reason: reason || 'Khách hàng yêu cầu hủy đơn' }),
     });
 
     if (!response.ok) {

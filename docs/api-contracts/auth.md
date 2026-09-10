@@ -4,6 +4,30 @@
 
 ---
 
+## ⚠️ Trạng thái triển khai thực tế
+
+Phần đặc tả bên dưới là thiết kế ban đầu. Đường dẫn và phạm vi **thực tế trong code** hiện như sau:
+
+| Chức năng | Đặc tả (bên dưới) | Thực tế đang chạy | Trạng thái |
+|---|---|---|---|
+| Đăng ký | `POST /api/local-auth/register` | `POST /api/auth/register` | ✅ Có |
+| Đăng nhập | `POST /api/local-auth/login` | `POST /api/auth/login` | ✅ Có |
+| Refresh token | `POST /api/local-auth/refresh` | `POST /api/auth/refresh` | ✅ Có |
+| Đồng bộ Google | `POST /api/auth/sync` | `POST /api/auth/sync` | ✅ Có |
+| Lấy user hiện tại | `GET /api/auth/me` | `GET /api/users/profile` | ✅ Có (khác đường dẫn) |
+| Đăng xuất | `POST /api/auth/logout` | — | ❌ Chưa có (FE chỉ xóa token ở localStorage) |
+| Quên mật khẩu | `POST /api/local-auth/forgot-password` | — | ❌ **Chưa triển khai** (cần hạ tầng gửi email) |
+| Đặt lại mật khẩu | `POST /api/local-auth/reset-password` | — | ❌ **Chưa triển khai** |
+| Đổi mật khẩu (đã đăng nhập) | — | `PUT /api/users/change-password` | ✅ Có |
+
+**Hai loại token.** Access token (`token_use = "access"`, sống 1 giờ) dùng cho header `Authorization`. Refresh token (`token_use = "refresh"`, sống 30 ngày) **chỉ** dùng cho `POST /api/auth/refresh` — nó bị từ chối nếu đem gọi API thường, và ngược lại access token không đổi được thành token mới.
+
+**Shape user trả về** (`data.user` của register/login/refresh, và response của `/api/auth/sync`) là `AuthUserDto`: `id`, `email`, `fullName`, `phone`, `avatarUrl`, `role`, `status`, `branchId`, `branchName`. Mật khẩu không bao giờ được trả về.
+
+> Endpoint `POST /api/auth/dev-login` **đã bị xóa**. Trước đây nó là public và cấp token của tài khoản admin thật cho bất kỳ ai gọi tới — không cần mật khẩu.
+
+---
+
 ## 1. API: Đăng ký tài khoản (Cho Customer)
 
 - **Endpoint:** POST `/api/local-auth/register`
