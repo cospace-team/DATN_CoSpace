@@ -13,10 +13,12 @@ import {
   FiRefreshCw,
   FiCopy,
   FiCheck,
+  FiCreditCard,
 } from "react-icons/fi";
 import { Button } from "../../components/ui/button";
 import { formatVND } from "../../utils/formatters";
 import { bookingApi, type BookingResponse } from "../../lib/bookingApi";
+import { startPayment } from "../../lib/startPayment";
 import { workspaces, branches } from "../../data/mockData";
 
 // Initial Mock Bookings
@@ -78,6 +80,26 @@ const BookingHistoryPage: React.FC = () => {
   const [bookings, setBookings] = useState<typeof MOCK_BOOKINGS>([]);
   const [loading, setLoading] = useState(true);
   const [apiLoaded, setApiLoaded] = useState(false);
+  const [payingId, setPayingId] = useState<string | null>(null);
+
+  const handlePayNow = async (bookingId: string, amount: number) => {
+    setPayingId(bookingId);
+    setErrorMessage(null);
+    try {
+      const redirected = await startPayment("payos", bookingId, amount);
+      if (!redirected) {
+        setSuccessMessage(
+          "Đã tạo yêu cầu thanh toán VietQR. Vui lòng hoàn tất thanh toán để giữ chỗ.",
+        );
+      }
+    } catch (err) {
+      setErrorMessage(
+        err instanceof Error ? err.message : "Không tạo được yêu cầu thanh toán.",
+      );
+    } finally {
+      setPayingId(null);
+    }
+  };
 
   const handleDownloadQr = async (code: string) => {
     setDownloadingQr(true);
@@ -436,6 +458,24 @@ const BookingHistoryPage: React.FC = () => {
                     </button>
                     <button
                       className="w-full py-3 bg-card text-foreground font-semibold tracking-tight border border-border rounded-full shadow-sm hover:bg-red-50 dark:bg-red-950/30 dark:bg-red-950/30 hover:text-red-700 hover:border-red-200 dark:border-red-900/50 dark:border-red-900/50 transition-colors flex justify-center items-center gap-2 text-xs"
+                      onClick={() => setShowCancelModal(booking.id)}
+                    >
+                      <FiX className="h-4 w-4" /> Hủy đặt chỗ
+                    </button>
+                  </>
+                )}
+                {booking.status === "pending_payment" && (
+                  <>
+                    <button
+                      onClick={() => void handlePayNow(booking.id, booking.totalAmount)}
+                      disabled={!apiLoaded || payingId === booking.id}
+                      className="w-full py-3 bg-slate-900 text-white font-semibold tracking-tight border border-border rounded-full shadow-sm hover:-translate-y-1 hover:shadow-sm transition-all flex justify-center items-center gap-2 text-xs disabled:opacity-60 disabled:hover:translate-y-0"
+                    >
+                      <FiCreditCard className="h-4 w-4" />
+                      {payingId === booking.id ? "Đang chuyển..." : "Thanh toán ngay"}
+                    </button>
+                    <button
+                      className="w-full py-3 bg-card text-foreground font-semibold tracking-tight border border-border rounded-full shadow-sm hover:bg-red-50 dark:bg-red-950/30 hover:text-red-700 hover:border-red-200 dark:border-red-900/50 transition-colors flex justify-center items-center gap-2 text-xs"
                       onClick={() => setShowCancelModal(booking.id)}
                     >
                       <FiX className="h-4 w-4" /> Hủy đặt chỗ

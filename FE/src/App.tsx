@@ -16,6 +16,7 @@ import { MockDataProvider } from "./context/MockDataContext";
 import { Button } from "./components/ui/button";
 import { Logo } from "./components/ui/Logo";
 import { NotificationBell } from "./components/notifications/NotificationBell";
+import { ChatWidget } from "./components/chatbot/ChatWidget";
 import {
   FiMapPin,
   FiCalendar,
@@ -462,6 +463,8 @@ const AppShell: React.FC = () => {
 
         {/* Mobile Bottom Nav */}
         <MobileBottomNav items={navItems} />
+
+        {user.role === "customer" && <ChatWidget />}
       </div>
     </div>
   );
