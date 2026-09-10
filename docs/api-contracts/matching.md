@@ -27,29 +27,60 @@
 
 ---
 
-## 2. Cập Nhật Hồ Sơ (Customer)
+## 2. Quản Lý Hồ Sơ Kết Nối (Networking Profile)
 
-### `PUT /api/profiles/me/networking`
+### `GET /api/profiles/me/networking`
 **Roles**: `customer`
 
-**Request**:
+**Response — 200 OK**:
 ```json
 {
+  "userId": "uuid",
+  "fullName": "Nguyễn Văn A",
+  "avatarUrl": "https://...",
   "bio": "Xin chào, tôi là Web Developer...",
+  "profession": "Senior Frontend Developer",
   "company": "FPT Software",
-  "title": "Senior Frontend",
-  "contact_public": true,
+  "contactEmail": "user@example.com",
+  "contactPhone": "0901234567",
+  "contactLink": "{\"linkedin\":\"https://linkedin.com/in/user\",\"github\":\"https://github.com/user\",\"website\":\"https://user.dev\"}",
+  "contactPublic": true,
+  "primaryBranchId": "uuid_branch",
   "skills": [
-    { "tag_id": "uuid_frontend", "level": 4 },
-    { "tag_id": "uuid_react", "level": 3 }
+    { "tagId": "uuid_frontend", "tagName": "Frontend Dev", "level": 4 },
+    { "tagId": "uuid_react", "tagName": "React", "level": 3 }
   ],
   "interests": [
-    { "tag_id": "uuid_startup", "priority": 5 }
+    { "tagId": "uuid_startup", "interestName": "Khởi nghiệp", "priority": 5 }
   ]
 }
 ```
 
-**Response — 200 OK**: Trả về chính cấu trúc trên sau khi lưu DB.
+### `PUT /api/profiles/me/networking`
+**Roles**: `customer`
+
+**Request Body**:
+```json
+{
+  "bio": "Xin chào, tôi là Web Developer...",
+  "profession": "Senior Frontend Developer",
+  "company": "FPT Software",
+  "contactEmail": "user@example.com",
+  "contactPhone": "0901234567",
+  "contactLink": "{\"linkedin\":\"https://linkedin.com/in/user\",\"github\":\"https://github.com/user\",\"website\":\"https://user.dev\"}",
+  "contactPublic": true,
+  "skills": [
+    { "tagId": "uuid_frontend", "tagName": "Frontend Dev", "level": 4 },
+    { "tagId": null, "tagName": "Spring Boot", "level": 3 }
+  ],
+  "interests": [
+    { "tagId": "uuid_startup", "interestName": "Khởi nghiệp", "priority": 5 }
+  ]
+}
+```
+> **Cơ chế đồng bộ kỹ năng & tag**: Nếu `tagId` là null nhưng có `tagName`, backend sẽ tự động tìm kiếm tag theo tên (không phân biệt hoa/thường) hoặc tự động tạo tag mới trong bảng `tags`, sau đó ghi vào bảng `profile_skills` và tính lại điểm gợi ý đối tác Jaccard.
+
+**Response — 200 OK**: Trả về `NetworkingProfileDto` đã được cập nhật thành công trong Database.
 
 ---
 

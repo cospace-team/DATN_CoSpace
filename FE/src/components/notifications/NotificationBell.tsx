@@ -1,5 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FiBell, FiCheck, FiInfo, FiAlertCircle, FiCheckCircle } from 'react-icons/fi';
+import {
+  FiBell,
+  FiCheck,
+  FiInfo,
+  FiAlertCircle,
+  FiCheckCircle,
+  FiClock,
+  FiDollarSign,
+  FiUsers,
+  FiMessageSquare,
+  FiCreditCard,
+} from 'react-icons/fi';
 
 interface NotificationItem {
   id: string;
@@ -24,14 +35,14 @@ export const NotificationBell: React.FC = () => {
       if (!token) return;
 
       const res = await fetch(`${API_BASE_URL}/api/notifications`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
         const data: NotificationItem[] = await res.json();
         setNotifications(data);
         setUnreadCount(data.filter(n => !n.isRead).length);
       }
-    } catch (e) {
+    } catch {
       // offline fallback: quiet
     }
   };
@@ -62,10 +73,10 @@ export const NotificationBell: React.FC = () => {
 
       await fetch(`${API_BASE_URL}/api/notifications/${id}/read`, {
         method: 'PATCH',
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
 
-      setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+      setNotifications(prev => prev.map(n => (n.id === id ? { ...n, isRead: true } : n)));
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (e) {
       console.warn('Cannot mark notification read:', e);
@@ -79,7 +90,7 @@ export const NotificationBell: React.FC = () => {
 
       await fetch(`${API_BASE_URL}/api/notifications/read-all`, {
         method: 'PATCH',
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
@@ -89,15 +100,74 @@ export const NotificationBell: React.FC = () => {
     }
   };
 
-  const getIcon = (type: string) => {
+  const getTypeConfig = (type: string) => {
     switch (type?.toUpperCase()) {
+      case 'BOOKING_CONFIRMED':
+        return {
+          icon: <FiCheckCircle className="h-4 w-4" />,
+          colorClass: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
+          badge: 'Đặt chỗ',
+        };
+      case 'BOOKING_REMINDER':
+        return {
+          icon: <FiClock className="h-4 w-4" />,
+          colorClass: 'text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20',
+          badge: 'Nhắc nhở',
+        };
+      case 'REFUND_PROCESSED':
+        return {
+          icon: <FiDollarSign className="h-4 w-4" />,
+          colorClass: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
+          badge: 'Hoàn tiền',
+        };
+      case 'PARTNER_MATCH':
+        return {
+          icon: <FiUsers className="h-4 w-4" />,
+          colorClass: 'text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 border-indigo-500/20',
+          badge: 'Kết nối',
+        };
+      case 'COMMUNITY_POST':
+        return {
+          icon: <FiMessageSquare className="h-4 w-4" />,
+          colorClass: 'text-blue-600 dark:text-blue-400 bg-blue-500/10 border-blue-500/20',
+          badge: 'Cộng đồng',
+        };
       case 'BOOKING_CANCEL':
-        return <FiAlertCircle className="h-4 w-4 text-rose-500" />;
-      case 'CHECKIN':
+        return {
+          icon: <FiAlertCircle className="h-4 w-4" />,
+          colorClass: 'text-rose-600 dark:text-rose-400 bg-rose-500/10 border-rose-500/20',
+          badge: 'Hủy đơn',
+        };
       case 'PAYMENT':
-        return <FiCheckCircle className="h-4 w-4 text-emerald-500" />;
+        return {
+          icon: <FiCreditCard className="h-4 w-4" />,
+          colorClass: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
+          badge: 'Giao dịch',
+        };
       default:
-        return <FiInfo className="h-4 w-4 text-blue-500" />;
+        return {
+          icon: <FiInfo className="h-4 w-4" />,
+          colorClass: 'text-sky-600 dark:text-sky-400 bg-sky-500/10 border-sky-500/20',
+          badge: 'Hệ thống',
+        };
+    }
+  };
+
+  const formatRelativeTime = (isoString: string) => {
+    try {
+      const date = new Date(isoString);
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffMin = Math.floor(diffMs / 60000);
+      if (diffMin < 1) return 'Vừa xong';
+      if (diffMin < 60) return `${diffMin} phút trước`;
+      const diffHours = Math.floor(diffMin / 60);
+      if (diffHours < 24) return `${diffHours} giờ trước`;
+      const diffDays = Math.floor(diffHours / 24);
+      if (diffDays < 7) return `${diffDays} ngày trước`;
+      return date.toLocaleDateString('vi-VN');
+    } catch {
+      return '';
     }
   };
 
@@ -107,7 +177,7 @@ export const NotificationBell: React.FC = () => {
         onClick={() => setIsOpen(!isOpen)}
         className="relative p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-all cursor-pointer"
         aria-label="Thông báo"
-        title="Thông báo"
+        title="Thông báo hệ thống"
       >
         <FiBell className="h-5 w-5" />
         {unreadCount > 0 && (
@@ -118,8 +188,8 @@ export const NotificationBell: React.FC = () => {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl bg-card border border-border shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/40">
+        <div className="absolute right-0 top-full mt-3 w-80 sm:w-96 max-w-[calc(100vw-2rem)] rounded-2xl bg-card border border-border/80 shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card">
             <div className="flex items-center gap-2">
               <h4 className="text-sm font-bold text-foreground">Thông báo</h4>
               {unreadCount > 0 && (
@@ -133,45 +203,64 @@ export const NotificationBell: React.FC = () => {
                 onClick={markAllAsRead}
                 className="text-xs font-semibold text-primary hover:underline flex items-center gap-1 cursor-pointer"
               >
-                <FiCheck className="h-3 w-3" /> Đọc tất cả
+                <FiCheck className="h-3.5 w-3.5" /> Đọc tất cả
               </button>
             )}
           </div>
 
-          <div className="max-h-[360px] overflow-y-auto divide-y divide-border/50">
+          <div className="max-h-[380px] overflow-y-auto divide-y divide-border/50">
             {notifications.length === 0 ? (
               <div className="p-8 text-center text-muted-foreground">
-                <FiBell className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                <p className="text-xs">Chưa có thông báo nào</p>
+                <div className="h-12 w-12 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-3">
+                  <FiBell className="h-6 w-6 text-muted-foreground opacity-40" />
+                </div>
+                <p className="text-xs font-semibold text-foreground">Chưa có thông báo nào</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Các thông tin về đơn đặt chỗ, hoàn tiền và đối tác sẽ hiển thị tại đây
+                </p>
               </div>
             ) : (
-              notifications.map(item => (
-                <div
-                  key={item.id}
-                  onClick={() => !item.isRead && markAsRead(item.id)}
-                  className={`p-3.5 transition-colors cursor-pointer hover:bg-muted/50 flex gap-3 items-start ${
-                    !item.isRead ? 'bg-primary/5' : ''
-                  }`}
-                >
-                  <div className="mt-0.5 shrink-0 rounded-lg p-1.5 bg-card border border-border shadow-2xs">
-                    {getIcon(item.type)}
+              notifications.map(item => {
+                const config = getTypeConfig(item.type);
+                return (
+                  <div
+                    key={item.id}
+                    onClick={() => !item.isRead && markAsRead(item.id)}
+                    className={`p-3.5 transition-colors cursor-pointer hover:bg-muted/50 flex gap-3 items-start ${
+                      !item.isRead ? 'bg-primary/5' : ''
+                    }`}
+                  >
+                    <div
+                      className={`mt-0.5 shrink-0 rounded-xl p-2 border shadow-sm ${config.colorClass}`}
+                      title={config.badge}
+                    >
+                      {config.icon}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1 mb-0.5">
+                        <p
+                          className={`text-xs ${
+                            !item.isRead
+                              ? 'font-bold text-foreground'
+                              : 'font-semibold text-muted-foreground'
+                          }`}
+                        >
+                          {item.title}
+                        </p>
+                        <span className="text-[10px] font-medium text-muted-foreground/70 shrink-0">
+                          {formatRelativeTime(item.createdAt)}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground/90 line-clamp-2 leading-relaxed">
+                        {item.content}
+                      </p>
+                    </div>
+                    {!item.isRead && (
+                      <span className="h-2 w-2 rounded-full bg-primary shrink-0 mt-1.5" />
+                    )}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-xs ${!item.isRead ? 'font-bold text-foreground' : 'font-medium text-muted-foreground'}`}>
-                      {item.title}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground/90 mt-0.5 line-clamp-2 leading-relaxed">
-                      {item.content}
-                    </p>
-                    <p className="text-[10px] text-muted-foreground/60 mt-1">
-                      {new Date(item.createdAt).toLocaleString('vi-VN')}
-                    </p>
-                  </div>
-                  {!item.isRead && (
-                    <span className="h-2 w-2 rounded-full bg-primary shrink-0 mt-1.5" />
-                  )}
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>

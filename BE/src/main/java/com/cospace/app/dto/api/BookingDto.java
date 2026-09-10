@@ -44,5 +44,14 @@ public class BookingDto {
     private PaymentStatus paymentStatus;
     private UUID latestPaymentId;
 
+    // Cancellation Details
+    private String cancellationReason;
+    private Integer refundPercent;
+    private Long refundAmount;
+    private Long penaltyAmount;
+    private String refundStatus;
+    private String policyName;
+    private String cancelledAt;
+
     private String createdAt;
 }

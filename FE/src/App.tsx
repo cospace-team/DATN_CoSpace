@@ -341,7 +341,7 @@ const AppShell: React.FC = () => {
       {/* ─── Main Content Area ─── */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top header bar */}
-        <header className="h-[60px] flex items-center justify-between px-6 border-b border-border bg-card/60 backdrop-blur-xl shrink-0">
+        <header className="relative z-40 h-[60px] flex items-center justify-between px-6 border-b border-border bg-card/90 backdrop-blur-xl shrink-0">
           {/* Left: mobile menu + page context */}
           <div className="flex items-center gap-4">
             <button

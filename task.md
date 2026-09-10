@@ -46,6 +46,18 @@ Sử dụng ký hiệu: `[ ]` Chưa làm | `[/]` Đang làm | `[x]` Đã xong.
 - [x] In-app Notifications System (`/api/notifications` - Rule #20)
 
 ## 🧪 6. Quality & Release (Testing & Hardening)
-- [x] Backend compile: BUILD SUCCESS cho 119 file Java mã nguồn
+- [x] Backend compile: BUILD SUCCESS cho 138 file Java mã nguồn
 - [x] Frontend build: BUILD SUCCESS (`tsc && vite build`) không lỗi kiểu dữ liệu
 - [x] Đồng bộ Schema SQL: fail-safe, bảo toàn tương thích ngược cho dữ liệu thực tế Supabase
+
+## 👤 7. Customer Module Refinement & Verification
+- [x] **Lịch sử đặt chỗ (`BookingHistoryPage.tsx`)**: Bỏ nút "Đặt lại chỗ này"; Thiết kế lại chi tiết tab "Đã hủy" hiển thị minh bạch (% hoàn tiền, số tiền hoàn, phí phạt hủy, chính sách hủy áp dụng, lý do hủy).
+- [x] **Cộng đồng (`CommunityPage.tsx`)**: Seed dữ liệu thực vào PostgreSQL Supabase (4 authors, 8 bài viết cộng đồng đa dạng thể loại, 20 tags liên kết); Không dùng mock giả lập.
+- [x] **Hồ sơ & Kết nối (`ProfilePage.tsx`)**: Sửa lỗi lệch họ tên và layout rời rạc; Thay thế stats mock bằng `realStats` tính toán từ lịch sử đặt chỗ thực; Hỗ trợ lưu và hiển thị liên kết mạng xã hội (LinkedIn, GitHub, Website/Portfolio) có empty state trực quan.
+- [x] **Kỹ năng & Chuyên môn (Tags & Skills)**: Đồng bộ triệt để 3 lớp Database (`tags`, `profile_skills`), Backend (`PartnerMatchingService.updateNetworkingProfile`) và Frontend (`ProfilePage.tsx`); Auto-save ngầm mượt mà; Tự động kích hoạt lại thuật toán đối sánh Jaccard ngay khi có thay đổi; Lấy danh mục tag thực tế từ DB; Thiết kế giao diện chuyên nghiệp, loại bỏ nhãn kỹ thuật thô kệch.
+- [x] **Liên kết mạng xã hội**: Chỉnh sửa & lưu độc lập trực tiếp tại Bento Card 4 mà không cần cuộn lên; Lưu trữ JSON chuẩn trong `profiles.contact_link`.
+- [x] **Mạng lưới đối tác (Networking Suggestions)**: Bộ lọc phân loại `⭐ Phù hợp nhất` (Match Score ≥ 50%) và `🌐 Tất cả thành viên`; Phân trang hiển thị mở rộng với nút xem thêm; Sắp xếp theo mức độ phù hợp giảm dần.
+- [x] **Theme & Huy hiệu Member**: Tối ưu độ tương phản WCAG AAA cho Bronze Member trên Light theme (không còn bị chìm/mờ) và dịu mắt trên Dark theme; Bỏ huy hiệu "Đã xác thực" thừa thãi.
+- [x] **Đồng bộ Tài liệu (Docs)**: Cập nhật `docs/api-contracts/matching.md` và `docs/SYSTEM_SPEC.md` phản ánh đúng 100% các endpoints và schema DTO thực tế.
+- [x] **Hệ thống thông báo (`NotificationBell.tsx`)**: Sửa class CSS `shadow-2xs`, tối ưu responsive layout cho mobile, phân loại icon/màu sắc đẹp mắt theo 7 loại sự kiện (Đặt chỗ, Nhắc nhở trước 1h, Hoàn tiền hủy đơn, Gợi ý đối tác, Bài viết cộng đồng, Hủy đơn, Giao dịch).
+

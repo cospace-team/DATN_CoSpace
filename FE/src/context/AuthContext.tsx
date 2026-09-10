@@ -20,6 +20,7 @@ export interface AuthUser {
   branchId: string | null;
   branchName: string | null;
   phone?: string;
+  createdAt?: string;
 }
 
 interface AuthContextValue {

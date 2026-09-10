@@ -43,8 +43,9 @@ public class BookingService {
     private final CheckinLogRepository checkinLogRepository;
     private final jakarta.persistence.EntityManager entityManager;
     private final com.cospace.app.repository.WorkspaceMaintenanceRepository workspaceMaintenanceRepository;
+    private final com.cospace.app.repository.BookingCancellationRepository bookingCancellationRepository;
 
-    public BookingService(BookingRepository bookingRepository, PaymentRepository paymentRepository, PricingService pricingService, WorkspaceEntityRepository workspaceEntityRepository, com.cospace.app.repository.FloorRepository floorRepository, BranchEntityRepository branchEntityRepository, UserRepository userRepository, CheckinLogRepository checkinLogRepository, jakarta.persistence.EntityManager entityManager, com.cospace.app.repository.WorkspaceMaintenanceRepository workspaceMaintenanceRepository) {
+    public BookingService(BookingRepository bookingRepository, PaymentRepository paymentRepository, PricingService pricingService, WorkspaceEntityRepository workspaceEntityRepository, com.cospace.app.repository.FloorRepository floorRepository, BranchEntityRepository branchEntityRepository, UserRepository userRepository, CheckinLogRepository checkinLogRepository, jakarta.persistence.EntityManager entityManager, com.cospace.app.repository.WorkspaceMaintenanceRepository workspaceMaintenanceRepository, com.cospace.app.repository.BookingCancellationRepository bookingCancellationRepository) {
         this.bookingRepository = bookingRepository;
         this.paymentRepository = paymentRepository;
         this.pricingService = pricingService;
@@ -55,6 +56,7 @@ public class BookingService {
         this.checkinLogRepository = checkinLogRepository;
         this.entityManager = entityManager;
         this.workspaceMaintenanceRepository = workspaceMaintenanceRepository;
+        this.bookingCancellationRepository = bookingCancellationRepository;
     }
 
     @Transactional
@@ -422,6 +424,20 @@ public class BookingService {
         latestPaymentOpt.ifPresent(p -> builder
                 .paymentStatus(p.getStatus())
                 .latestPaymentId(p.getId()));
+
+        if (b.getStatus() == BookingStatus.CANCELLED) {
+            bookingCancellationRepository.findByBookingId(b.getId()).ifPresent(c -> {
+                builder.cancellationReason(c.getReason());
+                builder.refundPercent(c.getRefundPercent());
+                builder.refundAmount(c.getRefundAmount());
+                builder.penaltyAmount(c.getPenaltyAmount());
+                builder.refundStatus(c.getRefundStatus());
+                builder.cancelledAt(c.getCreatedAt() != null ? c.getCreatedAt().toString() : null);
+                if (c.getAppliedRuleJson() != null && c.getAppliedRuleJson().get("policy_name") != null) {
+                    builder.policyName(c.getAppliedRuleJson().get("policy_name").toString());
+                }
+            });
+        }
 
         return builder.build();
     }

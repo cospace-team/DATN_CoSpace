@@ -39,6 +39,13 @@ export interface BookingResponse {
   paymentDeadlineAt?: string;
   source: string;
   createdAt: string;
+  cancellationReason?: string;
+  refundPercent?: number;
+  refundAmount?: number;
+  penaltyAmount?: number;
+  refundStatus?: string;
+  policyName?: string;
+  cancelledAt?: string;
 }
 
 export interface MomoCreatePaymentResponse {

@@ -14,6 +14,7 @@ import {
   FiCopy,
   FiCheck,
   FiCreditCard,
+  FiShield,
 } from "react-icons/fi";
 import { Button } from "../../components/ui/button";
 import { formatVND } from "../../utils/formatters";
@@ -21,8 +22,28 @@ import { bookingApi, type BookingResponse } from "../../lib/bookingApi";
 import { startPayment } from "../../lib/startPayment";
 import { workspaces, branches } from "../../data/mockData";
 
+export interface CustomerBookingItem {
+  id: string;
+  code: string;
+  workspaceName: string;
+  branchName: string;
+  date: Date;
+  startTime: string;
+  endTime: string;
+  status: string;
+  totalAmount: number;
+  paymentMethod: string;
+  cancellationReason?: string;
+  refundPercent?: number;
+  refundAmount?: number;
+  penaltyAmount?: number;
+  refundStatus?: string;
+  policyName?: string;
+  cancelledAt?: string;
+}
+
 // Initial Mock Bookings
-const MOCK_BOOKINGS = [
+const MOCK_BOOKINGS: CustomerBookingItem[] = [
   {
     id: "b1",
     code: "WH-8823",
@@ -211,11 +232,18 @@ const BookingHistoryPage: React.FC = () => {
             hour: "2-digit",
             minute: "2-digit",
           }),
-          // Normalize: Java enum serializes as UPPERCASE → lowercase for filter
-          status: b.status ? (b.status as string).toLowerCase() : "pending_payment",
-          totalAmount: b.totalAmount,
-          paymentMethod: "momo",
-        };
+            // Normalize: Java enum serializes as UPPERCASE → lowercase for filter
+            status: b.status ? (b.status as string).toLowerCase() : "pending_payment",
+            totalAmount: b.totalAmount,
+            paymentMethod: "momo",
+            cancellationReason: b.cancellationReason,
+            refundPercent: b.refundPercent,
+            refundAmount: b.refundAmount,
+            penaltyAmount: b.penaltyAmount,
+            refundStatus: b.refundStatus,
+            policyName: b.policyName,
+            cancelledAt: b.cancelledAt,
+          };
         });
         setBookings(mapped);
         setApiLoaded(true);
@@ -447,6 +475,69 @@ const BookingHistoryPage: React.FC = () => {
                     </span>
                   </div>
                 </div>
+
+                {/* Modern Cancellation Breakdown Card */}
+                {(booking.status === "canceled" || booking.status === "cancelled") && (
+                  <div className="p-4 rounded-2xl bg-rose-500/5 border border-rose-500/20 text-xs space-y-3 animate-fade-in">
+                    <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-rose-500/15">
+                      <span className="font-semibold text-foreground flex items-center gap-1.5">
+                        <FiShield className="h-4 w-4 text-rose-500" />
+                        Chi tiết hoàn tiền & chính sách hủy
+                      </span>
+                      <span
+                        className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                          (booking.refundPercent ?? 0) > 0
+                            ? booking.refundStatus === "processed"
+                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                              : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                            : "bg-muted text-muted-foreground border border-border"
+                        }`}
+                      >
+                        {(booking.refundPercent ?? 0) > 0
+                          ? booking.refundStatus === "processed"
+                            ? "✓ Đã hoàn tiền"
+                            : "⏳ Đang xử lý hoàn tiền"
+                          : "× Không áp dụng hoàn tiền"}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-0.5">
+                      <div className="bg-card/70 p-2.5 rounded-xl border border-border/70">
+                        <span className="text-[10px] text-muted-foreground block mb-0.5">Chính sách áp dụng</span>
+                        <span className="font-bold text-foreground truncate block text-xs" title={booking.policyName || "Chính sách hủy tiêu chuẩn"}>
+                          {booking.policyName || "Chính sách hủy chuẩn"}
+                        </span>
+                      </div>
+                      <div className="bg-card/70 p-2.5 rounded-xl border border-border/70">
+                        <span className="text-[10px] text-muted-foreground block mb-0.5">Tỷ lệ hoàn</span>
+                        <span className="font-bold text-foreground text-xs">
+                          {booking.refundPercent !== undefined ? `${booking.refundPercent}%` : "—"}
+                        </span>
+                      </div>
+                      <div className="bg-card/70 p-2.5 rounded-xl border border-border/70">
+                        <span className="text-[10px] text-muted-foreground block mb-0.5">Số tiền hoàn lại</span>
+                        <span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono text-xs">
+                          {booking.refundAmount !== undefined ? formatVND(booking.refundAmount) : formatVND(0)}
+                        </span>
+                      </div>
+                      <div className="bg-card/70 p-2.5 rounded-xl border border-border/70">
+                        <span className="text-[10px] text-muted-foreground block mb-0.5">Phí hủy giữ lại</span>
+                        <span className="font-bold text-rose-600 dark:text-rose-400 font-mono text-xs">
+                          {booking.penaltyAmount !== undefined
+                            ? formatVND(booking.penaltyAmount)
+                            : formatVND(booking.totalAmount)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {booking.cancellationReason && (
+                      <div className="text-[11px] text-muted-foreground pt-1 flex items-start gap-1">
+                        <span className="font-medium text-foreground shrink-0">Lý do hủy:</span>
+                        <span className="italic">{booking.cancellationReason}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Right Quick Actions */}
@@ -486,15 +577,13 @@ const BookingHistoryPage: React.FC = () => {
                   </>
                 )}
                 {(booking.status === "completed" || booking.status === "checked_out") && (
-                  <button className="w-full py-3 bg-card text-foreground font-semibold tracking-tight border border-border rounded-full shadow-sm hover:bg-muted/50 transition-colors text-xs">
-                    Đặt lại chỗ này
-                  </button>
+                  <div className="py-2.5 px-4 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs font-semibold flex items-center justify-center gap-1.5 w-full">
+                    <FiCheckCircle className="h-4 w-4" /> Đã hoàn thành
+                  </div>
                 )}
                 {(booking.status === "canceled" || booking.status === "cancelled") && (
-                  <div className="bg-muted/50 p-3 rounded-2xl border border-border border-dashed text-center w-full">
-                    <span className="text-[10px] font-semibold text-muted-foreground">
-                      Đã hoàn tiền theo quy định
-                    </span>
+                  <div className="py-2.5 px-4 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 text-xs font-semibold flex items-center justify-center gap-1.5 w-full">
+                    <FiX className="h-4 w-4" /> Đơn đã hủy
                   </div>
                 )}
               </div>

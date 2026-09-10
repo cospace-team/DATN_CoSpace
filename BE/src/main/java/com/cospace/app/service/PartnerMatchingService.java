@@ -136,28 +136,54 @@ public class PartnerMatchingService {
         // Update Skills
         profileSkillRepository.deleteByProfileUserId(userId);
         if (req.getSkills() != null) {
-            List<ProfileSkill> newSkills = req.getSkills().stream()
-                    .filter(s -> s.getTagId() != null)
-                    .map(s -> ProfileSkill.builder()
+            List<ProfileSkill> newSkills = new ArrayList<>();
+            for (NetworkingProfileDto.SkillItemDto s : req.getSkills()) {
+                UUID tagId = s.getTagId();
+                if (tagId == null && s.getTagName() != null && !s.getTagName().isBlank()) {
+                    String name = s.getTagName().trim();
+                    Tag tag = tagRepository.findByNameIgnoreCase(name)
+                            .orElseGet(() -> tagRepository.save(Tag.builder()
+                                    .name(name)
+                                    .category("skill")
+                                    .isActive(true)
+                                    .build()));
+                    tagId = tag.getId();
+                }
+                if (tagId != null) {
+                    newSkills.add(ProfileSkill.builder()
                             .profileUserId(userId)
-                            .tagId(s.getTagId())
+                            .tagId(tagId)
                             .level(s.getLevel() > 0 ? s.getLevel() : (short) 3)
-                            .build())
-                    .toList();
+                            .build());
+                }
+            }
             profileSkillRepository.saveAll(newSkills);
         }
 
         // Update Interests
         profileInterestRepository.deleteByProfileUserId(userId);
         if (req.getInterests() != null) {
-            List<ProfileInterest> newInterests = req.getInterests().stream()
-                    .filter(i -> i.getTagId() != null)
-                    .map(i -> ProfileInterest.builder()
+            List<ProfileInterest> newInterests = new ArrayList<>();
+            for (NetworkingProfileDto.InterestItemDto i : req.getInterests()) {
+                UUID tagId = i.getTagId();
+                if (tagId == null && i.getTagName() != null && !i.getTagName().isBlank()) {
+                    String name = i.getTagName().trim();
+                    Tag tag = tagRepository.findByNameIgnoreCase(name)
+                            .orElseGet(() -> tagRepository.save(Tag.builder()
+                                    .name(name)
+                                    .category("interest")
+                                    .isActive(true)
+                                    .build()));
+                    tagId = tag.getId();
+                }
+                if (tagId != null) {
+                    newInterests.add(ProfileInterest.builder()
                             .profileUserId(userId)
-                            .tagId(i.getTagId())
+                            .tagId(tagId)
                             .priority(i.getPriority() > 0 ? i.getPriority() : (short) 3)
-                            .build())
-                    .toList();
+                            .build());
+                }
+            }
             profileInterestRepository.saveAll(newInterests);
         }
 
@@ -323,6 +349,23 @@ public class PartnerMatchingService {
             String company = candProfile != null && candProfile.getCompany() != null ? candProfile.getCompany() : "Freelancer";
             String bio = candProfile != null && candProfile.getBio() != null ? candProfile.getBio() : "";
 
+            String candLinkedin = null;
+            String candGithub = null;
+            if (candProfile != null && candProfile.getContactLink() != null) {
+                String rawLink = candProfile.getContactLink().trim();
+                if (rawLink.startsWith("{")) {
+                    try {
+                        JsonNode linkNode = new com.fasterxml.jackson.databind.ObjectMapper().readTree(rawLink);
+                        candLinkedin = linkNode.path("linkedin").asText(null);
+                        candGithub = linkNode.path("github").asText(null);
+                    } catch (Exception e) {
+                        candLinkedin = rawLink;
+                    }
+                } else {
+                    candLinkedin = rawLink;
+                }
+            }
+
             suggestions.add(PartnerSuggestionDto.builder()
                     .id(candidateId.toString())
                     .name(candidate.getFullName())
@@ -335,8 +378,8 @@ public class PartnerMatchingService {
                     .email(email)
                     .phone(phone)
                     .bio(bio)
-                    .linkedin(candProfile != null ? candProfile.getContactLink() : null)
-                    .github(null)
+                    .linkedin(candLinkedin)
+                    .github(candGithub)
                     .isSameBranch(isSameBranch)
                     .postTags(sharedPostTagNames)
                     .build());
