@@ -293,6 +293,15 @@ public class PaymentService {
 
         confirmBooking(payment.getBookingId());
     }
+
+    @Transactional(readOnly = true)
+    public PaymentStatus getPaymentStatusByOrderCode(String orderCode) {
+        String orderId = orderCode.startsWith("PAYOS-") ? orderCode : "PAYOS-" + orderCode;
+        return paymentRepository.findByOrderId(orderId)
+                .or(() -> paymentRepository.findByOrderId(orderCode))
+                .map(Payment::getStatus)
+                .orElse(null);
+    }
     
     @Transactional(readOnly = true)
     public List<PaymentDto> listPaymentsByBooking(UUID userId, UUID bookingId) {

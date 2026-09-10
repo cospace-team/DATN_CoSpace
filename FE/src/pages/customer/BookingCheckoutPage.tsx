@@ -358,13 +358,8 @@ const BookingCheckoutPage: React.FC = () => {
                     VietQR
                   </div>
                   <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-lg block text-foreground">Chuyển khoản VietQR (PayOS)</span>
-                      <span className="text-[10px] font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-800">
-                        Khuyên dùng
-                      </span>
-                    </div>
-                    <span className="text-xs font-medium text-foreground/70">Mã QR động mọi ngân hàng · Có nút giả lập thanh toán</span>
+                    <span className="font-semibold text-lg block text-foreground">Chuyển khoản VietQR</span>
+                    <span className="text-xs font-medium text-foreground/70">Quét mã QR qua mọi ứng dụng ngân hàng (NAPAS 247) · Tự động xác nhận</span>
                   </div>
                 </div>
                 <div className={`h-8 w-8 rounded-full border flex items-center justify-center ${paymentMethod === 'payos' ? 'bg-[#0052cc] border-[#0052cc] text-white' : 'border-border/50 text-transparent'}`}>

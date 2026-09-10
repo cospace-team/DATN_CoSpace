@@ -126,6 +126,7 @@ public class SecurityConfig {
                                                                 new AntPathRequestMatcher("/api/payments/payos/notify"),
                                                                 new AntPathRequestMatcher("/api/payments/payos/return"),
                                                                 new AntPathRequestMatcher("/api/payments/payos/simulate"),
+                                                                new AntPathRequestMatcher("/api/payments/payos/status/**"),
                                                                 new AntPathRequestMatcher("/api/auth/register"),
                                                                 new AntPathRequestMatcher("/api/auth/login"),
                                                                 new AntPathRequestMatcher("/api/auth/refresh"),

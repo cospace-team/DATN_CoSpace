@@ -147,6 +147,16 @@ public class PaymentController {
                 .build();
     }
 
+    @GetMapping("/payos/status/{orderCode}")
+    public ResponseEntity<Map<String, Object>> getPayosPaymentStatus(@PathVariable("orderCode") String orderCode) {
+        com.cospace.app.entity.PaymentStatus status = paymentService.getPaymentStatusByOrderCode(orderCode);
+        if (status == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("orderCode", orderCode, "status", "NOT_FOUND"));
+        }
+        return ResponseEntity.ok(Map.of("orderCode", orderCode, "status", status.name()));
+    }
+
     @PostMapping("/payos/simulate")
     public ResponseEntity<Map<String, Object>> simulatePayosPayment(@RequestBody Map<String, Object> body) {
         String orderCode = Objects.toString(body.get("orderCode"), "");
