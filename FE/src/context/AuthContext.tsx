@@ -44,19 +44,23 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 const normalizeRole = (role: unknown): UserRole => {
   if (typeof role !== "string") return "customer";
-  const normalized = role.toLowerCase();
-  return ROLE_LIST.includes(normalized as UserRole) ? (normalized as UserRole) : "customer";
+  const normalized = role.toLowerCase().trim();
+  if (normalized === "branch_admin" || normalized === "super_admin" || normalized === "admin") {
+    return "admin";
+  }
+  if (normalized === "staff") return "staff";
+  return "customer";
 };
 
-const mapBackendUser = (dataUser: any): AuthUser => ({
+const mapBackendUser = (dataUser: any, prevUser?: AuthUser | null): AuthUser => ({
   id: dataUser.id,
   email: dataUser.email,
-  fullName: dataUser.fullName,
-  avatarUrl: dataUser.avatarUrl || "",
-  role: normalizeRole(dataUser.role),
-  branchId: dataUser.branchId || null,
-  branchName: dataUser.branchName || null,
-  phone: dataUser.phone || "",
+  fullName: dataUser.fullName || dataUser.full_name || prevUser?.fullName || "",
+  avatarUrl: dataUser.avatarUrl || dataUser.avatar_url || prevUser?.avatarUrl || "",
+  role: normalizeRole(dataUser.role || prevUser?.role),
+  branchId: dataUser.branchId || dataUser.branch_id || prevUser?.branchId || null,
+  branchName: dataUser.branchName || dataUser.branch_name || prevUser?.branchName || null,
+  phone: dataUser.phone || prevUser?.phone || "",
 });
 
 /** Expiry of a JWT in epoch milliseconds, or null if it can't be read. */
@@ -99,7 +103,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const data = await response.json();
       if (!data.data?.user || !data.data?.accessToken) return false;
 
-      const mappedUser = mapBackendUser(data.data.user);
+      const mappedUser = mapBackendUser(data.data.user, user);
       localStorage.setItem("workhub_user", JSON.stringify(mappedUser));
       localStorage.setItem("workhub_access_token", data.data.accessToken);
       if (data.data.refreshToken) {
@@ -132,8 +136,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               setBackendStatus("idle");
             }
           } else {
-            setUser(JSON.parse(storedUser));
-            setBackendStatus("ok");
+            try {
+              const parsed = JSON.parse(storedUser);
+              if (parsed && typeof parsed === "object") {
+                // If the user had branchId and was incorrectly saved as customer due to previous role normalization, repair to admin
+                if (parsed.branchId && parsed.role === "customer") {
+                  parsed.role = "admin";
+                  localStorage.setItem("workhub_user", JSON.stringify(parsed));
+                }
+              }
+              setUser(parsed);
+              setBackendStatus("ok");
+            } catch {
+              setUser(null);
+            }
           }
         } else {
           setBackendStatus("idle");
@@ -218,7 +234,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
       if (response.ok) {
         const resData = await response.json();
-        const mappedUser = mapBackendUser(resData);
+        const mappedUser = mapBackendUser(resData, user);
         localStorage.setItem("workhub_user", JSON.stringify(mappedUser));
         setUser(mappedUser);
       }
@@ -313,7 +329,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       throw new Error(resData.message || "Cập nhật hồ sơ thất bại");
     }
 
-    const updatedUser = mapBackendUser(resData);
+    const updatedUser = mapBackendUser(resData, user);
     localStorage.setItem("workhub_user", JSON.stringify(updatedUser));
     setUser(updatedUser);
     return updatedUser;

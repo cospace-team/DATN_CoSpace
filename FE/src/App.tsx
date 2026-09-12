@@ -187,8 +187,8 @@ const AppShell: React.FC = () => {
     return <Navigate to="/login" replace />;
   }
 
-  const isBranchAdmin = user.role === "admin" && !!user.branchId;
-  const isSuperAdmin  = user.role === "admin" && !user.branchId;
+  const isBranchAdmin = (user.role === "admin" || (user.role as string) === "branch_admin") && !!user.branchId;
+  const isSuperAdmin  = (user.role as string) === "super_admin" || (user.role === "admin" && !user.branchId);
 
   const navItems =
     isBranchAdmin ? branchAdminNav

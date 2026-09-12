@@ -22,4 +22,16 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     java.util.List<User> findByBranchIdAndRole(UUID branchId, User.Role role);
 
     boolean existsByEmailAndIdNot(String email, UUID id);
+
+    @org.springframework.data.jpa.repository.Query("SELECT u FROM User u WHERE " +
+            "(:role IS NULL OR u.role = :role) AND " +
+            "(:branchId IS NULL OR u.branchId = :branchId) AND " +
+            "(:status IS NULL OR u.status = :status) AND " +
+            "(:search IS NULL OR :search = '' OR lower(u.fullName) LIKE lower(concat('%', :search, '%')) OR lower(u.email) LIKE lower(concat('%', :search, '%')) OR u.phone LIKE concat('%', :search, '%')) " +
+            "ORDER BY u.createdAt DESC")
+    java.util.List<User> filterUsers(
+            @org.springframework.data.repository.query.Param("role") User.Role role,
+            @org.springframework.data.repository.query.Param("branchId") UUID branchId,
+            @org.springframework.data.repository.query.Param("status") User.Status status,
+            @org.springframework.data.repository.query.Param("search") String search);
 }

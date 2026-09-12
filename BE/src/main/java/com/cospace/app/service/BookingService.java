@@ -216,7 +216,8 @@ public class BookingService {
         OffsetDateTime todayStart = todayVn.toOffsetDateTime().withOffsetSameInstant(ZoneOffset.UTC);
         OffsetDateTime todayEnd = todayVn.plusDays(1).toOffsetDateTime().withOffsetSameInstant(ZoneOffset.UTC);
         
-        return bookingRepository.findByBranchIdAndStartAtBetweenOrderByStartAtAsc(branchId, todayStart, todayEnd)
+        // Use overlap logic to include bookings spanning across today (contracts, overnight stays)
+        return bookingRepository.findBookingsInInterval(branchId, todayStart, todayEnd)
                 .stream()
                 .map(this::toDto)
                 .collect(Collectors.toList());

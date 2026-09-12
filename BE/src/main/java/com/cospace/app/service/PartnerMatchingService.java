@@ -336,8 +336,8 @@ public class PartnerMatchingService {
             }
 
             boolean contactPublic = candProfile != null && candProfile.isContactPublic();
-            String email = contactPublic ? (candProfile.getContactEmail() != null ? candProfile.getContactEmail() : candidate.getEmail()) : null;
-            String phone = contactPublic ? (candProfile.getContactPhone() != null ? candProfile.getContactPhone() : candidate.getPhone()) : null;
+            String email = (candProfile != null && contactPublic) ? (candProfile.getContactEmail() != null ? candProfile.getContactEmail() : candidate.getEmail()) : null;
+            String phone = (candProfile != null && contactPublic) ? (candProfile.getContactPhone() != null ? candProfile.getContactPhone() : candidate.getPhone()) : null;
 
             String avatar = (candidate.getAvatarUrl() != null && !candidate.getAvatarUrl().isBlank())
                     ? candidate.getAvatarUrl()

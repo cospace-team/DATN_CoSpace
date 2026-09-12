@@ -1045,11 +1045,11 @@ const ExplorePage: React.FC = () => {
       {/* ── Top Toolbar (Block-based) ── */}
       <div className="flex items-center gap-3 px-6 py-3 bg-card border-b border-border shrink-0 overflow-x-auto shadow-sm">
         {/* View mode switcher */}
-        <div className="flex rounded-2xl border border-border overflow-hidden shrink-0 shadow-sm">
+        <div className="flex items-center bg-muted/60 p-1 rounded-2xl border border-border shrink-0 shadow-sm">
           {[
             {
               mode: "day" as ViewMode,
-              label: "NGÀY",
+              label: "LỊCH NGÀY",
               icon: <FiCalendar className="h-3.5 w-3.5" />,
             },
             {
@@ -1064,17 +1064,17 @@ const ExplorePage: React.FC = () => {
             },
             {
               mode: "map" as ViewMode,
-              label: "BẢN ĐỒ",
+              label: "SƠ ĐỒ 2D",
               icon: <FiMap className="h-3.5 w-3.5" />,
             },
           ].map((v) => (
             <button
               key={v.mode}
               onClick={() => setViewMode(v.mode)}
-              className={`flex items-center gap-1.5 px-4 py-2 text-xs font-medium transition-all border-r last:border-r-0 border-border ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-all rounded-xl ${
                 viewMode === v.mode
-                  ? "bg-slate-900 text-white"
-                  : "bg-card text-foreground hover:bg-muted"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               {v.icon} {v.label}
@@ -1387,53 +1387,63 @@ const ExplorePage: React.FC = () => {
                       onClick={() =>
                         setSelectedWs(selectedWs === ws.id ? null : ws.id)
                       }
-                      className="bg-card rounded-2xl border border-border p-5 cursor-pointer shadow-sm hover:-translate-y-1 hover:shadow-sm transition-all flex flex-col h-full"
-                      style={
+                      className={`group relative overflow-hidden bg-card rounded-3xl border transition-all duration-300 p-5 cursor-pointer flex flex-col h-full ${
                         selectedWs === ws.id
-                          ? { borderColor: "#3B82F6", boxShadow: "0 0 0 2px rgba(59, 130, 246, 0.2)" }
-                          : undefined
-                      }
+                          ? "border-primary ring-2 ring-primary/25 shadow-lg -translate-y-1 bg-primary/[0.02]"
+                          : "border-border shadow-sm hover:-translate-y-1 hover:shadow-md hover:border-primary/40"
+                      }`}
                     >
-                      <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center justify-between mb-3.5">
                         <span
-                          className={`px-3 py-1 rounded-full text-xs font-medium border border-border ${
+                          className={`px-3 py-1 rounded-full text-xs font-semibold border ${
                             avail === "available"
-                              ? "bg-emerald-100 text-emerald-800 dark:text-emerald-400 dark:text-emerald-400"
+                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
                               : avail === "booked"
-                                ? "bg-rose-100 text-rose-800"
-                                : "bg-slate-200 text-foreground"
+                                ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20"
+                                : "bg-muted text-muted-foreground border-border"
                           }`}
                         >
                           {avail === "available"
-                            ? "Trống"
+                            ? "Còn trống"
                             : avail === "booked"
-                              ? "Đã đặt"
-                              : "Bảo trì"}
+                              ? "Đang có khách"
+                              : "Đang bảo trì"}
                         </span>
                         {zone && (
                           <span
-                            className="h-3 w-8 rounded-lg border border-border"
-                            style={{ background: zone.color }}
-                          />
+                            className="text-[10px] font-semibold px-2 py-0.5 rounded-full border border-border"
+                            style={{ backgroundColor: zone.bgColor, color: zone.color }}
+                          >
+                            {zone.name}
+                          </span>
                         )}
                       </div>
-                      <h3 className="text-lg font-medium text-foreground">
-                        {ws.name} <span className="opacity-70 text-sm">({ws.code})</span>
+                      <h3 className="text-lg font-bold text-foreground group-hover:text-primary transition-colors flex items-center justify-between">
+                        <span>{ws.name}</span>
+                        <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-muted text-muted-foreground border border-border">
+                          {ws.code}
+                        </span>
                       </h3>
-                      <p className="text-sm font-semibold text-foreground opacity-80 mt-1">
-                        {ws.workspaceTypeName || wsType?.name} · {ws.capacity}{" "}
-                        chỗ
+                      <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1.5">
+                        <FiUsers className="h-3.5 w-3.5 text-primary" />
+                        <span>{ws.workspaceTypeName || wsType?.name || 'Không gian làm việc'}</span>
+                        <span>·</span>
+                        <span>{ws.capacity} chỗ ngồi</span>
                       </p>
                       
-                      <div className="mt-auto pt-4">
+                      <div className="mt-auto pt-4 border-t border-border/60">
                         {price && (
-                          <p className="font-medium text-lg text-foreground">
-                            {formatVND(price.price)}<span className="text-sm opacity-80">/{durationUnitLabel[price.duration_unit]?.toLowerCase()}</span>
-                          </p>
+                          <div className="flex items-baseline justify-between">
+                            <span className="text-xs text-muted-foreground">Giá tiêu chuẩn:</span>
+                            <p className="font-bold text-lg text-primary">
+                              {formatVND(price.price)}
+                              <span className="text-xs font-normal text-muted-foreground">/{durationUnitLabel[price.duration_unit]?.toLowerCase()}</span>
+                            </p>
+                          </div>
                         )}
                         {avail === "available" && (
-                          <button className="w-full mt-4 bg-card text-foreground border border-border py-2.5 rounded-2xl font-medium shadow-sm hover:bg-card transition-colors">
-                            Đặt chỗ ngay
+                          <button className="w-full mt-3 btn btn-primary py-2.5 rounded-2xl font-semibold text-xs shadow-sm hover:shadow-md transition-all">
+                            Chọn đặt bàn này
                           </button>
                         )}
                       </div>

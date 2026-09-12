@@ -61,13 +61,16 @@ public class ReportService {
 
     @Transactional(readOnly = true)
     public ReportOverviewDto getOverview(UUID branchId, LocalDate dateFrom, LocalDate dateTo) {
+        return getOverview(branchId, dateFrom, dateTo, null);
+    }
+
+    @Transactional(readOnly = true)
+    public ReportOverviewDto getOverview(UUID branchId, LocalDate dateFrom, LocalDate dateTo, String groupBy) {
         OffsetDateTime start = (dateFrom != null) ? vnStartOfDay(dateFrom) : null;
         OffsetDateTime end = (dateTo != null) ? vnEndOfDay(dateTo) : null;
 
         List<Booking> allBookings = bookingRepository.findAll();
         List<BranchEntity> branches = branchRepository.findAll();
-        Map<String, WorkspaceType> typeMap = workspaceTypeRepository.findAll().stream()
-                .collect(Collectors.toMap(wt -> wt.getId().toString(), Function.identity(), (a, b) -> a));
 
         // Filter bookings
         List<Booking> branchBookings = allBookings.stream()
@@ -75,15 +78,19 @@ public class ReportService {
                 .toList();
                 
         List<Booking> filtered = branchBookings.stream()
-                .filter(b -> start == null || (b.getCreatedAt() != null && !b.getCreatedAt().isBefore(start)))
-                .filter(b -> end == null || (b.getCreatedAt() != null && !b.getCreatedAt().isAfter(end)))
+                .filter(b -> {
+                    OffsetDateTime t = getBookingEffectiveTime(b);
+                    return (start == null || (t != null && !t.isBefore(start))) &&
+                           (end == null || (t != null && !t.isAfter(end)));
+                })
                 .toList();
                 
-        // Fetch all PAID payments for this branch for fallback
+        // Filter payments: scoped to this branch's bookings
         Set<UUID> branchBookingIds = branchBookings.stream().map(Booking::getId).collect(Collectors.toSet());
-        List<Payment> branchPayments = paymentRepository.findAll().stream()
-                .filter(p -> p.getStatus() == PaymentStatus.PAID)
+        List<Payment> allPayments = paymentRepository.findAll();
+        List<Payment> branchPayments = allPayments.stream()
                 .filter(p -> branchBookingIds.contains(p.getBookingId()))
+                .filter(p -> p.getStatus() == PaymentStatus.PAID)
                 .toList();
 
         int totalBookings = filtered.size();
@@ -95,68 +102,244 @@ public class ReportService {
         // numbers are derived from the exact same rule and can never disagree with each other.
         long totalRevenue = computeRevenue(filtered, branchPayments, start, end);
 
-        // Determine the range of months to display
-        YearMonth startYM;
-        YearMonth endYM;
-        if (start != null && end != null) {
-            startYM = toVnYearMonth(start);
-            endYM = toVnYearMonth(end);
-        } else {
-            endYM = YearMonth.now(VN_ZONE);
-            startYM = endYM.minusMonths(5); // Default to last 6 months
-        }
-        
-        // Cap at 12 months to avoid UI overflow
-        if (java.time.temporal.ChronoUnit.MONTHS.between(startYM, endYM) > 11) {
-            startYM = endYM.minusMonths(11);
+        // Resolve local date boundaries in VN time zone to avoid UTC offset day/year shifting
+        LocalDate localFrom = (dateFrom != null) ? dateFrom : (start != null ? start.atZoneSameInstant(VN_ZONE).toLocalDate() : null);
+        LocalDate localTo = (dateTo != null) ? dateTo : (end != null ? end.atZoneSameInstant(VN_ZONE).toLocalDate() : null);
+
+        // Determine effective grouping: hour, day, week, month, quarter
+        String effectiveGroupBy = (groupBy != null && !groupBy.isBlank()) ? groupBy.trim().toLowerCase() : "auto";
+        if ("auto".equals(effectiveGroupBy)) {
+            if (localFrom != null && localTo != null && localFrom.equals(localTo)) {
+                effectiveGroupBy = "hour";
+            } else if (localFrom != null && localTo != null && java.time.temporal.ChronoUnit.DAYS.between(localFrom, localTo) <= 8) {
+                effectiveGroupBy = "day";
+            } else if (localFrom != null && localTo != null && java.time.temporal.ChronoUnit.DAYS.between(localFrom, localTo) <= 35 && localFrom.getMonth() == localTo.getMonth()) {
+                effectiveGroupBy = "week";
+            } else {
+                effectiveGroupBy = "month";
+            }
         }
 
         List<String> months = new ArrayList<>();
         List<Long> monthlyRevenue = new ArrayList<>();
-        
-        YearMonth ym = startYM;
-        while (!ym.isAfter(endYM)) {
-            String label = "T" + ym.getMonthValue();
-            if (startYM.getYear() != endYM.getYear()) {
-                label += "/" + (ym.getYear() % 100);
+        List<Integer> monthlyBookings = new ArrayList<>();
+
+        if ("hour".equals(effectiveGroupBy)) {
+            // Hourly blocks (08:00, 10:00, 12:00, 14:00, 16:00, 18:00, 20:00, 22:00) for single day / today
+            LocalDate targetDate = (localFrom != null) ? localFrom : LocalDate.now(VN_ZONE);
+            for (int h = 8; h <= 22; h += 2) {
+                LocalTime tStart = LocalTime.of(h, 0);
+                LocalTime tEnd = (h == 22) ? LocalTime.of(23, 59, 59, 999_999_999) : LocalTime.of(h + 1, 59, 59, 999_999_999);
+                OffsetDateTime slotStart = targetDate.atTime(tStart).atZone(VN_ZONE).toOffsetDateTime().withOffsetSameInstant(ZoneOffset.UTC);
+                OffsetDateTime slotEnd = targetDate.atTime(tEnd).atZone(VN_ZONE).toOffsetDateTime().withOffsetSameInstant(ZoneOffset.UTC);
+
+                months.add(String.format("%02d:00", h));
+
+                List<Booking> slotBookings = branchBookings.stream()
+                        .filter(b -> {
+                            OffsetDateTime t = getBookingEffectiveTime(b);
+                            return t != null && !t.isBefore(slotStart) && !t.isAfter(slotEnd);
+                        })
+                        .toList();
+                List<Payment> slotPayments = branchPayments.stream()
+                        .filter(p -> p.getCreatedAt() != null && !p.getCreatedAt().isBefore(slotStart) && !p.getCreatedAt().isAfter(slotEnd))
+                        .toList();
+                monthlyRevenue.add(computeRevenue(slotBookings, slotPayments, slotStart, slotEnd));
+                monthlyBookings.add((int) slotBookings.stream().filter(b -> REVENUE_STATUSES.contains(b.getStatus())).count());
             }
-            months.add(label);
-            
-            // Scope both bookings and payments to this calendar month (in VN time) AND to the
-            // overall requested [start, end] window — the window can be narrower than a full
-            // month (e.g. a "this week" filter), and without this second filter the bucket would
-            // count the whole month's revenue while the KPI total above only counts the window,
-            // so the chart bars would never add up to the headline total.
-            final YearMonth currentYm = ym;
-            List<Booking> monthBookings = branchBookings.stream()
-                    .filter(b -> b.getCreatedAt() != null && toVnYearMonth(b.getCreatedAt()).equals(currentYm))
-                    .filter(b -> start == null || !b.getCreatedAt().isBefore(start))
-                    .filter(b -> end == null || !b.getCreatedAt().isAfter(end))
-                    .toList();
-            List<Payment> monthPayments = branchPayments.stream()
-                    .filter(p -> p.getCreatedAt() != null && toVnYearMonth(p.getCreatedAt()).equals(currentYm))
-                    .toList();
-            long mRev = computeRevenue(monthBookings, monthPayments, start, end);
-            monthlyRevenue.add(mRev);
-            ym = ym.plusMonths(1);
+        } else if ("day".equals(effectiveGroupBy)) {
+            // Daily granularity: show all days in range (e.g. 01/09 to 30/09 for this month)
+            LocalDate cur = (localFrom != null) ? localFrom : LocalDate.now(VN_ZONE).minusDays(6);
+            LocalDate last = (localTo != null) ? localTo : LocalDate.now(VN_ZONE);
+            DateTimeFormatter dayFmt = DateTimeFormatter.ofPattern("dd/MM");
+            while (!cur.isAfter(last)) {
+                OffsetDateTime dayStart = vnStartOfDay(cur);
+                OffsetDateTime dayEnd = vnEndOfDay(cur);
+                months.add(cur.format(dayFmt));
+                List<Booking> dayBookings = branchBookings.stream()
+                        .filter(b -> {
+                            OffsetDateTime t = getBookingEffectiveTime(b);
+                            return t != null && !t.isBefore(dayStart) && !t.isAfter(dayEnd);
+                        })
+                        .toList();
+                List<Payment> dayPayments = branchPayments.stream()
+                        .filter(p -> p.getCreatedAt() != null && !p.getCreatedAt().isBefore(dayStart) && !p.getCreatedAt().isAfter(dayEnd))
+                        .toList();
+                monthlyRevenue.add(computeRevenue(dayBookings, dayPayments, dayStart, dayEnd));
+                monthlyBookings.add((int) dayBookings.stream().filter(b -> REVENUE_STATUSES.contains(b.getStatus())).count());
+                cur = cur.plusDays(1);
+            }
+        } else if ("week".equals(effectiveGroupBy)) {
+            LocalDate wRangeStart = (localFrom != null) ? localFrom : LocalDate.now(VN_ZONE).withDayOfMonth(1);
+            LocalDate wRangeEnd = (localTo != null) ? localTo : wRangeStart.withDayOfMonth(wRangeStart.lengthOfMonth());
+
+            YearMonth startYm = YearMonth.from(wRangeStart);
+            YearMonth endYm = YearMonth.from(wRangeEnd);
+
+            if (startYm.equals(endYm)) {
+                // Single month weekly breakdown (Tuần 1..5 of this month)
+                int lengthOfMonth = wRangeStart.lengthOfMonth();
+                int[][] weekRanges = { {1, 7}, {8, 14}, {15, 21}, {22, 28}, {29, lengthOfMonth} };
+                int maxWeeks = (lengthOfMonth > 28) ? 5 : 4;
+                for (int i = 0; i < maxWeeks; i++) {
+                    int startDay = weekRanges[i][0];
+                    int endDay = Math.min(weekRanges[i][1], lengthOfMonth);
+                    LocalDate wStart = wRangeStart.withDayOfMonth(startDay);
+                    LocalDate wEnd = wRangeStart.withDayOfMonth(endDay);
+                    
+                    OffsetDateTime wStartDt = vnStartOfDay(wStart);
+                    OffsetDateTime wEndDt = vnEndOfDay(wEnd);
+                    
+                    String label = String.format("Tuần %d (%02d-%02d)", i + 1, startDay, endDay);
+                    months.add(label);
+                    
+                    List<Booking> weekBookings = branchBookings.stream()
+                            .filter(b -> {
+                                OffsetDateTime t = getBookingEffectiveTime(b);
+                                return t != null && !t.isBefore(wStartDt) && !t.isAfter(wEndDt);
+                            })
+                            .toList();
+                    List<Payment> weekPayments = branchPayments.stream()
+                            .filter(p -> p.getCreatedAt() != null && !p.getCreatedAt().isBefore(wStartDt) && !p.getCreatedAt().isAfter(wEndDt))
+                            .toList();
+                    monthlyRevenue.add(computeRevenue(weekBookings, weekPayments, wStartDt, wEndDt));
+                    monthlyBookings.add((int) weekBookings.stream().filter(b -> REVENUE_STATUSES.contains(b.getStatus())).count());
+                }
+            } else {
+                // Multi-month range (e.g. Quarter spanning 3 months): continuous 13 weeks across the quarter
+                DateTimeFormatter dayMonthFmt = DateTimeFormatter.ofPattern("dd/MM");
+                LocalDate curWeekStart = wRangeStart;
+                int weekIndex = 1;
+                while (!curWeekStart.isAfter(wRangeEnd)) {
+                    LocalDate curWeekEnd = curWeekStart.plusDays(6);
+                    // If remaining tail after this week is 3 days or fewer, merge into this week to prevent a 1-day tail
+                    if (curWeekEnd.isAfter(wRangeEnd) || !curWeekStart.plusDays(9).isBefore(wRangeEnd)) {
+                        curWeekEnd = wRangeEnd;
+                    }
+
+                    OffsetDateTime wStartDt = vnStartOfDay(curWeekStart);
+                    OffsetDateTime wEndDt = vnEndOfDay(curWeekEnd);
+
+                    String label = String.format("Tuần %d (%s-%s)", weekIndex, curWeekStart.format(dayMonthFmt), curWeekEnd.format(dayMonthFmt));
+                    months.add(label);
+
+                    List<Booking> weekBookings = branchBookings.stream()
+                            .filter(b -> {
+                                OffsetDateTime t = getBookingEffectiveTime(b);
+                                return t != null && !t.isBefore(wStartDt) && !t.isAfter(wEndDt);
+                            })
+                            .toList();
+                    List<Payment> weekPayments = branchPayments.stream()
+                            .filter(p -> p.getCreatedAt() != null && !p.getCreatedAt().isBefore(wStartDt) && !p.getCreatedAt().isAfter(wEndDt))
+                            .toList();
+                    monthlyRevenue.add(computeRevenue(weekBookings, weekPayments, wStartDt, wEndDt));
+                    monthlyBookings.add((int) weekBookings.stream().filter(b -> REVENUE_STATUSES.contains(b.getStatus())).count());
+
+                    curWeekStart = curWeekEnd.plusDays(1);
+                    weekIndex++;
+                }
+            }
+        } else if ("quarter".equals(effectiveGroupBy)) {
+            // Quarterly granularity: 4 Quý (Q1..Q4) for the selected calendar year
+            int currentYear = (localFrom != null) ? localFrom.getYear() : LocalDate.now(VN_ZONE).getYear();
+            int[][] quarters = { {1, 3}, {4, 6}, {7, 9}, {10, 12} };
+            for (int q = 0; q < 4; q++) {
+                int startMonth = quarters[q][0];
+                int endMonth = quarters[q][1];
+                LocalDate qStart = LocalDate.of(currentYear, startMonth, 1);
+                LocalDate qEnd = LocalDate.of(currentYear, endMonth, YearMonth.of(currentYear, endMonth).lengthOfMonth());
+
+                OffsetDateTime qStartDt = vnStartOfDay(qStart);
+                OffsetDateTime qEndDt = vnEndOfDay(qEnd);
+
+                months.add(String.format("Q%d (T%d-T%d)", q + 1, startMonth, endMonth));
+
+                List<Booking> qBookings = branchBookings.stream()
+                        .filter(b -> {
+                            OffsetDateTime t = getBookingEffectiveTime(b);
+                            return t != null && !t.isBefore(qStartDt) && !t.isAfter(qEndDt);
+                        })
+                        .toList();
+                List<Payment> qPayments = branchPayments.stream()
+                        .filter(p -> p.getCreatedAt() != null && !p.getCreatedAt().isBefore(qStartDt) && !p.getCreatedAt().isAfter(qEndDt))
+                        .toList();
+                monthlyRevenue.add(computeRevenue(qBookings, qPayments, qStartDt, qEndDt));
+                monthlyBookings.add((int) qBookings.stream().filter(b -> REVENUE_STATUSES.contains(b.getStatus())).count());
+            }
+        } else {
+            // Monthly granularity: for Year, Quarter or custom date ranges
+            YearMonth startYM;
+            YearMonth endYM;
+            if (localFrom != null && localTo != null) {
+                startYM = YearMonth.from(localFrom);
+                endYM = YearMonth.from(localTo);
+            } else {
+                endYM = YearMonth.now(VN_ZONE);
+                startYM = endYM.minusMonths(5);
+            }
+
+            // When viewing a calendar year, always display all 12 months (T1..T12) with future months having 0
+            if (localFrom != null && localTo != null && localFrom.getYear() == localTo.getYear() && localFrom.getMonthValue() == 1 && (localTo.getMonthValue() == 12 || "year".equalsIgnoreCase(groupBy))) {
+                startYM = YearMonth.of(localFrom.getYear(), 1);
+                endYM = YearMonth.of(localFrom.getYear(), 12);
+            }
+
+            YearMonth ym = startYM;
+            while (!ym.isAfter(endYM)) {
+                String label = "T" + ym.getMonthValue();
+                if (startYM.getYear() != endYM.getYear()) {
+                    label += "/" + (ym.getYear() % 100);
+                }
+                months.add(label);
+
+                final YearMonth currentYm = ym;
+                OffsetDateTime ymStart = vnStartOfDay(ym.atDay(1));
+                OffsetDateTime ymEnd = vnEndOfDay(ym.atEndOfMonth());
+
+                List<Booking> monthBookings = branchBookings.stream()
+                        .filter(b -> {
+                            OffsetDateTime t = getBookingEffectiveTime(b);
+                            return t != null && toVnYearMonth(t).equals(currentYm);
+                        })
+                        .toList();
+                List<Payment> monthPayments = branchPayments.stream()
+                        .filter(p -> p.getCreatedAt() != null && toVnYearMonth(p.getCreatedAt()).equals(currentYm))
+                        .toList();
+                monthlyRevenue.add(computeRevenue(monthBookings, monthPayments, ymStart, ymEnd));
+                monthlyBookings.add((int) monthBookings.stream().filter(b -> REVENUE_STATUSES.contains(b.getStatus())).count());
+                ym = ym.plusMonths(1);
+            }
         }
 
-        // By workspace type breakdown
+        // Canonical Workspace Type breakdown
         String[] colors = {
                 "from-blue-500 to-indigo-500",
-                "from-violet-500 to-purple-500",
                 "from-emerald-500 to-teal-500",
+                "from-purple-500 to-violet-500",
                 "from-amber-500 to-orange-500"
         };
+        
+        Map<String, String> canonicalNameMap = new HashMap<>();
+        for (WorkspaceType wt : workspaceTypeRepository.findAll()) {
+            canonicalNameMap.put(wt.getId().toString(), wt.getName());
+            canonicalNameMap.put(wt.getCode(), wt.getName());
+        }
+
         Map<String, List<Booking>> groupedByType = filtered.stream()
-                .collect(Collectors.groupingBy(b -> b.getWorkspaceTypeId() != null ? b.getWorkspaceTypeId() : "Khác"));
+                .collect(Collectors.groupingBy(b -> {
+                    String raw = b.getWorkspaceTypeId();
+                    if (raw == null || raw.isBlank()) return "Bàn làm việc";
+                    if (canonicalNameMap.containsKey(raw)) return canonicalNameMap.get(raw);
+                    String lower = raw.toLowerCase();
+                    if (lower.contains("meeting")) return "Phòng họp";
+                    if (lower.contains("office") || lower.contains("private")) return "Văn phòng riêng";
+                    return "Bàn làm việc";
+                }));
 
         List<ReportOverviewDto.WorkspaceTypeStatDto> byType = new ArrayList<>();
         int colorIdx = 0;
         for (Map.Entry<String, List<Booking>> entry : groupedByType.entrySet()) {
-            String typeKey = entry.getKey();
-            WorkspaceType wt = typeMap.get(typeKey);
-            String typeName = wt != null ? wt.getName() : "Không gian làm việc";
+            String typeName = entry.getKey();
             int count = entry.getValue().size();
             Set<UUID> typeBookingIds = entry.getValue().stream().map(Booking::getId).collect(Collectors.toSet());
             List<Payment> typePayments = branchPayments.stream()
@@ -207,9 +390,14 @@ public class ReportService {
                 .canceledBookings(canceledBookings)
                 .months(months)
                 .monthlyRevenue(monthlyRevenue)
+                .monthlyBookings(monthlyBookings)
                 .byType(byType)
                 .branchComparison(branchComparison)
                 .build();
+    }
+
+    private OffsetDateTime getBookingEffectiveTime(Booking b) {
+        return b.getStartAt() != null ? b.getStartAt() : b.getCreatedAt();
     }
 
     /**
@@ -255,9 +443,12 @@ public class ReportService {
 
         List<Booking> list = bookingRepository.findAll().stream()
                 .filter(b -> branchId == null || branchId.equals(b.getBranchId()))
-                .filter(b -> start == null || (b.getCreatedAt() != null && !b.getCreatedAt().isBefore(start)))
-                .filter(b -> end == null || (b.getCreatedAt() != null && !b.getCreatedAt().isAfter(end)))
-                .sorted(Comparator.comparing(Booking::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
+                .filter(b -> {
+                    OffsetDateTime t = getBookingEffectiveTime(b);
+                    return (start == null || (t != null && !t.isBefore(start))) &&
+                           (end == null || (t != null && !t.isAfter(end)));
+                })
+                .sorted(Comparator.comparing(this::getBookingEffectiveTime, Comparator.nullsLast(Comparator.reverseOrder())))
                 .toList();
 
         Map<UUID, User> userMap = userRepository.findAll().stream()

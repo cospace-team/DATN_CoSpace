@@ -31,6 +31,9 @@ export interface BranchTodayBookingDto {
   status: string;
   totalAmount: number;
   type?: string;
+  unit?: 'hour' | 'day' | 'week' | 'month';
+  unitCount?: number;
+  isContract?: boolean;
 }
 
 export interface StaffDashboardStatsDto {
@@ -129,6 +132,7 @@ export interface ReportOverviewDto {
   canceledBookings: number;
   months: string[];
   monthlyRevenue: number[];
+  monthlyBookings?: number[];
   byType: { type: string; count: number; revenue: number; color: string }[];
   branchComparison?: any[];
 }
@@ -529,19 +533,26 @@ export const staffApi = {
 
   /* ── Reports ── */
 
-  getReportOverview: async (branchId: string, dateFrom?: string, dateTo?: string): Promise<ReportOverviewDto> => {
-    let url = `${API_BASE_URL}/api/reports/overview?branchId=${branchId}`;
-    if (dateFrom) url += `&dateFrom=${dateFrom}`;
-    if (dateTo) url += `&dateTo=${dateTo}`;
+  getReportOverview: async (branchId?: string, dateFrom?: string, dateTo?: string, groupBy?: string): Promise<ReportOverviewDto> => {
+    const params = new URLSearchParams();
+    if (branchId) params.append('branchId', branchId);
+    if (dateFrom) params.append('dateFrom', dateFrom);
+    if (dateTo) params.append('dateTo', dateTo);
+    if (groupBy) params.append('groupBy', groupBy);
+    const queryString = params.toString();
+    const url = `${API_BASE_URL}/api/reports/overview${queryString ? `?${queryString}` : ''}`;
     const res = await fetch(url, { headers: getAuthHeaders() });
     if (!res.ok) throw new Error('Failed to fetch report overview');
     return res.json();
   },
 
-  exportReportCsv: async (branchId: string, dateFrom?: string, dateTo?: string): Promise<Blob> => {
-    let url = `${API_BASE_URL}/api/reports/export/csv?branchId=${branchId}`;
-    if (dateFrom) url += `&dateFrom=${dateFrom}`;
-    if (dateTo) url += `&dateTo=${dateTo}`;
+  exportReportCsv: async (branchId?: string, dateFrom?: string, dateTo?: string): Promise<Blob> => {
+    const params = new URLSearchParams();
+    if (branchId) params.append('branchId', branchId);
+    if (dateFrom) params.append('dateFrom', dateFrom);
+    if (dateTo) params.append('dateTo', dateTo);
+    const queryString = params.toString();
+    const url = `${API_BASE_URL}/api/reports/export/csv${queryString ? `?${queryString}` : ''}`;
     const res = await fetch(url, { headers: getAuthHeaders() });
     if (!res.ok) throw new Error('Không thể xuất báo cáo.');
     return res.blob();

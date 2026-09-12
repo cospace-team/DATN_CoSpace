@@ -153,13 +153,13 @@ const MaintenancePage: React.FC = () => {
         
         <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
           <div className="relative w-full md:w-64">
-            <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
             <input
               type="text"
               placeholder="Tìm kiếm không gian..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="input-field pl-10 w-full"
+              className="input-field !pl-10 w-full"
             />
           </div>
           

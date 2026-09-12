@@ -279,21 +279,36 @@ const BookingHistoryPage: React.FC = () => {
     setIsCanceling(true);
 
     try {
-      // Always go through the real API — never fake success locally. If the initial booking
-      // list load fell back to mock data, this call fails honestly instead of pretending the
-      // cancellation went through.
       const result = await bookingApi.cancelBooking(showCancelModal);
 
       setBookings((prev) =>
         prev.map((b) =>
-          b.id === showCancelModal ? { ...b, status: "cancelled" } : b,
+          b.id === showCancelModal
+            ? {
+                ...b,
+                status: "canceled",
+                refundPercent: result.refundPercent,
+                refundAmount: result.refundAmount,
+                penaltyAmount: result.penaltyAmount,
+                refundStatus: result.refundStatus,
+                cancelledAt: new Date().toISOString(),
+              }
+            : b,
         ),
       );
 
       setShowCancelModal(null);
-      setSuccessMessage(
-        `Yêu cầu hủy đơn đặt chỗ thành công. Hoàn tiền: ${formatVND(result.refundAmount)} (${result.refundPercent}% theo chính sách hủy).`,
-      );
+      setActiveTab("canceled");
+
+      if (result.refundAmount > 0) {
+        setSuccessMessage(
+          `Hủy đơn thành công! Bạn được hoàn ${formatVND(result.refundAmount)} (${result.refundPercent}% giá trị đơn) theo chính sách hủy.`,
+        );
+      } else {
+        setSuccessMessage(
+          `Hủy đơn thành công. Theo chính sách áp dụng tại thời điểm hủy, đơn này không thuộc diện hoàn phí (0%).`,
+        );
+      }
       setTimeout(() => setSuccessMessage(null), 6000);
     } catch (err: any) {
       console.error("Failed to cancel booking:", err);
@@ -529,13 +544,6 @@ const BookingHistoryPage: React.FC = () => {
                         </span>
                       </div>
                     </div>
-
-                    {booking.cancellationReason && (
-                      <div className="text-[11px] text-muted-foreground pt-1 flex items-start gap-1">
-                        <span className="font-medium text-foreground shrink-0">Lý do hủy:</span>
-                        <span className="italic">{booking.cancellationReason}</span>
-                      </div>
-                    )}
                   </div>
                 )}
               </div>

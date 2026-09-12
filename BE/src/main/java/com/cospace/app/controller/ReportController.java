@@ -33,9 +33,10 @@ public class ReportController {
             @AuthenticationPrincipal Jwt jwt,
             @RequestParam(value = "branchId", required = false) UUID branchId,
             @RequestParam(value = "dateFrom", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
-            @RequestParam(value = "dateTo", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo) {
+            @RequestParam(value = "dateTo", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+            @RequestParam(value = "groupBy", required = false) String groupBy) {
         UUID effectiveBranchId = branchAccessGuard.resolveReportBranchId(jwt, branchId);
-        return ResponseEntity.ok(reportService.getOverview(effectiveBranchId, dateFrom, dateTo));
+        return ResponseEntity.ok(reportService.getOverview(effectiveBranchId, dateFrom, dateTo, groupBy));
     }
 
     @GetMapping("/export/csv")

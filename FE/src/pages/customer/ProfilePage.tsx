@@ -7,6 +7,7 @@ import {
   FiPhone,
   FiGithub,
   FiLinkedin,
+  FiFacebook,
   FiGlobe,
   FiSettings,
   FiCheck,
@@ -179,6 +180,8 @@ const ProfilePage: React.FC = () => {
   const [socialLinks, setSocialLinks] = useState({
     linkedin: '',
     github: '',
+    facebook: '',
+    email: '',
     website: '',
   });
   const [isEditingSocial, setIsEditingSocial] = useState(false);
@@ -338,15 +341,21 @@ const ProfilePage: React.FC = () => {
                 setSocialLinks({
                   linkedin: parsed.linkedin || '',
                   github: parsed.github || '',
+                  facebook: parsed.facebook || '',
+                  email: parsed.email || '',
                   website: parsed.website || '',
                 });
               } catch {
-                setSocialLinks(prev => ({ ...prev, linkedin: raw }));
+                setSocialLinks(prev => ({ ...prev, website: raw }));
               }
             } else if (raw.includes('linkedin.com')) {
               setSocialLinks(prev => ({ ...prev, linkedin: raw }));
             } else if (raw.includes('github.com')) {
               setSocialLinks(prev => ({ ...prev, github: raw }));
+            } else if (raw.includes('facebook.com')) {
+              setSocialLinks(prev => ({ ...prev, facebook: raw }));
+            } else if (raw.includes('@')) {
+              setSocialLinks(prev => ({ ...prev, email: raw }));
             } else {
               setSocialLinks(prev => ({ ...prev, website: raw }));
             }
@@ -483,9 +492,11 @@ const ProfilePage: React.FC = () => {
     setIsSavingProfile(true);
     try {
       const contactLinkJson = JSON.stringify({
-        linkedin: socialLinks.linkedin.trim(),
-        github: socialLinks.github.trim(),
-        website: socialLinks.website.trim(),
+        linkedin: (socialLinks.linkedin || '').trim(),
+        github: (socialLinks.github || '').trim(),
+        facebook: (socialLinks.facebook || '').trim(),
+        email: (socialLinks.email || '').trim(),
+        website: (socialLinks.website || '').trim(),
       });
 
       // 1. Update basic user profile
@@ -527,8 +538,8 @@ const ProfilePage: React.FC = () => {
           }),
         });
 
-        // 3. Immediately refresh partner suggestions based on updated skills
-        await reloadPartnerSuggestions();
+        // 3. Refresh partner suggestions in background
+        void reloadPartnerSuggestions().catch(e => console.warn('Partner suggestions background refresh:', e));
       }
 
       setIsEditing(false);
@@ -563,7 +574,7 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-  // ── Auto-save or Manual-save Skills into Database ──
+  // ── Auto-save or Manual-save Skills into Database (Optimized & Non-blocking) ──
   const saveSkillsToBackend = async (
     skillsToSave: { tagId?: string; tagName: string; level?: number }[]
   ) => {
@@ -575,9 +586,11 @@ const ProfilePage: React.FC = () => {
         return;
       }
       const contactLinkJson = JSON.stringify({
-        linkedin: socialLinks.linkedin.trim(),
-        github: socialLinks.github.trim(),
-        website: socialLinks.website.trim(),
+        linkedin: (socialLinks.linkedin || '').trim(),
+        github: (socialLinks.github || '').trim(),
+        facebook: (socialLinks.facebook || '').trim(),
+        email: (socialLinks.email || '').trim(),
+        website: (socialLinks.website || '').trim(),
       });
       const res = await fetch('http://localhost:8080/api/profiles/me/networking', {
         method: 'PUT',
@@ -603,7 +616,8 @@ const ProfilePage: React.FC = () => {
       });
 
       if (res.ok) {
-        await reloadPartnerSuggestions();
+        // Run partner suggestions in the background so tag editing feels instantaneous
+        void reloadPartnerSuggestions().catch(e => console.warn('Partner suggestions background refresh:', e));
       } else {
         showToast('Không thể lưu kỹ năng lên máy chủ', 'error');
       }
@@ -649,9 +663,11 @@ const ProfilePage: React.FC = () => {
     setIsSavingSocial(true);
     try {
       const contactLinkJson = JSON.stringify({
-        linkedin: socialLinks.linkedin.trim(),
-        github: socialLinks.github.trim(),
-        website: socialLinks.website.trim(),
+        linkedin: (socialLinks.linkedin || '').trim(),
+        github: (socialLinks.github || '').trim(),
+        facebook: (socialLinks.facebook || '').trim(),
+        email: (socialLinks.email || '').trim(),
+        website: (socialLinks.website || '').trim(),
       });
       // 1. Update basic profile
       await updateProfile({
@@ -1382,6 +1398,38 @@ const ProfilePage: React.FC = () => {
 
                   <div>
                     <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
+                      Facebook Profile URL
+                    </label>
+                    <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border rounded-xl focus-within:ring-2 focus-within:ring-blue-600/30">
+                      <FiFacebook className="h-4 w-4 text-blue-600 shrink-0" />
+                      <input
+                        type="url"
+                        value={socialLinks.facebook}
+                        onChange={e => setSocialLinks({ ...socialLinks, facebook: e.target.value })}
+                        placeholder="https://facebook.com/username"
+                        className="bg-transparent text-xs w-full focus:outline-none font-medium text-foreground"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
+                      Email / Gmail liên hệ công việc
+                    </label>
+                    <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border rounded-xl focus-within:ring-2 focus-within:ring-rose-500/30">
+                      <FiMail className="h-4 w-4 text-rose-500 shrink-0" />
+                      <input
+                        type="email"
+                        value={socialLinks.email}
+                        onChange={e => setSocialLinks({ ...socialLinks, email: e.target.value })}
+                        placeholder="name@example.com"
+                        className="bg-transparent text-xs w-full focus:outline-none font-medium text-foreground"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
                       Website / Portfolio cá nhân
                     </label>
                     <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border rounded-xl focus-within:ring-2 focus-within:ring-emerald-500/30">
@@ -1424,7 +1472,7 @@ const ProfilePage: React.FC = () => {
                 </div>
               ) : (
                 <div className="space-y-2.5">
-                  {socialLinks.linkedin || socialLinks.github || socialLinks.website ? (
+                  {socialLinks.linkedin || socialLinks.github || socialLinks.facebook || socialLinks.email || socialLinks.website ? (
                     <>
                       {socialLinks.linkedin && (
                         <a
@@ -1482,6 +1530,54 @@ const ProfilePage: React.FC = () => {
                         </a>
                       )}
 
+                      {socialLinks.facebook && (
+                        <a
+                          href={
+                            socialLinks.facebook.startsWith('http')
+                              ? socialLinks.facebook
+                              : `https://${socialLinks.facebook}`
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-between p-3 rounded-2xl bg-muted/30 border border-border/60 hover:bg-blue-600/5 hover:border-blue-600/30 transition-all text-xs font-semibold text-foreground group"
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <div className="p-1.5 rounded-lg bg-blue-600/10 text-blue-600">
+                              <FiFacebook className="h-4 w-4" />
+                            </div>
+                            <div>
+                              <p className="font-semibold text-foreground">Facebook</p>
+                              <p className="text-[11px] text-muted-foreground truncate max-w-[180px]">
+                                {socialLinks.facebook
+                                  .replace(/^https?:\/\/(www\.)?facebook\.com\/?/, '@')
+                                  .replace(/\/$/, '')}
+                              </p>
+                            </div>
+                          </div>
+                          <FiExternalLink className="h-3.5 w-3.5 text-muted-foreground group-hover:text-blue-600 transition-colors" />
+                        </a>
+                      )}
+
+                      {socialLinks.email && (
+                        <a
+                          href={`mailto:${socialLinks.email}`}
+                          className="flex items-center justify-between p-3 rounded-2xl bg-muted/30 border border-border/60 hover:bg-rose-500/5 hover:border-rose-500/30 transition-all text-xs font-semibold text-foreground group"
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <div className="p-1.5 rounded-lg bg-rose-500/10 text-rose-500">
+                              <FiMail className="h-4 w-4" />
+                            </div>
+                            <div>
+                              <p className="font-semibold text-foreground">Email / Gmail</p>
+                              <p className="text-[11px] text-muted-foreground truncate max-w-[180px]">
+                                {socialLinks.email}
+                              </p>
+                            </div>
+                          </div>
+                          <FiExternalLink className="h-3.5 w-3.5 text-muted-foreground group-hover:text-rose-500 transition-colors" />
+                        </a>
+                      )}
+
                       {socialLinks.website && (
                         <a
                           href={
@@ -1517,7 +1613,7 @@ const ProfilePage: React.FC = () => {
                         Chưa có liên kết mạng xã hội
                       </p>
                       <p className="text-[11px] text-muted-foreground max-w-xs mb-3">
-                        Thêm LinkedIn, GitHub hoặc Portfolio cá nhân để đối tác và đồng nghiệp dễ dàng kết nối với bạn.
+                        Thêm LinkedIn, GitHub, Facebook, Gmail hoặc Portfolio cá nhân để đối tác và đồng nghiệp dễ dàng kết nối với bạn.
                       </p>
                       <button
                         type="button"
