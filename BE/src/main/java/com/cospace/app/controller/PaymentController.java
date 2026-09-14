@@ -30,6 +30,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -144,6 +145,16 @@ public class PaymentController {
         return ResponseEntity.status(HttpStatus.FOUND)
                 .header(HttpHeaders.LOCATION, redirectUrl)
                 .build();
+    }
+
+    @GetMapping("/payos/status/{orderCode}")
+    public ResponseEntity<Map<String, Object>> getPayosPaymentStatus(@PathVariable("orderCode") String orderCode) {
+        com.cospace.app.entity.PaymentStatus status = paymentService.getPaymentStatusByOrderCode(orderCode);
+        if (status == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("orderCode", orderCode, "status", "NOT_FOUND"));
+        }
+        return ResponseEntity.ok(Map.of("orderCode", orderCode, "status", status.name()));
     }
 
     @PostMapping("/payos/simulate")

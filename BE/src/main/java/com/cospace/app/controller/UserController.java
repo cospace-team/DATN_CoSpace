@@ -79,6 +79,53 @@ public class UserController {
         return ResponseEntity.ok(userService.searchUsers(query));
     }
 
+    @GetMapping
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('staff', 'branch_admin', 'super_admin', 'admin')")
+    public ResponseEntity<List<UserProfileDto>> getUsers(
+            @RequestParam(name = "role", required = false) String role,
+            @RequestParam(name = "branchId", required = false) UUID branchId,
+            @RequestParam(name = "status", required = false) String status,
+            @RequestParam(name = "search", required = false) String search) {
+        return ResponseEntity.ok(userService.getUsers(role, branchId, status, search));
+    }
+
+    @PutMapping("/{id}/status")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('super_admin', 'admin')")
+    public ResponseEntity<?> updateUserStatus(
+            @AuthenticationPrincipal Jwt jwt,
+            @org.springframework.web.bind.annotation.PathVariable UUID id,
+            @RequestBody Map<String, String> body) {
+        try {
+            UUID currentAdminUserId = requireUserId(jwt);
+            String status = body.get("status");
+            if (status == null || status.isBlank()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "bad_request", "message", "Trạng thái không được để trống"));
+            }
+            UserProfileDto updated = userService.updateUserStatus(id, status, currentAdminUserId);
+            return ResponseEntity.ok(updated);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", "bad_request", "message", e.getMessage()));
+        }
+    }
+
+    @PutMapping("/{id}/role")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('super_admin', 'admin')")
+    public ResponseEntity<?> updateUserRole(
+            @AuthenticationPrincipal Jwt jwt,
+            @org.springframework.web.bind.annotation.PathVariable UUID id,
+            @RequestBody Map<String, Object> body) {
+        try {
+            UUID currentAdminUserId = requireUserId(jwt);
+            String role = (String) body.get("role");
+            String branchIdStr = (String) body.get("branchId");
+            UUID branchId = (branchIdStr != null && !branchIdStr.isBlank()) ? UUID.fromString(branchIdStr) : null;
+            UserProfileDto updated = userService.updateUserRoleAndBranch(id, role, branchId, currentAdminUserId);
+            return ResponseEntity.ok(updated);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", "bad_request", "message", e.getMessage()));
+        }
+    }
+
     @PostMapping("/walkin")
     @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('staff', 'branch_admin')")
     public ResponseEntity<UserProfileDto> createWalkinUser(@Valid @RequestBody WalkinUserCreateRequest req) {

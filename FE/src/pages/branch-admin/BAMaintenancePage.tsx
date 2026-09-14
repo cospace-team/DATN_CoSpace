@@ -1,18 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FiTool, FiPlus, FiX, FiCheck, FiAlertCircle } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
-import {
-  floors as allFloors, workspaces as allWorkspaces,
-  workspaceMaintenances as allMaintenances,
-  type WorkspaceMaintenance,
-} from '../../data/mockData';
-import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
-import { Button } from '../../components/ui/button';
-import { Badge } from '../../components/ui/badge';
-import { Input } from '../../components/ui/input';
-import { Label } from '../../components/ui/label';
-import { EmptyState } from '../../components/ui/EmptyState';
+import { staffApi, type MaintenanceResponseDto, type WorkspaceMaintenanceStatusDto } from '../../api/staffApi';
 
+// ─── Modal Wrapper ────────────────────────────────────────────────────────────
 const Modal: React.FC<{ title: string; onClose: () => void; children: React.ReactNode }> = ({
   title, onClose, children,
 }) => (
@@ -20,139 +11,178 @@ const Modal: React.FC<{ title: string; onClose: () => void; children: React.Reac
     <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md animate-scale-in flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
       <div className="flex items-center justify-between px-6 py-4 border-b border-border">
         <h2 className="text-base font-bold font-heading">{title}</h2>
-        <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 rounded-full">
-          <FiX className="h-4 w-4" />
-        </Button>
+        <button onClick={onClose} className="btn btn-ghost btn-sm p-1"><FiX className="h-4 w-4" /></button>
       </div>
       <div className="px-6 py-5 overflow-y-auto">{children}</div>
     </div>
   </div>
 );
 
-const STATUS_FLOW: Array<{ from: WorkspaceMaintenance['status']; to: WorkspaceMaintenance['status']; label: string }> = [
-  { from: 'scheduled', to: 'active', label: 'Bắt đầu' },
-  { from: 'active', to: 'done', label: 'Hoàn thành' },
-];
-
-const STATUS_BADGE: Record<WorkspaceMaintenance['status'], "warning" | "info" | "success" | "neutral"> = {
-  scheduled: 'warning',
-  active: 'info',
-  done: 'success',
-  canceled: 'neutral',
+// ─── Constants ────────────────────────────────────────────────────────────────
+const STATUS_BADGE: Record<MaintenanceResponseDto['status'], "badge-warning" | "badge-info" | "badge-success" | "badge-neutral"> = {
+  scheduled: 'badge-warning',
+  active: 'badge-info',
+  done: 'badge-success',
+  canceled: 'badge-neutral',
 };
 
-const STATUS_LABEL: Record<WorkspaceMaintenance['status'], string> = {
+const STATUS_LABEL: Record<MaintenanceResponseDto['status'], string> = {
   scheduled: 'Lên lịch',
   active: 'Đang thực hiện',
   done: 'Hoàn thành',
   canceled: 'Đã hủy',
 };
 
+// ─── Page Component ───────────────────────────────────────────────────────────
 const BAMaintenancePage: React.FC = () => {
   const { user } = useAuth();
   const branchId = user!.branchId!;
 
-  const branchFloors = allFloors.filter((f) => f.branch_id === branchId);
-  const floorIds = branchFloors.map((f) => f.id);
-  const branchWorkspaces = allWorkspaces.filter((w) => floorIds.includes(w.floor_id));
-  const branchWsIds = new Set(branchWorkspaces.map((w) => w.id));
-
-  const [maintenances, setMaintenances] = useState<WorkspaceMaintenance[]>(
-    allMaintenances.filter((m) => branchWsIds.has(m.workspace_id))
-  );
+  const [isLoading, setIsLoading] = useState(true);
+  const [maintenances, setMaintenances] = useState<MaintenanceResponseDto[]>([]);
+  const [workspaces, setWorkspaces] = useState<WorkspaceMaintenanceStatusDto[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
   const [form, setForm] = useState({
-    workspace_id: branchWorkspaces[0]?.id ?? '',
-    start_at: '',
-    end_at: '',
+    workspaceId: '',
+    startAt: '',
+    endAt: '',
     reason: '',
   });
   const [formError, setFormError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
 
-  const getWsName = (wsId: string) => branchWorkspaces.find((w) => w.id === wsId)?.name ?? wsId;
+  // ─── Load Data ──────────────────────────────────────────────────────────────
+  useEffect(() => {
+    const load = async () => {
+      setIsLoading(true);
+      try {
+        const [mData, wsData] = await Promise.all([
+          staffApi.getMaintenances(branchId),
+          staffApi.getWorkspaceMaintenances(branchId),
+        ]);
+        setMaintenances(mData);
+        setWorkspaces(wsData);
+      } catch (e) {
+        console.error('Failed to load maintenance data', e);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    load();
+  }, [branchId]);
 
-  const saveMaintenance = () => {
+  // ─── Helpers ────────────────────────────────────────────────────────────────
+  const showSuccess = (msg: string) => {
+    setSuccessMsg(msg);
+    setTimeout(() => setSuccessMsg(''), 3000);
+  };
+
+  const getWsName = (wsId: string) => workspaces.find((w) => w.workspaceId === wsId)?.name ?? wsId;
+
+  const openAdd = () => {
+    setForm({ workspaceId: workspaces[0]?.workspaceId ?? '', startAt: '', endAt: '', reason: '' });
     setFormError('');
-    if (!form.workspace_id || !form.start_at || !form.end_at) {
-      setFormError('Vui lòng điền đầy đủ thông tin.');
+    setModalOpen(true);
+  };
+
+  // ─── Actions ────────────────────────────────────────────────────────────────
+  const saveMaintenance = async () => {
+    setFormError('');
+    if (!form.workspaceId || !form.startAt || !form.endAt) {
+      setFormError('Vui lòng điền đầy đủ thông tin bắt buộc.');
       return;
     }
-    if (new Date(form.end_at) <= new Date(form.start_at)) {
+    if (new Date(form.endAt) <= new Date(form.startAt)) {
       setFormError('Thời gian kết thúc phải sau thời gian bắt đầu.');
       return;
     }
-    const newRecord: WorkspaceMaintenance = {
-      id: `wm-local-${Date.now()}`,
-      workspace_id: form.workspace_id,
-      start_at: new Date(form.start_at).toISOString(),
-      end_at: new Date(form.end_at).toISOString(),
-      reason: form.reason,
-      status: 'scheduled',
-      created_by: user!.id,
-    };
-    setMaintenances((prev) => [newRecord, ...prev]);
-    setModalOpen(false);
-    setForm({ workspace_id: branchWorkspaces[0]?.id ?? '', start_at: '', end_at: '', reason: '' });
+    
+    setIsSubmitting(true);
+    try {
+      const created = await staffApi.createMaintenance(form.workspaceId, {
+        startAt: new Date(form.startAt).toISOString(),
+        endAt: new Date(form.endAt).toISOString(),
+        reason: form.reason,
+      });
+      setMaintenances((prev) => [created, ...prev]);
+      showSuccess('Tạo lịch bảo trì thành công');
+      setModalOpen(false);
+    } catch (e: any) {
+      setFormError(e.message || 'Lỗi khi tạo lịch bảo trì');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const advanceStatus = (id: string) => {
-    setMaintenances((prev) =>
-      prev.map((m) => {
-        if (m.id !== id) return m;
-        const step = STATUS_FLOW.find((s) => s.from === m.status);
-        return step ? { ...m, status: step.to } : m;
-      })
-    );
+  const completeMaintenance = async (id: string) => {
+    if (!window.confirm('Xác nhận hoàn thành bảo trì này?')) return;
+    try {
+      const updated = await staffApi.completeMaintenance(id);
+      setMaintenances((prev) => prev.map((m) => (m.id === id ? updated : m)));
+      showSuccess('Đã hoàn thành bảo trì');
+    } catch (e: any) {
+      alert(e.message || 'Lỗi khi hoàn thành bảo trì');
+    }
   };
 
-  const cancelMaintenance = (id: string) => {
-    if (!window.confirm('Bạn có chắc chắn muốn hủy lịch bảo trì này?')) return;
-    setMaintenances((prev) =>
-      prev.map((m) => (m.id === id ? { ...m, status: 'canceled' } : m))
-    );
+  const deleteMaintenance = async (id: string) => {
+    if (!window.confirm('Bạn có chắc chắn muốn hủy lịch bảo trì này? (Thao tác này sẽ xóa lịch bảo trì)')) return;
+    try {
+      await staffApi.deleteMaintenance(id);
+      setMaintenances((prev) => prev.filter((m) => m.id !== id));
+      showSuccess('Đã hủy lịch bảo trì');
+    } catch (e: any) {
+      alert(e.message || 'Lỗi khi hủy lịch bảo trì');
+    }
   };
 
+  // ─── Render Helpers ─────────────────────────────────────────────────────────
   const active = maintenances.filter((m) => m.status === 'active');
   const scheduled = maintenances.filter((m) => m.status === 'scheduled');
   const past = maintenances.filter((m) => m.status === 'done' || m.status === 'canceled');
 
-  const renderRow = (m: WorkspaceMaintenance) => {
-    const step = STATUS_FLOW.find((s) => s.from === m.status);
-    return (
-      <tr key={m.id} className="border-b border-border hover:bg-muted/50 transition-colors">
-        <td className="px-4 py-3 align-middle font-medium">{getWsName(m.workspace_id)}</td>
-        <td className="px-4 py-3 align-middle text-sm text-muted-foreground">{m.reason || '—'}</td>
-        <td className="px-4 py-3 align-middle font-mono text-xs">{new Date(m.start_at).toLocaleString('vi-VN')}</td>
-        <td className="px-4 py-3 align-middle font-mono text-xs">{new Date(m.end_at).toLocaleString('vi-VN')}</td>
-        <td className="px-4 py-3 align-middle text-center">
-          <Badge variant={STATUS_BADGE[m.status]}>{STATUS_LABEL[m.status]}</Badge>
-        </td>
-        <td className="px-4 py-3 align-middle text-right">
-          <div className="flex items-center gap-2 justify-end">
-            {step && (
-              <Button size="sm" onClick={() => advanceStatus(m.id)}>
-                {step.label}
-              </Button>
-            )}
-            {m.status === 'scheduled' && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                onClick={() => cancelMaintenance(m.id)}
-                title="Hủy lịch"
-              >
-                <FiX className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-        </td>
-      </tr>
-    );
-  };
+  const renderRow = (m: MaintenanceResponseDto) => (
+    <tr key={m.id} className="border-b border-border hover:bg-muted/50 transition-colors bg-card">
+      <td className="px-4 py-3 align-middle font-medium">{getWsName(m.workspaceId)}</td>
+      <td className="px-4 py-3 align-middle text-sm text-muted-foreground">{m.reason || '—'}</td>
+      <td className="px-4 py-3 align-middle font-mono text-xs">{new Date(m.startAt).toLocaleString('vi-VN')}</td>
+      <td className="px-4 py-3 align-middle font-mono text-xs">{new Date(m.endAt).toLocaleString('vi-VN')}</td>
+      <td className="px-4 py-3 align-middle text-center">
+        <span className={`badge ${STATUS_BADGE[m.status]}`}>{STATUS_LABEL[m.status]}</span>
+      </td>
+      <td className="px-4 py-3 align-middle text-right">
+        <div className="flex items-center gap-2 justify-end">
+          {(m.status === 'scheduled' || m.status === 'active') && (
+            <button className="btn btn-outline btn-sm" onClick={() => completeMaintenance(m.id)}>
+              Hoàn thành
+            </button>
+          )}
+          {m.status === 'scheduled' && (
+            <button
+              className="btn btn-ghost btn-sm p-1 text-destructive hover:bg-destructive/10"
+              onClick={() => deleteMaintenance(m.id)}
+              title="Hủy lịch"
+            >
+              <FiX className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
 
+  // ─── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-6 animate-fade-in pb-10">
+    <div className="space-y-6 animate-fade-in relative pb-10">
+      {successMsg && (
+        <div className="fixed top-4 right-4 z-50 animate-slide-up flex items-center gap-2 bg-success text-success-foreground px-4 py-3 rounded-xl shadow-xl">
+          <FiCheck className="h-5 w-5" />
+          <p className="font-medium text-sm">{successMsg}</p>
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-card rounded-3xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -163,35 +193,38 @@ const BAMaintenancePage: React.FC = () => {
               {active.length} đang thực hiện · {scheduled.length} lên lịch
             </span>
           </div>
-          <Button onClick={() => setModalOpen(true)}>
-            <FiPlus className="h-4 w-4 mr-2" /> Tạo lịch bảo trì
-          </Button>
+          <button className="btn btn-primary btn-sm" onClick={openAdd}>
+            <FiPlus className="h-4 w-4" /> Tạo lịch bảo trì
+          </button>
         </div>
       </div>
 
-      {maintenances.length === 0 ? (
-        <Card>
-          <EmptyState
-            icon={FiTool}
-            title="Chưa có lịch bảo trì"
-            description="Bạn chưa tạo lịch bảo trì nào cho các không gian trong chi nhánh này."
-            action={
-              <Button onClick={() => setModalOpen(true)}>
-                <FiPlus className="h-4 w-4 mr-2" /> Tạo ngay
-              </Button>
-            }
-          />
-        </Card>
+      {isLoading ? (
+        <div className="bg-card rounded-3xl border border-border p-6">
+          <div className="space-y-4">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="h-12 bg-muted rounded-xl animate-pulse" />
+            ))}
+          </div>
+        </div>
+      ) : maintenances.length === 0 ? (
+        <div className="bg-card rounded-3xl border border-border p-12 text-center text-muted-foreground">
+          <FiTool className="h-12 w-12 mx-auto mb-4 opacity-20" />
+          <h3 className="text-lg font-medium text-foreground mb-2">Chưa có lịch bảo trì</h3>
+          <p className="text-sm mb-6">Bạn chưa tạo lịch bảo trì nào cho các không gian trong chi nhánh này.</p>
+          <button className="btn btn-primary" onClick={openAdd}>
+            <FiPlus className="h-4 w-4" /> Tạo ngay
+          </button>
+        </div>
       ) : (
         <div className="grid gap-6">
           {/* Active & Scheduled */}
           {[...active, ...scheduled].length > 0 && (
-            <Card className="overflow-hidden">
-              <CardHeader className="bg-muted/30 border-b border-border px-6 py-4">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <FiTool className="h-5 w-5 text-primary" /> Đang diễn ra & Sắp tới
-                </CardTitle>
-              </CardHeader>
+            <div className="bg-card rounded-3xl border border-border shadow-sm overflow-hidden">
+              <div className="flex items-center gap-2 px-6 py-4 border-b border-border bg-muted/30">
+                <FiTool className="h-5 w-5 text-primary" />
+                <h2 className="text-base font-semibold">Đang diễn ra & Sắp tới</h2>
+              </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left">
                   <thead className="bg-muted/50 text-muted-foreground uppercase text-xs">
@@ -207,19 +240,17 @@ const BAMaintenancePage: React.FC = () => {
                   <tbody>{[...active, ...scheduled].map(renderRow)}</tbody>
                 </table>
               </div>
-            </Card>
+            </div>
           )}
 
           {/* History */}
           {past.length > 0 && (
-            <Card className="overflow-hidden">
-              <CardHeader className="bg-muted/10 border-b border-border px-6 py-4">
-                <CardTitle className="text-lg text-muted-foreground flex items-center gap-2">
-                  Lịch sử
-                </CardTitle>
-              </CardHeader>
+            <div className="bg-card rounded-3xl border border-border shadow-sm overflow-hidden opacity-80 hover:opacity-100 transition-opacity">
+              <div className="flex items-center gap-2 px-6 py-4 border-b border-border bg-muted/10">
+                <h2 className="text-base font-semibold text-muted-foreground">Lịch sử</h2>
+              </div>
               <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left opacity-80 hover:opacity-100 transition-opacity">
+                <table className="w-full text-sm text-left">
                   <thead className="bg-muted/30 text-muted-foreground uppercase text-xs">
                     <tr>
                       <th className="px-4 py-3 font-semibold">Workspace</th>
@@ -233,62 +264,64 @@ const BAMaintenancePage: React.FC = () => {
                   <tbody>{past.map(renderRow)}</tbody>
                 </table>
               </div>
-            </Card>
+            </div>
           )}
         </div>
       )}
 
-      {/* Create modal */}
+      {/* Create Modal */}
       {modalOpen && (
         <Modal title="Tạo lịch bảo trì" onClose={() => setModalOpen(false)}>
           <div className="space-y-5">
             {formError && (
-              <div className="flex items-center gap-2 rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 px-3 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
+              <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-3 text-sm text-destructive">
                 <FiAlertCircle className="h-5 w-5 shrink-0" />
                 <p>{formError}</p>
               </div>
             )}
             
             <div className="space-y-2">
-              <Label htmlFor="workspace_id">Workspace <span className="text-destructive">*</span></Label>
+              <label htmlFor="workspaceId" className="block text-sm font-medium">Workspace <span className="text-destructive">*</span></label>
               <select
-                id="workspace_id"
-                className="flex h-10 w-full rounded-lg border border-input bg-card px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
-                value={form.workspace_id}
-                onChange={(e) => setForm((p) => ({ ...p, workspace_id: e.target.value }))}
+                id="workspaceId"
+                className="input-field"
+                value={form.workspaceId}
+                onChange={(e) => setForm((p) => ({ ...p, workspaceId: e.target.value }))}
               >
-                {branchWorkspaces.map((w) => (
-                  <option key={w.id} value={w.id}>{w.name} ({w.code})</option>
+                {workspaces.map((w) => (
+                  <option key={w.workspaceId} value={w.workspaceId}>{w.name} ({w.code})</option>
                 ))}
               </select>
             </div>
             
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="start_at">Bắt đầu <span className="text-destructive">*</span></Label>
-                <Input
-                  id="start_at"
+                <label htmlFor="startAt" className="block text-sm font-medium">Bắt đầu <span className="text-destructive">*</span></label>
+                <input
+                  id="startAt"
                   type="datetime-local"
-                  value={form.start_at}
-                  onChange={(e) => setForm((p) => ({ ...p, start_at: e.target.value }))}
+                  className="input-field"
+                  value={form.startAt}
+                  onChange={(e) => setForm((p) => ({ ...p, startAt: e.target.value }))}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="end_at">Kết thúc <span className="text-destructive">*</span></Label>
-                <Input
-                  id="end_at"
+                <label htmlFor="endAt" className="block text-sm font-medium">Kết thúc <span className="text-destructive">*</span></label>
+                <input
+                  id="endAt"
                   type="datetime-local"
-                  value={form.end_at}
-                  onChange={(e) => setForm((p) => ({ ...p, end_at: e.target.value }))}
+                  className="input-field"
+                  value={form.endAt}
+                  onChange={(e) => setForm((p) => ({ ...p, endAt: e.target.value }))}
                 />
               </div>
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="reason">Lý do bảo trì</Label>
+              <label htmlFor="reason" className="block text-sm font-medium">Lý do bảo trì</label>
               <textarea
                 id="reason"
-                className="flex w-full rounded-lg border border-input bg-card px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-colors resize-y min-h-[80px]"
+                className="input-field resize-y min-h-[80px]"
                 rows={3}
                 placeholder="Ví dụ: Sửa chữa thiết bị, làm sạch tổng thể..."
                 value={form.reason}
@@ -297,12 +330,17 @@ const BAMaintenancePage: React.FC = () => {
             </div>
             
             <div className="flex gap-3 justify-end pt-4 border-t border-border mt-6">
-              <Button variant="outline" onClick={() => setModalOpen(false)}>
+              <button className="btn btn-secondary btn-sm" onClick={() => setModalOpen(false)} disabled={isSubmitting}>
                 Hủy
-              </Button>
-              <Button onClick={saveMaintenance}>
-                <FiCheck className="h-4 w-4 mr-2" /> Tạo lịch
-              </Button>
+              </button>
+              <button className="btn btn-primary btn-sm" onClick={saveMaintenance} disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <span className="animate-spin h-4 w-4 mr-2 border-2 border-primary-foreground border-t-transparent rounded-full" />
+                ) : (
+                  <FiCheck className="h-4 w-4 mr-2" />
+                )}
+                Tạo lịch
+              </button>
             </div>
           </div>
         </Modal>

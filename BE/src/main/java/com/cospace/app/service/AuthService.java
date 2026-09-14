@@ -1,9 +1,11 @@
 package com.cospace.app.service;
 
 import com.cospace.app.dto.api.AuthResponse;
+import com.cospace.app.dto.api.AuthUserDto;
 import com.cospace.app.dto.api.LoginRequest;
 import com.cospace.app.dto.api.RegisterRequest;
 import com.cospace.app.entity.User;
+import com.cospace.app.repository.BranchEntityRepository;
 import com.cospace.app.repository.UserRepository;
 import com.cospace.app.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +19,7 @@ import java.util.UUID;
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final BranchEntityRepository branchEntityRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
 
@@ -57,34 +60,21 @@ public class AuthService {
         return createAuthResponse(user, "Đăng nhập thành công.");
     }
 
-    public AuthResponse devLogin(String roleStr) {
-        if (roleStr == null || roleStr.isBlank()) {
-            throw new IllegalArgumentException("Vai trò không được để trống.");
-        }
-        User.Role role;
-        try {
-            role = User.Role.valueOf(roleStr.toLowerCase());
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Vai trò không hợp lệ.");
+    /**
+     * Trades a valid refresh token for a fresh access token so a session survives past the
+     * 1-hour access-token lifetime. The refresh token is rotated on each use.
+     */
+    public AuthResponse refresh(String refreshToken) {
+        UUID userId = jwtUtil.parseRefreshToken(refreshToken);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Tài khoản không còn tồn tại."));
+
+        if (user.getStatus() != User.Status.active) {
+            throw new IllegalStateException("Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.");
         }
 
-        User user = userRepository.findFirstByRole(role)
-                .orElseGet(() -> {
-                    User newUser = User.builder()
-                            .email("dev_" + role.name() + "@dev.local")
-                            .password(passwordEncoder.encode("123456"))
-                            .fullName("Mock " + role.name())
-                            .role(role)
-                            .status(User.Status.active)
-                            .build();
-                    
-                    if (role == User.Role.staff || role == User.Role.admin) {
-                        newUser.setBranchId(UUID.fromString("10000000-0000-0000-0000-000000000001"));
-                    }
-                    return userRepository.save(newUser);
-                });
-
-        return createAuthResponse(user, "Dev login thành công.");
+        return createAuthResponse(user, "Làm mới phiên đăng nhập thành công.");
     }
 
     @org.springframework.transaction.annotation.Transactional
@@ -152,11 +142,30 @@ public class AuthService {
                 .status("success")
                 .message(message)
                 .data(AuthResponse.AuthData.builder()
-                        .user(user)
+                        .user(toAuthUserDto(user))
                         .accessToken(accessToken)
                         .refreshToken(refreshToken)
                         .expiresIn(jwtUtil.getJwtExpiration())
                         .build())
+                .build();
+    }
+
+    public AuthUserDto toAuthUserDto(User user) {
+        String branchName = user.getBranchId() == null ? null
+                : branchEntityRepository.findById(user.getBranchId())
+                        .map(com.cospace.app.entity.BranchEntity::getName)
+                        .orElse(null);
+
+        return AuthUserDto.builder()
+                .id(user.getId())
+                .email(user.getEmail())
+                .fullName(user.getFullName())
+                .phone(user.getPhone())
+                .avatarUrl(user.getAvatarUrl())
+                .role(user.getRole() != null ? user.getRole().name() : null)
+                .status(user.getStatus() != null ? user.getStatus().name() : null)
+                .branchId(user.getBranchId())
+                .branchName(branchName)
                 .build();
     }
 }

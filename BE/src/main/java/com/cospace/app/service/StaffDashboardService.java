@@ -6,7 +6,6 @@ import com.cospace.app.entity.BookingStatus;
 import com.cospace.app.entity.WorkspaceEntity;
 
 import com.cospace.app.repository.BookingRepository;
-import com.cospace.app.repository.CheckinLogRepository;
 import com.cospace.app.repository.WorkspaceEntityRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,12 +19,10 @@ import java.util.UUID;
 public class StaffDashboardService {
 
     private final BookingRepository bookingRepository;
-    private final CheckinLogRepository checkinLogRepository;
     private final WorkspaceEntityRepository workspaceEntityRepository;
 
-    public StaffDashboardService(BookingRepository bookingRepository, CheckinLogRepository checkinLogRepository, WorkspaceEntityRepository workspaceEntityRepository) {
+    public StaffDashboardService(BookingRepository bookingRepository, WorkspaceEntityRepository workspaceEntityRepository) {
         this.bookingRepository = bookingRepository;
-        this.checkinLogRepository = checkinLogRepository;
         this.workspaceEntityRepository = workspaceEntityRepository;
     }
 
@@ -58,7 +55,9 @@ public class StaffDashboardService {
         OffsetDateTime start = startVn.toOffsetDateTime().withOffsetSameInstant(ZoneOffset.UTC);
         OffsetDateTime end = endVn.toOffsetDateTime().withOffsetSameInstant(ZoneOffset.UTC);
 
-        List<Booking> filteredBookings = bookingRepository.findByBranchIdAndStartAtBetweenOrderByStartAtAsc(branchId, start, end);
+        // Use overlap logic: bookings where [start_at, end_at) intersects [start, end)
+        // This catches bookings that started before today but extend into today (contracts, overnight)
+        List<Booking> filteredBookings = bookingRepository.findBookingsInInterval(branchId, start, end);
 
         long revenue = filteredBookings.stream()
                 .filter(b -> b.getStatus() == BookingStatus.CONFIRMED || b.getStatus() == BookingStatus.CHECKED_IN || b.getStatus() == BookingStatus.COMPLETED)

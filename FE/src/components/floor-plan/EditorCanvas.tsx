@@ -1,8 +1,8 @@
 /**
  * EditorCanvas — The main SVG canvas where elements are rendered, selected,
  * dragged, resized, and dropped from the library.
- * Redesigned with Pro Max dark theme, precision dot-matrix grid, floating telemetry HUD,
- * and high-frequency snap handles.
+ * Precision dot-matrix grid, floating telemetry HUD, and snap handles,
+ * all rendered with theme-aware (light/dark) colors.
  */
 
 import React, { useRef, useState, useCallback, useEffect } from 'react';
@@ -288,7 +288,7 @@ const EditorCanvas: React.FC<Props> = ({ editor }) => {
 
   return (
     <div
-      className="flex-1 relative overflow-hidden bg-transparent transition-colors select-none"
+      className="flex-1 relative overflow-hidden bg-background transition-colors select-none"
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
@@ -315,7 +315,7 @@ const EditorCanvas: React.FC<Props> = ({ editor }) => {
           {/* Pro Precision Dot Grid */}
           {showGrid && (
             <pattern
-              id="editor-dots-dark"
+              id="editor-dots"
               width={gridSize}
               height={gridSize}
               patternUnits="userSpaceOnUse"
@@ -324,7 +324,7 @@ const EditorCanvas: React.FC<Props> = ({ editor }) => {
                 cx={gridSize}
                 cy={gridSize}
                 r={1.2}
-                fill="#475569"
+                fill="hsl(var(--muted-foreground))"
                 opacity={0.45}
               />
             </pattern>
@@ -332,25 +332,25 @@ const EditorCanvas: React.FC<Props> = ({ editor }) => {
 
           {/* Glowing Selection Linear Gradients */}
           <linearGradient id="selectionGlow" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#8B5CF6" stopOpacity="0.8" />
-            <stop offset="100%" stopColor="#06B6D4" stopOpacity="0.8" />
+            <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.8" />
+            <stop offset="100%" stopColor="hsl(var(--secondary))" stopOpacity="0.8" />
           </linearGradient>
         </defs>
 
-        {/* Canvas Background Base (Semi-transparent for ambient light) */}
+        {/* Canvas Background Base */}
         <rect
           width={canvasW}
           height={canvasH}
-          fill="rgba(15, 23, 42, 0.5)"
+          fill="hsl(var(--muted) / 0.4)"
           rx={12}
         />
-        
+
         {/* Pattern Overlay */}
         <rect
           data-canvas="bg"
           width={canvasW}
           height={canvasH}
-          fill={showGrid ? 'url(#editor-dots-dark)' : 'transparent'}
+          fill={showGrid ? 'url(#editor-dots)' : 'transparent'}
           rx={12}
         />
 
@@ -359,7 +359,7 @@ const EditorCanvas: React.FC<Props> = ({ editor }) => {
           width={canvasW}
           height={canvasH}
           fill="none"
-          stroke="#334155"
+          stroke="hsl(var(--border))"
           strokeWidth={1.5}
           strokeDasharray="8 6"
           rx={12}
@@ -391,7 +391,7 @@ const EditorCanvas: React.FC<Props> = ({ editor }) => {
                 width={el.width + 6}
                 height={el.height + 6}
                 fill="none"
-                stroke="#EF4444"
+                stroke="var(--state-danger, #EF4444)"
                 strokeWidth={2}
                 strokeDasharray="5 4"
                 rx={6}
@@ -414,24 +414,24 @@ const EditorCanvas: React.FC<Props> = ({ editor }) => {
 
       {/* Floating Telemetry HUD (Coordinates + Tooltips) */}
       {cursorCoords && (
-        <div className="absolute bottom-4 left-4 bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-800 text-[11px] font-mono shadow-xl pointer-events-none text-slate-300 flex items-center gap-3">
-          <div className="flex items-center gap-1 text-violet-400">
+        <div className="absolute bottom-4 left-4 bg-card/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-border text-[11px] font-mono shadow-xl pointer-events-none text-muted-foreground flex items-center gap-3">
+          <div className="flex items-center gap-1 text-primary">
             <FiCompass className="h-3.5 w-3.5" />
             <span className="font-bold">X: {Math.round(cursorCoords.x)}</span>
-            <span className="text-slate-600">·</span>
+            <span className="text-muted-foreground/50">·</span>
             <span className="font-bold">Y: {Math.round(cursorCoords.y)}</span>
           </div>
-          <div className="h-3 w-px bg-slate-800" />
-          <div className="flex items-center gap-1.5 text-slate-400">
-            <FiTarget className="h-3.5 w-3.5 text-cyan-400" />
-            <span>Grid: <strong className="text-slate-200">{snapToGrid ? `${gridSize}px` : 'Tắt'}</strong></span>
+          <div className="h-3 w-px bg-border" />
+          <div className="flex items-center gap-1.5 text-muted-foreground">
+            <FiTarget className="h-3.5 w-3.5 text-primary" />
+            <span>Grid: <strong className="text-foreground">{snapToGrid ? `${gridSize}px` : 'Tắt'}</strong></span>
           </div>
         </div>
       )}
 
       {/* Out-of-bounds warning banner */}
       {outOfBoundsIds.size > 0 && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-red-500/90 backdrop-blur-md text-white text-xs font-bold px-4 py-2 rounded-full shadow-2xl pointer-events-none animate-pulse">
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-destructive/90 backdrop-blur-md text-destructive-foreground text-xs font-bold px-4 py-2 rounded-full shadow-2xl pointer-events-none animate-pulse">
           <FiAlertTriangle className="h-4 w-4" />
           <span>{outOfBoundsIds.size} phần tử vượt ngoài khung vẽ — hãy di chuyển vào trong</span>
         </div>

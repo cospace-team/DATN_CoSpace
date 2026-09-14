@@ -84,6 +84,13 @@ CREATE TABLE IF NOT EXISTS extra_services (
 );
 CREATE INDEX IF NOT EXISTS idx_extra_services_branch ON extra_services(branch_id);
 
+-- 9b. Extra services also need a short SKU-like code and a category used to pick a display
+-- icon on the branch-admin UI; these were missing from the table above (an older, superseded
+-- migration in database/migrations/ declared them as NOT NULL, but this file is what actually
+-- runs against the app's DB, so add them here instead).
+ALTER TABLE extra_services ADD COLUMN IF NOT EXISTS code VARCHAR(40) NOT NULL DEFAULT '';
+ALTER TABLE extra_services ADD COLUMN IF NOT EXISTS service_type VARCHAR(20) NOT NULL DEFAULT 'other';
+
 -- 10. Table 'booking_services' (Dịch vụ gọi thêm trong thời gian đặt chỗ - Running Tab)
 CREATE TABLE IF NOT EXISTS booking_services (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -211,3 +218,29 @@ CREATE TABLE IF NOT EXISTS profile_match_scores (
     PRIMARY KEY (profile_user_id, matched_user_id)
 );
 CREATE INDEX IF NOT EXISTS idx_match_scores_ranking ON profile_match_scores (profile_user_id, score DESC);
+
+-- 19. Table 'posts'
+CREATE TABLE IF NOT EXISTS posts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    author_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title VARCHAR(200) NOT NULL,
+    content TEXT NOT NULL,
+    post_type VARCHAR(32) NOT NULL DEFAULT 'sharing',
+    branch_id UUID REFERENCES branches(id) ON DELETE SET NULL,
+    status VARCHAR(16) NOT NULL DEFAULT 'published',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_posts_feed ON posts (status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_posts_author ON posts (author_user_id, created_at DESC);
+
+-- 20. Table 'post_tags'
+CREATE TABLE IF NOT EXISTS post_tags (
+    post_id UUID NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+    tag_id UUID NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+    source VARCHAR(16) NOT NULL DEFAULT 'ai',
+    PRIMARY KEY (post_id, tag_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_post_tags_tag ON post_tags (tag_id);

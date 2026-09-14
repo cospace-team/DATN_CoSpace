@@ -43,8 +43,9 @@ public class BookingService {
     private final CheckinLogRepository checkinLogRepository;
     private final jakarta.persistence.EntityManager entityManager;
     private final com.cospace.app.repository.WorkspaceMaintenanceRepository workspaceMaintenanceRepository;
+    private final com.cospace.app.repository.BookingCancellationRepository bookingCancellationRepository;
 
-    public BookingService(BookingRepository bookingRepository, PaymentRepository paymentRepository, PricingService pricingService, WorkspaceEntityRepository workspaceEntityRepository, com.cospace.app.repository.FloorRepository floorRepository, BranchEntityRepository branchEntityRepository, UserRepository userRepository, CheckinLogRepository checkinLogRepository, jakarta.persistence.EntityManager entityManager, com.cospace.app.repository.WorkspaceMaintenanceRepository workspaceMaintenanceRepository) {
+    public BookingService(BookingRepository bookingRepository, PaymentRepository paymentRepository, PricingService pricingService, WorkspaceEntityRepository workspaceEntityRepository, com.cospace.app.repository.FloorRepository floorRepository, BranchEntityRepository branchEntityRepository, UserRepository userRepository, CheckinLogRepository checkinLogRepository, jakarta.persistence.EntityManager entityManager, com.cospace.app.repository.WorkspaceMaintenanceRepository workspaceMaintenanceRepository, com.cospace.app.repository.BookingCancellationRepository bookingCancellationRepository) {
         this.bookingRepository = bookingRepository;
         this.paymentRepository = paymentRepository;
         this.pricingService = pricingService;
@@ -55,6 +56,7 @@ public class BookingService {
         this.checkinLogRepository = checkinLogRepository;
         this.entityManager = entityManager;
         this.workspaceMaintenanceRepository = workspaceMaintenanceRepository;
+        this.bookingCancellationRepository = bookingCancellationRepository;
     }
 
     @Transactional
@@ -214,7 +216,8 @@ public class BookingService {
         OffsetDateTime todayStart = todayVn.toOffsetDateTime().withOffsetSameInstant(ZoneOffset.UTC);
         OffsetDateTime todayEnd = todayVn.plusDays(1).toOffsetDateTime().withOffsetSameInstant(ZoneOffset.UTC);
         
-        return bookingRepository.findByBranchIdAndStartAtBetweenOrderByStartAtAsc(branchId, todayStart, todayEnd)
+        // Use overlap logic to include bookings spanning across today (contracts, overnight stays)
+        return bookingRepository.findBookingsInInterval(branchId, todayStart, todayEnd)
                 .stream()
                 .map(this::toDto)
                 .collect(Collectors.toList());
@@ -273,6 +276,58 @@ public class BookingService {
             dto.setTodayBookings(wsBookings);
 
             return dto;
+        }).collect(Collectors.toList());
+    }
+
+    /**
+     * Customer-facing availability: which time ranges a workspace is busy in, with no booking
+     * owner identity or pricing exposed (unlike {@link #getWorkspaceBookingStatus}, which is
+     * staff-only and carries customer PII).
+     */
+    @Transactional(readOnly = true)
+    public List<com.cospace.app.dto.api.PublicWorkspaceAvailabilityDto> getPublicWorkspaceAvailability(
+            UUID branchId, OffsetDateTime from, OffsetDateTime to) {
+        List<WorkspaceEntity> workspaces = workspaceEntityRepository.findWorkspacesByBranchId(branchId);
+
+        List<com.cospace.app.entity.WorkspaceMaintenanceEntity> maintenances =
+                workspaceMaintenanceRepository.findAllByBranchIdOrderByCreatedAtDesc(branchId).stream()
+                        .filter(m -> m.getStatus() == com.cospace.app.entity.MaintenanceStatus.active
+                                || m.getStatus() == com.cospace.app.entity.MaintenanceStatus.scheduled)
+                        .filter(m -> m.getStartAt().toOffsetDateTime().isBefore(to)
+                                && m.getEndAt().toOffsetDateTime().isAfter(from))
+                        .collect(Collectors.toList());
+
+        List<BookingStatus> activeStatuses = java.util.Arrays.asList(
+                BookingStatus.PENDING_PAYMENT, BookingStatus.CONFIRMED, BookingStatus.CHECKED_IN);
+
+        List<Booking> intervalBookings = bookingRepository.findBookingsInInterval(branchId, from, to).stream()
+                .filter(b -> activeStatuses.contains(b.getStatus()))
+                .collect(Collectors.toList());
+
+        return workspaces.stream().map(ws -> {
+            List<com.cospace.app.dto.api.PublicWorkspaceAvailabilityDto.BusySlot> slots = new java.util.ArrayList<>();
+
+            intervalBookings.stream()
+                    .filter(b -> b.getWorkspaceId().equals(ws.getId()))
+                    .forEach(b -> slots.add(com.cospace.app.dto.api.PublicWorkspaceAvailabilityDto.BusySlot.builder()
+                            .startAt(b.getStartAt())
+                            .endAt(b.getEndAt())
+                            .reason("booking")
+                            .build()));
+
+            maintenances.stream()
+                    .filter(m -> m.getWorkspaceId().equals(ws.getId()))
+                    .forEach(m -> slots.add(com.cospace.app.dto.api.PublicWorkspaceAvailabilityDto.BusySlot.builder()
+                            .startAt(m.getStartAt().toOffsetDateTime())
+                            .endAt(m.getEndAt().toOffsetDateTime())
+                            .reason("maintenance")
+                            .build()));
+
+            return com.cospace.app.dto.api.PublicWorkspaceAvailabilityDto.builder()
+                    .workspaceId(ws.getId())
+                    .status(ws.getStatus() != null ? ws.getStatus().name() : null)
+                    .busySlots(slots)
+                    .build();
         }).collect(Collectors.toList());
     }
 
@@ -370,6 +425,20 @@ public class BookingService {
         latestPaymentOpt.ifPresent(p -> builder
                 .paymentStatus(p.getStatus())
                 .latestPaymentId(p.getId()));
+
+        if (b.getStatus() == BookingStatus.CANCELLED) {
+            bookingCancellationRepository.findByBookingId(b.getId()).ifPresent(c -> {
+                builder.cancellationReason(c.getReason());
+                builder.refundPercent(c.getRefundPercent());
+                builder.refundAmount(c.getRefundAmount());
+                builder.penaltyAmount(c.getPenaltyAmount());
+                builder.refundStatus(c.getRefundStatus());
+                builder.cancelledAt(c.getCreatedAt() != null ? c.getCreatedAt().toString() : null);
+                if (c.getAppliedRuleJson() != null && c.getAppliedRuleJson().get("policy_name") != null) {
+                    builder.policyName(c.getAppliedRuleJson().get("policy_name").toString());
+                }
+            });
+        }
 
         return builder.build();
     }

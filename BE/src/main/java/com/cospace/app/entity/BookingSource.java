@@ -1,5 +1,5 @@
 package com.cospace.app.entity;
 
 public enum BookingSource {
-    web, mobile, counter, admin
+    web, mobile, counter, admin, test
 }

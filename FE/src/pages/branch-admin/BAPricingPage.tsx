@@ -1,16 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { FiDollarSign, FiEdit2, FiPlus, FiCheckCircle, FiXCircle, FiInbox, FiX, FiCheck, FiTrash2, FiAlertCircle, FiGlobe, FiMapPin } from 'react-icons/fi';
-import { EmptyState } from '../../components/ui/EmptyState';
-import { Skeleton } from '../../components/ui/Skeleton';
+import { FiDollarSign, FiEdit2, FiPlus, FiX, FiCheck, FiTrash2, FiAlertCircle, FiGlobe, FiMapPin } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
-import { pricePolicies as initialPolicies, getWorkspaceType, workspaceTypes, type PricePolicy } from '../../data/mockData';
+import { staffApi, type PricePolicyDto } from '../../api/staffApi';
 import { formatVND, durationUnitLabel } from '../../utils/formatters';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { Button } from '../../components/ui/button';
-import { Badge } from '../../components/ui/badge';
-import { Input } from '../../components/ui/input';
-import { Label } from '../../components/ui/label';
 
+// ─── Modal wrapper ────────────────────────────────────────────────────────────
 const Modal: React.FC<{ title: string; onClose: () => void; children: React.ReactNode }> = ({
   title, onClose, children,
 }) => (
@@ -18,64 +12,86 @@ const Modal: React.FC<{ title: string; onClose: () => void; children: React.Reac
     <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md animate-scale-in flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
       <div className="flex items-center justify-between px-6 py-4 border-b border-border">
         <h2 className="text-base font-bold font-heading">{title}</h2>
-        <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 rounded-full">
-          <FiX className="h-4 w-4" />
-        </Button>
+        <button onClick={onClose} className="btn btn-ghost btn-sm p-1"><FiX className="h-4 w-4" /></button>
       </div>
       <div className="px-6 py-5 overflow-y-auto">{children}</div>
     </div>
   </div>
 );
 
-type ModalMode = { type: 'add' } | { type: 'edit'; policy: PricePolicy } | null;
+type ModalMode = { type: 'add' } | { type: 'edit'; policy: PricePolicyDto } | null;
 
+const DURATION_LABELS: Record<string, string> = {
+  hour: 'Giờ', day: 'Ngày', week: 'Tuần', month: 'Tháng',
+};
+
+// ─── Page Component ───────────────────────────────────────────────────────────
 const BAPricingPage: React.FC = () => {
   const { user } = useAuth();
   const branchId = user!.branchId!;
 
   const [isLoading, setIsLoading] = useState(true);
-  const [policies, setPolicies] = useState<PricePolicy[]>([]);
+  const [policies, setPolicies] = useState<PricePolicyDto[]>([]);
+  const [wsTypes, setWsTypes] = useState<{ id: string; name: string }[]>([]);
   const [modal, setModal] = useState<ModalMode>(null);
 
   const [form, setForm] = useState({
     workspace_type_id: '',
-    duration_unit: 'hour' as PricePolicy['duration_unit'],
+    duration_unit: 'hour',
     price: '',
     is_active: true,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [successMsg, setSuccessMsg] = useState('');
 
+  // ─── Load data ──────────────────────────────────────────────────────────────
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setPolicies(initialPolicies.filter(p => !p.branch_id || p.branch_id === branchId).map(p => ({ ...p })));
-      setIsLoading(false);
-    }, 800);
-    return () => clearTimeout(timer);
+    const load = async () => {
+      setIsLoading(true);
+      try {
+        const [pData, wData] = await Promise.all([
+          staffApi.getPricePolicies(),
+          staffApi.getWorkspaceTypes()
+        ]);
+        
+        // Map names to policies for display
+        const nameMap = new Map<string, string>();
+        wData.forEach(w => nameMap.set(w.id, w.name));
+        
+        const policiesWithNames = pData.map(p => ({
+          ...p,
+          workspaceTypeName: p.workspaceTypeName || nameMap.get(p.workspaceTypeId) || 'Không xác định'
+        }));
+        
+        setPolicies(policiesWithNames);
+        setWsTypes(wData);
+      } catch (e) {
+        console.error('Failed to load pricing data', e);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    load();
   }, [branchId]);
 
+  // ─── Helpers ────────────────────────────────────────────────────────────────
   const showSuccess = (msg: string) => {
     setSuccessMsg(msg);
     setTimeout(() => setSuccessMsg(''), 3000);
   };
 
   const openAdd = () => {
-    setForm({
-      workspace_type_id: workspaceTypes[0]?.id || '',
-      duration_unit: 'hour',
-      price: '',
-      is_active: true,
-    });
+    setForm({ workspace_type_id: wsTypes[0]?.id || '', duration_unit: 'hour', price: '', is_active: true });
     setErrors({});
     setModal({ type: 'add' });
   };
 
-  const openEdit = (p: PricePolicy) => {
+  const openEdit = (p: PricePolicyDto) => {
     setForm({
-      workspace_type_id: p.workspace_type_id,
-      duration_unit: p.duration_unit,
+      workspace_type_id: p.workspaceTypeId,
+      duration_unit: p.durationUnit,
       price: String(p.price),
-      is_active: p.is_active,
+      is_active: p.isActive,
     });
     setErrors({});
     setModal({ type: 'edit', policy: p });
@@ -85,212 +101,211 @@ const BAPricingPage: React.FC = () => {
     const newErrors: Record<string, string> = {};
     if (!form.workspace_type_id) newErrors.workspace_type_id = 'Vui lòng chọn loại không gian';
     if (!form.duration_unit) newErrors.duration_unit = 'Vui lòng chọn đơn vị thời gian';
-    
     const priceNum = parseInt(form.price.replace(/\D/g, ''));
     if (isNaN(priceNum) || priceNum < 0) newErrors.price = 'Giá phải là số hợp lệ';
-    
-    const isDuplicate = policies.some(p => 
-      p.branch_id === branchId &&
-      p.workspace_type_id === form.workspace_type_id &&
-      p.duration_unit === form.duration_unit &&
-      (modal?.type !== 'edit' || modal.policy.id !== p.id)
-    );
-
-    if (isDuplicate) {
-      newErrors.general = 'Chi nhánh của bạn đã có mức giá riêng cho loại không gian và thời lượng này.';
-    }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const save = () => {
+  const save = async () => {
     if (!validate()) return;
-    
     const price = parseInt(form.price.replace(/\D/g, '')) || 0;
-    
-    if (modal?.type === 'add') {
-      const newPolicy: PricePolicy = {
-        id: `pp-branch-${Date.now()}`,
-        workspace_type_id: form.workspace_type_id,
-        duration_unit: form.duration_unit,
-        price,
-        currency: 'VND',
-        is_active: form.is_active,
-        branch_id: branchId,
-      };
-      setPolicies((prev) => [newPolicy, ...prev]);
-      showSuccess('Thêm giá riêng cho chi nhánh thành công');
-    } else if (modal?.type === 'edit') {
-      if (!modal.policy.branch_id) {
-        const newOverride: PricePolicy = {
-          id: `pp-branch-${Date.now()}`,
-          workspace_type_id: form.workspace_type_id,
-          duration_unit: form.duration_unit,
+    try {
+      if (modal?.type === 'add') {
+        let created = await staffApi.createPricePolicy({
+          workspaceTypeId: form.workspace_type_id,
+          durationUnit: form.duration_unit,
           price,
-          currency: 'VND',
-          is_active: form.is_active,
-          branch_id: branchId,
-        };
-        setPolicies((prev) => [newOverride, ...prev]);
-        showSuccess('Đã tạo mức giá ghi đè cho chi nhánh');
-      } else {
-        setPolicies((prev) =>
-          prev.map((p) =>
-            p.id === modal.policy.id
-              ? { ...p, workspace_type_id: form.workspace_type_id, duration_unit: form.duration_unit, price, is_active: form.is_active }
-              : p
-          )
-        );
+        });
+        created.workspaceTypeName = wsTypes.find(w => w.id === created.workspaceTypeId)?.name || 'Không xác định';
+        setPolicies((prev) => [created, ...prev]);
+        showSuccess('Thêm giá riêng cho chi nhánh thành công');
+      } else if (modal?.type === 'edit' && modal.policy.source === 'branch') {
+        let updated = await staffApi.updatePricePolicy(modal.policy.id, { price, isActive: form.is_active });
+        updated.workspaceTypeName = wsTypes.find(w => w.id === updated.workspaceTypeId)?.name || 'Không xác định';
+        setPolicies((prev) => prev.map((p) => p.id === modal.policy.id ? updated : p));
         showSuccess('Cập nhật mức giá thành công');
+      } else if (modal?.type === 'edit' && modal.policy.source === 'global') {
+        // Override global policy with a new branch-level entry
+        let created = await staffApi.createPricePolicy({
+          workspaceTypeId: form.workspace_type_id,
+          durationUnit: form.duration_unit,
+          price,
+        });
+        created.workspaceTypeName = wsTypes.find(w => w.id === created.workspaceTypeId)?.name || 'Không xác định';
+        setPolicies((prev) => [created, ...prev]);
+        showSuccess('Đã tạo mức giá ghi đè cho chi nhánh');
       }
+    } catch (e: any) {
+      setErrors(prev => ({ ...prev, general: e.message || 'Lỗi khi lưu mức giá.' }));
+      return;
     }
     setModal(null);
   };
 
-  const deletePolicy = (id: string) => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa vĩnh viễn mức giá riêng này? Hệ thống sẽ quay về dùng giá mặc định.')) {
+  const deletePolicy = async (id: string) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa vĩnh viễn mức giá riêng này?')) return;
+    try {
+      await staffApi.deletePricePolicy(id);
       setPolicies(prev => prev.filter(p => p.id !== id));
       showSuccess('Đã xóa mức giá riêng của chi nhánh');
+    } catch (e: any) {
+      setErrors(prev => ({ ...prev, general: e.message || 'Lỗi khi xóa.' }));
     }
   };
 
   const sortedPolicies = [...policies].sort((a, b) => {
-    if (a.branch_id && !b.branch_id) return -1;
-    if (!a.branch_id && b.branch_id) return 1;
+    if (a.source === 'branch' && b.source !== 'branch') return -1;
+    if (a.source !== 'branch' && b.source === 'branch') return 1;
     return 0;
   });
 
+  // ─── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6 animate-fade-in relative pb-10">
       {successMsg && (
         <div className="fixed top-4 right-4 z-50 animate-slide-up flex items-center gap-2 bg-success text-success-foreground px-4 py-3 rounded-xl shadow-xl">
-          <FiCheckCircle className="h-5 w-5" />
+          <FiCheck className="h-5 w-5" />
           <p className="font-medium text-sm">{successMsg}</p>
         </div>
       )}
 
       {/* Header */}
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Quản lý chi nhánh</p>
-              <h1 className="text-2xl font-bold font-heading mt-1">Bảng giá</h1>
-              <p className="text-sm font-medium text-muted-foreground mt-2">Quản lý các mức giá áp dụng tại chi nhánh của bạn.</p>
-            </div>
-            <Button onClick={openAdd}>
-              <FiPlus className="h-4 w-4 mr-2" /> Thêm giá riêng
-            </Button>
+      <div className="bg-card rounded-3xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Quản lý chi nhánh</p>
+            <h1 className="text-2xl font-bold font-heading mt-1">Bảng giá</h1>
+            <p className="text-sm font-medium text-muted-foreground mt-2">Quản lý các mức giá áp dụng tại chi nhánh của bạn.</p>
           </div>
-        </CardContent>
-      </Card>
+          <button className="btn btn-primary btn-sm" onClick={openAdd}>
+            <FiPlus className="h-4 w-4" /> Thêm giá riêng
+          </button>
+        </div>
+      </div>
 
-      <div className="flex items-center gap-4 text-xs text-muted-foreground px-1">
+      {/* Legend */}
+      <div className="flex items-center gap-4 text-xs text-muted-foreground px-2 flex-wrap">
         <span className="flex items-center gap-1.5">
-          <span className="px-2.5 py-1 rounded-full border border-primary/30 bg-primary/10 text-primary font-medium flex items-center gap-1">
-            <FiMapPin className="h-3 w-3" /> Giá riêng (Ghi đè)
+          <span className="px-3 py-1.5 rounded-full border border-primary/20 bg-primary/10 text-primary font-medium flex items-center gap-1 shadow-sm">
+            <FiMapPin className="h-3.5 w-3.5" /> Giá chi nhánh
           </span>
+          <span className="text-muted-foreground/80">Áp dụng riêng cho chi nhánh này</span>
         </span>
-        <span className="flex items-center gap-1.5">
-          <span className="px-2.5 py-1 rounded-full border border-border bg-muted font-medium flex items-center gap-1">
-            <FiGlobe className="h-3 w-3" /> Giá hệ thống (Mặc định)
+        <span className="flex items-center gap-1.5 ml-4">
+          <span className="px-3 py-1.5 rounded-full border border-border bg-muted text-muted-foreground font-medium flex items-center gap-1 shadow-sm">
+            <FiGlobe className="h-3.5 w-3.5" /> Mặc định
           </span>
+          <span className="text-muted-foreground/80">Giá chung của hệ thống</span>
         </span>
       </div>
 
-      {/* Table Section */}
-      <Card className="overflow-hidden">
-        <CardHeader className="bg-muted/30 border-b border-border px-6 py-4">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <FiDollarSign className="h-5 w-5 text-primary" /> Tất cả bảng giá
-          </CardTitle>
-        </CardHeader>
+      {/* Table */}
+      {/* Table */}
+      <div className="bg-card rounded-2xl border border-border/60 shadow-lg shadow-black/5 overflow-hidden">
+        <div className="flex items-center gap-3 px-6 py-5 bg-gradient-to-r from-muted/40 to-transparent border-b border-border/60">
+          <div className="p-2 bg-primary/10 rounded-lg text-primary">
+            <FiDollarSign className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-foreground">Chi tiết bảng giá</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">Tất cả các chính sách giá đang hoạt động</p>
+          </div>
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
-            <thead className="bg-muted/50 text-muted-foreground uppercase text-xs">
+            <thead className="bg-muted/20 text-muted-foreground uppercase text-[11px] font-bold tracking-wider">
               <tr>
-                <th className="px-6 py-4 font-semibold">Loại workspace</th>
-                <th className="px-6 py-4 font-semibold">Đơn vị thời gian</th>
-                <th className="px-6 py-4 font-semibold">Phân loại</th>
-                <th className="px-6 py-4 font-semibold">Giá (VND)</th>
-                <th className="px-6 py-4 font-semibold text-center">Trạng thái</th>
-                <th className="px-6 py-4 font-semibold text-right">Thao tác</th>
+                <th className="px-6 py-4">Loại workspace</th>
+                <th className="px-6 py-4">Thời lượng</th>
+                <th className="px-6 py-4">Phân loại</th>
+                <th className="px-6 py-4">Giá (VND)</th>
+                <th className="px-6 py-4 text-center">Trạng thái</th>
+                <th className="px-6 py-4 text-right">Thao tác</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-border/50">
               {isLoading ? (
                 Array.from({ length: 4 }).map((_, i) => (
-                  <tr key={`skel-${i}`} className="border-b border-border">
-                    <td className="px-6 py-4"><Skeleton className="h-4 w-32" /></td>
-                    <td className="px-6 py-4"><Skeleton className="h-4 w-20" /></td>
-                    <td className="px-6 py-4"><Skeleton className="h-6 w-24 rounded-full" /></td>
-                    <td className="px-6 py-4"><Skeleton className="h-4 w-20" /></td>
-                    <td className="px-6 py-4"><Skeleton className="h-6 w-28 rounded-full" /></td>
-                    <td className="px-6 py-4"><Skeleton className="h-8 w-16 rounded-lg ml-auto" /></td>
+                  <tr key={`skel-${i}`} className="bg-card">
+                    {[1,2,3,4,5,6].map(j => (
+                      <td key={j} className="px-6 py-5"><div className="h-5 w-24 bg-muted/60 rounded-md animate-pulse" /></td>
+                    ))}
                   </tr>
                 ))
               ) : sortedPolicies.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-12 bg-card">
-                    <EmptyState 
-                      icon={FiInbox} 
-                      title="Chưa có chính sách giá" 
-                      description="Hệ thống chưa cấu hình bảng giá nào." 
-                      action={
-                        <Button onClick={openAdd}>
-                          <FiPlus className="h-4 w-4 mr-2" /> Thêm ngay
-                        </Button>
-                      }
-                    />
+                  <td colSpan={6} className="py-16 text-center text-muted-foreground">
+                    <div className="h-16 w-16 bg-muted/50 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <FiDollarSign className="h-8 w-8 opacity-40" />
+                    </div>
+                    <p className="text-base font-medium text-foreground mb-1">Chưa có chính sách giá nào</p>
+                    <p className="text-sm mb-4">Hệ thống chưa ghi nhận bảng giá cho chi nhánh này.</p>
+                    <button className="btn btn-primary shadow-md shadow-primary/20" onClick={openAdd}>
+                      <FiPlus className="h-4 w-4" /> Thêm giá ngay
+                    </button>
                   </td>
                 </tr>
               ) : (
                 sortedPolicies.map(pp => {
-                  const wsType = getWorkspaceType(pp.workspace_type_id);
-                  const isBranchSpecific = !!pp.branch_id;
-                  
-                  const isOverridden = !isBranchSpecific && policies.some(
-                    override => override.branch_id && override.workspace_type_id === pp.workspace_type_id && override.duration_unit === pp.duration_unit
+                  const isBranchSpecific = pp.source === 'branch';
+                  const isOverridden = pp.source === 'global' && policies.some(
+                    o => o.source === 'branch' && o.workspaceTypeId === pp.workspaceTypeId && o.durationUnit === pp.durationUnit
                   );
 
                   return (
-                    <tr key={pp.id} className={`border-b border-border hover:bg-muted/50 transition-colors bg-card ${isOverridden ? 'opacity-40 bg-muted/20' : ''}`}>
-                      <td className="px-6 py-4 align-middle font-medium max-w-[150px]">
-                        <div className="truncate" title={wsType?.name}>{wsType?.name}</div>
+                    <tr key={pp.id} className={`hover:bg-muted/30 transition-all duration-200 group ${isOverridden ? 'bg-muted/10 opacity-60' : 'bg-card'}`}>
+                      <td className="px-6 py-4 align-middle font-semibold text-foreground max-w-[150px]">
+                        <div className="flex items-center gap-2">
+                          <div className={`w-1.5 h-1.5 rounded-full ${isBranchSpecific ? 'bg-primary' : 'bg-muted-foreground/50'}`} />
+                          <span className="truncate" title={pp.workspaceTypeName}>{pp.workspaceTypeName}</span>
+                        </div>
                       </td>
-                      <td className="px-6 py-4 align-middle text-muted-foreground">{durationUnitLabel[pp.duration_unit]}</td>
+                      <td className="px-6 py-4 align-middle text-muted-foreground font-medium">
+                        {DURATION_LABELS[pp.durationUnit] ?? pp.durationUnit}
+                      </td>
                       <td className="px-6 py-4 align-middle">
                         {isBranchSpecific ? (
-                          <Badge className="border border-primary/20 bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
-                            <FiMapPin className="h-3 w-3 mr-1" /> Giá chi nhánh
-                          </Badge>
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-primary/20 bg-primary/10 text-primary text-[11px] font-bold tracking-wide shadow-sm">
+                            <FiMapPin className="h-3 w-3" /> CHI NHÁNH
+                          </span>
                         ) : (
-                          <Badge variant="neutral">
-                            <FiGlobe className="h-3 w-3 mr-1" /> Mặc định
-                          </Badge>
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-border bg-muted text-muted-foreground text-[11px] font-bold tracking-wide">
+                            <FiGlobe className="h-3 w-3" /> MẶC ĐỊNH
+                          </span>
                         )}
-                        {isOverridden && <span className="ml-2 text-xs font-semibold text-destructive">(Đã bị ghi đè)</span>}
+                        {isOverridden && <span className="block mt-1 text-[10px] font-semibold text-destructive/80">(Bị ghi đè)</span>}
                       </td>
-                      <td className={`px-6 py-4 align-middle font-semibold ${isBranchSpecific ? 'text-primary' : ''}`}>
-                        {isOverridden ? <del className="text-muted-foreground">{formatVND(pp.price)}</del> : formatVND(pp.price)}
+                      <td className="px-6 py-4 align-middle">
+                        <div className={`font-bold text-[15px] ${isBranchSpecific ? 'text-primary' : 'text-foreground'}`}>
+                          {isOverridden ? <del className="text-muted-foreground font-medium">{formatVND(pp.price)}</del> : formatVND(pp.price)}
+                        </div>
                       </td>
                       <td className="px-6 py-4 align-middle text-center">
-                        <Badge variant={pp.is_active ? 'success' : 'neutral'}>
-                          {pp.is_active ? 'Đang áp dụng' : 'Tạm ngưng'}
-                        </Badge>
+                        <span className={`badge ${pp.isActive ? 'badge-success' : 'badge-danger'}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${pp.isActive ? 'bg-success' : 'bg-destructive'}`}></span>
+                          {pp.isActive ? 'Hoạt động' : 'Tạm ngưng'}
+                        </span>
                       </td>
                       <td className="px-6 py-4 align-middle text-right">
-                        <div className="flex items-center justify-end gap-2">
+                        <div className="flex items-center justify-end gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
                           {!isOverridden && (
-                            <Button variant="ghost" size="icon" onClick={() => openEdit(pp)} title={isBranchSpecific ? "Chỉnh sửa" : "Tạo giá ghi đè"}>
+                            <button
+                              className="p-2 rounded-full hover:bg-primary/10 hover:text-primary transition-colors focus:outline-none"
+                              onClick={() => openEdit(pp)}
+                              title={isBranchSpecific ? 'Chỉnh sửa' : 'Tạo giá ghi đè'}
+                            >
                               <FiEdit2 className="h-4 w-4" />
-                            </Button>
+                            </button>
                           )}
                           {isBranchSpecific && (
-                            <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => deletePolicy(pp.id)} title="Xóa">
+                            <button
+                              className="p-2 rounded-full hover:bg-destructive/10 text-destructive/70 hover:text-destructive transition-colors focus:outline-none"
+                              onClick={() => deletePolicy(pp.id)}
+                              title="Xóa"
+                            >
                               <FiTrash2 className="h-4 w-4" />
-                            </Button>
+                            </button>
                           )}
                         </div>
                       </td>
@@ -301,27 +316,27 @@ const BAPricingPage: React.FC = () => {
             </tbody>
           </table>
         </div>
-      </Card>
+      </div>
 
-      {/* Modal */}
+      {/* Add / Edit Modal */}
       {modal && (
         <Modal
-          title={modal.type === 'add' ? 'Thêm giá riêng cho chi nhánh' : (modal.policy.branch_id ? 'Chỉnh sửa giá chi nhánh' : 'Tạo giá ghi đè cho chi nhánh')}
+          title={modal.type === 'add' ? 'Thêm giá riêng cho chi nhánh' : (modal.policy.source === 'branch' ? 'Chỉnh sửa giá chi nhánh' : 'Tạo giá ghi đè cho chi nhánh')}
           onClose={() => setModal(null)}
         >
           <div className="space-y-5">
             {errors.general && (
-              <div className="flex items-center gap-2 rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 px-3 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
+              <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-3 text-sm text-destructive">
                 <FiAlertCircle className="h-5 w-5 shrink-0" />
                 <p>{errors.general}</p>
               </div>
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="workspace_type_id">Loại không gian <span className="text-destructive">*</span></Label>
+              <label htmlFor="workspace_type_id" className="block text-sm font-medium">Loại không gian <span className="text-destructive">*</span></label>
               <select
                 id="workspace_type_id"
-                className={`flex h-10 w-full rounded-lg border border-input bg-card px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-colors ${errors.workspace_type_id ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                className={`input-field ${errors.workspace_type_id ? 'border-destructive' : ''}`}
                 value={form.workspace_type_id}
                 disabled={modal.type === 'edit'}
                 onChange={(e) => {
@@ -329,19 +344,20 @@ const BAPricingPage: React.FC = () => {
                   if (errors.workspace_type_id) setErrors(p => ({ ...p, workspace_type_id: '' }));
                 }}
               >
-                {workspaceTypes.map(wt => <option key={wt.id} value={wt.id}>{wt.name}</option>)}
+                {wsTypes.map(wt => <option key={wt.id} value={wt.id}>{wt.name}</option>)}
               </select>
+              {errors.workspace_type_id && <p className="text-xs text-destructive mt-1 flex items-center gap-1"><FiAlertCircle className="shrink-0" /> {errors.workspace_type_id}</p>}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="duration_unit">Thời lượng <span className="text-destructive">*</span></Label>
+                <label htmlFor="duration_unit" className="block text-sm font-medium">Thời lượng <span className="text-destructive">*</span></label>
                 <select
                   id="duration_unit"
-                  className="flex h-10 w-full rounded-lg border border-input bg-card px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
+                  className="input-field"
                   value={form.duration_unit}
                   disabled={modal.type === 'edit'}
-                  onChange={(e) => setForm((p) => ({ ...p, duration_unit: e.target.value as PricePolicy['duration_unit'] }))}
+                  onChange={(e) => setForm((p) => ({ ...p, duration_unit: e.target.value }))}
                 >
                   <option value="hour">Giờ</option>
                   <option value="day">Ngày</option>
@@ -350,13 +366,13 @@ const BAPricingPage: React.FC = () => {
                 </select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="price">Giá mới (VND) <span className="text-destructive">*</span></Label>
-                <Input
+                <label htmlFor="price" className="block text-sm font-medium">Giá mới (VND) <span className="text-destructive">*</span></label>
+                <input
                   id="price"
                   type="number"
                   min={0}
                   step={1000}
-                  className={errors.price ? 'border-destructive focus-visible:ring-destructive' : ''}
+                  className={`input-field ${errors.price ? 'border-destructive' : ''}`}
                   placeholder="Ví dụ: 50000"
                   value={form.price}
                   onChange={(e) => {
@@ -369,7 +385,7 @@ const BAPricingPage: React.FC = () => {
             </div>
 
             <p className="text-xs text-muted-foreground bg-muted p-3 rounded-lg mt-2">
-              Chính sách giá này sẽ được ưu tiên áp dụng tại chi nhánh của bạn. Giá mới chỉ áp dụng cho các lượt đặt chỗ (booking) sau thời điểm lưu.
+              Chính sách giá này sẽ được ưu tiên áp dụng tại chi nhánh của bạn.
             </p>
 
             <div className="flex items-center gap-3 pt-2">
@@ -380,14 +396,14 @@ const BAPricingPage: React.FC = () => {
                 onChange={(e) => setForm((p) => ({ ...p, is_active: e.target.checked }))}
                 className="h-4 w-4 rounded border-border"
               />
-              <Label htmlFor="price-active" className="cursor-pointer">Kích hoạt mức giá này</Label>
+              <label htmlFor="price-active" className="text-sm cursor-pointer">Kích hoạt mức giá này</label>
             </div>
 
             <div className="flex gap-3 justify-end pt-4 border-t border-border mt-6">
-              <Button variant="outline" onClick={() => setModal(null)}>Hủy</Button>
-              <Button onClick={save}>
-                <FiCheck className="h-4 w-4 mr-2" /> Lưu giá riêng
-              </Button>
+              <button className="btn btn-secondary btn-sm" onClick={() => setModal(null)}>Hủy</button>
+              <button className="btn btn-primary btn-sm" onClick={save}>
+                <FiCheck className="h-4 w-4" /> Lưu giá riêng
+              </button>
             </div>
           </div>
         </Modal>

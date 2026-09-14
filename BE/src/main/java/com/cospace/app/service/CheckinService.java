@@ -5,6 +5,7 @@ import com.cospace.app.dto.api.CheckinLogDto;
 import com.cospace.app.entity.Booking;
 import com.cospace.app.entity.BookingStatus;
 import com.cospace.app.entity.CheckinLog;
+import com.cospace.app.entity.DurationUnit;
 import com.cospace.app.repository.BookingRepository;
 import com.cospace.app.repository.CheckinLogRepository;
 import com.cospace.app.repository.UserRepository;
@@ -50,12 +51,17 @@ public class CheckinService {
             });
         }
 
+        boolean isMultiDayPass = booking.isContract() 
+                || booking.getUnit() == DurationUnit.week 
+                || booking.getUnit() == DurationUnit.month 
+                || (booking.getUnit() == DurationUnit.day && booking.getUnitCount() > 1);
+
         // 2. Validate booking status
-        if (!booking.isContract() && booking.getStatus() != BookingStatus.CONFIRMED) {
+        if (!isMultiDayPass && booking.getStatus() != BookingStatus.CONFIRMED) {
             throw new IllegalArgumentException("Vé chưa được thanh toán/xác nhận hoặc đã hoàn tất (Trạng thái: " + booking.getStatus() + ").");
         }
-        if (booking.isContract() && booking.getStatus() != BookingStatus.CONFIRMED && booking.getStatus() != BookingStatus.CHECKED_IN) {
-            throw new IllegalArgumentException("Hợp đồng chưa hợp lệ để Check-in (Trạng thái: " + booking.getStatus() + ").");
+        if (isMultiDayPass && booking.getStatus() != BookingStatus.CONFIRMED && booking.getStatus() != BookingStatus.CHECKED_IN) {
+            throw new IllegalArgumentException("Gói đặt chỗ dài hạn chưa hợp lệ để Check-in (Trạng thái: " + booking.getStatus() + ").");
         }
 
         // 3. Check if already checked in
@@ -68,7 +74,7 @@ public class CheckinService {
         if (now.isBefore(booking.getStartAt().minusMinutes(30))) {
             throw new IllegalArgumentException("Chưa đến giờ Check-in. Hệ thống chỉ cho phép Check-in trước giờ bắt đầu tối đa 30 phút.");
         }
-        if (!booking.isContract() && now.isAfter(booking.getEndAt())) {
+        if (!isMultiDayPass && now.isAfter(booking.getEndAt())) {
             throw new IllegalArgumentException("Vé đặt chỗ đã quá hạn giờ kết thúc. Không thể Check-in.");
         }
 
@@ -109,9 +115,23 @@ public class CheckinService {
         Booking booking = bookingRepository.findByIdWithLock(checkinLog.getBookingId())
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thông tin đặt chỗ"));
 
-        // If contract and still within valid period, maintain status CHECKED_IN for tomorrow
-        if (booking.isContract() && now.isBefore(booking.getEndAt())) {
-            booking.setStatus(BookingStatus.CHECKED_IN);
+        // Validate branch matching if staff is bound to a specific branch (same rule as checkin)
+        if (staffId != null) {
+            userRepository.findById(staffId).ifPresent(staff -> {
+                if (staff.getBranchId() != null && !staff.getBranchId().equals(booking.getBranchId())) {
+                    throw new IllegalArgumentException("Nhân viên không thuộc chi nhánh của vé đặt chỗ này.");
+                }
+            });
+        }
+
+        // Multi-day pass: if still within valid period, maintain status CONFIRMED for future days, do not truncate endAt
+        boolean isMultiDayPass = booking.isContract() 
+                || booking.getUnit() == DurationUnit.week 
+                || booking.getUnit() == DurationUnit.month 
+                || (booking.getUnit() == DurationUnit.day && booking.getUnitCount() > 1);
+
+        if (isMultiDayPass && now.isBefore(booking.getEndAt())) {
+            booking.setStatus(BookingStatus.CONFIRMED);
         } else {
             booking.setStatus(BookingStatus.COMPLETED);
             // Early checkout: Truncate endAt to actual checkout time to immediately release the physical space

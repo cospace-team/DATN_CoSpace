@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   FiUser,
   FiBriefcase,
@@ -7,6 +7,7 @@ import {
   FiPhone,
   FiGithub,
   FiLinkedin,
+  FiFacebook,
   FiGlobe,
   FiSettings,
   FiCheck,
@@ -31,9 +32,16 @@ import {
   FiTrendingUp,
   FiShield,
   FiShare2,
+  FiUploadCloud,
+  FiImage,
+  FiChevronDown,
+  FiRefreshCw,
 } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../components/Toast';
+import { Skeleton } from '../../components/ui/Skeleton';
+import { Spinner } from '../../components/ui/Spinner';
+import { bookingApi } from '../../lib/bookingApi';
 
 // ── BANNER THEMES ──
 const BANNER_THEMES = [
@@ -164,24 +172,83 @@ const ProfilePage: React.FC = () => {
     contactPublic: true,
   });
 
-  // Skills & Social Links (Extended profile features)
-  const [skills, setSkills] = useState<string[]>([
-    'React',
-    'TypeScript',
-    'UI/UX Design',
-    'Khởi nghiệp',
-    'AI / Machine Learning',
-  ]);
+  // Skills & Social Links (Real Database Networking Profile)
+  const [skills, setSkills] = useState<{ tagId?: string; tagName: string; level?: number }[]>([]);
+  const [availableMasterTags, setAvailableMasterTags] = useState<{ id: string; name: string; category?: string }[]>([]);
+  const [isSavingSkills, setIsSavingSkills] = useState(false);
   const [newSkillInput, setNewSkillInput] = useState('');
   const [socialLinks, setSocialLinks] = useState({
-    linkedin: 'https://linkedin.com/in/cospace-user',
-    github: 'https://github.com/cospace-dev',
-    website: 'https://cospace.vn',
+    linkedin: '',
+    github: '',
+    facebook: '',
+    email: '',
+    website: '',
   });
+  const [isEditingSocial, setIsEditingSocial] = useState(false);
+  const [isSavingSocial, setIsSavingSocial] = useState(false);
 
-  // Avatar Modal
+  // Networking list display filters
+  const [networkFilterMode, setNetworkFilterMode] = useState<'best' | 'all'>('best');
+  const [visiblePartnersCount, setVisiblePartnersCount] = useState<number>(6);
+
+  // Avatar Modal & Upload States
   const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [customAvatarUrl, setCustomAvatarUrl] = useState('');
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      showToast('Vui lòng chọn tệp hình ảnh hợp lệ (PNG, JPG, WebP)', 'error');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('Dung lượng ảnh tối đa là 5MB', 'error');
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+    const reader = new FileReader();
+    reader.onload = event => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          const size = 360;
+          canvas.width = size;
+          canvas.height = size;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            const minDim = Math.min(img.width, img.height);
+            const sx = (img.width - minDim) / 2;
+            const sy = (img.height - minDim) / 2;
+            ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, size, size);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+            setCustomAvatarUrl(dataUrl);
+            showToast('Tải ảnh thành công! Bấm "Lưu ảnh đại diện" để áp dụng.', 'success');
+          }
+        } catch {
+          showToast('Có lỗi khi xử lý định dạng ảnh', 'error');
+        } finally {
+          setIsUploadingAvatar(false);
+        }
+      };
+      img.onerror = () => {
+        showToast('Không thể đọc dữ liệu ảnh này', 'error');
+        setIsUploadingAvatar(false);
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.onerror = () => {
+      showToast('Lỗi khi đọc file từ thiết bị', 'error');
+      setIsUploadingAvatar(false);
+    };
+    reader.readAsDataURL(file);
+  };
 
   // ── Tab 2: Networking States ──
   const [searchQuery, setSearchQuery] = useState('');
@@ -198,15 +265,15 @@ const ProfilePage: React.FC = () => {
   const [showOldPassword, setShowOldPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [isSavingPassword, setIsSavingPassword] = useState(false);
+  const [isLoadingPartners, setIsLoadingPartners] = useState(true);
 
-  // ── Stats (Customer Mini Dashboard) ──
-  const stats = {
-    totalBookings: 12,
-    totalHours: 48,
-    matchedCount: partnersList.length,
-    tier: 'Gold Member',
-    memberSince: 'Tháng 01/2026',
-  };
+  // ── Real Customer Stats (Calculated from actual bookings) ──
+  const [realStats, setRealStats] = useState({
+    totalBookings: 0,
+    totalHours: 0,
+    tier: 'Bronze Member',
+    memberSince: 'Năm 2026',
+  });
 
   // Sync user data when loaded
   useEffect(() => {
@@ -220,12 +287,89 @@ const ProfilePage: React.FC = () => {
     }
   }, [user]);
 
-  // Fetch backend profile data
+  // Fetch backend profile data, master tags & real booking stats
   useEffect(() => {
+    const token = localStorage.getItem('workhub_access_token');
+    if (!token) return;
+
+    // 1. Fetch Master Tags from Database
+    const fetchMasterTags = async () => {
+      try {
+        const res = await fetch('http://localhost:8080/api/tags');
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            setAvailableMasterTags(data);
+          }
+        }
+      } catch (err) {
+        console.warn('Cannot fetch master tags:', err);
+      }
+    };
+    fetchMasterTags();
+
+    // 2. Fetch Networking Profile (Skills, Bio, Links) from Database
+    const fetchNetworkingProfile = async () => {
+      try {
+        const res = await fetch('http://localhost:8080/api/profiles/me/networking', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.skills && Array.isArray(data.skills) && data.skills.length > 0) {
+            setSkills(
+              data.skills.map((s: { tagId?: string; tagName: string; level?: number }) => ({
+                tagId: s.tagId,
+                tagName: s.tagName,
+                level: s.level || 3,
+              }))
+            );
+          } else {
+            // Default initial suggestions if empty
+            setSkills([
+              { tagName: 'UI/UX Design' },
+              { tagName: 'Frontend Dev' },
+              { tagName: 'Khởi nghiệp' },
+            ]);
+          }
+
+          if (data.contactLink) {
+            const raw = data.contactLink.trim();
+            if (raw.startsWith('{')) {
+              try {
+                const parsed = JSON.parse(raw);
+                setSocialLinks({
+                  linkedin: parsed.linkedin || '',
+                  github: parsed.github || '',
+                  facebook: parsed.facebook || '',
+                  email: parsed.email || '',
+                  website: parsed.website || '',
+                });
+              } catch {
+                setSocialLinks(prev => ({ ...prev, website: raw }));
+              }
+            } else if (raw.includes('linkedin.com')) {
+              setSocialLinks(prev => ({ ...prev, linkedin: raw }));
+            } else if (raw.includes('github.com')) {
+              setSocialLinks(prev => ({ ...prev, github: raw }));
+            } else if (raw.includes('facebook.com')) {
+              setSocialLinks(prev => ({ ...prev, facebook: raw }));
+            } else if (raw.includes('@')) {
+              setSocialLinks(prev => ({ ...prev, email: raw }));
+            } else {
+              setSocialLinks(prev => ({ ...prev, website: raw }));
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Cannot fetch networking profile:', err);
+      }
+    };
+    fetchNetworkingProfile();
+
+    // 3. Fetch User profile details
     const fetchProfile = async () => {
       try {
-        const token = localStorage.getItem('workhub_access_token');
-        if (!token) return;
         const response = await fetch('http://localhost:8080/api/users/profile', {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -237,7 +381,10 @@ const ProfilePage: React.FC = () => {
             ...prev,
             profession: data.profession || prev.profession || 'Frontend Developer & Co-worker',
             company: data.company || prev.company || 'CoSpace Community',
-            bio: data.bio || prev.bio || 'Thành viên năng động tại CoSpace. Đam mê công nghệ, chia sẻ kinh nghiệm và tìm kiếm cơ hội hợp tác kết nối.',
+            bio:
+              data.bio ||
+              prev.bio ||
+              'Thành viên năng động tại CoSpace. Đam mê công nghệ, chia sẻ kinh nghiệm và tìm kiếm cơ hội hợp tác kết nối.',
             contactPublic: data.contactPublic !== undefined ? data.contactPublic : true,
           }));
           if (data.avatarUrl) {
@@ -250,16 +397,58 @@ const ProfilePage: React.FC = () => {
     };
     fetchProfile();
 
-    // Fetch partner matching suggestions
-    const fetchPartners = async () => {
+    // 4. Calculate real stats from user bookings
+    const loadRealStats = async () => {
       try {
-        const token = localStorage.getItem('workhub_access_token');
-        if (!token) return;
+        const bookings = await bookingApi.getMyBookings();
+        if (bookings && Array.isArray(bookings)) {
+          const valid = bookings.filter(
+            b => b.status === 'confirmed' || b.status === 'checked_in' || b.status === 'completed'
+          );
+          const totalBookings = valid.length;
+          let totalHours = 0;
+          valid.forEach(b => {
+            if (b.unit === 'hour') totalHours += b.unitCount || 1;
+            else if (b.unit === 'day') totalHours += (b.unitCount || 1) * 8;
+            else if (b.unit === 'week') totalHours += (b.unitCount || 1) * 40;
+            else if (b.unit === 'month') totalHours += (b.unitCount || 1) * 160;
+            else if (b.startAt && b.endAt) {
+              const diff = new Date(b.endAt).getTime() - new Date(b.startAt).getTime();
+              totalHours += Math.max(1, Math.round(diff / 3600000));
+            }
+          });
+
+          let tier = 'Bronze Member';
+          if (totalBookings >= 20 || totalHours >= 80) tier = 'Platinum Member';
+          else if (totalBookings >= 10 || totalHours >= 40) tier = 'Gold Member';
+          else if (totalBookings >= 3 || totalHours >= 10) tier = 'Silver Member';
+
+          let memberSince = 'Năm 2026';
+          if (user?.createdAt) {
+            const d = new Date(user.createdAt);
+            memberSince = `Tháng ${d.getMonth() + 1}/${d.getFullYear()}`;
+          } else if (valid.length > 0 && valid[0].createdAt) {
+            const d = new Date(valid[0].createdAt);
+            memberSince = `Tháng ${d.getMonth() + 1}/${d.getFullYear()}`;
+          }
+
+          setRealStats({ totalBookings, totalHours, tier, memberSince });
+        }
+      } catch (e) {
+        console.warn('Failed to calculate real booking stats:', e);
+      }
+    };
+    loadRealStats();
+
+    // 5. Fetch partner matching suggestions
+    const fetchPartners = async () => {
+      setIsLoadingPartners(true);
+      try {
         const res = await fetch('http://localhost:8080/api/matching/suggestions', {
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
-          }
+            Authorization: `Bearer ${token}`,
+          },
         });
         if (res.ok) {
           const json = await res.json();
@@ -269,15 +458,48 @@ const ProfilePage: React.FC = () => {
         }
       } catch (err) {
         console.warn('Cannot fetch partner suggestions, fallback to demo data:', err);
+      } finally {
+        setIsLoadingPartners(false);
       }
     };
     fetchPartners();
   }, [user]);
 
-  // ── Save Profile Handler ──
+  // Re-fetch partners helper
+  const reloadPartnerSuggestions = async () => {
+    try {
+      const token = localStorage.getItem('workhub_access_token');
+      if (!token) return;
+      const res = await fetch('http://localhost:8080/api/matching/suggestions', {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.data && Array.isArray(json.data)) {
+          setPartnersList(json.data);
+        }
+      }
+    } catch {
+      // quiet
+    }
+  };
+
+  // ── Save Entire Profile Handler (User Details + Networking + Skills + Social Links) ──
   const handleSaveProfile = async () => {
     setIsSavingProfile(true);
     try {
+      const contactLinkJson = JSON.stringify({
+        linkedin: (socialLinks.linkedin || '').trim(),
+        github: (socialLinks.github || '').trim(),
+        facebook: (socialLinks.facebook || '').trim(),
+        email: (socialLinks.email || '').trim(),
+        website: (socialLinks.website || '').trim(),
+      });
+
+      // 1. Update basic user profile
       await updateProfile({
         fullName: profileForm.fullName,
         email: profileForm.email,
@@ -287,10 +509,41 @@ const ProfilePage: React.FC = () => {
         profession: profileForm.profession,
         company: profileForm.company,
         contactPublic: profileForm.contactPublic,
-        contactLink: socialLinks.website || socialLinks.linkedin,
+        contactLink: contactLinkJson,
       });
+
+      // 2. Persist networking profile with real skills into database
+      const token = localStorage.getItem('workhub_access_token');
+      if (token) {
+        await fetch('http://localhost:8080/api/profiles/me/networking', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            bio: profileForm.bio,
+            profession: profileForm.profession,
+            company: profileForm.company,
+            contactEmail: profileForm.email,
+            contactPhone: profileForm.phone,
+            contactLink: contactLinkJson,
+            contactPublic: profileForm.contactPublic,
+            skills: skills.map(s => ({
+              tagId: s.tagId || null,
+              tagName: s.tagName,
+              level: s.level || 3,
+            })),
+            interests: [],
+          }),
+        });
+
+        // 3. Refresh partner suggestions in background
+        void reloadPartnerSuggestions().catch(e => console.warn('Partner suggestions background refresh:', e));
+      }
+
       setIsEditing(false);
-      showToast('Cập nhật hồ sơ thông tin thành công!', 'success');
+      showToast('Cập nhật toàn bộ thông tin hồ sơ và kỹ năng thành công!', 'success');
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Có lỗi xảy ra khi lưu thông tin', 'error');
     } finally {
@@ -321,34 +574,236 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-  // ── Skills Handlers ──
-  const handleAddSkill = (skillToAdd: string) => {
-    const trimmed = skillToAdd.trim();
-    if (trimmed && !skills.includes(trimmed)) {
-      setSkills(prev => [...prev, trimmed]);
-      setNewSkillInput('');
-      showToast(`Đã thêm kỹ năng: ${trimmed}`, 'info');
+  // ── Auto-save or Manual-save Skills into Database (Optimized & Non-blocking) ──
+  const saveSkillsToBackend = async (
+    skillsToSave: { tagId?: string; tagName: string; level?: number }[]
+  ) => {
+    setIsSavingSkills(true);
+    try {
+      const token = localStorage.getItem('workhub_access_token');
+      if (!token) {
+        showToast('Vui lòng đăng nhập để lưu kỹ năng', 'error');
+        return;
+      }
+      const contactLinkJson = JSON.stringify({
+        linkedin: (socialLinks.linkedin || '').trim(),
+        github: (socialLinks.github || '').trim(),
+        facebook: (socialLinks.facebook || '').trim(),
+        email: (socialLinks.email || '').trim(),
+        website: (socialLinks.website || '').trim(),
+      });
+      const res = await fetch('http://localhost:8080/api/profiles/me/networking', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          bio: profileForm.bio,
+          profession: profileForm.profession,
+          company: profileForm.company,
+          contactEmail: profileForm.email,
+          contactPhone: profileForm.phone,
+          contactLink: contactLinkJson,
+          contactPublic: profileForm.contactPublic,
+          skills: skillsToSave.map(s => ({
+            tagId: s.tagId || null,
+            tagName: s.tagName,
+            level: s.level || 3,
+          })),
+          interests: [],
+        }),
+      });
+
+      if (res.ok) {
+        // Run partner suggestions in the background so tag editing feels instantaneous
+        void reloadPartnerSuggestions().catch(e => console.warn('Partner suggestions background refresh:', e));
+      } else {
+        showToast('Không thể lưu kỹ năng lên máy chủ', 'error');
+      }
+    } catch {
+      showToast('Có lỗi xảy ra khi kết nối máy chủ', 'error');
+    } finally {
+      setIsSavingSkills(false);
     }
   };
 
-  const handleRemoveSkill = (skillToRemove: string) => {
-    setSkills(prev => prev.filter(s => s !== skillToRemove));
+  // ── Skills Handlers ──
+  const handleAddSkill = async (skillToAdd: string) => {
+    const trimmed = skillToAdd.trim();
+    if (!trimmed) return;
+    if (skills.some(s => s.tagName.toLowerCase() === trimmed.toLowerCase())) {
+      showToast(`Kỹ năng "${trimmed}" đã có trong danh sách`, 'info');
+      return;
+    }
+    const matchedMaster = availableMasterTags.find(
+      t => t.name.toLowerCase() === trimmed.toLowerCase()
+    );
+    const newSkill = {
+      tagId: matchedMaster?.id,
+      tagName: matchedMaster?.name || trimmed,
+      level: 3,
+    };
+    const updated = [...skills, newSkill];
+    setSkills(updated);
+    setNewSkillInput('');
+    await saveSkillsToBackend(updated);
   };
 
-  // ── Filtered Partners ──
-  const filteredPartners = partnersList.filter(partner => {
-    const matchesSearch =
-      partner.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      partner.profession.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      partner.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      partner.commonTags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
+  const handleRemoveSkill = async (skillNameToRemove: string) => {
+    const updated = skills.filter(
+      s => s.tagName.toLowerCase() !== skillNameToRemove.toLowerCase()
+    );
+    setSkills(updated);
+    await saveSkillsToBackend(updated);
+  };
 
-    const matchesTag = selectedTagFilter
-      ? partner.commonTags.includes(selectedTagFilter)
-      : true;
+  // ── Save Social Links Separately ──
+  const handleSaveSocialLinks = async () => {
+    setIsSavingSocial(true);
+    try {
+      const contactLinkJson = JSON.stringify({
+        linkedin: (socialLinks.linkedin || '').trim(),
+        github: (socialLinks.github || '').trim(),
+        facebook: (socialLinks.facebook || '').trim(),
+        email: (socialLinks.email || '').trim(),
+        website: (socialLinks.website || '').trim(),
+      });
+      // 1. Update basic profile
+      await updateProfile({
+        fullName: profileForm.fullName,
+        email: profileForm.email,
+        phone: profileForm.phone,
+        avatarUrl: customAvatarUrl || user?.avatarUrl,
+        bio: profileForm.bio,
+        profession: profileForm.profession,
+        company: profileForm.company,
+        contactPublic: profileForm.contactPublic,
+        contactLink: contactLinkJson,
+      });
 
-    return matchesSearch && matchesTag;
-  });
+      // 2. Update networking profile in DB
+      const token = localStorage.getItem('workhub_access_token');
+      if (token) {
+        await fetch('http://localhost:8080/api/profiles/me/networking', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            bio: profileForm.bio,
+            profession: profileForm.profession,
+            company: profileForm.company,
+            contactEmail: profileForm.email,
+            contactPhone: profileForm.phone,
+            contactLink: contactLinkJson,
+            contactPublic: profileForm.contactPublic,
+            skills: skills.map(s => ({
+              tagId: s.tagId || null,
+              tagName: s.tagName,
+              level: s.level || 3,
+            })),
+            interests: [],
+          }),
+        });
+      }
+
+      setIsEditingSocial(false);
+      showToast('Cập nhật liên kết mạng xã hội thành công!', 'success');
+    } catch {
+      showToast('Lỗi khi lưu liên kết mạng xã hội', 'error');
+    } finally {
+      setIsSavingSocial(false);
+    }
+  };
+
+  // ── Filtered & Sorted Partners ──
+  const sortedAndFilteredPartners = partnersList
+    .filter(partner => {
+      const matchesSearch =
+        partner.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        partner.profession.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        partner.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        partner.commonTags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
+
+      const matchesTag = selectedTagFilter
+        ? partner.commonTags.includes(selectedTagFilter)
+        : true;
+
+      const matchesMode =
+        networkFilterMode === 'best'
+          ? partner.matchScore >= 50
+          : true;
+
+      return matchesSearch && matchesTag && matchesMode;
+    })
+    .sort((a, b) => b.matchScore - a.matchScore);
+
+  const getTierBadgeStyle = (tier: string) => {
+    if (tier.includes('Platinum')) {
+      return 'bg-purple-100 text-purple-950 border-purple-300 dark:bg-purple-950/70 dark:text-purple-200 dark:border-purple-800';
+    }
+    if (tier.includes('Gold')) {
+      return 'bg-amber-100 text-amber-950 border-amber-300 dark:bg-amber-950/70 dark:text-amber-200 dark:border-amber-700';
+    }
+    if (tier.includes('Silver')) {
+      return 'bg-slate-200 text-slate-900 border-slate-350 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700';
+    }
+    // Bronze Member: Rõ nét, độ tương phản cao, dịu mắt trên cả Light và Dark theme
+    return 'bg-orange-100 text-orange-950 border-orange-300 dark:bg-amber-950/60 dark:text-amber-200 dark:border-amber-800/80';
+  };
+
+  const renderAvatarElement = (
+    avatarString: string | undefined,
+    name: string,
+    sizeClass = 'h-14 w-14',
+    textClass = 'text-xl'
+  ) => {
+    const isUrl =
+      avatarString &&
+      (avatarString.startsWith('http://') ||
+        avatarString.startsWith('https://') ||
+        avatarString.startsWith('data:image/') ||
+        avatarString.startsWith('/'));
+
+    if (isUrl) {
+      return (
+        <div
+          className={`${sizeClass} rounded-2xl overflow-hidden border border-border/60 shadow-md shrink-0 bg-muted/30 relative`}
+        >
+          <img
+            src={avatarString}
+            alt={name}
+            className="h-full w-full object-cover"
+            onError={e => {
+              const parent = e.currentTarget.parentElement;
+              if (parent) {
+                parent.innerHTML = `<div class="h-full w-full bg-gradient-to-tr from-indigo-500 to-purple-600 text-white flex items-center justify-center font-bold ${textClass}">${
+                  name ? name.charAt(0).toUpperCase() : 'U'
+                }</div>`;
+              }
+            }}
+          />
+        </div>
+      );
+    }
+
+    const letter =
+      avatarString && avatarString.length <= 3
+        ? avatarString
+        : name
+        ? name.charAt(0).toUpperCase()
+        : 'U';
+
+    return (
+      <div
+        className={`${sizeClass} rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-600 text-white flex items-center justify-center font-bold shadow-md shrink-0 ${textClass}`}
+      >
+        {letter}
+      </div>
+    );
+  };
 
   const currentTheme = BANNER_THEMES.find(t => t.id === selectedTheme) || BANNER_THEMES[0];
 
@@ -388,20 +843,20 @@ const ProfilePage: React.FC = () => {
         </div>
 
         {/* Profile Info Area Below Banner */}
-        <div className="px-6 sm:px-10 pb-6 pt-0 relative">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-16 sm:-mt-20 mb-6">
+        <div className="px-6 sm:px-8 pb-6 pt-0 relative">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 -mt-14 sm:-mt-16 mb-6">
             {/* Avatar & Identifiers */}
-            <div className="flex flex-col sm:flex-row items-center sm:items-end gap-5 text-center sm:text-left">
-              <div className="relative group">
-                <div className="h-28 w-28 sm:h-36 sm:w-36 rounded-2xl bg-card border-4 border-card shadow-xl flex items-center justify-center overflow-hidden relative">
+            <div className="flex flex-col sm:flex-row items-center sm:items-center gap-5 text-center sm:text-left">
+              <div className="relative group shrink-0">
+                <div className="h-28 w-28 sm:h-32 sm:w-32 rounded-3xl bg-card p-1 ring-4 ring-card/90 shadow-xl overflow-hidden relative">
                   {user?.avatarUrl || customAvatarUrl ? (
                     <img
                       src={customAvatarUrl || user?.avatarUrl}
                       alt="Avatar"
-                      className="h-full w-full object-cover"
+                      className="h-full w-full object-cover rounded-2xl"
                     />
                   ) : (
-                    <div className="h-full w-full bg-gradient-to-tr from-primary to-secondary flex items-center justify-center text-white text-4xl sm:text-5xl font-bold">
+                    <div className="h-full w-full bg-gradient-to-tr from-primary to-secondary rounded-2xl flex items-center justify-center text-white text-3xl sm:text-4xl font-bold">
                       {user?.fullName ? user.fullName.charAt(0).toUpperCase() : 'U'}
                     </div>
                   )}
@@ -409,10 +864,10 @@ const ProfilePage: React.FC = () => {
                   {/* Camera change avatar overlay */}
                   <button
                     onClick={() => setShowAvatarModal(true)}
-                    className="absolute inset-0 bg-black/50 text-white flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer"
+                    className="absolute inset-1 rounded-2xl bg-black/55 text-white flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer"
                     title="Đổi ảnh đại diện"
                   >
-                    <FiCamera className="h-6 w-6 mb-1" />
+                    <FiCamera className="h-5 w-5 mb-1" />
                     <span className="text-[10px] font-semibold">Đổi ảnh</span>
                   </button>
                 </div>
@@ -424,38 +879,44 @@ const ProfilePage: React.FC = () => {
                 />
               </div>
 
-              <div className="space-y-1 sm:pb-2">
+              <div className="space-y-1.5">
                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5">
-                  <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+                  <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
                     {user?.fullName || 'Khách hàng CoSpace'}
                   </h1>
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
+                  <span
+                    className={`inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-xs font-bold border shadow-xs ${getTierBadgeStyle(
+                      realStats.tier
+                    )}`}
+                  >
                     <FiAward className="h-3.5 w-3.5" />
-                    {stats.tier}
+                    {realStats.tier}
                   </span>
                 </div>
 
                 <p className="text-sm font-medium text-muted-foreground flex items-center justify-center sm:justify-start gap-2">
                   <FiBriefcase className="h-4 w-4 text-primary shrink-0" />
                   <span>
-                    {profileForm.profession || 'Chuyên viên'} @{' '}
-                    <strong className="text-foreground">{profileForm.company || 'CoSpace'}</strong>
+                    <span className="text-foreground font-semibold">
+                      {profileForm.profession || 'Chuyên viên'}
+                    </span>
+                    {profileForm.company ? ` @ ${profileForm.company}` : ''}
                   </span>
                 </p>
 
-                <div className="flex items-center justify-center sm:justify-start gap-4 text-xs text-muted-foreground pt-1">
-                  <span className="flex items-center gap-1">
-                    <FiCalendar className="h-3.5 w-3.5" /> Tham gia: {stats.memberSince}
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-1 text-xs text-muted-foreground pt-0.5">
+                  <span className="flex items-center gap-1.5">
+                    <FiMail className="h-3.5 w-3.5" /> {profileForm.email || user?.email}
                   </span>
-                  <span className="flex items-center gap-1">
-                    <FiShield className="h-3.5 w-3.5 text-emerald-500" /> Tài khoản đã xác thực
+                  <span className="flex items-center gap-1.5">
+                    <FiCalendar className="h-3.5 w-3.5" /> Tham gia: {realStats.memberSince}
                   </span>
                 </div>
               </div>
             </div>
 
             {/* Top Action Buttons */}
-            <div className="flex items-center justify-center gap-3 sm:pb-2">
+            <div className="flex items-center justify-center lg:justify-end gap-3 shrink-0">
               {activeTab === 'profile' && !isEditing && (
                 <button
                   onClick={() => setIsEditing(true)}
@@ -478,7 +939,7 @@ const ProfilePage: React.FC = () => {
                     disabled={isSavingProfile}
                     className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm bg-emerald-600 text-white shadow-md hover:bg-emerald-700 transition-all disabled:opacity-50 cursor-pointer"
                   >
-                    <FiCheck className="h-4 w-4" />
+                    {isSavingProfile ? <Spinner size="sm" /> : <FiCheck className="h-4 w-4" />}
                     {isSavingProfile ? 'Đang lưu...' : 'Lưu thay đổi'}
                   </button>
                 </div>
@@ -497,7 +958,7 @@ const ProfilePage: React.FC = () => {
           </div>
 
           {/* ══════════════════════════════════════════════════════════════
-              2. MINI STATS DASHBOARD (4 IMPACT METRICS)
+              2. MINI STATS DASHBOARD (REAL METRICS)
               ══════════════════════════════════════════════════════════════ */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 pt-4 border-t border-border/80">
             {/* Metric 1: Bookings */}
@@ -507,7 +968,7 @@ const ProfilePage: React.FC = () => {
               </div>
               <div>
                 <p className="text-[11px] font-medium text-muted-foreground">Lượt đặt chỗ</p>
-                <p className="text-lg font-bold text-foreground">{stats.totalBookings} lượt</p>
+                <p className="text-lg font-bold text-foreground">{realStats.totalBookings} lượt</p>
               </div>
             </div>
 
@@ -518,7 +979,7 @@ const ProfilePage: React.FC = () => {
               </div>
               <div>
                 <p className="text-[11px] font-medium text-muted-foreground">Giờ làm việc</p>
-                <p className="text-lg font-bold text-foreground">{stats.totalHours} giờ</p>
+                <p className="text-lg font-bold text-foreground">{realStats.totalHours} giờ</p>
               </div>
             </div>
 
@@ -529,7 +990,7 @@ const ProfilePage: React.FC = () => {
               </div>
               <div>
                 <p className="text-[11px] font-medium text-muted-foreground">Gợi ý đối tác</p>
-                <p className="text-lg font-bold text-foreground">{stats.matchedCount} người</p>
+                <p className="text-lg font-bold text-foreground">{partnersList.length} người</p>
               </div>
             </div>
 
@@ -541,7 +1002,7 @@ const ProfilePage: React.FC = () => {
               <div>
                 <p className="text-[11px] font-medium text-muted-foreground">Hạng thành viên</p>
                 <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
-                  {stats.tier}
+                  {realStats.tier}
                 </p>
               </div>
             </div>
@@ -782,16 +1243,24 @@ const ProfilePage: React.FC = () => {
 
           {/* RIGHT 1 COLUMN: Skills & Social Links */}
           <div className="space-y-6">
-            {/* Bento Card 3: Skills & Interest Tags */}
+            {/* Bento Card 3: Skills & Professional Expertise */}
             <section className="bg-card rounded-3xl border border-border p-6 shadow-sm">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                  <FiStar className="h-5 w-5" />
+              <div className="flex items-center justify-between gap-3 mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
+                    <FiStar className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-foreground">Kỹ năng & Chuyên môn</h2>
+                    <p className="text-xs text-muted-foreground">Tối ưu gợi ý kết nối đối tác phù hợp</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-lg font-bold text-foreground">Kỹ năng & Lĩnh vực</h2>
-                  <p className="text-xs text-muted-foreground">Tối ưu điểm số gợi ý kết nối</p>
-                </div>
+                {isSavingSkills && (
+                  <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground animate-pulse">
+                    <Spinner className="h-3 w-3" />
+                    <span>Đang cập nhật...</span>
+                  </span>
+                )}
               </div>
 
               {/* Tag Input */}
@@ -806,33 +1275,36 @@ const ProfilePage: React.FC = () => {
                       handleAddSkill(newSkillInput);
                     }
                   }}
-                  placeholder="Thêm tag kỹ năng..."
-                  className="flex-1 px-3.5 py-2 text-xs bg-muted/50 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 font-medium"
+                  placeholder="Thêm chuyên môn (VD: React, Spring Boot, AI...)"
+                  className="flex-1 px-3.5 py-2 text-xs bg-muted/50 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 font-medium text-foreground"
                 />
                 <button
                   type="button"
+                  disabled={isSavingSkills || !newSkillInput.trim()}
                   onClick={() => handleAddSkill(newSkillInput)}
-                  className="px-3 py-2 bg-primary text-primary-foreground rounded-xl text-xs font-semibold hover:bg-primary/90 transition-colors cursor-pointer"
+                  className="px-3.5 py-2 bg-primary text-primary-foreground rounded-xl text-xs font-semibold hover:bg-primary/90 transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1"
                 >
                   <FiPlus className="h-3.5 w-3.5" />
+                  <span>Thêm</span>
                 </button>
               </div>
 
-              {/* Selected Skills */}
+              {/* Selected Skills List */}
               <div className="flex flex-wrap gap-1.5 mb-4 min-h-[48px] p-2.5 rounded-2xl bg-muted/30 border border-border/60">
                 {skills.length === 0 ? (
                   <span className="text-xs text-muted-foreground py-1">Chưa chọn kỹ năng nào</span>
                 ) : (
-                  skills.map(skill => (
+                  skills.map(s => (
                     <span
-                      key={skill}
-                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-primary/10 text-primary border border-primary/20 animate-scale-in"
+                      key={s.tagName}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-primary/10 text-primary border border-primary/25 animate-scale-in"
                     >
-                      {skill}
+                      {s.tagName}
                       <button
-                        onClick={() => handleRemoveSkill(skill)}
-                        className="hover:text-red-500 transition-colors cursor-pointer"
-                        title="Xóa tag"
+                        type="button"
+                        onClick={() => handleRemoveSkill(s.tagName)}
+                        className="hover:text-red-500 transition-colors cursor-pointer p-0.5 rounded-full"
+                        title={`Xóa ${s.tagName}`}
                       >
                         <FiX className="h-3 w-3" />
                       </button>
@@ -845,126 +1317,312 @@ const ProfilePage: React.FC = () => {
               <div>
                 <p className="text-[11px] font-semibold text-muted-foreground mb-2">Gợi ý phổ biến:</p>
                 <div className="flex flex-wrap gap-1.5">
-                  {SUGGESTED_SKILLS.filter(s => !skills.includes(s)).slice(0, 6).map(s => (
-                    <button
-                      key={s}
-                      onClick={() => handleAddSkill(s)}
-                      className="text-[11px] font-medium px-2.5 py-1 rounded-lg border border-border/80 bg-card hover:bg-muted hover:border-primary/40 text-muted-foreground hover:text-foreground transition-all cursor-pointer"
-                    >
-                      + {s}
-                    </button>
-                  ))}
+                  {(availableMasterTags.length > 0
+                    ? availableMasterTags.map(t => t.name)
+                    : SUGGESTED_SKILLS
+                  )
+                    .filter(
+                      name => !skills.some(s => s.tagName.toLowerCase() === name.toLowerCase())
+                    )
+                    .slice(0, 8)
+                    .map(name => (
+                      <button
+                        key={name}
+                        type="button"
+                        onClick={() => handleAddSkill(name)}
+                        className="text-[11px] font-medium px-2.5 py-1 rounded-lg border border-border/80 bg-card hover:bg-primary/10 hover:border-primary/40 text-muted-foreground hover:text-primary transition-all cursor-pointer flex items-center gap-1"
+                      >
+                        + {name}
+                      </button>
+                    ))}
                 </div>
               </div>
             </section>
 
             {/* Bento Card 4: Social Links & Portfolio */}
             <section className="bg-card rounded-3xl border border-border p-6 shadow-sm">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                  <FiGlobe className="h-5 w-5" />
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                    <FiGlobe className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-foreground">Liên kết mạng xã hội</h2>
+                    <p className="text-xs text-muted-foreground">Portfolio và kênh kết nối chuyên nghiệp</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-lg font-bold text-foreground">Liên kết mạng xã hội</h2>
-                  <p className="text-xs text-muted-foreground">Portfolio và kênh giao lưu chuyên nghiệp</p>
-                </div>
+                {!isEditing && !isEditingSocial && (
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingSocial(true)}
+                    className="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <FiEdit2 className="h-3.5 w-3.5" /> Chỉnh sửa
+                  </button>
+                )}
               </div>
 
-              {isEditing ? (
-                <div className="space-y-3">
+              {isEditing || isEditingSocial ? (
+                <div className="space-y-3.5">
                   <div>
                     <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
-                      LinkedIn URL
+                      LinkedIn Profile URL
                     </label>
-                    <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border rounded-xl">
+                    <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border rounded-xl focus-within:ring-2 focus-within:ring-blue-500/30">
                       <FiLinkedin className="h-4 w-4 text-blue-600 shrink-0" />
                       <input
                         type="url"
                         value={socialLinks.linkedin}
                         onChange={e => setSocialLinks({ ...socialLinks, linkedin: e.target.value })}
-                        placeholder="https://linkedin.com/in/..."
-                        className="bg-transparent text-xs w-full focus:outline-none font-medium"
+                        placeholder="https://linkedin.com/in/username"
+                        className="bg-transparent text-xs w-full focus:outline-none font-medium text-foreground"
                       />
                     </div>
                   </div>
 
                   <div>
                     <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
-                      GitHub URL
+                      GitHub Profile URL
                     </label>
-                    <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border rounded-xl">
+                    <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border rounded-xl focus-within:ring-2 focus-within:ring-gray-500/30">
                       <FiGithub className="h-4 w-4 text-foreground shrink-0" />
                       <input
                         type="url"
                         value={socialLinks.github}
                         onChange={e => setSocialLinks({ ...socialLinks, github: e.target.value })}
-                        placeholder="https://github.com/..."
-                        className="bg-transparent text-xs w-full focus:outline-none font-medium"
+                        placeholder="https://github.com/username"
+                        className="bg-transparent text-xs w-full focus:outline-none font-medium text-foreground"
                       />
                     </div>
                   </div>
 
                   <div>
                     <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
-                      Website / Portfolio
+                      Facebook Profile URL
                     </label>
-                    <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border rounded-xl">
+                    <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border rounded-xl focus-within:ring-2 focus-within:ring-blue-600/30">
+                      <FiFacebook className="h-4 w-4 text-blue-600 shrink-0" />
+                      <input
+                        type="url"
+                        value={socialLinks.facebook}
+                        onChange={e => setSocialLinks({ ...socialLinks, facebook: e.target.value })}
+                        placeholder="https://facebook.com/username"
+                        className="bg-transparent text-xs w-full focus:outline-none font-medium text-foreground"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
+                      Email / Gmail liên hệ công việc
+                    </label>
+                    <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border rounded-xl focus-within:ring-2 focus-within:ring-rose-500/30">
+                      <FiMail className="h-4 w-4 text-rose-500 shrink-0" />
+                      <input
+                        type="email"
+                        value={socialLinks.email}
+                        onChange={e => setSocialLinks({ ...socialLinks, email: e.target.value })}
+                        placeholder="name@example.com"
+                        className="bg-transparent text-xs w-full focus:outline-none font-medium text-foreground"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
+                      Website / Portfolio cá nhân
+                    </label>
+                    <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border rounded-xl focus-within:ring-2 focus-within:ring-emerald-500/30">
                       <FiGlobe className="h-4 w-4 text-emerald-600 shrink-0" />
                       <input
                         type="url"
                         value={socialLinks.website}
                         onChange={e => setSocialLinks({ ...socialLinks, website: e.target.value })}
-                        placeholder="https://mywebsite.com"
-                        className="bg-transparent text-xs w-full focus:outline-none font-medium"
+                        placeholder="https://yourportfolio.dev"
+                        className="bg-transparent text-xs w-full focus:outline-none font-medium text-foreground"
                       />
                     </div>
                   </div>
+
+                  {/* Direct Action buttons for Social Links editing */}
+                  {isEditingSocial && !isEditing && (
+                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/60">
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingSocial(false)}
+                        className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-muted hover:bg-muted/80 text-foreground transition-colors cursor-pointer"
+                      >
+                        Hủy
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isSavingSocial}
+                        onClick={handleSaveSocialLinks}
+                        className="px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      >
+                        {isSavingSocial ? (
+                          <Spinner className="h-3 w-3 text-white" />
+                        ) : (
+                          <FiCheck className="h-3.5 w-3.5" />
+                        )}
+                        <span>Lưu liên kết</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-2.5">
-                  {socialLinks.linkedin && (
-                    <a
-                      href={socialLinks.linkedin}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-between p-3 rounded-2xl bg-muted/30 border border-border/60 hover:bg-muted/60 transition-colors text-xs font-semibold text-foreground group"
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <FiLinkedin className="h-4 w-4 text-blue-600" />
-                        <span>LinkedIn Profile</span>
-                      </div>
-                      <FiExternalLink className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
-                    </a>
-                  )}
+                  {socialLinks.linkedin || socialLinks.github || socialLinks.facebook || socialLinks.email || socialLinks.website ? (
+                    <>
+                      {socialLinks.linkedin && (
+                        <a
+                          href={
+                            socialLinks.linkedin.startsWith('http')
+                              ? socialLinks.linkedin
+                              : `https://${socialLinks.linkedin}`
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-between p-3 rounded-2xl bg-muted/30 border border-border/60 hover:bg-blue-500/5 hover:border-blue-500/30 transition-all text-xs font-semibold text-foreground group"
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-600">
+                              <FiLinkedin className="h-4 w-4" />
+                            </div>
+                            <div>
+                              <p className="font-semibold text-foreground">LinkedIn</p>
+                              <p className="text-[11px] text-muted-foreground truncate max-w-[180px]">
+                                {socialLinks.linkedin
+                                  .replace(/^https?:\/\/(www\.)?linkedin\.com\/in\/?/, '@')
+                                  .replace(/\/$/, '')}
+                              </p>
+                            </div>
+                          </div>
+                          <FiExternalLink className="h-3.5 w-3.5 text-muted-foreground group-hover:text-blue-600 transition-colors" />
+                        </a>
+                      )}
 
-                  {socialLinks.github && (
-                    <a
-                      href={socialLinks.github}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-between p-3 rounded-2xl bg-muted/30 border border-border/60 hover:bg-muted/60 transition-colors text-xs font-semibold text-foreground group"
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <FiGithub className="h-4 w-4 text-foreground" />
-                        <span>GitHub Repository</span>
-                      </div>
-                      <FiExternalLink className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
-                    </a>
-                  )}
+                      {socialLinks.github && (
+                        <a
+                          href={
+                            socialLinks.github.startsWith('http')
+                              ? socialLinks.github
+                              : `https://${socialLinks.github}`
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-between p-3 rounded-2xl bg-muted/30 border border-border/60 hover:bg-foreground/5 hover:border-foreground/20 transition-all text-xs font-semibold text-foreground group"
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <div className="p-1.5 rounded-lg bg-foreground/10 text-foreground">
+                              <FiGithub className="h-4 w-4" />
+                            </div>
+                            <div>
+                              <p className="font-semibold text-foreground">GitHub</p>
+                              <p className="text-[11px] text-muted-foreground truncate max-w-[180px]">
+                                {socialLinks.github
+                                  .replace(/^https?:\/\/(www\.)?github\.com\/?/, '@')
+                                  .replace(/\/$/, '')}
+                              </p>
+                            </div>
+                          </div>
+                          <FiExternalLink className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                        </a>
+                      )}
 
-                  {socialLinks.website && (
-                    <a
-                      href={socialLinks.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-between p-3 rounded-2xl bg-muted/30 border border-border/60 hover:bg-muted/60 transition-colors text-xs font-semibold text-foreground group"
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <FiGlobe className="h-4 w-4 text-emerald-600" />
-                        <span>Portfolio / Website</span>
+                      {socialLinks.facebook && (
+                        <a
+                          href={
+                            socialLinks.facebook.startsWith('http')
+                              ? socialLinks.facebook
+                              : `https://${socialLinks.facebook}`
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-between p-3 rounded-2xl bg-muted/30 border border-border/60 hover:bg-blue-600/5 hover:border-blue-600/30 transition-all text-xs font-semibold text-foreground group"
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <div className="p-1.5 rounded-lg bg-blue-600/10 text-blue-600">
+                              <FiFacebook className="h-4 w-4" />
+                            </div>
+                            <div>
+                              <p className="font-semibold text-foreground">Facebook</p>
+                              <p className="text-[11px] text-muted-foreground truncate max-w-[180px]">
+                                {socialLinks.facebook
+                                  .replace(/^https?:\/\/(www\.)?facebook\.com\/?/, '@')
+                                  .replace(/\/$/, '')}
+                              </p>
+                            </div>
+                          </div>
+                          <FiExternalLink className="h-3.5 w-3.5 text-muted-foreground group-hover:text-blue-600 transition-colors" />
+                        </a>
+                      )}
+
+                      {socialLinks.email && (
+                        <a
+                          href={`mailto:${socialLinks.email}`}
+                          className="flex items-center justify-between p-3 rounded-2xl bg-muted/30 border border-border/60 hover:bg-rose-500/5 hover:border-rose-500/30 transition-all text-xs font-semibold text-foreground group"
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <div className="p-1.5 rounded-lg bg-rose-500/10 text-rose-500">
+                              <FiMail className="h-4 w-4" />
+                            </div>
+                            <div>
+                              <p className="font-semibold text-foreground">Email / Gmail</p>
+                              <p className="text-[11px] text-muted-foreground truncate max-w-[180px]">
+                                {socialLinks.email}
+                              </p>
+                            </div>
+                          </div>
+                          <FiExternalLink className="h-3.5 w-3.5 text-muted-foreground group-hover:text-rose-500 transition-colors" />
+                        </a>
+                      )}
+
+                      {socialLinks.website && (
+                        <a
+                          href={
+                            socialLinks.website.startsWith('http')
+                              ? socialLinks.website
+                              : `https://${socialLinks.website}`
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-between p-3 rounded-2xl bg-muted/30 border border-border/60 hover:bg-emerald-500/5 hover:border-emerald-500/30 transition-all text-xs font-semibold text-foreground group"
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600">
+                              <FiGlobe className="h-4 w-4" />
+                            </div>
+                            <div>
+                              <p className="font-semibold text-foreground">Portfolio / Website</p>
+                              <p className="text-[11px] text-muted-foreground truncate max-w-[180px]">
+                                {socialLinks.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}
+                              </p>
+                            </div>
+                          </div>
+                          <FiExternalLink className="h-3.5 w-3.5 text-muted-foreground group-hover:text-emerald-600 transition-colors" />
+                        </a>
+                      )}
+                    </>
+                  ) : (
+                    <div className="p-4 rounded-2xl bg-muted/20 border border-dashed border-border/80 text-center flex flex-col items-center justify-center">
+                      <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground mb-2">
+                        <FiGlobe className="h-5 w-5 opacity-60" />
                       </div>
-                      <FiExternalLink className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
-                    </a>
+                      <p className="text-xs font-semibold text-foreground mb-1">
+                        Chưa có liên kết mạng xã hội
+                      </p>
+                      <p className="text-[11px] text-muted-foreground max-w-xs mb-3">
+                        Thêm LinkedIn, GitHub, Facebook, Gmail hoặc Portfolio cá nhân để đối tác và đồng nghiệp dễ dàng kết nối với bạn.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingSocial(true)}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-primary/10 text-primary hover:bg-primary/20 transition-colors cursor-pointer"
+                      >
+                        <FiPlus className="h-3.5 w-3.5" /> Thêm liên kết ngay
+                      </button>
+                    </div>
                   )}
                 </div>
               )}
@@ -979,31 +1637,65 @@ const ProfilePage: React.FC = () => {
       {activeTab === 'network' && (
         <div className="space-y-6">
           {/* Network Header & Search / Filters */}
-          <div className="bg-card rounded-3xl border border-border p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="bg-card rounded-3xl border border-border p-6 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div>
               <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
-                <FiUsers className="text-indigo-500" /> Gợi ý Đối tác & Đồng nghiệp
+                <FiUsers className="text-indigo-500" /> Mạng lưới Đối tác & Đồng nghiệp
               </h2>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Thuật toán đối sánh dựa trên kỹ năng và lĩnh vực bạn đang quan tâm
+                Thuật toán đối sánh Jaccard dựa trên kỹ năng & lĩnh vực thực tế từ Database
               </p>
             </div>
 
-            {/* Search Input */}
-            <div className="flex items-center gap-3">
-              <div className="relative w-full sm:w-72">
+            {/* Filter Mode & Search Input */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              {/* Filter Tabs: Best Matches vs All */}
+              <div className="flex items-center p-1 bg-muted/60 rounded-2xl border border-border shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNetworkFilterMode('best');
+                    setVisiblePartnersCount(6);
+                  }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    networkFilterMode === 'best'
+                      ? 'bg-primary text-primary-foreground shadow-xs'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  ⭐ Phù hợp nhất
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNetworkFilterMode('all');
+                    setVisiblePartnersCount(6);
+                  }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    networkFilterMode === 'all'
+                      ? 'bg-primary text-primary-foreground shadow-xs'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  🌐 Tất cả ({partnersList.length})
+                </button>
+              </div>
+
+              {/* Search Box */}
+              <div className="relative w-full sm:w-64">
                 <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  placeholder="Tìm theo tên, nghề nghiệp, skill..."
-                  className="w-full pl-10 pr-4 py-2 text-xs bg-muted/50 border border-border rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  placeholder="Tìm tên, chuyên môn, skill..."
+                  className="w-full pl-10 pr-4 py-2 text-xs bg-muted/50 border border-border rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-primary/30 text-foreground"
                 />
               </div>
 
               {selectedTagFilter && (
                 <button
+                  type="button"
                   onClick={() => setSelectedTagFilter(null)}
                   className="px-3 py-2 bg-muted text-xs font-semibold rounded-xl text-muted-foreground hover:text-foreground border border-border flex items-center gap-1 shrink-0 cursor-pointer"
                 >
@@ -1015,92 +1707,166 @@ const ProfilePage: React.FC = () => {
 
           {/* Partner Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {filteredPartners.map(partner => (
-              <div
-                key={partner.id}
-                className="bg-card border border-border rounded-3xl p-6 shadow-sm hover:shadow-md hover:border-primary/40 transition-all flex flex-col justify-between relative group"
-              >
-                {/* Top Badge: Match Score */}
-                <div className="flex items-start justify-between gap-3 mb-4">
-                  <div className="flex items-center gap-3.5">
-                    <div className="h-14 w-14 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-600 text-white flex items-center justify-center text-xl font-bold shadow-md">
-                      {partner.avatar}
+            {isLoadingPartners &&
+              [...Array(4)].map((_, i) => (
+                <div
+                  key={`partner-skeleton-${i}`}
+                  className="bg-card border border-border rounded-3xl p-6 shadow-sm"
+                >
+                  <div className="flex items-start justify-between gap-3 mb-4">
+                    <div className="flex items-center gap-3.5">
+                      <Skeleton className="h-14 w-14 rounded-2xl" />
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-3 w-24" />
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="text-base font-bold text-foreground group-hover:text-primary transition-colors">
-                        {partner.name}
-                      </h3>
-                      <p className="text-xs font-medium text-muted-foreground">
-                        {partner.profession}
-                      </p>
-                      <p className="text-[11px] font-semibold text-primary/90 mt-0.5">
-                        @{partner.company}
-                      </p>
-                    </div>
+                    <Skeleton className="h-6 w-14 rounded-full" />
                   </div>
-
-                  <div className="px-3 py-1 rounded-full text-xs font-bold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 shrink-0">
-                    {partner.matchScore}% Match
+                  <Skeleton className="h-3 w-full mb-2" />
+                  <Skeleton className="h-3 w-4/5 mb-4" />
+                  <div className="flex gap-2">
+                    <Skeleton className="h-6 w-16 rounded-full" />
+                    <Skeleton className="h-6 w-20 rounded-full" />
+                    <Skeleton className="h-6 w-14 rounded-full" />
                   </div>
                 </div>
+              ))}
 
-                {/* Partner Bio */}
-                <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2 mb-4 bg-muted/30 p-3 rounded-2xl border border-border/40">
-                  "{partner.bio}"
-                </p>
+            {!isLoadingPartners &&
+              sortedAndFilteredPartners.slice(0, visiblePartnersCount).map(partner => {
+                // Match score badge color calculation
+                let badgeColor =
+                  'bg-slate-100 text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700';
+                if (partner.matchScore >= 80) {
+                  badgeColor =
+                    'bg-emerald-100 text-emerald-950 border-emerald-300 dark:bg-emerald-950/70 dark:text-emerald-200 dark:border-emerald-800';
+                } else if (partner.matchScore >= 60) {
+                  badgeColor =
+                    'bg-indigo-100 text-indigo-950 border-indigo-300 dark:bg-indigo-950/70 dark:text-indigo-200 dark:border-indigo-800';
+                }
 
-                {/* Common Tags */}
-                <div className="mb-5">
-                  <p className="text-[10px] font-semibold text-muted-foreground mb-1.5">Kỹ năng tương đồng:</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {partner.commonTags.map(tag => (
-                      <button
-                        key={tag}
-                        onClick={() => setSelectedTagFilter(tag)}
-                        className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-lg border transition-colors cursor-pointer ${
-                          selectedTagFilter === tag
-                            ? 'bg-primary text-primary-foreground border-primary'
-                            : 'bg-muted/50 text-foreground border-border/60 hover:bg-muted'
-                        }`}
+                return (
+                  <div
+                    key={partner.id}
+                    className="bg-card border border-border rounded-3xl p-6 shadow-sm hover:shadow-md hover:border-primary/40 transition-all flex flex-col justify-between relative group"
+                  >
+                    {/* Top Header: Avatar & Match Score */}
+                    <div className="flex items-start justify-between gap-3 mb-4">
+                      <div className="flex items-center gap-3.5">
+                        {renderAvatarElement(partner.avatar, partner.name, 'h-14 w-14', 'text-xl')}
+                        <div>
+                          <h3 className="text-base font-bold text-foreground group-hover:text-primary transition-colors">
+                            {partner.name}
+                          </h3>
+                          <p className="text-xs font-medium text-muted-foreground">
+                            {partner.profession}
+                          </p>
+                          <p className="text-[11px] font-semibold text-primary/90 mt-0.5">
+                            @{partner.company}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div
+                        className={`px-3 py-1 rounded-full text-xs font-bold border shadow-2xs shrink-0 ${badgeColor}`}
                       >
-                        {tag}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                        {partner.matchScore}% Match
+                      </div>
+                    </div>
 
-                {/* Actions */}
-                <div className="flex items-center gap-2 pt-2 border-t border-border/60">
-                  <button
-                    onClick={() => setSelectedPartner(partner)}
-                    className="flex-1 py-2.5 px-4 rounded-xl text-xs font-semibold border border-border bg-muted/40 hover:bg-muted text-foreground transition-colors cursor-pointer"
-                  >
-                    Xem chi tiết
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (partner.contactPublic) {
-                        window.location.href = `mailto:${partner.email}?subject=Ket noi tu CoSpace`;
-                      } else {
-                        showToast(`${partner.name} đang ẩn thông tin liên hệ trực tiếp.`, 'info');
-                      }
-                    }}
-                    className="py-2.5 px-4 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <FiMessageCircle className="h-3.5 w-3.5" /> Kết nối
-                  </button>
-                </div>
-              </div>
-            ))}
+                    {/* Partner Bio */}
+                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2 mb-4 bg-muted/30 p-3 rounded-2xl border border-border/40">
+                      "{partner.bio}"
+                    </p>
+
+                    {/* Common Tags */}
+                    <div className="mb-5">
+                      <p className="text-[10px] font-semibold text-muted-foreground mb-1.5">
+                        Kỹ năng tương đồng:
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {partner.commonTags.map(tag => (
+                          <button
+                            key={tag}
+                            type="button"
+                            onClick={() => setSelectedTagFilter(tag)}
+                            className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-lg border transition-colors cursor-pointer ${
+                              selectedTagFilter === tag
+                                ? 'bg-primary text-primary-foreground border-primary'
+                                : 'bg-muted/50 text-foreground border-border/60 hover:bg-muted'
+                            }`}
+                          >
+                            {tag}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-2 pt-2 border-t border-border/60">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedPartner(partner)}
+                        className="flex-1 py-2.5 px-4 rounded-xl text-xs font-semibold border border-border bg-muted/40 hover:bg-muted text-foreground transition-colors cursor-pointer"
+                      >
+                        Xem chi tiết
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (partner.contactPublic) {
+                            window.location.href = `mailto:${partner.email}?subject=Ket noi tu CoSpace`;
+                          } else {
+                            showToast(`${partner.name} đang ẩn thông tin liên hệ trực tiếp.`, 'info');
+                          }
+                        }}
+                        className="py-2.5 px-4 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <FiMessageCircle className="h-3.5 w-3.5" /> Kết nối
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
           </div>
 
-          {filteredPartners.length === 0 && (
-            <div className="text-center py-16 bg-card rounded-3xl border border-border">
+          {/* Expand / View More Button */}
+          {!isLoadingPartners && sortedAndFilteredPartners.length > visiblePartnersCount && (
+            <div className="text-center pt-2">
+              <button
+                type="button"
+                onClick={() => setVisiblePartnersCount(prev => prev + 6)}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-card border border-border hover:border-primary/50 text-foreground font-semibold text-xs transition-all shadow-xs hover:shadow cursor-pointer"
+              >
+                <span>
+                  Xem thêm đối tác khác (còn{' '}
+                  {sortedAndFilteredPartners.length - visiblePartnersCount} người)
+                </span>
+                <FiChevronDown className="h-4 w-4 text-primary" />
+              </button>
+            </div>
+          )}
+
+          {/* Empty State */}
+          {!isLoadingPartners && sortedAndFilteredPartners.length === 0 && (
+            <div className="text-center py-16 bg-card rounded-3xl border border-border px-4">
               <FiUsers className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-50" />
               <h3 className="text-base font-bold text-foreground">Không tìm thấy đối tác phù hợp</h3>
-              <p className="text-xs text-muted-foreground mt-1">
-                Hãy thử tìm kiếm với từ khóa khác hoặc xóa bộ lọc tag.
+              <p className="text-xs text-muted-foreground mt-1 max-w-md mx-auto">
+                {networkFilterMode === 'best'
+                  ? 'Chưa có đối tác nào đạt độ tương đồng trên 50%. Hãy cập nhật thêm kỹ năng ở hồ sơ của bạn hoặc chuyển sang xem tất cả thành viên.'
+                  : 'Hãy thử tìm kiếm với từ khóa khác hoặc xóa bộ lọc tag.'}
               </p>
+              {networkFilterMode === 'best' && (
+                <button
+                  type="button"
+                  onClick={() => setNetworkFilterMode('all')}
+                  className="mt-4 px-4 py-2 bg-primary/10 text-primary border border-primary/20 rounded-xl text-xs font-semibold hover:bg-primary/20 transition-colors cursor-pointer"
+                >
+                  Xem tất cả thành viên trong mạng lưới
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -1190,8 +1956,9 @@ const ProfilePage: React.FC = () => {
                 <button
                   type="submit"
                   disabled={isSavingPassword}
-                  className="px-6 py-2.5 bg-primary text-primary-foreground font-semibold rounded-xl text-sm hover:bg-primary/90 transition-all shadow-md active:scale-95 disabled:opacity-50 mt-2 cursor-pointer"
+                  className="inline-flex items-center gap-2 px-6 py-2.5 bg-primary text-primary-foreground font-semibold rounded-xl text-sm hover:bg-primary/90 transition-all shadow-md active:scale-95 disabled:opacity-50 mt-2 cursor-pointer"
                 >
+                  {isSavingPassword && <Spinner size="sm" />}
                   {isSavingPassword ? 'Đang cập nhật...' : 'Cập nhật mật khẩu'}
                 </button>
               </form>
@@ -1291,9 +2058,12 @@ const ProfilePage: React.FC = () => {
             <div className="px-6 pb-6 pt-0 relative">
               {/* Partner Avatar & % Match */}
               <div className="flex items-end justify-between -mt-12 mb-4">
-                <div className="h-20 w-20 rounded-2xl bg-card border-4 border-card text-foreground shadow-lg flex items-center justify-center text-3xl font-bold">
-                  {selectedPartner.avatar}
-                </div>
+                {renderAvatarElement(
+                  selectedPartner.avatar,
+                  selectedPartner.name,
+                  'h-20 w-20 ring-4 ring-card',
+                  'text-3xl'
+                )}
                 <span className="px-3 py-1 rounded-full text-xs font-bold bg-indigo-500 text-white shadow-sm">
                   {selectedPartner.matchScore}% Match
                 </span>
@@ -1380,78 +2150,166 @@ const ProfilePage: React.FC = () => {
       )}
 
       {/* ══════════════════════════════════════════════════════════════
-          8. MODAL: CHANGE AVATAR MODAL
+          8. MODAL: CHANGE AVATAR MODAL (FILE UPLOAD & PRESETS)
           ══════════════════════════════════════════════════════════════ */}
       {showAvatarModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-          <div className="bg-card rounded-3xl max-w-md w-full border border-border shadow-2xl p-6 animate-scale-in">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
-                <FiCamera className="text-primary" /> Đổi ảnh đại diện
-              </h3>
+          <div className="bg-card rounded-3xl max-w-lg w-full border border-border shadow-2xl p-6 animate-scale-in max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                  <FiCamera className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-foreground">Đổi ảnh đại diện</h3>
+                  <p className="text-xs text-muted-foreground">Tải ảnh từ máy tính hoặc chọn mẫu có sẵn</p>
+                </div>
+              </div>
               <button
                 onClick={() => setShowAvatarModal(false)}
-                className="text-muted-foreground hover:text-foreground cursor-pointer"
+                className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
               >
                 <FiX className="h-5 w-5" />
               </button>
             </div>
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-foreground mb-1.5">
-                  Đường dẫn ảnh (Avatar URL)
-                </label>
-                <input
-                  type="url"
-                  value={customAvatarUrl}
-                  onChange={e => setCustomAvatarUrl(e.target.value)}
-                  placeholder="https://images.unsplash.com/..."
-                  className="w-full px-4 py-2.5 bg-muted/40 border border-border rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-primary/30"
-                />
+            <div className="space-y-5">
+              {/* Preview Current / Selected Avatar */}
+              <div className="flex items-center gap-4 p-3.5 rounded-2xl bg-muted/40 border border-border/80">
+                <div className="h-16 w-16 rounded-2xl overflow-hidden border-2 border-primary/30 shadow-md bg-card shrink-0 flex items-center justify-center">
+                  {customAvatarUrl || user?.avatarUrl ? (
+                    <img
+                      src={customAvatarUrl || user?.avatarUrl}
+                      alt="Avatar Preview"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="h-full w-full bg-gradient-to-tr from-primary to-secondary flex items-center justify-center text-white text-2xl font-bold">
+                      {user?.fullName ? user.fullName.charAt(0).toUpperCase() : 'U'}
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-foreground">Ảnh đang chọn</p>
+                  <p className="text-[11px] text-muted-foreground truncate">
+                    {customAvatarUrl?.startsWith('data:image')
+                      ? 'Ảnh tải lên từ máy tính cá nhân'
+                      : customAvatarUrl || user?.avatarUrl || 'Ảnh mặc định theo chữ cái'}
+                  </p>
+                  {customAvatarUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setCustomAvatarUrl('')}
+                      className="mt-1 text-[11px] font-semibold text-rose-500 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                    >
+                      <FiTrash2 className="h-3 w-3" /> Bỏ ảnh này, dùng mặc định
+                    </button>
+                  )}
+                </div>
               </div>
 
+              {/* Option 1: File Upload from Computer */}
               <div>
-                <p className="text-[11px] font-semibold text-muted-foreground mb-2">
-                  Hoặc chọn ảnh avatar mẫu:
+                <label className="block text-xs font-bold text-foreground mb-1.5">
+                  1. Tải ảnh trực tiếp từ máy tính
+                </label>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleAvatarFileUpload}
+                  accept="image/png, image/jpeg, image/webp"
+                  className="hidden"
+                />
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border-2 border-dashed border-border hover:border-primary/60 bg-muted/20 hover:bg-muted/40 rounded-2xl p-5 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 group"
+                >
+                  <div className="h-11 w-11 rounded-2xl bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 transition-transform">
+                    {isUploadingAvatar ? <Spinner size="sm" /> : <FiUploadCloud className="h-6 w-6" />}
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">
+                      {isUploadingAvatar ? 'Đang xử lý tối ưu ảnh...' : 'Nhấn để chọn ảnh từ máy tính'}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      Hỗ trợ định dạng PNG, JPG, WebP (Tối đa 5MB)
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Option 2: Pre-selected Curated Avatars */}
+              <div>
+                <p className="text-xs font-bold text-foreground mb-2">
+                  2. Hoặc chọn nhanh ảnh đại diện mẫu:
                 </p>
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-4 gap-2.5">
                   {[
-                    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-                    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-                    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
-                    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150',
+                    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+                    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80',
+                    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&auto=format&fit=crop&q=80',
+                    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&auto=format&fit=crop&q=80',
+                    'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&auto=format&fit=crop&q=80',
+                    'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=200&auto=format&fit=crop&q=80',
+                    'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=200&auto=format&fit=crop&q=80',
+                    'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=200&auto=format&fit=crop&q=80',
                   ].map((url, idx) => (
                     <button
                       key={idx}
+                      type="button"
                       onClick={() => setCustomAvatarUrl(url)}
-                      className={`h-16 rounded-xl overflow-hidden border-2 transition-all cursor-pointer ${
+                      className={`h-16 rounded-2xl overflow-hidden border-2 transition-all cursor-pointer relative group ${
                         customAvatarUrl === url
-                          ? 'border-primary scale-105 shadow-md'
-                          : 'border-transparent opacity-80 hover:opacity-100'
+                          ? 'border-primary scale-105 shadow-md ring-2 ring-primary/20'
+                          : 'border-transparent opacity-80 hover:opacity-100 hover:scale-102'
                       }`}
                     >
-                      <img src={url} alt={`Avatar Preset ${idx}`} className="h-full w-full object-cover" />
+                      <img src={url} alt={`Avatar Preset ${idx + 1}`} className="h-full w-full object-cover" />
+                      {customAvatarUrl === url && (
+                        <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
+                          <FiCheck className="h-5 w-5 text-white drop-shadow-md" />
+                        </div>
+                      )}
                     </button>
                   ))}
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-border/60">
+              {/* Option 3: External URL */}
+              <div>
+                <label className="block text-xs font-bold text-foreground mb-1.5">
+                  3. Hoặc dán đường dẫn ảnh trực tiếp (URL)
+                </label>
+                <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border rounded-xl">
+                  <FiImage className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <input
+                    type="url"
+                    value={customAvatarUrl?.startsWith('data:') ? '' : customAvatarUrl}
+                    onChange={e => setCustomAvatarUrl(e.target.value)}
+                    placeholder="https://images.unsplash.com/photo-..."
+                    className="bg-transparent text-xs w-full focus:outline-none font-medium"
+                  />
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-border/80">
                 <button
+                  type="button"
                   onClick={() => setShowAvatarModal(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold border border-border hover:bg-muted text-foreground cursor-pointer"
+                  className="px-4 py-2.5 rounded-xl text-xs font-semibold border border-border hover:bg-muted text-foreground transition-colors cursor-pointer"
                 >
-                  Đóng
+                  Hủy
                 </button>
                 <button
+                  type="button"
                   onClick={async () => {
                     await handleSaveProfile();
                     setShowAvatarModal(false);
                   }}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm cursor-pointer"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-md transition-all cursor-pointer"
                 >
-                  Lưu ảnh đại diện
+                  <FiCheck className="h-4 w-4" /> Lưu ảnh đại diện
                 </button>
               </div>
             </div>

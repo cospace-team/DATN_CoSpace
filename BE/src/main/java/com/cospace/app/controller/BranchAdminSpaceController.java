@@ -7,9 +7,15 @@ import com.cospace.app.dto.api.SpaceDto.UpdateFloorRequest;
 import com.cospace.app.dto.api.SpaceDto.UpdateWorkspaceRequest;
 import com.cospace.app.dto.api.SpaceDto.WorkspaceResponse;
 import com.cospace.app.dto.api.SpaceDto.WorkspaceTypeResponse;
+import com.cospace.app.dto.api.UserProfileDto;
+import com.cospace.app.entity.DurationUnit;
+import com.cospace.app.entity.PricePolicy;
 import com.cospace.app.entity.User;
+import com.cospace.app.repository.PricePolicyRepository;
 import com.cospace.app.repository.UserRepository;
+import com.cospace.app.service.AuditLogService;
 import com.cospace.app.service.SpaceManagementService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -17,12 +23,16 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/branch-admin")
@@ -31,14 +41,25 @@ public class BranchAdminSpaceController {
 
     private final SpaceManagementService spaceService;
     private final UserRepository userRepository;
+    private final PricePolicyRepository pricePolicyRepository;
+    private final PasswordEncoder passwordEncoder;
     private final JdbcTemplate jdbcTemplate;
+    private final AuditLogService auditLogService;
+    private final HttpServletRequest httpServletRequest;
 
     /* ═══════════════════════ Branch ═══════════════════════ */
 
     @GetMapping("/branches/{branchId}/name")
     public ResponseEntity<?> getBranchName(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID branchId) {
         try {
-            requireBranchId(jwt); // verify access
+            UUID ownBranchId = requireBranchId(jwt);
+            if (!ownBranchId.equals(branchId)) {
+                throw new AccessDeniedException("Bạn không có quyền xem thông tin chi nhánh khác.");
+            }
+        } catch (IllegalArgumentException | AccessDeniedException e) {
+            return errorResponse(e);
+        }
+        try {
             String name = jdbcTemplate.queryForObject(
                 "SELECT name FROM branches WHERE id = ?",
                 String.class,
@@ -46,6 +67,8 @@ public class BranchAdminSpaceController {
             );
             return ResponseEntity.ok(Map.of("name", name));
         } catch (Exception e) {
+            // Only a genuinely missing branch row reaches here now — an auth failure was already
+            // returned above as 400/403 instead of being folded into this 404.
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Branch not found"));
         }
     }
@@ -169,6 +192,284 @@ public class BranchAdminSpaceController {
         } catch (IllegalArgumentException | AccessDeniedException e) {
             return errorResponse(e);
         }
+    }
+
+    /* ═══════════════════════ Staff Management ═══════════════════════ */
+
+    @GetMapping("/staff")
+    public ResponseEntity<?> listStaff(@AuthenticationPrincipal Jwt jwt) {
+        try {
+            UUID branchId = requireBranchId(jwt);
+            List<User> staffList = userRepository.findByBranchIdAndRole(branchId, User.Role.staff);
+            List<Map<String, String>> result = staffList.stream().map(u -> Map.of(
+                "id", u.getId().toString(),
+                "email", u.getEmail(),
+                "fullName", u.getFullName() != null ? u.getFullName() : "",
+                "phone", u.getPhone() != null ? u.getPhone() : "",
+                "status", u.getStatus().name(),
+                "role", u.getRole().name(),
+                "createdAt", u.getCreatedAt() != null ? u.getCreatedAt().toString() : ""
+            )).collect(Collectors.toList());
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException | AccessDeniedException e) {
+            return errorResponse(e);
+        }
+    }
+
+    @PostMapping("/staff")
+    public ResponseEntity<?> createStaff(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestBody Map<String, String> req) {
+        try {
+            UUID branchId = requireBranchId(jwt);
+            String email = req.get("email");
+            String fullName = req.get("fullName");
+            String password = req.get("password");
+            if (email == null || email.isBlank() || fullName == null || fullName.isBlank() || password == null || password.isBlank()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "bad_request", "message", "email, fullName và password là bắt buộc."));
+            }
+            if (userRepository.existsByEmail(email)) {
+                return ResponseEntity.badRequest().body(Map.of("error", "conflict", "message", "Email này đã được sử dụng."));
+            }
+            User staff = User.builder()
+                .email(email)
+                .fullName(fullName)
+                .phone(req.getOrDefault("phone", ""))
+                .password(passwordEncoder.encode(password))
+                .role(User.Role.staff)
+                .status(User.Status.active)
+                .branchId(branchId)
+                .build();
+            userRepository.save(staff);
+            auditLogService.log(httpServletRequest, UUID.fromString(jwt.getSubject()), "CREATE", "users", staff.getId(),
+                    null, Map.of("email", staff.getEmail(), "fullName", staff.getFullName(), "role", staff.getRole().name()));
+            return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
+                "id", staff.getId().toString(),
+                "email", staff.getEmail(),
+                "fullName", staff.getFullName(),
+                "phone", staff.getPhone() != null ? staff.getPhone() : "",
+                "status", staff.getStatus().name(),
+                "role", staff.getRole().name()
+            ));
+        } catch (IllegalArgumentException | AccessDeniedException e) {
+            return errorResponse(e);
+        }
+    }
+
+    @PutMapping("/staff/{staffId}")
+    public ResponseEntity<?> updateStaff(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID staffId,
+            @RequestBody Map<String, String> req) {
+        try {
+            UUID branchId = requireBranchId(jwt);
+            User staff = userRepository.findById(staffId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy nhân viên."));
+            if (!branchId.equals(staff.getBranchId())) {
+                throw new AccessDeniedException("Nhân viên không thuộc chi nhánh của bạn.");
+            }
+            if (staff.getRole() != User.Role.staff) {
+                throw new AccessDeniedException("Chỉ có thể quản lý tài khoản nhân viên (staff).");
+            }
+            Map<String, Object> oldValues = Map.of(
+                    "fullName", staff.getFullName() != null ? staff.getFullName() : "",
+                    "email", staff.getEmail(),
+                    "phone", staff.getPhone() != null ? staff.getPhone() : "");
+            boolean passwordChanged = req.containsKey("password") && !req.get("password").isBlank();
+            if (req.containsKey("fullName") && !req.get("fullName").isBlank()) {
+                staff.setFullName(req.get("fullName"));
+            }
+            if (req.containsKey("phone")) {
+                staff.setPhone(req.get("phone"));
+            }
+            if (req.containsKey("email") && !req.get("email").isBlank()) {
+                String newEmail = req.get("email");
+                if (!newEmail.equalsIgnoreCase(staff.getEmail()) && userRepository.existsByEmail(newEmail)) {
+                    return ResponseEntity.badRequest().body(Map.of("error", "conflict", "message", "Email này đã được sử dụng."));
+                }
+                staff.setEmail(newEmail);
+            }
+            if (passwordChanged) {
+                staff.setPassword(passwordEncoder.encode(req.get("password")));
+            }
+            userRepository.save(staff);
+            // Never write the password itself to the audit trail — only whether it changed.
+            Map<String, Object> newValues = Map.of(
+                    "fullName", staff.getFullName() != null ? staff.getFullName() : "",
+                    "email", staff.getEmail(),
+                    "phone", staff.getPhone() != null ? staff.getPhone() : "",
+                    "passwordChanged", passwordChanged);
+            auditLogService.log(httpServletRequest, UUID.fromString(jwt.getSubject()), "UPDATE", "users", staff.getId(),
+                    oldValues, newValues);
+            return ResponseEntity.ok(Map.of(
+                "id", staff.getId().toString(),
+                "email", staff.getEmail(),
+                "fullName", staff.getFullName(),
+                "phone", staff.getPhone() != null ? staff.getPhone() : "",
+                "status", staff.getStatus().name(),
+                "role", staff.getRole().name()
+            ));
+        } catch (IllegalArgumentException | AccessDeniedException e) {
+            return errorResponse(e);
+        }
+    }
+
+    @PutMapping("/staff/{staffId}/status")
+    public ResponseEntity<?> updateStaffStatus(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID staffId,
+            @RequestBody Map<String, String> req) {
+        try {
+            UUID branchId = requireBranchId(jwt);
+            User staff = userRepository.findById(staffId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy nhân viên."));
+            if (!branchId.equals(staff.getBranchId())) {
+                throw new AccessDeniedException("Nhân viên không thuộc chi nhánh của bạn.");
+            }
+            if (staff.getRole() != User.Role.staff) {
+                throw new AccessDeniedException("Chỉ có thể quản lý tài khoản nhân viên (staff).");
+            }
+            String oldStatus = staff.getStatus().name();
+            String newStatus = req.getOrDefault("status", "active");
+            staff.setStatus(User.Status.valueOf(newStatus));
+            userRepository.save(staff);
+            auditLogService.log(httpServletRequest, UUID.fromString(jwt.getSubject()), "UPDATE_STATUS", "users", staff.getId(),
+                    Map.of("status", oldStatus), Map.of("status", staff.getStatus().name()));
+            return ResponseEntity.ok(Map.of("id", staff.getId().toString(), "status", staff.getStatus().name()));
+        } catch (IllegalArgumentException | AccessDeniedException e) {
+            return errorResponse(e);
+        }
+    }
+
+    /* ═══════════════════════ Price Policies ═══════════════════════ */
+
+    @GetMapping("/price-policies")
+    public ResponseEntity<?> listPricePolicies(@AuthenticationPrincipal Jwt jwt) {
+        try {
+            UUID branchId = requireBranchId(jwt);
+            List<PricePolicy> branchPolicies = pricePolicyRepository.findByBranchIdAndIsActiveTrue(branchId);
+            List<PricePolicy> globalPolicies = pricePolicyRepository.findByBranchIdIsNullAndIsActiveTrue();
+            List<Map<String, Object>> result = new ArrayList<>();
+            branchPolicies.forEach(p -> result.add(toPricePolicyMap(p, "branch")));
+            globalPolicies.forEach(p -> result.add(toPricePolicyMap(p, "global")));
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException | AccessDeniedException e) {
+            return errorResponse(e);
+        }
+    }
+
+    @PostMapping("/price-policies")
+    public ResponseEntity<?> createPricePolicy(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestBody Map<String, Object> req) {
+        try {
+            UUID branchId = requireBranchId(jwt);
+            UUID creatorId = UUID.fromString(jwt.getSubject());
+            String wsTypeIdStr = (String) req.get("workspaceTypeId");
+            String durationUnitStr = (String) req.get("durationUnit");
+            Object priceObj = req.get("price");
+            if (wsTypeIdStr == null || durationUnitStr == null || priceObj == null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "bad_request", "message", "workspaceTypeId, durationUnit và price là bắt buộc."));
+            }
+            UUID workspaceTypeId = UUID.fromString(wsTypeIdStr);
+            DurationUnit durationUnit = DurationUnit.valueOf(durationUnitStr);
+
+            // The DB enforces one active policy per (branch, workspace type, duration unit) via
+            // a partial unique index — check for it up front so a normal "create branch price"
+            // click on an already-overridden combo returns a friendly 409 instead of an
+            // unhandled 500 from the constraint violation.
+            if (pricePolicyRepository
+                    .findByBranchIdAndWorkspaceTypeIdAndDurationUnitAndIsActiveTrue(branchId, workspaceTypeId, durationUnit)
+                    .isPresent()) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                        "error", "conflict",
+                        "message", "Chi nhánh đã có mức giá riêng cho loại không gian và đơn vị thời gian này. Vui lòng chỉnh sửa mức giá hiện có thay vì tạo mới."
+                ));
+            }
+
+            PricePolicy policy = PricePolicy.builder()
+                .branchId(branchId)
+                .workspaceTypeId(workspaceTypeId)
+                .durationUnit(durationUnit)
+                .price(Long.parseLong(priceObj.toString()))
+                .isActive(true)
+                .createdBy(creatorId)
+                .build();
+            pricePolicyRepository.save(policy);
+            auditLogService.log(httpServletRequest, creatorId, "CREATE", "price_policies", policy.getId(),
+                    null, Map.of("workspaceTypeId", workspaceTypeId.toString(), "durationUnit", durationUnit.name(), "price", policy.getPrice()));
+            return ResponseEntity.status(HttpStatus.CREATED).body(toPricePolicyMap(policy, "branch"));
+        } catch (IllegalArgumentException | AccessDeniedException e) {
+            return errorResponse(e);
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            // Defense in depth against the race between the check above and this insert
+            // (two concurrent requests both passing the check, then both inserting).
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                    "error", "conflict",
+                    "message", "Chi nhánh đã có mức giá riêng cho loại không gian và đơn vị thời gian này."
+            ));
+        }
+    }
+
+    @PutMapping("/price-policies/{id}")
+    public ResponseEntity<?> updatePricePolicy(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID id,
+            @RequestBody Map<String, Object> req) {
+        try {
+            UUID branchId = requireBranchId(jwt);
+            PricePolicy policy = pricePolicyRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy price policy."));
+            if (policy.getBranchId() == null || !policy.getBranchId().equals(branchId)) {
+                throw new AccessDeniedException("Bạn không có quyền sửa price policy này.");
+            }
+            Map<String, Object> oldValues = Map.of("price", policy.getPrice(), "isActive", policy.isActive());
+            if (req.containsKey("price") && req.get("price") != null) {
+                policy.setPrice(Long.parseLong(req.get("price").toString()));
+            }
+            if (req.containsKey("isActive")) {
+                policy.setActive(Boolean.parseBoolean(req.get("isActive").toString()));
+            }
+            pricePolicyRepository.save(policy);
+            auditLogService.log(httpServletRequest, UUID.fromString(jwt.getSubject()), "UPDATE", "price_policies", policy.getId(),
+                    oldValues, Map.of("price", policy.getPrice(), "isActive", policy.isActive()));
+            return ResponseEntity.ok(toPricePolicyMap(policy, "branch"));
+        } catch (IllegalArgumentException | AccessDeniedException e) {
+            return errorResponse(e);
+        }
+    }
+
+    @DeleteMapping("/price-policies/{id}")
+    public ResponseEntity<?> deletePricePolicy(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID id) {
+        try {
+            UUID branchId = requireBranchId(jwt);
+            PricePolicy policy = pricePolicyRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy price policy."));
+            if (policy.getBranchId() == null || !policy.getBranchId().equals(branchId)) {
+                throw new AccessDeniedException("Bạn không có quyền xóa price policy này.");
+            }
+            policy.setActive(false);
+            pricePolicyRepository.save(policy);
+            auditLogService.log(httpServletRequest, UUID.fromString(jwt.getSubject()), "DELETE", "price_policies", policy.getId(),
+                    Map.of("isActive", true), Map.of("isActive", false));
+            return ResponseEntity.ok(Map.of("message", "Đã xóa price policy thành công."));
+        } catch (IllegalArgumentException | AccessDeniedException e) {
+            return errorResponse(e);
+        }
+    }
+
+    private Map<String, Object> toPricePolicyMap(PricePolicy p, String source) {
+        return Map.of(
+            "id", p.getId().toString(),
+            "workspaceTypeId", p.getWorkspaceTypeId().toString(),
+            "durationUnit", p.getDurationUnit().name(),
+            "price", p.getPrice(),
+            "isActive", p.isActive(),
+            "branchId", p.getBranchId() != null ? p.getBranchId().toString() : "",
+            "source", source
+        );
     }
 
     /* ═══════════════════════ Auth Helper ═══════════════════════ */

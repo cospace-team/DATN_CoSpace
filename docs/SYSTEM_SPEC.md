@@ -436,6 +436,14 @@ Customer cập nhật profile → chọn skills/interests từ danh sách tags c
 | POST/PUT | /branch/floors | Tầng chi nhánh | Branch Admin |
 | POST/PUT | /branch/workspaces | Workspace chi nhánh | Branch Admin |
 
+### Profile & Matching
+| Method | Endpoint | Mô tả | Role |
+|--------|----------|-------|------|
+| GET | /api/tags | Danh sách tag kỹ năng/lĩnh vực chuẩn | All |
+| GET | /api/profiles/me/networking | Lấy hồ sơ kỹ năng, bio, liên kết mạng xã hội | Customer |
+| PUT | /api/profiles/me/networking | Cập nhật kỹ năng, bio, liên kết MXH (tự động đồng bộ tag) | Customer |
+| GET | /api/matching/suggestions | Gợi ý đối tác phù hợp (Jaccard matching, matchScore, matchReason) | Customer |
+
 ### System Admin
 | Method | Endpoint | Mô tả | Role |
 |--------|----------|-------|------|

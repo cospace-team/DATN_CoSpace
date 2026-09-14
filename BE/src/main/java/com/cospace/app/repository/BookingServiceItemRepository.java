@@ -13,4 +13,6 @@ public interface BookingServiceItemRepository extends JpaRepository<BookingServi
     List<BookingServiceItem> findByBookingIdOrderByCreatedAtAsc(UUID bookingId);
 
     void deleteByBookingId(UUID bookingId);
+
+    boolean existsByServiceId(UUID serviceId);
 }

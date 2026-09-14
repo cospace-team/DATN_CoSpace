@@ -13,14 +13,37 @@ import {
   FiRefreshCw,
   FiCopy,
   FiCheck,
+  FiCreditCard,
+  FiShield,
 } from "react-icons/fi";
 import { Button } from "../../components/ui/button";
 import { formatVND } from "../../utils/formatters";
 import { bookingApi, type BookingResponse } from "../../lib/bookingApi";
+import { startPayment } from "../../lib/startPayment";
 import { workspaces, branches } from "../../data/mockData";
 
+export interface CustomerBookingItem {
+  id: string;
+  code: string;
+  workspaceName: string;
+  branchName: string;
+  date: Date;
+  startTime: string;
+  endTime: string;
+  status: string;
+  totalAmount: number;
+  paymentMethod: string;
+  cancellationReason?: string;
+  refundPercent?: number;
+  refundAmount?: number;
+  penaltyAmount?: number;
+  refundStatus?: string;
+  policyName?: string;
+  cancelledAt?: string;
+}
+
 // Initial Mock Bookings
-const MOCK_BOOKINGS = [
+const MOCK_BOOKINGS: CustomerBookingItem[] = [
   {
     id: "b1",
     code: "WH-8823",
@@ -78,6 +101,26 @@ const BookingHistoryPage: React.FC = () => {
   const [bookings, setBookings] = useState<typeof MOCK_BOOKINGS>([]);
   const [loading, setLoading] = useState(true);
   const [apiLoaded, setApiLoaded] = useState(false);
+  const [payingId, setPayingId] = useState<string | null>(null);
+
+  const handlePayNow = async (bookingId: string, amount: number) => {
+    setPayingId(bookingId);
+    setErrorMessage(null);
+    try {
+      const redirected = await startPayment("payos", bookingId, amount);
+      if (!redirected) {
+        setSuccessMessage(
+          "Đã tạo yêu cầu thanh toán VietQR. Vui lòng hoàn tất thanh toán để giữ chỗ.",
+        );
+      }
+    } catch (err) {
+      setErrorMessage(
+        err instanceof Error ? err.message : "Không tạo được yêu cầu thanh toán.",
+      );
+    } finally {
+      setPayingId(null);
+    }
+  };
 
   const handleDownloadQr = async (code: string) => {
     setDownloadingQr(true);
@@ -189,11 +232,18 @@ const BookingHistoryPage: React.FC = () => {
             hour: "2-digit",
             minute: "2-digit",
           }),
-          // Normalize: Java enum serializes as UPPERCASE → lowercase for filter
-          status: b.status ? (b.status as string).toLowerCase() : "pending_payment",
-          totalAmount: b.totalAmount,
-          paymentMethod: "momo",
-        };
+            // Normalize: Java enum serializes as UPPERCASE → lowercase for filter
+            status: b.status ? (b.status as string).toLowerCase() : "pending_payment",
+            totalAmount: b.totalAmount,
+            paymentMethod: "momo",
+            cancellationReason: b.cancellationReason,
+            refundPercent: b.refundPercent,
+            refundAmount: b.refundAmount,
+            penaltyAmount: b.penaltyAmount,
+            refundStatus: b.refundStatus,
+            policyName: b.policyName,
+            cancelledAt: b.cancelledAt,
+          };
         });
         setBookings(mapped);
         setApiLoaded(true);
@@ -229,19 +279,37 @@ const BookingHistoryPage: React.FC = () => {
     setIsCanceling(true);
 
     try {
-      if (apiLoaded) {
-        await bookingApi.cancelBooking(showCancelModal);
-      }
-      
+      const result = await bookingApi.cancelBooking(showCancelModal);
+
       setBookings((prev) =>
         prev.map((b) =>
-          b.id === showCancelModal ? { ...b, status: "cancelled" } : b,
+          b.id === showCancelModal
+            ? {
+                ...b,
+                status: "canceled",
+                refundPercent: result.refundPercent,
+                refundAmount: result.refundAmount,
+                penaltyAmount: result.penaltyAmount,
+                refundStatus: result.refundStatus,
+                cancelledAt: new Date().toISOString(),
+              }
+            : b,
         ),
       );
 
       setShowCancelModal(null);
-      setSuccessMessage("Yêu cầu hủy đơn đặt chỗ thành công.");
-      setTimeout(() => setSuccessMessage(null), 4000);
+      setActiveTab("canceled");
+
+      if (result.refundAmount > 0) {
+        setSuccessMessage(
+          `Hủy đơn thành công! Bạn được hoàn ${formatVND(result.refundAmount)} (${result.refundPercent}% giá trị đơn) theo chính sách hủy.`,
+        );
+      } else {
+        setSuccessMessage(
+          `Hủy đơn thành công. Theo chính sách áp dụng tại thời điểm hủy, đơn này không thuộc diện hoàn phí (0%).`,
+        );
+      }
+      setTimeout(() => setSuccessMessage(null), 6000);
     } catch (err: any) {
       console.error("Failed to cancel booking:", err);
       setShowCancelModal(null);
@@ -422,6 +490,62 @@ const BookingHistoryPage: React.FC = () => {
                     </span>
                   </div>
                 </div>
+
+                {/* Modern Cancellation Breakdown Card */}
+                {(booking.status === "canceled" || booking.status === "cancelled") && (
+                  <div className="p-4 rounded-2xl bg-rose-500/5 border border-rose-500/20 text-xs space-y-3 animate-fade-in">
+                    <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-rose-500/15">
+                      <span className="font-semibold text-foreground flex items-center gap-1.5">
+                        <FiShield className="h-4 w-4 text-rose-500" />
+                        Chi tiết hoàn tiền & chính sách hủy
+                      </span>
+                      <span
+                        className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                          (booking.refundPercent ?? 0) > 0
+                            ? booking.refundStatus === "processed"
+                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                              : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                            : "bg-muted text-muted-foreground border border-border"
+                        }`}
+                      >
+                        {(booking.refundPercent ?? 0) > 0
+                          ? booking.refundStatus === "processed"
+                            ? "✓ Đã hoàn tiền"
+                            : "⏳ Đang xử lý hoàn tiền"
+                          : "× Không áp dụng hoàn tiền"}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-0.5">
+                      <div className="bg-card/70 p-2.5 rounded-xl border border-border/70">
+                        <span className="text-[10px] text-muted-foreground block mb-0.5">Chính sách áp dụng</span>
+                        <span className="font-bold text-foreground truncate block text-xs" title={booking.policyName || "Chính sách hủy tiêu chuẩn"}>
+                          {booking.policyName || "Chính sách hủy chuẩn"}
+                        </span>
+                      </div>
+                      <div className="bg-card/70 p-2.5 rounded-xl border border-border/70">
+                        <span className="text-[10px] text-muted-foreground block mb-0.5">Tỷ lệ hoàn</span>
+                        <span className="font-bold text-foreground text-xs">
+                          {booking.refundPercent !== undefined ? `${booking.refundPercent}%` : "—"}
+                        </span>
+                      </div>
+                      <div className="bg-card/70 p-2.5 rounded-xl border border-border/70">
+                        <span className="text-[10px] text-muted-foreground block mb-0.5">Số tiền hoàn lại</span>
+                        <span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono text-xs">
+                          {booking.refundAmount !== undefined ? formatVND(booking.refundAmount) : formatVND(0)}
+                        </span>
+                      </div>
+                      <div className="bg-card/70 p-2.5 rounded-xl border border-border/70">
+                        <span className="text-[10px] text-muted-foreground block mb-0.5">Phí hủy giữ lại</span>
+                        <span className="font-bold text-rose-600 dark:text-rose-400 font-mono text-xs">
+                          {booking.penaltyAmount !== undefined
+                            ? formatVND(booking.penaltyAmount)
+                            : formatVND(booking.totalAmount)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Right Quick Actions */}
@@ -442,16 +566,32 @@ const BookingHistoryPage: React.FC = () => {
                     </button>
                   </>
                 )}
+                {booking.status === "pending_payment" && (
+                  <>
+                    <button
+                      onClick={() => void handlePayNow(booking.id, booking.totalAmount)}
+                      disabled={!apiLoaded || payingId === booking.id}
+                      className="w-full py-3 bg-slate-900 text-white font-semibold tracking-tight border border-border rounded-full shadow-sm hover:-translate-y-1 hover:shadow-sm transition-all flex justify-center items-center gap-2 text-xs disabled:opacity-60 disabled:hover:translate-y-0"
+                    >
+                      <FiCreditCard className="h-4 w-4" />
+                      {payingId === booking.id ? "Đang chuyển..." : "Thanh toán ngay"}
+                    </button>
+                    <button
+                      className="w-full py-3 bg-card text-foreground font-semibold tracking-tight border border-border rounded-full shadow-sm hover:bg-red-50 dark:bg-red-950/30 hover:text-red-700 hover:border-red-200 dark:border-red-900/50 transition-colors flex justify-center items-center gap-2 text-xs"
+                      onClick={() => setShowCancelModal(booking.id)}
+                    >
+                      <FiX className="h-4 w-4" /> Hủy đặt chỗ
+                    </button>
+                  </>
+                )}
                 {(booking.status === "completed" || booking.status === "checked_out") && (
-                  <button className="w-full py-3 bg-card text-foreground font-semibold tracking-tight border border-border rounded-full shadow-sm hover:bg-muted/50 transition-colors text-xs">
-                    Đặt lại chỗ này
-                  </button>
+                  <div className="py-2.5 px-4 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs font-semibold flex items-center justify-center gap-1.5 w-full">
+                    <FiCheckCircle className="h-4 w-4" /> Đã hoàn thành
+                  </div>
                 )}
                 {(booking.status === "canceled" || booking.status === "cancelled") && (
-                  <div className="bg-muted/50 p-3 rounded-2xl border border-border border-dashed text-center w-full">
-                    <span className="text-[10px] font-semibold text-muted-foreground">
-                      Đã hoàn tiền theo quy định
-                    </span>
+                  <div className="py-2.5 px-4 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 text-xs font-semibold flex items-center justify-center gap-1.5 w-full">
+                    <FiX className="h-4 w-4" /> Đơn đã hủy
                   </div>
                 )}
               </div>
@@ -581,18 +721,10 @@ const BookingHistoryPage: React.FC = () => {
                   {formatVND(selectedCancelBooking.totalAmount)}
                 </span>
               </div>
-              <div className="flex justify-between text-sm font-semibold text-foreground">
-                <span>Phí hủy (20%):</span>
-                <span className="font-mono">
-                  -{formatVND(selectedCancelBooking.totalAmount * 0.2)}
-                </span>
-              </div>
-              <div className="pt-3 border-t border-border/10 flex justify-between font-semibold text-lg text-foreground">
-                <span>Hoàn tiền thực nhận:</span>
-                <span className="font-mono">
-                  {formatVND(selectedCancelBooking.totalAmount * 0.8)}
-                </span>
-              </div>
+              <p className="text-xs font-medium text-foreground/70 leading-relaxed">
+                Số tiền hoàn lại sẽ được tính theo chính sách hủy đang áp dụng tại chi nhánh
+                (phụ thuộc thời điểm hủy so với giờ nhận chỗ) và hiển thị ngay sau khi bạn xác nhận.
+              </p>
             </div>
 
             <div className="flex gap-4">

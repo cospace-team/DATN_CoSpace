@@ -80,6 +80,72 @@ const OperationsDashboardPage: React.FC = () => {
     };
   }, [branchBookingsToday]);
 
+interface BookingPackageDisplay {
+  isMultiDay: boolean;
+  packageType: string;
+  badgeClass: string;
+  progressText?: string;
+  dateRangeText?: string;
+  timeSlotText: string;
+}
+
+const getBookingPackageDisplay = (b: BranchTodayBookingDto): BookingPackageDisplay => {
+  const isContract = !!b.isContract;
+  const unit = b.unit;
+  const unitCount = b.unitCount || 1;
+  const isMultiDay = isContract || unit === 'week' || unit === 'month' || (unit === 'day' && unitCount > 1);
+
+  let packageType = 'Theo giờ';
+  let badgeClass = 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20';
+
+  if (isContract) {
+    packageType = 'Hợp đồng';
+    badgeClass = 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20';
+  } else if (unit === 'month') {
+    packageType = unitCount > 1 ? `Gói ${unitCount} tháng` : 'Gói tháng';
+    badgeClass = 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20';
+  } else if (unit === 'week') {
+    packageType = unitCount > 1 ? `Gói ${unitCount} tuần` : 'Gói tuần';
+    badgeClass = 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20';
+  } else if (unit === 'day' && unitCount > 1) {
+    packageType = `Gói ${unitCount} ngày`;
+    badgeClass = 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20';
+  } else if (unit === 'day') {
+    packageType = 'Vé ngày';
+    badgeClass = 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20';
+  } else {
+    packageType = unitCount > 1 ? `Theo giờ (${unitCount}h)` : 'Theo giờ';
+    badgeClass = 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20';
+  }
+
+  let progressText: string | undefined;
+  let dateRangeText: string | undefined;
+  let timeSlotText = `${formatTime(b.startAt)} - ${formatTime(b.endAt)}`;
+
+  if (isMultiDay && b.startAt && b.endAt) {
+    const start = new Date(b.startAt);
+    const end = new Date(b.endAt);
+    const now = new Date();
+    
+    const msPerDay = 86400000;
+    const startMidnight = new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime();
+    const endMidnight = new Date(end.getFullYear(), end.getMonth(), end.getDate()).getTime();
+    const nowMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    
+    const totalDays = Math.max(1, Math.round((endMidnight - startMidnight) / msPerDay) + 1);
+    const dayPassed = Math.floor((nowMidnight - startMidnight) / msPerDay) + 1;
+    const currentDay = Math.min(Math.max(1, dayPassed), totalDays);
+    
+    progressText = `Ngày ${currentDay}/${totalDays}`;
+    
+    const fmt = (d: Date) => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+    dateRangeText = `${fmt(start)} - ${fmt(end)}`;
+    timeSlotText = '08:00 - 20:00 (Cả ngày)';
+  }
+
+  return { isMultiDay, packageType, badgeClass, progressText, dateRangeText, timeSlotText };
+};
+
   // Lọc danh sách hiển thị theo tab và từ khóa tìm kiếm
   const filteredBookings = useMemo(() => {
     return branchBookingsToday.filter(b => {
@@ -89,11 +155,13 @@ const OperationsDashboardPage: React.FC = () => {
 
       if (searchTerm.trim()) {
         const q = searchTerm.toLowerCase().trim();
+        const pkg = getBookingPackageDisplay(b);
         const matchName = b.customerName?.toLowerCase().includes(q);
         const matchPhone = b.customerPhone?.toLowerCase().includes(q);
         const matchCode = b.bookingCode?.toLowerCase().includes(q);
         const matchWs = b.workspaceName?.toLowerCase().includes(q);
-        return matchName || matchPhone || matchCode || matchWs;
+        const matchType = pkg.packageType.toLowerCase().includes(q);
+        return matchName || matchPhone || matchCode || matchWs || matchType;
       }
       return true;
     });
@@ -297,12 +365,22 @@ const OperationsDashboardPage: React.FC = () => {
             {/* Header Lịch Trình & Filter Tabs */}
             <div className="flex flex-col gap-4 mb-5 pb-4 border-b border-border">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                <h2 className="font-bold text-base flex items-center gap-2 text-foreground">
-                  <FiClock className="text-primary" /> Lịch Trình Khách Đến Hôm Nay
-                  <span className="text-xs font-semibold bg-muted px-2 py-0.5 rounded-full text-muted-foreground">
-                    {counts.all}
-                  </span>
-                </h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="font-bold text-base flex items-center gap-2 text-foreground">
+                    <FiClock className="text-primary" /> Lịch Trình Khách Đến Hôm Nay
+                    <span className="text-xs font-semibold bg-muted px-2 py-0.5 rounded-full text-muted-foreground">
+                      {counts.all}
+                    </span>
+                  </h2>
+                  <button 
+                    onClick={() => navigate('/staff/checkin')}
+                    className="hidden sm:inline-flex items-center gap-1 text-xs text-primary hover:underline font-medium ml-2"
+                    title="Mở Quầy Check-in"
+                  >
+                    <span>Quầy Check-in</span>
+                    <FiArrowRight className="w-3 h-3" />
+                  </button>
+                </div>
 
                 {/* Tabs trạng thái có số lượng */}
                 <div className="flex gap-1 bg-muted/60 p-1 rounded-xl w-full sm:w-auto border border-border/50">
@@ -353,7 +431,7 @@ const OperationsDashboardPage: React.FC = () => {
                   placeholder="Tìm kiếm theo tên khách, số điện thoại, mã vé (#WH-...), tên bàn..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-muted/40 border border-border rounded-xl pl-9.5 pr-8 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary focus:bg-background transition-all"
+                  className="w-full bg-muted/40 border border-border rounded-xl pl-10 pr-8 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary focus:bg-background transition-all"
                 />
                 {searchTerm && (
                   <button 
@@ -393,17 +471,31 @@ const OperationsDashboardPage: React.FC = () => {
                   const statusColor = (bookingStatusColor as any)[statusStr] || 'badge-neutral';
                   const statusLabel = (bookingStatusLabel as any)[statusStr] || b.status;
                   const initials = getAvatarInitials(b.customerName);
+                  const pkg = getBookingPackageDisplay(b);
 
                   return (
                     <div 
                       key={b.id} 
-                      className="flex items-center gap-3.5 rounded-xl bg-card p-3.5 border border-border/80 transition-all hover:border-primary/40 hover:shadow-sm"
+                      className="flex items-center gap-3.5 rounded-2xl bg-card p-3.5 border border-border/80 transition-all hover:border-primary/40 hover:shadow-sm"
                     >
-                      {/* Cột 1: Giờ */}
-                      <div className="text-center shrink-0 w-16 bg-muted/40 py-2 rounded-lg border border-border/40">
-                        <p className="text-base font-bold text-primary leading-none">{formatTime(b.startAt)}</p>
-                        <p className="text-[11px] text-muted-foreground mt-1 leading-none">{formatTime(b.endAt)}</p>
-                      </div>
+                      {/* Cột 1: Thông tin gói & Giờ */}
+                      {pkg.isMultiDay ? (
+                        <div className="text-center shrink-0 w-20 bg-amber-500/5 dark:bg-amber-500/10 py-2 px-1 rounded-xl border border-amber-500/20">
+                          <p className="text-xs font-bold text-amber-600 dark:text-amber-400 leading-tight">{pkg.progressText}</p>
+                          <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight font-mono">{pkg.dateRangeText}</p>
+                          <span className={`inline-block mt-1 text-[9px] font-semibold px-1.5 py-0.2 rounded border ${pkg.badgeClass}`}>
+                            {pkg.packageType}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="text-center shrink-0 w-20 bg-muted/40 py-2 px-1 rounded-xl border border-border/40">
+                          <p className="text-sm font-bold text-primary leading-tight">{formatTime(b.startAt)}</p>
+                          <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight font-mono">{formatTime(b.endAt)}</p>
+                          <span className={`inline-block mt-1 text-[9px] font-semibold px-1.5 py-0.2 rounded border ${pkg.badgeClass}`}>
+                            {pkg.packageType}
+                          </span>
+                        </div>
+                      )}
 
                       {/* Cột 2: Avatar & Chi tiết khách */}
                       <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -418,6 +510,11 @@ const OperationsDashboardPage: React.FC = () => {
                             <span className="text-[11px] font-mono font-medium bg-muted px-2 py-0.5 rounded border border-border text-muted-foreground">
                               #{b.bookingCode}
                             </span>
+                            {pkg.isMultiDay && (
+                              <span className="text-[10px] font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 px-2 py-0.2 rounded-full">
+                                {pkg.packageType} · {pkg.progressText}
+                              </span>
+                            )}
                           </div>
                           
                           <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1 flex-wrap">
@@ -434,6 +531,11 @@ const OperationsDashboardPage: React.FC = () => {
                             <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
                               {formatVND(b.totalAmount)}
                             </span>
+                            {pkg.isMultiDay && (
+                              <span className="text-[11px] text-muted-foreground">
+                                (Hiệu lực: {pkg.dateRangeText})
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>

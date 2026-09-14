@@ -101,7 +101,7 @@ const PublicNavbar: React.FC = () => {
               </span>
               <Button
                 onClick={handleDashboard}
-                className="bg-slate-900 hover:bg-secondary text-white rounded-full font-medium px-5 py-2 shadow-sm transition-all hover:shadow-md"
+                className="rounded-full font-medium px-5 py-2"
               >
                 Vào Dashboard
               </Button>
@@ -116,7 +116,7 @@ const PublicNavbar: React.FC = () => {
               </Link>
               <Button
                 onClick={handleDashboard}
-                className="bg-slate-900 hover:bg-secondary text-white rounded-full font-medium px-5 py-2 shadow-sm transition-all hover:shadow-md"
+                className="rounded-full font-medium px-5 py-2"
               >
                 Đặt chỗ
               </Button>
@@ -158,7 +158,7 @@ const PublicNavbar: React.FC = () => {
                 <p className="text-sm text-muted-foreground px-4">
                   Xin chào, <span className="font-semibold text-foreground">{user.fullName}</span>
                 </p>
-                <Button onClick={handleDashboard} className="w-full bg-slate-900 text-white rounded-full py-5 font-medium">
+                <Button onClick={handleDashboard} className="w-full rounded-full py-5 font-medium">
                   Vào Dashboard
                 </Button>
               </>
@@ -167,7 +167,7 @@ const PublicNavbar: React.FC = () => {
                 <Link to="/login" className="flex-1">
                   <Button variant="outline" className="w-full rounded-full py-5 border-border text-foreground font-medium">Đăng nhập</Button>
                 </Link>
-                <Button onClick={handleDashboard} className="flex-1 bg-slate-900 text-white rounded-full py-5 font-medium">
+                <Button onClick={handleDashboard} className="flex-1 rounded-full py-5 font-medium">
                   Đặt chỗ
                 </Button>
               </div>

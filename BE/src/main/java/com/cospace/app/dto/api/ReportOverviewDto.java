@@ -21,6 +21,7 @@ public class ReportOverviewDto {
 
     private List<String> months;
     private List<Long> monthlyRevenue;
+    private List<Integer> monthlyBookings;
 
     private List<WorkspaceTypeStatDto> byType;
     private List<BranchComparisonDto> branchComparison;

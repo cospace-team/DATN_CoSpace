@@ -19,6 +19,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final ProfileRepository profileRepository;
+    private final com.cospace.app.repository.BranchEntityRepository branchEntityRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Transactional(readOnly = true)
@@ -128,20 +129,93 @@ public class UserService {
         return convertToDto(user, profile);
     }
 
+    @Transactional(readOnly = true)
+    public java.util.List<UserProfileDto> getUsers(String roleStr, UUID branchId, String statusStr, String search) {
+        User.Role role = null;
+        if (roleStr != null && !roleStr.isBlank() && !"all".equalsIgnoreCase(roleStr)) {
+            try {
+                role = User.Role.valueOf(roleStr.toLowerCase());
+            } catch (IllegalArgumentException ignored) {}
+        }
+
+        User.Status status = null;
+        if (statusStr != null && !statusStr.isBlank() && !"all".equalsIgnoreCase(statusStr)) {
+            try {
+                status = User.Status.valueOf(statusStr.toLowerCase());
+            } catch (IllegalArgumentException ignored) {}
+        }
+
+        String searchClean = (search != null && !search.isBlank()) ? search.trim() : null;
+
+        return userRepository.filterUsers(role, branchId, status, searchClean).stream()
+                .map(user -> {
+                    Profile profile = profileRepository.findById(user.getId())
+                            .orElseGet(() -> Profile.builder().userId(user.getId()).contactPublic(false).build());
+                    return convertToDto(user, profile);
+                })
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    @Transactional
+    public UserProfileDto updateUserStatus(UUID targetUserId, String statusStr, UUID currentAdminUserId) {
+        if (targetUserId.equals(currentAdminUserId)) {
+            throw new IllegalArgumentException("Không thể tự thay đổi trạng thái hoặc khóa tài khoản của chính mình");
+        }
+
+        User user = userRepository.findById(targetUserId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy người dùng"));
+
+        User.Status newStatus = User.Status.valueOf(statusStr.toLowerCase());
+        user.setStatus(newStatus);
+        userRepository.save(user);
+
+        Profile profile = profileRepository.findById(targetUserId)
+                .orElseGet(() -> Profile.builder().userId(targetUserId).contactPublic(false).build());
+        return convertToDto(user, profile);
+    }
+
+    @Transactional
+    public UserProfileDto updateUserRoleAndBranch(UUID targetUserId, String roleStr, UUID branchId, UUID currentAdminUserId) {
+        if (targetUserId.equals(currentAdminUserId)) {
+            throw new IllegalArgumentException("Không thể tự thay đổi vai trò của tài khoản quản trị hiện tại");
+        }
+
+        User user = userRepository.findById(targetUserId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy người dùng"));
+
+        if (roleStr != null && !roleStr.isBlank()) {
+            user.setRole(User.Role.valueOf(roleStr.toLowerCase()));
+        }
+        user.setBranchId(branchId);
+        userRepository.save(user);
+
+        Profile profile = profileRepository.findById(targetUserId)
+                .orElseGet(() -> Profile.builder().userId(targetUserId).contactPublic(false).build());
+        return convertToDto(user, profile);
+    }
+
     private UserProfileDto convertToDto(User user, Profile profile) {
+        String branchName = user.getBranchId() == null ? null
+                : branchEntityRepository.findById(user.getBranchId())
+                        .map(com.cospace.app.entity.BranchEntity::getName)
+                        .orElse(null);
+
         return UserProfileDto.builder()
                 .id(user.getId())
                 .email(user.getEmail())
                 .fullName(user.getFullName())
                 .phone(user.getPhone())
                 .avatarUrl(user.getAvatarUrl())
-                .role(user.getRole().name())
-                .status(user.getStatus().name())
+                .role(user.getRole() != null ? user.getRole().name() : null)
+                .status(user.getStatus() != null ? user.getStatus().name() : null)
+                .branchId(user.getBranchId())
+                .branchName(branchName)
                 .bio(profile.getBio())
                 .profession(profile.getProfession())
                 .company(profile.getCompany())
                 .contactPublic(profile.isContactPublic())
                 .contactLink(profile.getContactLink())
+                .createdAt(user.getCreatedAt())
                 .build();
     }
 }

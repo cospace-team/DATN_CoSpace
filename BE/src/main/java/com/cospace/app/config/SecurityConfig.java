@@ -26,6 +26,7 @@ import java.util.List;
 @Configuration
 @EnableWebSecurity
 @org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
+@lombok.extern.slf4j.Slf4j
 public class SecurityConfig {
 
         private final SupabaseJwtAuthenticationConverter jwtAuthenticationConverter;
@@ -48,9 +49,22 @@ public class SecurityConfig {
         @Bean
         public JwtDecoder jwtDecoder() {
                 // Local Decoder (HS384)
-                JwtDecoder localDecoder = NimbusJwtDecoder.withSecretKey(
+                NimbusJwtDecoder localNimbusDecoder = NimbusJwtDecoder.withSecretKey(
                         new SecretKeySpec(jwtSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA384")
                 ).macAlgorithm(org.springframework.security.oauth2.jose.jws.MacAlgorithm.HS384).build();
+
+                // A refresh token is signed with the same key and lives for 30 days, so without this
+                // it would work as a bearer token on every API. Only access tokens may authenticate.
+                localNimbusDecoder.setJwtValidator(new org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator<>(
+                        org.springframework.security.oauth2.jwt.JwtValidators.createDefault(),
+                        token -> com.cospace.app.util.JwtUtil.TOKEN_USE_REFRESH
+                                        .equals(token.getClaimAsString(com.cospace.app.util.JwtUtil.CLAIM_TOKEN_USE))
+                                ? org.springframework.security.oauth2.core.OAuth2TokenValidatorResult.failure(
+                                        new org.springframework.security.oauth2.core.OAuth2Error("invalid_token",
+                                                "Refresh token không dùng để gọi API.", null))
+                                : org.springframework.security.oauth2.core.OAuth2TokenValidatorResult.success()));
+
+                JwtDecoder localDecoder = localNimbusDecoder;
 
                 return new JwtDecoder() {
                         private JwtDecoder supabaseDecoder;
@@ -65,33 +79,30 @@ public class SecurityConfig {
 
                         @Override
                         public org.springframework.security.oauth2.jwt.Jwt decode(String token) throws org.springframework.security.oauth2.jwt.JwtException {
+                                // Note: the raw decoded payload (which carries the user's email, role, etc.)
+                                // must never be logged here, even at debug level — this decode() runs on
+                                // every single authenticated request.
                                 try {
                                         String[] parts = token.split("\\.");
                                         if (parts.length >= 2) {
                                                 String payload = new String(java.util.Base64.getUrlDecoder().decode(parts[1]), StandardCharsets.UTF_8);
-                                                System.err.println("[JWT Debug] Payload: " + payload);
                                                 if (payload.contains(supabaseIssuer)) {
                                                         try {
-                                                                System.err.println("[JWT Debug] Routing to Supabase Decoder...");
                                                                 return getSupabaseDecoder().decode(token);
                                                         } catch (org.springframework.security.oauth2.jwt.JwtException e) {
-                                                                System.err.println("[JWT Debug] Supabase JwtException: " + e.getMessage());
+                                                                log.debug("Supabase JWT decode failed: {}", e.getMessage());
                                                                 throw e;
                                                         } catch (Exception e) {
-                                                                System.err.println("[JWT Debug] Supabase Decoder Error: " + e.getMessage());
-                                                                e.printStackTrace();
+                                                                log.warn("Unexpected error decoding Supabase JWT: {}", e.getMessage());
                                                                 throw new org.springframework.security.oauth2.jwt.JwtException("Supabase token error: " + e.getMessage(), e);
                                                         }
-                                                } else {
-                                                        System.err.println("[JWT Debug] Issuer not matched! Expected: " + supabaseIssuer);
                                                 }
                                         }
                                 } catch (org.springframework.security.oauth2.jwt.JwtException e) {
                                         throw e;
                                 } catch (Exception e) {
-                                        System.err.println("[JWT Debug] Unknown Parsing Error: " + e.getMessage());
+                                        log.debug("Could not parse token to determine issuer, falling back to local decoder: {}", e.getMessage());
                                 }
-                                System.err.println("[JWT Debug] Falling back to Local Decoder...");
                                 return localDecoder.decode(token);
                         }
                 };
@@ -115,15 +126,17 @@ public class SecurityConfig {
                                                                 new AntPathRequestMatcher("/api/payments/payos/notify"),
                                                                 new AntPathRequestMatcher("/api/payments/payos/return"),
                                                                 new AntPathRequestMatcher("/api/payments/payos/simulate"),
+                                                                new AntPathRequestMatcher("/api/payments/payos/status/**"),
                                                                 new AntPathRequestMatcher("/api/auth/register"),
                                                                 new AntPathRequestMatcher("/api/auth/login"),
-                                                                new AntPathRequestMatcher("/api/auth/dev-login"),
                                                                 new AntPathRequestMatcher("/api/auth/refresh"),
                                                                 new AntPathRequestMatcher("/api/customer/spaces/branches"),
                                                                 new AntPathRequestMatcher("/h2-console/**"),
                                                                 new AntPathRequestMatcher("/error"))
                                                 .permitAll()
                                                 .requestMatchers("/api/staff/**").hasAnyRole("STAFF", "BRANCH_ADMIN", "SUPER_ADMIN", "ADMIN", "staff", "branch_admin", "admin")
+                                                .requestMatchers("/api/checkins/**").hasAnyRole("STAFF", "BRANCH_ADMIN", "SUPER_ADMIN", "ADMIN", "staff", "branch_admin", "admin")
+                                                .requestMatchers("/api/bookings/branch-today", "/api/bookings/code/**").hasAnyRole("STAFF", "BRANCH_ADMIN", "SUPER_ADMIN", "ADMIN", "staff", "branch_admin", "admin")
                                                 .requestMatchers("/api/branch-admin/**").hasAnyRole("BRANCH_ADMIN", "SUPER_ADMIN", "ADMIN", "branch_admin", "admin")
                                                 .requestMatchers("/api/admin/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "super_admin", "admin")
                                                 .anyRequest().authenticated())

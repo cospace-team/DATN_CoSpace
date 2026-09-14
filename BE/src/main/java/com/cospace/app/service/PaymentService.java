@@ -129,7 +129,8 @@ public class PaymentService {
         paymentRepository.save(payment);
 
         String description = "BK " + booking.getBookingCode();
-        Map<String, Object> payosRes = payosService.createPaymentLink(orderCode, payment.getAmount(), description);
+        Map<String, Object> payosRes = payosService.createPaymentLink(
+                orderCode, payment.getAmount(), description, booking.getPaymentDeadlineAt());
 
         String checkoutUrl = Objects.toString(payosRes.get("checkoutUrl"), "");
         String qrCode = Objects.toString(payosRes.get("qrCode"), "");
@@ -291,6 +292,15 @@ public class PaymentService {
         paymentRepository.save(payment);
 
         confirmBooking(payment.getBookingId());
+    }
+
+    @Transactional(readOnly = true)
+    public PaymentStatus getPaymentStatusByOrderCode(String orderCode) {
+        String orderId = orderCode.startsWith("PAYOS-") ? orderCode : "PAYOS-" + orderCode;
+        return paymentRepository.findByOrderId(orderId)
+                .or(() -> paymentRepository.findByOrderId(orderCode))
+                .map(Payment::getStatus)
+                .orElse(null);
     }
     
     @Transactional(readOnly = true)

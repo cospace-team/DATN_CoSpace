@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { FiSearch, FiCode, FiChevronDown, FiFilter, FiX, FiEye, FiShield, FiCalendar, FiGlobe } from 'react-icons/fi';
 import { auditLogs, getUser, users } from '../../data/mockData';
 import { formatDateTime } from '../../utils/formatters';
+import { Skeleton } from '../../components/ui/Skeleton';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
@@ -13,9 +14,11 @@ const AuditLogPage: React.FC = () => {
   const [dateTo, setDateTo] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [liveLogs, setLiveLogs] = useState<any[] | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchAuditLogs = async () => {
+      setIsLoading(true);
       try {
         const token = localStorage.getItem('workhub_access_token');
         if (!token) return;
@@ -33,6 +36,8 @@ const AuditLogPage: React.FC = () => {
         }
       } catch (err) {
         console.warn('Cannot fetch live audit logs, using fallback:', err);
+      } finally {
+        setIsLoading(false);
       }
     };
     fetchAuditLogs();
@@ -187,7 +192,22 @@ const AuditLogPage: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 ? (
+            {isLoading ? (
+              [...Array(6)].map((_, i) => (
+                <tr key={`skeleton-${i}`}>
+                  <td><Skeleton className="h-4 w-36" /></td>
+                  <td>
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-7 w-7 rounded-lg" />
+                      <Skeleton className="h-4 w-28" />
+                    </div>
+                  </td>
+                  <td><Skeleton className="h-5 w-16 rounded-full" /></td>
+                  <td><Skeleton className="h-5 w-24 rounded-full" /></td>
+                  <td />
+                </tr>
+              ))
+            ) : filtered.length === 0 ? (
               <tr>
                 <td colSpan={8} className="text-center py-12 text-muted-foreground">
                   <FiShield className="h-8 w-8 mx-auto mb-3 text-muted-foreground/50" />

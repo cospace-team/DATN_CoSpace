@@ -25,4 +25,7 @@ public interface WorkspaceMaintenanceRepository extends JpaRepository<WorkspaceM
             @Param("endAt") java.time.ZonedDateTime endAt,
             @Param("statuses") List<MaintenanceStatus> statuses
     );
+
+    @Query("SELECT f.branchId FROM WorkspaceMaintenanceEntity wm JOIN WorkspaceEntity w ON wm.workspaceId = w.id JOIN Floor f ON w.floorId = f.id WHERE wm.id = :maintenanceId")
+    java.util.Optional<UUID> findBranchIdByMaintenanceId(@Param("maintenanceId") UUID maintenanceId);
 }

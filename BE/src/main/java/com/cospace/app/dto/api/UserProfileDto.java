@@ -19,9 +19,12 @@ public class UserProfileDto {
     private String avatarUrl;
     private String role;
     private String status;
+    private UUID branchId;
+    private String branchName;
     private String bio;
     private String profession;
     private String company;
     private boolean contactPublic;
     private String contactLink;
+    private java.time.OffsetDateTime createdAt;
 }

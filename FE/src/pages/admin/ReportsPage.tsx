@@ -1,19 +1,31 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { FiBarChart2, FiDownload, FiPieChart, FiTrendingUp, FiDollarSign, FiCalendar, FiCheckCircle, FiXCircle, FiArrowUpRight, FiChevronDown, FiFilter, FiMapPin } from 'react-icons/fi';
-import { branches, bookings, payments } from '../../data/mockData';
 import { formatVND } from '../../utils/formatters';
+import { Skeleton } from '../../components/ui/Skeleton';
+import { Spinner } from '../../components/ui/Spinner';
+import { customerSpaceApi, type BranchResponse } from '../../lib/spaceApi';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
 const ReportsPage: React.FC = () => {
+  const currentYear = new Date().getFullYear();
+  const [branches, setBranches] = useState<BranchResponse[]>([]);
   const [branchFilter, setBranchFilter] = useState('all');
-  const [dateFrom, setDateFrom] = useState('2026-01-01');
-  const [dateTo, setDateTo] = useState('2026-04-30');
+  const [dateFrom, setDateFrom] = useState(`${currentYear}-01-01`);
+  const [dateTo, setDateTo] = useState(`${currentYear}-12-31`);
   const [overviewData, setOverviewData] = useState<any>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    customerSpaceApi.listBranches()
+      .then(res => setBranches(res))
+      .catch(err => console.error('Error fetching branches in ReportsPage:', err));
+  }, []);
 
   useEffect(() => {
     const fetchOverview = async () => {
+      setIsLoading(true);
       try {
         const token = localStorage.getItem('workhub_access_token');
         const branchParam = branchFilter !== 'all' ? `&branchId=${branchFilter}` : '';
@@ -29,6 +41,8 @@ const ReportsPage: React.FC = () => {
         }
       } catch (err) {
         console.warn('Cannot fetch live report data, using fallback state:', err);
+      } finally {
+        setIsLoading(false);
       }
     };
     fetchOverview();
@@ -62,23 +76,23 @@ const ReportsPage: React.FC = () => {
       setIsExporting(false);
     }
 
-    // Fallback CSV export
-    const csvContent = '\uFEFFMã đặt chỗ,Chi nhánh,Thời gian,Số tiền (VND),Trạng thái\n' +
-      bookings.map(b => `${b.id},${b.branch_id},${b.start_at},${b.total_amount},${b.status}`).join('\n');
+    // Fallback CSV export from current summary
+    const rows = (overviewData?.branchComparison || []).map((b: any) => `${b.code},"${b.name}",${b.bookingCount},${b.revenue},${b.rate}%`).join('\n');
+    const csvContent = '\uFEFFMã chi nhánh,Tên chi nhánh,Số booking,Doanh thu (VND),Tỷ lệ hoàn thành\n' + rows;
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `cospace_report_fallback.csv`);
+    link.setAttribute('download', `cospace_report_${dateFrom}_${dateTo}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  const totalRevenue = overviewData?.totalRevenue ?? payments.filter(p => p.status === 'paid').reduce((s, p) => s + p.amount, 0);
-  const totalBookings = overviewData?.totalBookings ?? bookings.length;
-  const completedBookings = overviewData?.completedBookings ?? bookings.filter(b => b.status === 'completed').length;
-  const canceledBookings = overviewData?.canceledBookings ?? bookings.filter(b => b.status === 'canceled').length;
+  const totalRevenue = overviewData?.totalRevenue ?? 0;
+  const totalBookings = overviewData?.totalBookings ?? 0;
+  const completedBookings = overviewData?.completedBookings ?? 0;
+  const canceledBookings = overviewData?.canceledBookings ?? 0;
 
   const statCards = [
     { icon: FiDollarSign, label: 'Tổng doanh thu', value: formatVND(totalRevenue), delta: '+12.5%', gradient: 'from-emerald-500 to-teal-500', bgGlow: 'bg-emerald-50 dark:bg-emerald-950/300/10', color: 'text-emerald-600 dark:text-emerald-400' },
@@ -87,26 +101,14 @@ const ReportsPage: React.FC = () => {
     { icon: FiXCircle, label: 'Đã hủy', value: String(canceledBookings), delta: '-2.1%', gradient: 'from-rose-500 to-pink-500', bgGlow: 'bg-rose-500/10', color: 'text-rose-600 dark:text-rose-400' },
   ];
 
-  const defaultByType = [
-    { type: 'Bàn làm việc', count: 5, revenue: 450000, color: 'from-blue-500 to-indigo-500' },
-    { type: 'Phòng họp', count: 2, revenue: 800000, color: 'from-violet-500 to-purple-500' },
-    { type: 'Văn phòng riêng', count: 1, revenue: 1450000, color: 'from-emerald-500 to-teal-500' },
-  ];
-  const byType = (overviewData?.byType && overviewData.byType.length > 0) ? overviewData.byType : defaultByType;
-  const maxRevType = Math.max(1, ...byType.map((t: any) => t.revenue));
+  const byType = (overviewData?.byType && overviewData.byType.length > 0) ? overviewData.byType : [];
+  const maxRevType = Math.max(1, ...(byType.map((t: any) => t.revenue) || [1]));
 
-  const months = overviewData?.months ?? ['T1', 'T2', 'T3', 'T4'];
-  const monthlyRevenue = overviewData?.monthlyRevenue ?? [2800000, 3500000, 4200000, totalRevenue];
-  const maxRev = Math.max(1, ...monthlyRevenue);
+  const months = overviewData?.months ?? [];
+  const monthlyRevenue = overviewData?.monthlyRevenue ?? [];
+  const maxRev = Math.max(1, ...(monthlyRevenue.length > 0 ? monthlyRevenue : [1]));
 
-  const defaultBranchComparison = useMemo(() =>
-    branches.map(b => {
-      const bBookings = bookings.filter(bk => bk.branch_id === b.id);
-      const bRevenue = bBookings.filter(bk => ['completed', 'checked_in'].includes(bk.status)).reduce((s, bk) => s + bk.total_amount, 0);
-      const rate = bBookings.length > 0 ? Math.round((bBookings.filter(bk => bk.status === 'completed').length / bBookings.length) * 100) : 0;
-      return { ...b, bookingCount: bBookings.length, revenue: bRevenue, rate };
-    }), []);
-  const branchComparison = (overviewData?.branchComparison && overviewData.branchComparison.length > 0) ? overviewData.branchComparison : defaultBranchComparison;
+  const branchComparison = overviewData?.branchComparison || [];
 
 
   return (
@@ -117,6 +119,11 @@ const ReportsPage: React.FC = () => {
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Báo cáo</p>
             <h1 className="text-2xl font-semibold tracking-tight text-foreground mt-1">Phân tích & Thống kê</h1>
+            {isLoading && (
+              <p className="mt-2 flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <Spinner size="sm" className="text-primary" /> Đang tải số liệu báo cáo...
+              </p>
+            )}
           </div>
           <button 
             onClick={handleExportCsv} 
@@ -153,7 +160,17 @@ const ReportsPage: React.FC = () => {
 
       {/* Stat Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {statCards.map(s => (
+        {isLoading && [...Array(4)].map((_, i) => (
+          <div key={`stat-skeleton-${i}`} className="bg-card rounded-3xl border border-border p-5 shadow-sm">
+            <Skeleton className="h-10 w-10 rounded-xl" />
+            <Skeleton className="mt-4 h-8 w-2/3" />
+            <div className="mt-3 flex items-center justify-between">
+              <Skeleton className="h-4 w-1/2" />
+              <Skeleton className="h-3 w-10" />
+            </div>
+          </div>
+        ))}
+        {!isLoading && statCards.map(s => (
           <div key={s.label} className="group relative overflow-hidden bg-card rounded-3xl border border-border p-5 shadow-sm hover:shadow-md transition-shadow transition-all duration-300 hover:border-primary/50 hover:shadow-lg">
             <div className={`absolute -top-8 -right-8 h-24 w-24 rounded-full ${s.bgGlow} blur-2xl transition-opacity group-hover:opacity-100 opacity-50`} />
             <div className="relative">
@@ -173,7 +190,10 @@ const ReportsPage: React.FC = () => {
       </div>
 
       {/* Charts Grid */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div
+        className={`grid gap-6 lg:grid-cols-2 transition-opacity duration-200 ${isLoading ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}
+        aria-busy={isLoading || undefined}
+      >
         {/* Line Chart (Monthly Revenue) */}
         <div className="bg-card rounded-3xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow">
           <h2 className="font-semibold flex items-center gap-2 mb-6">
@@ -230,7 +250,20 @@ const ReportsPage: React.FC = () => {
           <table className="data-table">
             <thead><tr><th>Chi nhánh</th><th>Tổng booking</th><th>Doanh thu</th><th>Tỷ lệ hoàn thành</th></tr></thead>
             <tbody>
-              {branchComparison.map((b: any) => (
+              {isLoading && [...Array(3)].map((_, i) => (
+                <tr key={`branch-skeleton-${i}`}>
+                  <td>
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-8 w-8 rounded-lg" />
+                      <Skeleton className="h-4 w-32" />
+                    </div>
+                  </td>
+                  <td><Skeleton className="h-4 w-12" /></td>
+                  <td><Skeleton className="h-4 w-24" /></td>
+                  <td><Skeleton className="h-4 w-16" /></td>
+                </tr>
+              ))}
+              {!isLoading && branchComparison.map((b: any) => (
                 <tr key={b.id}>
                   <td>
                     <div className="flex items-center gap-2">

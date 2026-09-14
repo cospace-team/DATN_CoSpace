@@ -1,6 +1,6 @@
 /**
  * PropertiesPanel — Right panel showing properties of the selected element.
- * Redesigned with Pro Max dark glass layout, color swatches, rotation dials,
+ * Theme-aware (light/dark) glass layout with color swatches, rotation dials,
  * seat counters, workspace linking, and keybindings matrix.
  */
 
@@ -8,7 +8,7 @@ import React, { useState } from 'react';
 import {
   FiTrash2, FiCopy, FiLock, FiUnlock,
   FiArrowUp, FiArrowDown, FiEye, FiEyeOff,
-  FiInfo, FiSliders, FiGrid, FiLink, FiChevronDown, FiChevronUp, FiPlus, FiMinus, FiCheck
+  FiInfo, FiSliders, FiLink, FiChevronDown, FiChevronUp, FiPlus, FiMinus, FiCheck
 } from 'react-icons/fi';
 import type { LayoutElement } from '../../types/floorPlan';
 import type { WorkspaceResponse } from '../../lib/spaceApi';
@@ -66,41 +66,41 @@ const PropertiesPanel: React.FC<Props> = ({
   /* ── EMPTY STATE (No Selection) ── */
   if (!element) {
     return (
-      <div className="flex flex-col h-full bg-slate-950/95 border-l border-slate-800 text-slate-200 select-none">
-        <div className="px-4 py-3 border-b border-slate-800 bg-slate-900/60 flex items-center justify-between">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-            <FiSliders className="h-4 w-4 text-violet-400" />
+      <div className="flex flex-col h-full bg-card border-l border-border text-foreground select-none">
+        <div className="px-4 py-3 border-b border-border bg-muted/40 flex items-center justify-between">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+            <FiSliders className="h-4 w-4 text-primary" />
             <span>Thuộc tính</span>
           </h3>
         </div>
 
         <div className="flex-1 overflow-y-auto custom-scrollbar p-4 flex flex-col gap-6">
           {/* Main Info */}
-          <div className="flex flex-col items-center justify-center text-center py-8 gap-3 text-slate-400">
-            <div className="w-14 h-14 rounded-3xl bg-slate-900 flex items-center justify-center border border-slate-800 shadow-inner mb-1 relative">
-              <FiInfo className="h-6 w-6 text-violet-400" />
-              <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-violet-500 animate-ping" />
+          <div className="flex flex-col items-center justify-center text-center py-8 gap-3 text-muted-foreground">
+            <div className="w-14 h-14 rounded-3xl bg-muted flex items-center justify-center border border-border shadow-inner mb-1 relative">
+              <FiInfo className="h-6 w-6 text-primary" />
+              <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-primary animate-ping" />
             </div>
             <div>
-              <p className="text-sm font-bold text-slate-100 font-heading">Chưa chọn phần tử</p>
-              <p className="text-xs text-slate-400 mt-1 max-w-[210px] leading-relaxed">
+              <p className="text-sm font-bold text-foreground font-heading">Chưa chọn phần tử</p>
+              <p className="text-xs text-muted-foreground mt-1 max-w-[210px] leading-relaxed">
                 Click chọn hoặc kéo thả vật tư lên sơ đồ để tùy chỉnh thông số.
               </p>
             </div>
-            <div className="flex items-center gap-2 text-[10px] bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl font-mono text-slate-300">
+            <div className="flex items-center gap-2 text-[10px] bg-muted border border-border px-3 py-1.5 rounded-xl font-mono text-foreground">
               <span>{elementCount} vật tư</span>
-              <span className="text-slate-600">·</span>
-              <span className="text-emerald-400 font-semibold">{linkedCount} đã liên kết</span>
+              <span className="text-muted-foreground">·</span>
+              <span className="text-success font-semibold">{linkedCount} đã liên kết</span>
             </div>
           </div>
 
-          <hr className="border-slate-800/80" />
+          <hr className="border-border" />
 
           {/* Keyboard Shortcuts Cheatsheet */}
           <div className="space-y-3">
-            <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
+            <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
               <span>Phím tắt thao tác nhanh</span>
-              <span className="font-mono text-violet-400">HUD</span>
+              <span className="font-mono text-primary">HUD</span>
             </h4>
             <div className="grid grid-cols-1 gap-2">
               <ShortcutRow keys={['Del', 'Backspace']} desc="Xóa phần tử" />
@@ -133,48 +133,48 @@ const PropertiesPanel: React.FC<Props> = ({
   );
 
   return (
-    <div className="flex flex-col h-full bg-slate-950/95 border-l border-slate-800 text-slate-200 select-none overflow-hidden">
-      
+    <div className="flex flex-col h-full bg-card border-l border-border text-foreground select-none overflow-hidden">
+
       {/* Header */}
-      <div className="px-4 py-3 border-b border-slate-800 bg-slate-900/60 flex items-center justify-between shrink-0">
+      <div className="px-4 py-3 border-b border-border bg-muted/40 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-lg shrink-0">
+          <div className="w-8 h-8 rounded-xl bg-muted border border-border flex items-center justify-center text-lg shrink-0">
             {catalog?.icon || '⬜'}
           </div>
           <div className="min-w-0">
-            <h3 className="text-xs font-bold text-slate-100 truncate uppercase tracking-wider font-heading">
+            <h3 className="text-xs font-bold text-foreground truncate uppercase tracking-wider font-heading">
               {catalog?.label || 'Chỉnh sửa'}
             </h3>
-            <span className="text-[9px] font-mono text-slate-400 truncate block">
+            <span className="text-[9px] font-mono text-muted-foreground truncate block">
               ID: {element.id.substring(0, 10)}...
             </span>
           </div>
         </div>
-        <span className="text-[9px] font-mono bg-violet-500/10 text-violet-400 border border-violet-500/20 px-2 py-0.5 rounded-full font-bold">
+        <span className="text-[9px] font-mono bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full font-bold">
           {element.type.toUpperCase()}
         </span>
       </div>
 
       {/* Quick Action Toolbar */}
-      <div className="px-3.5 py-2 border-b border-slate-800/80 bg-slate-950 flex items-center gap-1 shrink-0">
+      <div className="px-3.5 py-2 border-b border-border bg-card flex items-center gap-1 shrink-0">
         <ToolbarIconBtn
           icon={<FiCopy className="h-3.5 w-3.5" />}
           title="Nhân bản (Ctrl+D)"
           onClick={() => onDuplicate([element.id])}
         />
         <ToolbarIconBtn
-          icon={element.locked ? <FiLock className="h-3.5 w-3.5 text-amber-400" /> : <FiUnlock className="h-3.5 w-3.5" />}
+          icon={element.locked ? <FiLock className="h-3.5 w-3.5 text-warning" /> : <FiUnlock className="h-3.5 w-3.5" />}
           title={element.locked ? 'Mở khóa' : 'Khóa element'}
           onClick={() => onUpdate(element.id, { locked: !element.locked })}
           active={element.locked}
         />
         <ToolbarIconBtn
-          icon={element.visible ? <FiEye className="h-3.5 w-3.5" /> : <FiEyeOff className="h-3.5 w-3.5 text-slate-500" />}
+          icon={element.visible ? <FiEye className="h-3.5 w-3.5" /> : <FiEyeOff className="h-3.5 w-3.5 text-muted-foreground" />}
           title={element.visible ? 'Ẩn element' : 'Hiện element'}
           onClick={() => onUpdate(element.id, { visible: !element.visible })}
           active={!element.visible}
         />
-        <div className="w-px h-4 bg-slate-800 mx-1" />
+        <div className="w-px h-4 bg-border mx-1" />
         <ToolbarIconBtn
           icon={<FiArrowUp className="h-3.5 w-3.5" />}
           title="Đưa lên trên cùng"
@@ -186,10 +186,10 @@ const PropertiesPanel: React.FC<Props> = ({
           onClick={() => onSendToBack(element.id)}
         />
         <ToolbarIconBtn
-          icon={<FiTrash2 className="h-3.5 w-3.5 text-red-400" />}
+          icon={<FiTrash2 className="h-3.5 w-3.5 text-destructive" />}
           title="Xóa element (Del)"
           onClick={() => onDelete([element.id])}
-          className="ml-auto hover:bg-red-500/10 rounded-lg text-red-400"
+          className="ml-auto hover:bg-destructive/10 rounded-lg text-destructive"
         />
       </div>
 
@@ -197,18 +197,18 @@ const PropertiesPanel: React.FC<Props> = ({
       <div className="flex-1 overflow-y-auto p-3.5 space-y-3.5 custom-scrollbar">
 
         {/* ── SECTION 1: THÔNG TIN CHUNG ── */}
-        <div className="border border-slate-800 rounded-2xl overflow-hidden bg-slate-900/40">
+        <div className="border border-border rounded-2xl overflow-hidden bg-muted/20">
           <SectionHeader
             title="Thông tin chung"
             open={sectionOpen.general}
             onToggle={() => toggleSection('general')}
           />
           {sectionOpen.general && (
-            <div className="p-3.5 space-y-3 bg-slate-950 border-t border-slate-800/80">
+            <div className="p-3.5 space-y-3 bg-card border-t border-border">
               <FieldGroup label="Nhãn hiển thị">
                 <input
                   type="text"
-                  className="input-dark"
+                  className="input-field-custom"
                   value={element.label}
                   onChange={(e) => onUpdate(element.id, { label: e.target.value })}
                   placeholder="VD: Bàn A1..."
@@ -219,7 +219,7 @@ const PropertiesPanel: React.FC<Props> = ({
                 <FieldGroup label="Nhãn phụ (mô tả)">
                   <input
                     type="text"
-                    className="input-dark text-xs"
+                    className="input-field-custom"
                     value={element.sublabel || ''}
                     onChange={(e) =>
                       onUpdate(element.id, { sublabel: e.target.value || undefined })
@@ -235,13 +235,13 @@ const PropertiesPanel: React.FC<Props> = ({
                     <button
                       type="button"
                       onClick={() => onUpdate(element.id, { seatCount: Math.max(1, (element.seatCount || 1) - 1) })}
-                      className="w-8 h-8 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800"
+                      className="w-8 h-8 rounded-xl bg-muted border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/70"
                     >
                       <FiMinus className="h-3.5 w-3.5" />
                     </button>
                     <input
                       type="number"
-                      className="input-dark font-mono text-center font-bold text-sm flex-1"
+                      className="input-field-custom font-mono text-center font-bold text-sm flex-1"
                       value={element.seatCount ?? (element.type === 'meeting_room' ? 6 : 2)}
                       min={1}
                       max={32}
@@ -252,7 +252,7 @@ const PropertiesPanel: React.FC<Props> = ({
                     <button
                       type="button"
                       onClick={() => onUpdate(element.id, { seatCount: Math.min(32, (element.seatCount || 1) + 1) })}
-                      className="w-8 h-8 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800"
+                      className="w-8 h-8 rounded-xl bg-muted border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/70"
                     >
                       <FiPlus className="h-3.5 w-3.5" />
                     </button>
@@ -264,14 +264,14 @@ const PropertiesPanel: React.FC<Props> = ({
         </div>
 
         {/* ── SECTION 2: KÍCH THƯỚC & VỊ TRÍ ── */}
-        <div className="border border-slate-800 rounded-2xl overflow-hidden bg-slate-900/40">
+        <div className="border border-border rounded-2xl overflow-hidden bg-muted/20">
           <SectionHeader
             title="Vị trí & Kích thước"
             open={sectionOpen.geometry}
             onToggle={() => toggleSection('geometry')}
           />
           {sectionOpen.geometry && (
-            <div className="p-3.5 space-y-3.5 bg-slate-950 border-t border-slate-800/80">
+            <div className="p-3.5 space-y-3.5 bg-card border-t border-border">
               {/* Coordinates Grid */}
               <div className="grid grid-cols-2 gap-2">
                 <NumberInputGroup
@@ -310,13 +310,13 @@ const PropertiesPanel: React.FC<Props> = ({
                     onChange={(e) =>
                       onUpdate(element.id, { rotation: Number(e.target.value) })
                     }
-                    className="w-full h-1.5 accent-violet-500 bg-slate-800 rounded-full cursor-pointer"
+                    className="w-full h-1.5 accent-primary bg-muted rounded-full cursor-pointer"
                   />
-                  <span className="text-xs font-mono font-bold tabular-nums min-w-[36px] text-right text-violet-400">
+                  <span className="text-xs font-mono font-bold tabular-nums min-w-[36px] text-right text-primary">
                     {element.rotation}°
                   </span>
                 </div>
-                
+
                 {/* Instant Angle Presets */}
                 <div className="flex gap-1.5 mt-2">
                   {[0, 90, 180, 270].map((deg) => (
@@ -326,8 +326,8 @@ const PropertiesPanel: React.FC<Props> = ({
                       onClick={() => onUpdate(element.id, { rotation: deg })}
                       className={`flex-1 py-1 rounded-xl border text-[10px] font-mono font-bold transition-all ${
                         element.rotation === deg
-                          ? 'bg-violet-600/20 text-violet-400 border-violet-500/40 shadow-sm'
-                          : 'bg-slate-900 border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-slate-200'
+                          ? 'bg-primary/15 text-primary border-primary/40 shadow-sm'
+                          : 'bg-muted border-border hover:bg-muted/70 text-muted-foreground hover:text-foreground'
                       }`}
                     >
                       {deg}°
@@ -340,15 +340,15 @@ const PropertiesPanel: React.FC<Props> = ({
         </div>
 
         {/* ── SECTION 3: MÀU SẮC & KIỂU DÁNG ── */}
-        <div className="border border-slate-800 rounded-2xl overflow-hidden bg-slate-900/40">
+        <div className="border border-border rounded-2xl overflow-hidden bg-muted/20">
           <SectionHeader
             title="Kiểu dáng & Màu sắc"
             open={sectionOpen.style}
             onToggle={() => toggleSection('style')}
           />
           {sectionOpen.style && (
-            <div className="p-3.5 space-y-4 bg-slate-950 border-t border-slate-800/80">
-              
+            <div className="p-3.5 space-y-4 bg-card border-t border-border">
+
               {/* Presets Swatches */}
               <FieldGroup label="Mẫu phối màu sẵn">
                 <div className="grid grid-cols-4 gap-2">
@@ -368,12 +368,12 @@ const PropertiesPanel: React.FC<Props> = ({
                         }
                         className={`h-8 rounded-xl border flex items-center justify-center transition-all ${
                           isCurrent
-                            ? 'border-violet-400 ring-2 ring-violet-500/30 scale-105 shadow-md'
-                            : 'border-slate-800 hover:border-slate-600 hover:scale-105'
+                            ? 'border-primary ring-2 ring-primary/30 scale-105 shadow-md'
+                            : 'border-border hover:border-muted-foreground/50 hover:scale-105'
                         }`}
                         title={preset.name}
                         style={{
-                          backgroundColor: preset.fill === 'transparent' ? '#0F172A' : preset.fill,
+                          backgroundColor: preset.fill === 'transparent' ? 'hsl(var(--card))' : preset.fill,
                           borderColor: preset.stroke,
                         }}
                       >
@@ -390,37 +390,37 @@ const PropertiesPanel: React.FC<Props> = ({
               {/* Color pickers */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">
                     Màu nền (Fill)
                   </label>
-                  <div className="flex items-center gap-2 border border-slate-800 rounded-xl p-1.5 bg-slate-900">
+                  <div className="flex items-center gap-2 border border-border rounded-xl p-1.5 bg-muted/30">
                     <input
                       type="color"
                       value={rgbaToHex(element.fillColor || '#FFFFFF')}
                       onChange={(e) =>
                         onUpdate(element.id, { fillColor: e.target.value })
                       }
-                      className="w-7 h-7 rounded-lg cursor-pointer border border-slate-700 bg-transparent p-0"
+                      className="w-7 h-7 rounded-lg cursor-pointer border border-border bg-transparent p-0"
                     />
-                    <span className="text-[10px] font-mono font-bold truncate text-slate-300">
+                    <span className="text-[10px] font-mono font-bold truncate text-foreground">
                       {element.fillColor?.startsWith('#') ? element.fillColor : 'tùy chỉnh'}
                     </span>
                   </div>
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">
                     Viền (Stroke)
                   </label>
-                  <div className="flex items-center gap-2 border border-slate-800 rounded-xl p-1.5 bg-slate-900">
+                  <div className="flex items-center gap-2 border border-border rounded-xl p-1.5 bg-muted/30">
                     <input
                       type="color"
                       value={rgbaToHex(element.strokeColor || '#94A3B8')}
                       onChange={(e) =>
                         onUpdate(element.id, { strokeColor: e.target.value })
                       }
-                      className="w-7 h-7 rounded-lg cursor-pointer border border-slate-700 bg-transparent p-0"
+                      className="w-7 h-7 rounded-lg cursor-pointer border border-border bg-transparent p-0"
                     />
-                    <span className="text-[10px] font-mono font-bold truncate text-slate-300">
+                    <span className="text-[10px] font-mono font-bold truncate text-foreground">
                       {element.strokeColor?.startsWith('#') ? element.strokeColor : 'tùy chỉnh'}
                     </span>
                   </div>
@@ -435,7 +435,7 @@ const PropertiesPanel: React.FC<Props> = ({
                   min={0}
                   onChange={(v) => onUpdate(element.id, { cornerRadius: Math.max(0, v) })}
                 />
-                
+
                 <FieldGroup label="Độ mờ">
                   <div className="flex items-center gap-2 mt-1">
                     <input
@@ -447,9 +447,9 @@ const PropertiesPanel: React.FC<Props> = ({
                       onChange={(e) =>
                         onUpdate(element.id, { opacity: Number(e.target.value) })
                       }
-                      className="w-full h-1.5 accent-violet-500 bg-slate-800 rounded-full cursor-pointer"
+                      className="w-full h-1.5 accent-primary bg-muted rounded-full cursor-pointer"
                     />
-                    <span className="text-[10px] font-mono font-bold tabular-nums w-[28px] text-right text-slate-300">
+                    <span className="text-[10px] font-mono font-bold tabular-nums w-[28px] text-right text-foreground">
                       {Math.round((element.opacity ?? 1) * 100)}%
                     </span>
                   </div>
@@ -462,19 +462,19 @@ const PropertiesPanel: React.FC<Props> = ({
 
         {/* ── SECTION 4: GÁN WORKSPACE ── */}
         {canLink && (
-          <div className="border border-slate-800 rounded-2xl overflow-hidden bg-slate-900/40">
+          <div className="border border-border rounded-2xl overflow-hidden bg-muted/20">
             <SectionHeader
               title="Liên kết Workspace"
               open={sectionOpen.workspace}
               onToggle={() => toggleSection('workspace')}
             />
             {sectionOpen.workspace && (
-              <div className="p-3.5 space-y-3 bg-slate-950 border-t border-slate-800/80">
+              <div className="p-3.5 space-y-3 bg-card border-t border-border">
                 <FieldGroup label="Chọn Workspace">
                   <div className="relative">
-                    <FiLink className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 h-3.5 w-3.5" />
+                    <FiLink className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-3.5 w-3.5" />
                     <select
-                      className="input-dark pl-9 pr-3 py-1.5 text-xs appearance-none bg-slate-900 cursor-pointer text-slate-200"
+                      className="input-field-custom pl-9 pr-3 appearance-none cursor-pointer"
                       value={element.workspaceId || ''}
                       onChange={(e) =>
                         onUpdate(element.id, {
@@ -491,17 +491,17 @@ const PropertiesPanel: React.FC<Props> = ({
                     </select>
                   </div>
                 </FieldGroup>
-                
+
                 {element.workspaceId && (() => {
                   const isOrphan = !availableWs.some((ws) => ws.id === element.workspaceId);
                   return isOrphan ? (
-                    <div className="flex items-center gap-2 p-2.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-xl text-xs font-semibold">
-                      <span className="h-2 w-2 rounded-full bg-amber-400 shrink-0 animate-ping" />
+                    <div className="flex items-center gap-2 p-2.5 bg-warning/10 border border-warning/30 text-warning rounded-xl text-xs font-semibold">
+                      <span className="h-2 w-2 rounded-full bg-warning shrink-0 animate-ping" />
                       Workspace đã xóa — cần liên kết lại.
                     </div>
                   ) : (
-                    <div className="flex items-center gap-2 p-2.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-xl text-xs font-semibold">
-                      <FiCheck className="h-4 w-4 text-emerald-400 shrink-0" />
+                    <div className="flex items-center gap-2 p-2.5 bg-success/10 border border-success/30 text-success rounded-xl text-xs font-semibold">
+                      <FiCheck className="h-4 w-4 text-success shrink-0" />
                       Đã gán thành công vào sơ đồ.
                     </div>
                   );
@@ -526,10 +526,10 @@ const SectionHeader: React.FC<{
   <button
     type="button"
     onClick={onToggle}
-    className="w-full flex items-center justify-between px-3.5 py-2.5 text-[11px] font-bold uppercase tracking-wider text-slate-400 hover:bg-slate-900/60 transition-colors"
+    className="w-full flex items-center justify-between px-3.5 py-2.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground hover:bg-muted/60 transition-colors"
   >
     <span>{title}</span>
-    {open ? <FiChevronUp className="h-3.5 w-3.5 text-slate-500" /> : <FiChevronDown className="h-3.5 w-3.5 text-slate-500" />}
+    {open ? <FiChevronUp className="h-3.5 w-3.5 text-muted-foreground" /> : <FiChevronDown className="h-3.5 w-3.5 text-muted-foreground" />}
   </button>
 );
 
@@ -538,7 +538,7 @@ const FieldGroup: React.FC<{
   children: React.ReactNode;
 }> = ({ label, children }) => (
   <div className="space-y-1">
-    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
       {label}
     </label>
     {children}
@@ -552,10 +552,10 @@ const NumberInputGroup: React.FC<{
   onChange: (v: number) => void;
 }> = ({ label, value, min, onChange }) => (
   <div className="flex flex-col gap-1">
-    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{label}</label>
+    <label className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">{label}</label>
     <input
       type="number"
-      className="input-dark font-mono text-xs"
+      className="input-field-custom font-mono text-xs"
       value={Math.round(value)}
       min={min}
       onChange={(e) => onChange(Number(e.target.value) || 0)}
@@ -565,12 +565,12 @@ const NumberInputGroup: React.FC<{
 
 const ShortcutRow: React.FC<{ keys: string[]; desc: string }> = ({ keys, desc }) => (
   <div className="flex items-center justify-between gap-4 text-xs">
-    <span className="text-slate-400 font-medium text-[11px]">{desc}</span>
+    <span className="text-muted-foreground font-medium text-[11px]">{desc}</span>
     <div className="flex items-center gap-1">
       {keys.map((k, i) => (
         <React.Fragment key={k}>
-          {i > 0 && <span className="text-[10px] text-slate-600">+</span>}
-          <kbd className="px-1.5 py-0.5 rounded-lg border border-slate-800 bg-slate-900 text-[10px] font-mono font-bold text-violet-400 shadow-sm">
+          {i > 0 && <span className="text-[10px] text-muted-foreground/60">+</span>}
+          <kbd className="px-1.5 py-0.5 rounded-lg border border-border bg-muted text-[10px] font-mono font-bold text-primary shadow-sm">
             {k}
           </kbd>
         </React.Fragment>
@@ -591,8 +591,8 @@ const ToolbarIconBtn: React.FC<{
     onClick={onClick}
     className={`p-1.5 rounded-lg border border-transparent transition-all duration-150 ${
       active
-        ? 'bg-violet-600/20 text-violet-400 border-violet-500/30 font-medium'
-        : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
+        ? 'bg-primary/15 text-primary border-primary/30 font-medium'
+        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
     } ${className || ''}`}
     title={title}
   >
@@ -604,7 +604,7 @@ const ToolbarIconBtn: React.FC<{
 function rgbaToHex(color: string): string {
   if (color.startsWith('#')) return color.slice(0, 7);
   if (color === 'transparent') return '#ffffff';
-  
+
   const match = color.match(
     /rgba?\((\d+),\s*(\d+),\s*(\d+)/
   );

@@ -33,4 +33,7 @@ public interface WorkspaceEntityRepository extends JpaRepository<WorkspaceEntity
 
     @org.springframework.data.jpa.repository.Query("SELECT w FROM WorkspaceEntity w JOIN Floor f ON w.floorId = f.id WHERE f.branchId = :branchId ORDER BY w.code")
     List<WorkspaceEntity> findWorkspacesByBranchId(@org.springframework.data.repository.query.Param("branchId") UUID branchId);
+
+    @org.springframework.data.jpa.repository.Query("SELECT f.branchId FROM WorkspaceEntity w JOIN Floor f ON w.floorId = f.id WHERE w.id = :workspaceId")
+    java.util.Optional<UUID> findBranchIdByWorkspaceId(@org.springframework.data.repository.query.Param("workspaceId") UUID workspaceId);
 }
