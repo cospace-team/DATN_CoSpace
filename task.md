@@ -60,4 +60,9 @@ Sử dụng ký hiệu: `[ ]` Chưa làm | `[/]` Đang làm | `[x]` Đã xong.
 - [x] **Theme & Huy hiệu Member**: Tối ưu độ tương phản WCAG AAA cho Bronze Member trên Light theme (không còn bị chìm/mờ) và dịu mắt trên Dark theme; Bỏ huy hiệu "Đã xác thực" thừa thãi.
 - [x] **Đồng bộ Tài liệu (Docs)**: Cập nhật `docs/api-contracts/matching.md` và `docs/SYSTEM_SPEC.md` phản ánh đúng 100% các endpoints và schema DTO thực tế.
 - [x] **Hệ thống thông báo (`NotificationBell.tsx`)**: Sửa class CSS `shadow-2xs`, tối ưu responsive layout cho mobile, phân loại icon/màu sắc đẹp mắt theo 7 loại sự kiện (Đặt chỗ, Nhắc nhở trước 1h, Hoàn tiền hủy đơn, Gợi ý đối tác, Bài viết cộng đồng, Hủy đơn, Giao dịch).
-
+## 👑 8. Admin Console APIs, In-Memory Caching & Polish
+- [x] **Quản trị toàn hệ thống (`AdminController.java`)**: CRUD chi nhánh (`/api/admin/branches`), loại chỗ ngồi (`/api/admin/workspace-types`), bảng giá toàn hệ thống (`/api/admin/price-policies`).
+- [x] **Đấu nối dữ liệu thật cho FE Admin**: Thay thế hoàn toàn mock state tại `BranchManagementPage.tsx`, `PricingPage.tsx`, `ExtraServicesPage.tsx`, `CancellationPoliciesPage.tsx`.
+- [x] **Phân trang người dùng**: Hỗ trợ phân trang Server-side `GET /api/users?page=&size=` và tích hợp UI pagination controls tại `UserManagementPage.tsx`.
+- [x] **In-Memory Caching (Caffeine)**: Tích hợp Spring Cache với Caffeine cho các dữ liệu cấu hình tĩnh và báo cáo (`branches`, `workspace_types`, `price_policies`, `reports_overview`, `extra_services`, `cancellation_policies`), tự động `@CacheEvict` khi mutate.
+- [x] **Khắc phục lỗi pgjdbc Parameter Type**: Bổ sung `preferQueryMode: simple` vào cấu hình datasource HikariCP trong `application.yml`.
