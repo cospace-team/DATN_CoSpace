@@ -12,4 +12,8 @@ import java.util.UUID;
 public interface BranchEntityRepository extends JpaRepository<BranchEntity, UUID> {
 
     List<BranchEntity> findByStatusOrderByNameAsc(BranchStatus status);
+
+    List<BranchEntity> findAllByOrderByNameAsc();
+
+    boolean existsByCode(String code);
 }

@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { FiDollarSign, FiEdit2, FiPlus, FiCheckCircle, FiXCircle, FiInbox, FiX, FiCheck, FiTrash2, FiAlertCircle } from 'react-icons/fi';
+import { FiDollarSign, FiEdit2, FiPlus, FiCheckCircle, FiInbox, FiX, FiCheck, FiTrash2, FiAlertCircle } from 'react-icons/fi';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { Skeleton } from '../../components/ui/Skeleton';
-import { pricePolicies as initialPolicies, getBranch, getWorkspaceType, workspaceTypes, branches, type PricePolicy } from '../../data/mockData';
 import { formatVND, durationUnitLabel } from '../../utils/formatters';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
+import { adminApi, type AdminPricePolicyDto } from '../../api/adminApi';
+import { adminWorkspaceTypeApi, adminBranchApi, type WorkspaceTypeResponse, type AdminBranchDto } from '../../lib/spaceApi';
 
 const Modal: React.FC<{ title: string; onClose: () => void; children: React.ReactNode }> = ({
   title, onClose, children,
@@ -26,16 +27,19 @@ const Modal: React.FC<{ title: string; onClose: () => void; children: React.Reac
   </div>
 );
 
-type ModalMode = { type: 'add' } | { type: 'edit'; policy: PricePolicy } | null;
+type ModalMode = { type: 'add' } | { type: 'edit'; policy: AdminPricePolicyDto } | null;
 
 const PricingPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
-  const [policies, setPolicies] = useState<PricePolicy[]>([]);
+  const [policies, setPolicies] = useState<AdminPricePolicyDto[]>([]);
+  const [workspaceTypes, setWorkspaceTypes] = useState<WorkspaceTypeResponse[]>([]);
+  const [branches, setBranches] = useState<AdminBranchDto[]>([]);
   const [modal, setModal] = useState<ModalMode>(null);
+  const [apiError, setApiError] = useState('');
 
   const [form, setForm] = useState({
     workspace_type_id: '',
-    duration_unit: 'hour' as PricePolicy['duration_unit'],
+    duration_unit: 'hour' as AdminPricePolicyDto['durationUnit'],
     branch_id: '', // Empty means "Toàn hệ thống"
     price: '',
     is_active: true,
@@ -43,12 +47,27 @@ const PricingPage: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [successMsg, setSuccessMsg] = useState('');
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setPolicies(initialPolicies.map(p => ({ ...p })));
+  const load = async () => {
+    setIsLoading(true);
+    setApiError('');
+    try {
+      const [policyList, typeList, branchList] = await Promise.all([
+        adminApi.getPricePolicies(),
+        adminWorkspaceTypeApi.list(),
+        adminBranchApi.list(),
+      ]);
+      setPolicies(policyList);
+      setWorkspaceTypes(typeList);
+      setBranches(branchList);
+    } catch (e: any) {
+      setApiError(e.message || 'Không thể tải dữ liệu bảng giá.');
+    } finally {
       setIsLoading(false);
-    }, 800);
-    return () => clearTimeout(timer);
+    }
+  };
+
+  useEffect(() => {
+    load();
   }, []);
 
   const showSuccess = (msg: string) => {
@@ -68,13 +87,13 @@ const PricingPage: React.FC = () => {
     setModal({ type: 'add' });
   };
 
-  const openEdit = (p: PricePolicy) => {
+  const openEdit = (p: AdminPricePolicyDto) => {
     setForm({
-      workspace_type_id: p.workspace_type_id,
-      duration_unit: p.duration_unit,
-      branch_id: p.branch_id || '',
+      workspace_type_id: p.workspaceTypeId,
+      duration_unit: p.durationUnit,
+      branch_id: p.branchId || '',
       price: String(p.price),
-      is_active: p.is_active,
+      is_active: p.isActive,
     });
     setErrors({});
     setModal({ type: 'edit', policy: p });
@@ -84,59 +103,48 @@ const PricingPage: React.FC = () => {
     const newErrors: Record<string, string> = {};
     if (!form.workspace_type_id) newErrors.workspace_type_id = 'Vui lòng chọn loại không gian';
     if (!form.duration_unit) newErrors.duration_unit = 'Vui lòng chọn đơn vị thời gian';
-    
+
     const priceNum = parseInt(form.price.replace(/\D/g, ''));
     if (isNaN(priceNum) || priceNum < 0) newErrors.price = 'Giá phải là số hợp lệ';
-    
-    const isDuplicate = policies.some(p => 
-      p.workspace_type_id === form.workspace_type_id &&
-      p.duration_unit === form.duration_unit &&
-      (p.branch_id || '') === form.branch_id &&
-      (modal?.type !== 'edit' || modal.policy.id !== p.id)
-    );
-
-    if (isDuplicate) {
-      newErrors.general = 'Đã tồn tại mức giá cho loại không gian và đơn vị thời gian này tại chi nhánh đã chọn.';
-    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const save = () => {
+  const save = async () => {
     if (!validate()) return;
-    
     const price = parseInt(form.price.replace(/\D/g, '')) || 0;
-    
-    if (modal?.type === 'add') {
-      const newPolicy: PricePolicy = {
-        id: `pp-sys-${Date.now()}`,
-        workspace_type_id: form.workspace_type_id,
-        duration_unit: form.duration_unit,
-        price,
-        currency: 'VND',
-        is_active: form.is_active,
-        branch_id: form.branch_id || null,
-      };
-      setPolicies((prev) => [newPolicy, ...prev]);
-      showSuccess('Thêm chính sách giá thành công');
-    } else if (modal?.type === 'edit') {
-      setPolicies((prev) =>
-        prev.map((p) =>
-          p.id === modal.policy.id
-            ? { ...p, workspace_type_id: form.workspace_type_id, duration_unit: form.duration_unit, branch_id: form.branch_id || null, price, is_active: form.is_active }
-            : p
-        )
-      );
-      showSuccess('Cập nhật chính sách giá thành công');
+
+    try {
+      if (modal?.type === 'add') {
+        const created = await adminApi.createPricePolicy({
+          branchId: form.branch_id || null,
+          workspaceTypeId: form.workspace_type_id,
+          durationUnit: form.duration_unit,
+          price,
+        });
+        setPolicies((prev) => [created, ...prev]);
+        showSuccess('Thêm chính sách giá thành công');
+        setModal(null);
+      } else if (modal?.type === 'edit') {
+        const updated = await adminApi.updatePricePolicy(modal.policy.id, { price, isActive: form.is_active });
+        setPolicies((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+        showSuccess('Cập nhật chính sách giá thành công');
+        setModal(null);
+      }
+    } catch (e: any) {
+      setErrors({ general: e.message || 'Lỗi khi lưu chính sách giá.' });
     }
-    setModal(null);
   };
 
-  const deletePolicy = (id: string) => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa vĩnh viễn mức giá này? Hành động này không thể hoàn tác.')) {
-      setPolicies(prev => prev.filter(p => p.id !== id));
+  const deletePolicy = async (id: string) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa mức giá này? Hành động này không thể hoàn tác.')) return;
+    try {
+      await adminApi.deletePricePolicy(id);
+      setPolicies((prev) => prev.filter((p) => p.id !== id));
       showSuccess('Đã xóa mức giá');
+    } catch (e: any) {
+      setApiError(e.message || 'Lỗi khi xóa mức giá.');
     }
   };
 
@@ -166,6 +174,12 @@ const PricingPage: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+
+      {apiError && (
+        <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          <FiAlertCircle className="h-4 w-4 shrink-0" />{apiError}
+        </div>
+      )}
 
       {/* Table Section */}
       <Card className="overflow-hidden">
@@ -201,10 +215,10 @@ const PricingPage: React.FC = () => {
               ) : policies.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-12 bg-card">
-                    <EmptyState 
-                      icon={FiInbox} 
-                      title="Chưa có chính sách giá" 
-                      description="Hệ thống chưa thiết lập mức giá nào." 
+                    <EmptyState
+                      icon={FiInbox}
+                      title="Chưa có chính sách giá"
+                      description="Hệ thống chưa thiết lập mức giá nào."
                       action={
                         <Button onClick={openAdd}>
                           <FiPlus className="h-4 w-4 mr-2" /> Thêm ngay
@@ -214,39 +228,35 @@ const PricingPage: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                policies.map(pp => {
-                  const wsType = getWorkspaceType(pp.workspace_type_id);
-                  const branch = pp.branch_id ? getBranch(pp.branch_id) : null;
-                  return (
-                    <tr key={pp.id} className="border-b border-border hover:bg-muted/50 transition-colors bg-card">
-                      <td className="px-6 py-4 align-middle font-medium max-w-[150px]">
-                        <div className="truncate" title={wsType?.name}>{wsType?.name}</div>
-                      </td>
-                      <td className="px-6 py-4 align-middle text-muted-foreground">{durationUnitLabel[pp.duration_unit]}</td>
-                      <td className="px-6 py-4 align-middle max-w-[150px]">
-                        <div className="truncate" title={branch?.name}>
-                          {branch ? <Badge variant="info">{branch.name}</Badge> : <Badge variant="neutral">Toàn hệ thống</Badge>}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 align-middle font-semibold text-primary">{formatVND(pp.price)}</td>
-                      <td className="px-6 py-4 align-middle text-center">
-                        <Badge variant={pp.is_active ? 'success' : 'neutral'}>
-                          {pp.is_active ? 'Đang áp dụng' : 'Tạm ngưng'}
-                        </Badge>
-                      </td>
-                      <td className="px-6 py-4 align-middle text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button variant="ghost" size="icon" onClick={() => openEdit(pp)} title="Chỉnh sửa">
-                            <FiEdit2 className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => deletePolicy(pp.id)} title="Xóa">
-                            <FiTrash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
+                policies.map(pp => (
+                  <tr key={pp.id} className="border-b border-border hover:bg-muted/50 transition-colors bg-card">
+                    <td className="px-6 py-4 align-middle font-medium max-w-[150px]">
+                      <div className="truncate" title={pp.workspaceTypeName}>{pp.workspaceTypeName}</div>
+                    </td>
+                    <td className="px-6 py-4 align-middle text-muted-foreground">{durationUnitLabel[pp.durationUnit]}</td>
+                    <td className="px-6 py-4 align-middle max-w-[150px]">
+                      <div className="truncate" title={pp.branchName || ''}>
+                        {pp.branchName ? <Badge variant="info">{pp.branchName}</Badge> : <Badge variant="neutral">Toàn hệ thống</Badge>}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 align-middle font-semibold text-primary">{formatVND(pp.price)}</td>
+                    <td className="px-6 py-4 align-middle text-center">
+                      <Badge variant={pp.isActive ? 'success' : 'neutral'}>
+                        {pp.isActive ? 'Đang áp dụng' : 'Tạm ngưng'}
+                      </Badge>
+                    </td>
+                    <td className="px-6 py-4 align-middle text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button variant="ghost" size="icon" onClick={() => openEdit(pp)} title="Chỉnh sửa">
+                          <FiEdit2 className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => deletePolicy(pp.id)} title="Xóa">
+                          <FiTrash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
@@ -271,7 +281,8 @@ const PricingPage: React.FC = () => {
               <Label htmlFor="workspace_type_id">Loại không gian <span className="text-destructive">*</span></Label>
               <select
                 id="workspace_type_id"
-                className={`flex h-10 w-full rounded-lg border border-input bg-card px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-colors ${errors.workspace_type_id ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                disabled={modal.type === 'edit'}
+                className={`flex h-10 w-full rounded-lg border border-input bg-card px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-colors disabled:opacity-60 ${errors.workspace_type_id ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                 value={form.workspace_type_id}
                 onChange={(e) => {
                   setForm(p => ({ ...p, workspace_type_id: e.target.value }));
@@ -287,9 +298,10 @@ const PricingPage: React.FC = () => {
                 <Label htmlFor="duration_unit">Thời lượng <span className="text-destructive">*</span></Label>
                 <select
                   id="duration_unit"
-                  className="flex h-10 w-full rounded-lg border border-input bg-card px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-colors"
+                  disabled={modal.type === 'edit'}
+                  className="flex h-10 w-full rounded-lg border border-input bg-card px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-colors disabled:opacity-60"
                   value={form.duration_unit}
-                  onChange={(e) => setForm((p) => ({ ...p, duration_unit: e.target.value as PricePolicy['duration_unit'] }))}
+                  onChange={(e) => setForm((p) => ({ ...p, duration_unit: e.target.value as AdminPricePolicyDto['durationUnit'] }))}
                 >
                   <option value="hour">Giờ</option>
                   <option value="day">Ngày</option>
@@ -320,7 +332,8 @@ const PricingPage: React.FC = () => {
               <Label htmlFor="branch_id">Phạm vi áp dụng (Chi nhánh)</Label>
               <select
                 id="branch_id"
-                className="flex h-10 w-full rounded-lg border border-input bg-card px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-colors"
+                disabled={modal.type === 'edit'}
+                className="flex h-10 w-full rounded-lg border border-input bg-card px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-colors disabled:opacity-60"
                 value={form.branch_id}
                 onChange={(e) => setForm(p => ({ ...p, branch_id: e.target.value }))}
               >
@@ -330,16 +343,18 @@ const PricingPage: React.FC = () => {
               <p className="text-xs text-muted-foreground">Chọn "Toàn hệ thống" để áp dụng cho mọi chi nhánh, trừ khi chi nhánh có giá ghi đè riêng.</p>
             </div>
 
-            <div className="flex items-center gap-3 pt-2">
-              <input
-                type="checkbox"
-                id="price-active"
-                checked={form.is_active}
-                onChange={(e) => setForm((p) => ({ ...p, is_active: e.target.checked }))}
-                className="h-4 w-4 rounded border-border"
-              />
-              <Label htmlFor="price-active" className="cursor-pointer">Kích hoạt mức giá này</Label>
-            </div>
+            {modal.type === 'edit' && (
+              <div className="flex items-center gap-3 pt-2">
+                <input
+                  type="checkbox"
+                  id="price-active"
+                  checked={form.is_active}
+                  onChange={(e) => setForm((p) => ({ ...p, is_active: e.target.checked }))}
+                  className="h-4 w-4 rounded border-border"
+                />
+                <Label htmlFor="price-active" className="cursor-pointer">Kích hoạt mức giá này</Label>
+              </div>
+            )}
 
             <div className="flex gap-3 justify-end pt-4 border-t border-border mt-6">
               <Button variant="outline" onClick={() => setModal(null)}>Hủy</Button>

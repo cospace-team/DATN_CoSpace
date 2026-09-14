@@ -106,7 +106,7 @@ const AdminDashboardPage: React.FC = () => {
 
         // 2. Fetch branches list to query per-branch metrics
         const token = localStorage.getItem('workhub_access_token');
-        const branchRes = await fetch(`${API_BASE_URL}/api/branches`, {
+        const branchRes = await fetch(`${API_BASE_URL}/api/admin/branches`, {
           headers: token ? { 'Authorization': `Bearer ${token}` } : {}
         });
 

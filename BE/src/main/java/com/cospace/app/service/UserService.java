@@ -1,5 +1,6 @@
 package com.cospace.app.service;
 
+import com.cospace.app.config.CacheConfig;
 import com.cospace.app.dto.api.ChangePasswordRequest;
 import com.cospace.app.dto.api.UserProfileDto;
 import com.cospace.app.entity.Profile;
@@ -7,6 +8,12 @@ import com.cospace.app.entity.User;
 import com.cospace.app.repository.ProfileRepository;
 import com.cospace.app.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,6 +44,7 @@ public class UserService {
     }
 
     @Transactional
+    @CacheEvict(value = CacheConfig.ADMIN_USERS, allEntries = true)
     public UserProfileDto updateUserProfile(UUID userId, UserProfileDto dto) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy người dùng"));
@@ -110,6 +118,7 @@ public class UserService {
     }
 
     @Transactional
+    @CacheEvict(value = CacheConfig.ADMIN_USERS, allEntries = true)
     public UserProfileDto createWalkinUser(com.cospace.app.dto.api.WalkinUserCreateRequest req) {
         User user = User.builder()
                 .email("walkin_" + UUID.randomUUID().toString().substring(0, 8) + "@walkin.local")
@@ -130,7 +139,8 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
-    public java.util.List<UserProfileDto> getUsers(String roleStr, UUID branchId, String statusStr, String search) {
+    @Cacheable(CacheConfig.ADMIN_USERS)
+    public Page<UserProfileDto> getUsers(String roleStr, UUID branchId, String statusStr, String search, int page, int size) {
         User.Role role = null;
         if (roleStr != null && !roleStr.isBlank() && !"all".equalsIgnoreCase(roleStr)) {
             try {
@@ -147,16 +157,17 @@ public class UserService {
 
         String searchClean = (search != null && !search.isBlank()) ? search.trim() : null;
 
-        return userRepository.filterUsers(role, branchId, status, searchClean).stream()
+        Pageable pageable = PageRequest.of(Math.max(0, page), Math.min(100, Math.max(1, size)), Sort.by(Sort.Direction.DESC, "createdAt"));
+        return userRepository.filterUsers(role, branchId, status, searchClean, pageable)
                 .map(user -> {
                     Profile profile = profileRepository.findById(user.getId())
                             .orElseGet(() -> Profile.builder().userId(user.getId()).contactPublic(false).build());
                     return convertToDto(user, profile);
-                })
-                .collect(java.util.stream.Collectors.toList());
+                });
     }
 
     @Transactional
+    @CacheEvict(value = CacheConfig.ADMIN_USERS, allEntries = true)
     public UserProfileDto updateUserStatus(UUID targetUserId, String statusStr, UUID currentAdminUserId) {
         if (targetUserId.equals(currentAdminUserId)) {
             throw new IllegalArgumentException("Không thể tự thay đổi trạng thái hoặc khóa tài khoản của chính mình");
@@ -175,6 +186,7 @@ public class UserService {
     }
 
     @Transactional
+    @CacheEvict(value = CacheConfig.ADMIN_USERS, allEntries = true)
     public UserProfileDto updateUserRoleAndBranch(UUID targetUserId, String roleStr, UUID branchId, UUID currentAdminUserId) {
         if (targetUserId.equals(currentAdminUserId)) {
             throw new IllegalArgumentException("Không thể tự thay đổi vai trò của tài khoản quản trị hiện tại");

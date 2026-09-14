@@ -16,4 +16,6 @@ public interface FloorRepository extends JpaRepository<Floor, UUID> {
     Optional<Floor> findByBranchIdAndFloorNo(UUID branchId, int floorNo);
 
     boolean existsByBranchIdAndFloorNo(UUID branchId, int floorNo);
+
+    boolean existsByBranchId(UUID branchId);
 }

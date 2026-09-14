@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   FiSearch, FiEdit2, FiShield, FiUsers, FiMoreVertical,
   FiLock, FiUnlock, FiMapPin, FiChevronDown, FiFilter, FiX,
-  FiUserPlus, FiAlertCircle, FiCheckCircle
+  FiUserPlus, FiAlertCircle, FiCheckCircle, FiChevronLeft, FiChevronRight
 } from 'react-icons/fi';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { Skeleton } from '../../components/ui/Skeleton';
@@ -171,6 +171,12 @@ const UserManagementPage: React.FC = () => {
   const [branchesList, setBranchesList] = useState<BranchResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Pagination
+  const PAGE_SIZE = 10;
+  const [page, setPage] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+
   // Filters
   const [roleFilter, setRoleFilter] = useState('all');
   const [branchFilter, setBranchFilter] = useState('all');
@@ -196,14 +202,18 @@ const UserManagementPage: React.FC = () => {
         branchId: branchFilter,
         status: statusFilter,
         search: search,
+        page,
+        size: PAGE_SIZE,
       });
-      setUsersList(data);
+      setUsersList(data.content);
+      setTotalElements(data.totalElements);
+      setTotalPages(data.totalPages);
     } catch (err: any) {
       showToast(err.message || 'Không thể tải danh sách người dùng', 'error');
     } finally {
       setIsLoading(false);
     }
-  }, [roleFilter, branchFilter, statusFilter, search, showToast]);
+  }, [roleFilter, branchFilter, statusFilter, search, page, showToast]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -211,6 +221,12 @@ const UserManagementPage: React.FC = () => {
     }, 250);
     return () => clearTimeout(timer);
   }, [fetchUsers]);
+
+  // Any filter/search change jumps back to page 1 — staying on a stale page could otherwise
+  // land past the end of the newly filtered, smaller result set.
+  useEffect(() => {
+    setPage(0);
+  }, [roleFilter, branchFilter, statusFilter, search]);
 
   // Lock / Unlock toggle
   const toggleLock = async (targetUser: AdminUserDto) => {
@@ -287,7 +303,7 @@ const UserManagementPage: React.FC = () => {
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-primary/10 text-primary border border-primary/20">
-              Tổng số: {usersList.length} tài khoản
+              Tổng số: {totalElements} tài khoản
             </span>
           </div>
         </div>
@@ -369,7 +385,7 @@ const UserManagementPage: React.FC = () => {
         {hasActiveFilters && (
           <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
             <FiFilter className="h-3.5 w-3.5" />
-            <span>Hiển thị {usersList.length} kết quả lọc</span>
+            <span>Tìm thấy {totalElements} kết quả lọc</span>
           </div>
         )}
       </div>
@@ -513,6 +529,31 @@ const UserManagementPage: React.FC = () => {
           </tbody>
         </table>
       </div>
+
+      {/* Pagination */}
+      {!isLoading && totalElements > 0 && (
+        <div className="flex items-center justify-between flex-wrap gap-3 px-1">
+          <p className="text-xs text-muted-foreground">
+            Trang {page + 1} / {totalPages} · {usersList.length} / {totalElements} tài khoản
+          </p>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setPage(p => Math.max(0, p - 1))}
+              disabled={page === 0}
+              className="btn btn-secondary btn-sm !min-h-[32px] !px-2.5 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <FiChevronLeft className="h-3.5 w-3.5" /> Trước
+            </button>
+            <button
+              onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+              disabled={page >= totalPages - 1}
+              className="btn btn-secondary btn-sm !min-h-[32px] !px-2.5 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Sau <FiChevronRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Modal Edit Role & Branch */}
       {editingUser && (

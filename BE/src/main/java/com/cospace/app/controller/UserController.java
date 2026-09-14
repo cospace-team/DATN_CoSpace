@@ -81,12 +81,21 @@ public class UserController {
 
     @GetMapping
     @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('staff', 'branch_admin', 'super_admin', 'admin')")
-    public ResponseEntity<List<UserProfileDto>> getUsers(
+    public ResponseEntity<?> getUsers(
             @RequestParam(name = "role", required = false) String role,
             @RequestParam(name = "branchId", required = false) UUID branchId,
             @RequestParam(name = "status", required = false) String status,
-            @RequestParam(name = "search", required = false) String search) {
-        return ResponseEntity.ok(userService.getUsers(role, branchId, status, search));
+            @RequestParam(name = "search", required = false) String search,
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "20") int size) {
+        org.springframework.data.domain.Page<UserProfileDto> result = userService.getUsers(role, branchId, status, search, page, size);
+        return ResponseEntity.ok(Map.of(
+                "content", result.getContent(),
+                "totalElements", result.getTotalElements(),
+                "totalPages", result.getTotalPages(),
+                "page", result.getNumber(),
+                "size", result.getSize()
+        ));
     }
 
     @PutMapping("/{id}/status")

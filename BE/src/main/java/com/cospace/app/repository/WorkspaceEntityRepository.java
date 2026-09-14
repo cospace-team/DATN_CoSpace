@@ -21,6 +21,8 @@ public interface WorkspaceEntityRepository extends JpaRepository<WorkspaceEntity
 
     List<WorkspaceEntity> findByFloorId(UUID floorId);
 
+    long countByWorkspaceTypeId(UUID workspaceTypeId);
+
     void deleteAllByFloorId(UUID floorId);
     @org.springframework.data.jpa.repository.Query("SELECT COUNT(w) FROM WorkspaceEntity w JOIN Floor f ON w.floorId = f.id WHERE f.branchId = :branchId")
     int countByFloorBranchId(@org.springframework.data.repository.query.Param("branchId") UUID branchId);

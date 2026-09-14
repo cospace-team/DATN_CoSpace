@@ -18,6 +18,32 @@ export interface AdminUserDto {
   createdAt?: string;
 }
 
+export interface AdminUserPage {
+  content: AdminUserDto[];
+  totalElements: number;
+  totalPages: number;
+  page: number;
+  size: number;
+}
+
+export interface AdminPricePolicyDto {
+  id: string;
+  branchId: string | null;
+  branchName: string | null;
+  workspaceTypeId: string;
+  workspaceTypeName: string;
+  durationUnit: 'hour' | 'day' | 'week' | 'month';
+  price: number;
+  isActive: boolean;
+}
+
+export interface CreatePricePolicyPayload {
+  branchId?: string | null;
+  workspaceTypeId: string;
+  durationUnit: string;
+  price: number;
+}
+
 const getHeaders = () => {
   const token = localStorage.getItem('workhub_access_token');
   return {
@@ -32,15 +58,18 @@ export const adminApi = {
     branchId?: string;
     status?: string;
     search?: string;
-  }): Promise<AdminUserDto[]> => {
+    page?: number;
+    size?: number;
+  }): Promise<AdminUserPage> => {
     const query = new URLSearchParams();
     if (params?.role && params.role !== 'all') query.append('role', params.role);
     if (params?.branchId && params.branchId !== 'all') query.append('branchId', params.branchId);
     if (params?.status && params.status !== 'all') query.append('status', params.status);
     if (params?.search && params.search.trim()) query.append('search', params.search.trim());
+    query.append('page', String(params?.page ?? 0));
+    query.append('size', String(params?.size ?? 20));
 
-    const qs = query.toString() ? `?${query.toString()}` : '';
-    const res = await fetch(`${API_BASE_URL}/api/users${qs}`, {
+    const res = await fetch(`${API_BASE_URL}/api/users?${query.toString()}`, {
       headers: getHeaders(),
     });
 
@@ -87,5 +116,55 @@ export const adminApi = {
     }
 
     return res.json();
+  },
+
+  /* ── System-wide Price Policies ── */
+
+  getPricePolicies: async (): Promise<AdminPricePolicyDto[]> => {
+    const res = await fetch(`${API_BASE_URL}/api/admin/price-policies`, {
+      headers: getHeaders(),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || 'Không thể tải bảng giá');
+    }
+    return res.json();
+  },
+
+  createPricePolicy: async (payload: CreatePricePolicyPayload): Promise<AdminPricePolicyDto> => {
+    const res = await fetch(`${API_BASE_URL}/api/admin/price-policies`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || 'Không thể thêm chính sách giá');
+    }
+    return res.json();
+  },
+
+  updatePricePolicy: async (id: string, payload: { price?: number; isActive?: boolean }): Promise<AdminPricePolicyDto> => {
+    const res = await fetch(`${API_BASE_URL}/api/admin/price-policies/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || 'Không thể cập nhật chính sách giá');
+    }
+    return res.json();
+  },
+
+  deletePricePolicy: async (id: string): Promise<void> => {
+    const res = await fetch(`${API_BASE_URL}/api/admin/price-policies/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || 'Không thể xóa chính sách giá');
+    }
   },
 };

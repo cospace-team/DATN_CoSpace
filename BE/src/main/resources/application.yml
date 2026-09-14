@@ -26,6 +26,15 @@ spring:
     hikari:
       data-source-properties:
         sslmode: ${SUPABASE_DB_SSL_MODE:require}
+        # Postgres' extended query protocol can't infer a bind parameter's type when it's used
+        # only in a bare "? IS NULL" check on a non-text column (uuid, native enum) — exactly the
+        # "(:branchId IS NULL OR u.branchId = :branchId)" optional-filter pattern used by
+        # UserRepository.filterUsers / AuditLogRepository.searchAuditLogs. That throws
+        # "ERROR: could not determine data type of parameter $N" whenever the filter is left null,
+        # which is the default, no-filters-applied case admin screens load with. Simple query mode
+        # sends parameters as inline literals instead of server-side prepared statement binds, so
+        # Postgres never has to guess — the standard pgjdbc workaround for this class of query.
+        preferQueryMode: simple
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
