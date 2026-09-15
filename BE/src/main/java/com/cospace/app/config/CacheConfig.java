@@ -32,6 +32,9 @@ public class CacheConfig {
     public static final String ADMIN_USERS = "adminUsers";
     public static final String AUDIT_LOGS = "auditLogs";
     public static final String REPORTS_OVERVIEW = "reportsOverview";
+    public static final String AMENITIES = "amenities";
+    public static final String WORKSPACE_TYPE_AMENITIES = "workspaceTypeAmenities";
+    public static final String MEMBERSHIP_TIERS = "membershipTiers";
 
     @Bean
     public CacheManager cacheManager() {
@@ -44,7 +47,11 @@ public class CacheConfig {
                 buildCache(CANCELLATION_POLICIES, 5, TimeUnit.MINUTES),
                 buildCache(ADMIN_USERS, 1, TimeUnit.MINUTES),
                 buildCache(AUDIT_LOGS, 1, TimeUnit.MINUTES),
-                buildCache(REPORTS_OVERVIEW, 2, TimeUnit.MINUTES)
+                buildCache(REPORTS_OVERVIEW, 2, TimeUnit.MINUTES),
+                buildCache(AMENITIES, 10, TimeUnit.MINUTES),
+                buildCache(WORKSPACE_TYPE_AMENITIES, 10, TimeUnit.MINUTES),
+                // Read on every booking/quote to resolve the tier discount; evicted on tier edits.
+                buildCache(MEMBERSHIP_TIERS, 10, TimeUnit.MINUTES)
         ));
         return manager;
     }

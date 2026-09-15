@@ -4,6 +4,7 @@ import com.cospace.app.entity.Booking;
 import com.cospace.app.entity.BookingCancellation;
 import com.cospace.app.entity.BookingStatus;
 import com.cospace.app.entity.CancellationPolicy;
+import com.cospace.app.entity.Refund;
 import com.cospace.app.repository.BookingCancellationRepository;
 import com.cospace.app.repository.BookingRepository;
 import com.cospace.app.repository.CancellationPolicyRepository;
@@ -12,7 +13,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -27,6 +27,8 @@ public class CancellationService {
     private final BookingCancellationRepository cancellationRepository;
     private final CancellationPolicyRepository policyRepository;
     private final NotificationService notificationService;
+    private final RefundService refundService;
+    private final BookingAddonService bookingAddonService;
 
     @Transactional
     public BookingCancellation cancelBooking(UUID userId, UUID bookingId, String reason) {
@@ -41,7 +43,7 @@ public class CancellationService {
 
         // Check cancelable status
         if (booking.getStatus() != BookingStatus.CONFIRMED && booking.getStatus() != BookingStatus.PENDING_PAYMENT) {
-            throw new IllegalStateException("Không thể hủy đặt chỗ ở trạng thái hiện tại: " + booking.getStatus());
+            throw new IllegalStateException("Không thể hủy đặt chỗ ở trạng thái hiện tại: " + BookingStateMachine.label(booking.getStatus()));
         }
 
         // Check already cancelled
@@ -90,29 +92,37 @@ public class CancellationService {
             appliedRule.put("refund_percent", 0);
         }
 
+        // Add-ons that were never paid are dropped from the bill. The policy percentage applies to the
+        // rental only: add-ons already paid for were never consumed, so they are returned in full.
+        bookingAddonService.voidUnpaid(booking, userId);
         long totalAmount = booking.getTotalAmount();
-        long refundAmount = (totalAmount * refundPercent) / 100L;
+        long paidAddons = booking.getStatus() == BookingStatus.CONFIRMED ? booking.getAddonAmount() : 0;
+        long rentalAmount = Math.max(0, totalAmount - booking.getAddonAmount());
+        // Never promise back more than the customer actually paid.
+        long refundAmount = Math.min((rentalAmount * refundPercent) / 100L + paidAddons, refundService.refundableAmount(bookingId));
         // Rule #40: Cancellation Amount Invariant: refund_amount + penalty_amount == booking.total_amount
         long penaltyAmount = totalAmount - refundAmount;
 
-        // Update booking status
-        booking.setStatus(BookingStatus.CANCELLED);
+        BookingStateMachine.transition(booking, BookingStatus.CANCELLED);
         bookingRepository.save(booking);
+        // A gateway payment still in flight must not silently confirm a cancelled booking later.
+        refundService.cancelOpenPayments(bookingId);
 
-        // Record cancellation
-        BookingCancellation cancellation = BookingCancellation.builder()
+        String cancelReason = reason != null ? reason : "Khách hàng yêu cầu hủy";
+        BookingCancellation cancellation = cancellationRepository.save(BookingCancellation.builder()
                 .bookingId(booking.getId())
                 .userId(userId)
-                .reason(reason != null ? reason : "Khách hàng yêu cầu hủy")
+                .reason(cancelReason)
                 .refundPercent(refundPercent)
                 .refundAmount(refundAmount)
                 .penaltyAmount(penaltyAmount)
-                .refundStatus(refundAmount > 0 ? "pending" : "processed")
+                .refundStatus(refundAmount > 0 ? Refund.STATUS_PENDING : Refund.STATUS_PROCESSED)
                 .appliedRuleJson(appliedRule)
                 .processedAt(refundAmount == 0 ? now : null)
-                .build();
+                .build());
 
-        cancellation = cancellationRepository.save(cancellation);
+        refundService.requestRefund(booking, null, refundAmount, Refund.REASON_CANCELLATION,
+                "Hủy đơn theo chính sách (" + refundPercent + "%).");
 
         // Rule #20: Send in-app notification
         String notiContent = String.format("Đơn đặt chỗ %s đã được hủy thành công. Tỷ lệ hoàn tiền: %d%% (%d VNĐ).",
@@ -127,6 +137,73 @@ public class CancellationService {
         );
 
         return cancellation;
+    }
+
+    /**
+     * Cancels a not-yet-used booking because its workspace goes into maintenance. The customer is
+     * not at fault, so everything they paid is refunded regardless of the cancellation policy.
+     */
+    @Transactional
+    public void cancelForMaintenance(Booking booking, String maintenanceReason) {
+        if (booking.getStatus() != BookingStatus.PENDING_PAYMENT && booking.getStatus() != BookingStatus.CONFIRMED) {
+            throw new IllegalStateException("Chỉ hủy do bảo trì với đơn chưa sử dụng.");
+        }
+        if (cancellationRepository.findByBookingId(booking.getId()).isPresent()) {
+            return;
+        }
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        bookingAddonService.voidUnpaid(booking, null);
+        long refundAmount = booking.getStatus() == BookingStatus.CONFIRMED ? refundService.refundableAmount(booking.getId()) : 0;
+        String reason = "Không gian bảo trì đột xuất" + (maintenanceReason != null && !maintenanceReason.isBlank() ? ": " + maintenanceReason : "");
+
+        BookingStateMachine.transition(booking, BookingStatus.CANCELLED);
+        bookingRepository.save(booking);
+        refundService.cancelOpenPayments(booking.getId());
+
+        cancellationRepository.save(BookingCancellation.builder()
+                .bookingId(booking.getId())
+                .userId(booking.getUserId())
+                .reason(reason)
+                .refundPercent(refundAmount > 0 ? 100 : 0)
+                .refundAmount(refundAmount)
+                .penaltyAmount(0)
+                .refundStatus(refundAmount > 0 ? Refund.STATUS_PENDING : Refund.STATUS_PROCESSED)
+                .appliedRuleJson(Map.of("policy_name", "MAINTENANCE_FULL_REFUND", "refund_percent", refundAmount > 0 ? 100 : 0))
+                .processedAt(refundAmount == 0 ? now : null)
+                .build());
+
+        refundService.requestRefund(booking, null, refundAmount, Refund.REASON_MAINTENANCE, reason + ".");
+
+        notificationService.createNotification(booking.getUserId(),
+                "Đơn đặt chỗ bị hủy do bảo trì",
+                String.format("Rất tiếc, đơn %s đã bị hủy vì %s.%s", booking.getBookingCode(), reason.toLowerCase(Locale.ROOT),
+                        refundAmount > 0 ? " Bạn sẽ được hoàn toàn bộ " + RefundService.vnd(refundAmount) + "." : ""),
+                "BOOKING", booking.getId(), "BOOKING");
+    }
+
+    /**
+     * For a booking in use that maintenance cuts short: refunds the paid share of the time the
+     * customer loses, i.e. rental × (time left ÷ booked time). Add-ons were consumed and are not
+     * part of it. Call before the booking's end is truncated.
+     *
+     * @return the amount requested for refund
+     */
+    @Transactional
+    public long refundUnusedTimeForMaintenance(Booking booking, OffsetDateTime cutAt, String maintenanceReason) {
+        if (!cutAt.isBefore(booking.getEndAt()) || !booking.getEndAt().isAfter(booking.getStartAt())) {
+            return 0;
+        }
+        long bookedSeconds = Duration.between(booking.getStartAt(), booking.getEndAt()).getSeconds();
+        OffsetDateTime lostFrom = cutAt.isAfter(booking.getStartAt()) ? cutAt : booking.getStartAt();
+        long lostSeconds = Duration.between(lostFrom, booking.getEndAt()).getSeconds();
+        long rentalAmount = Math.max(0, booking.getTotalAmount() - booking.getAddonAmount());
+        long proRata = (long) Math.floor((double) rentalAmount * lostSeconds / bookedSeconds);
+        long amount = Math.min(proRata, refundService.refundableAmount(booking.getId()));
+
+        String reason = "Bảo trì đột xuất khi đang sử dụng, hoàn phần thời gian chưa dùng"
+                + (maintenanceReason != null && !maintenanceReason.isBlank() ? " (" + maintenanceReason + ")" : "");
+        refundService.requestRefund(booking, null, amount, Refund.REASON_MAINTENANCE, reason + ".");
+        return Math.max(0, amount);
     }
 
     private CancellationPolicy findApplicablePolicy(UUID branchId, long hoursSinceCreated, long hoursBeforeStart) {

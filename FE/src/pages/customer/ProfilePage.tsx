@@ -42,6 +42,9 @@ import { useToast } from '../../components/Toast';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { Spinner } from '../../components/ui/Spinner';
 import { bookingApi } from '../../lib/bookingApi';
+import { membershipApi, type MyMembershipDto } from '../../api/loyaltyApi';
+import { formatVND } from '../../utils/formatters';
+import { API_BASE_URL } from '../../config/api';
 
 // ── BANNER THEMES ──
 const BANNER_THEMES = [
@@ -87,69 +90,23 @@ const SUGGESTED_SKILLS = [
   'Data Science',
 ];
 
-// ── MOCK DATA FOR CO-WORKING NETWORK ──
-const MOCK_PARTNERS = [
-  {
-    id: 'p1',
-    name: 'Trần Văn Bình',
-    profession: 'Senior Frontend Developer',
-    company: 'TechCorp Vietnam',
-    avatar: 'B',
-    matchScore: 92,
-    commonTags: ['React', 'TypeScript', 'UI/UX Design', 'AI / Machine Learning'],
-    contactPublic: true,
-    email: 'binh.tran@techcorp.com',
-    phone: '0901234567',
-    bio: 'Đam mê xây dựng các sản phẩm web có trải nghiệm người dùng tuyệt vời với React, Next.js và Tailwind CSS.',
-    linkedin: 'https://linkedin.com',
-    github: 'https://github.com',
-  },
-  {
-    id: 'p2',
-    name: 'Lê Ngọc Mai',
-    profession: 'Product Manager',
-    company: 'Innovate VN Lab',
-    avatar: 'M',
-    matchScore: 84,
-    commonTags: ['Product Management', 'Khởi nghiệp', 'UI/UX Design'],
-    contactPublic: false,
-    email: 'mai.le@innovate.vn',
-    phone: '0912345678',
-    bio: 'Đang tìm kiếm Co-founder kỹ thuật cho dự án mới trong mảng EdTech và AI Assistant cho doanh nghiệp.',
-    linkedin: 'https://linkedin.com',
-    github: '',
-  },
-  {
-    id: 'p3',
-    name: 'Phạm Đức Anh',
-    profession: 'Data Scientist & AI Engineer',
-    company: 'AI Next Solutions',
-    avatar: 'A',
-    matchScore: 78,
-    commonTags: ['AI / Machine Learning', 'Data Science', 'Đầu tư'],
-    contactPublic: true,
-    email: 'anh.pham@aisolutions.dev',
-    phone: '0987654321',
-    bio: 'Chuyên gia xử lý dữ liệu lớn, LLM orchestration và triển khai giải pháp AI vào quản lý vận hành.',
-    linkedin: 'https://linkedin.com',
-    github: 'https://github.com',
-  },
-  {
-    id: 'p4',
-    name: 'Hoàng Minh Châu',
-    profession: 'Marketing Lead & Growth',
-    company: 'GrowthHub Media',
-    avatar: 'C',
-    matchScore: 71,
-    commonTags: ['Marketing', 'Khởi nghiệp', 'Fintech'],
-    contactPublic: true,
-    email: 'chau.hoang@growthhub.io',
-    phone: '0933445566',
-    bio: 'Chiến lược gia truyền thông số và tối ưu tỷ lệ chuyển đổi (CRO) cho các nền tảng công nghệ B2B.',
-    linkedin: 'https://linkedin.com',
-    github: '',
-  },
-];
+/** A suggested networking partner, as returned by /api/matching/suggestions. */
+interface PartnerSuggestion {
+  id: string;
+  name: string;
+  profession: string;
+  company: string;
+  avatar: string;
+  matchScore: number;
+  commonTags: string[];
+  contactPublic: boolean;
+  email: string;
+  phone: string;
+  bio: string;
+  linkedin: string;
+  github: string;
+  [key: string]: any;
+}
 
 const ProfilePage: React.FC = () => {
   const { user, updateProfile, changePassword } = useAuth();
@@ -253,8 +210,9 @@ const ProfilePage: React.FC = () => {
   // ── Tab 2: Networking States ──
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTagFilter, setSelectedTagFilter] = useState<string | null>(null);
-  const [partnersList, setPartnersList] = useState(MOCK_PARTNERS);
-  const [selectedPartner, setSelectedPartner] = useState<typeof MOCK_PARTNERS[0] | null>(null);
+  // Only real suggestions from the matching service; an empty list is shown as such.
+  const [partnersList, setPartnersList] = useState<PartnerSuggestion[]>([]);
+  const [selectedPartner, setSelectedPartner] = useState<PartnerSuggestion | null>(null);
 
   // ── Tab 3: Security & Password States ──
   const [passwordForm, setPasswordForm] = useState({
@@ -274,6 +232,9 @@ const ProfilePage: React.FC = () => {
     tier: 'Bronze Member',
     memberSince: 'Năm 2026',
   });
+  // Server-side membership tier; realStats.tier stays as the offline fallback.
+  const [membership, setMembership] = useState<MyMembershipDto | null>(null);
+  const tierLabel = membership?.currentTier ? `${membership.currentTier.name} Member` : realStats.tier;
 
   // Sync user data when loaded
   useEffect(() => {
@@ -439,12 +400,13 @@ const ProfilePage: React.FC = () => {
       }
     };
     loadRealStats();
+    membershipApi.me().then(setMembership).catch(() => setMembership(null));
 
     // 5. Fetch partner matching suggestions
     const fetchPartners = async () => {
       setIsLoadingPartners(true);
       try {
-        const res = await fetch('http://localhost:8080/api/matching/suggestions', {
+        const res = await fetch(`${API_BASE_URL}/api/matching/suggestions`, {
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
@@ -452,12 +414,10 @@ const ProfilePage: React.FC = () => {
         });
         if (res.ok) {
           const json = await res.json();
-          if (json.data && Array.isArray(json.data) && json.data.length > 0) {
-            setPartnersList(json.data);
-          }
+          setPartnersList(Array.isArray(json.data) ? json.data : []);
         }
       } catch (err) {
-        console.warn('Cannot fetch partner suggestions, fallback to demo data:', err);
+        console.warn('Cannot fetch partner suggestions:', err);
       } finally {
         setIsLoadingPartners(false);
       }
@@ -470,7 +430,7 @@ const ProfilePage: React.FC = () => {
     try {
       const token = localStorage.getItem('workhub_access_token');
       if (!token) return;
-      const res = await fetch('http://localhost:8080/api/matching/suggestions', {
+      const res = await fetch(`${API_BASE_URL}/api/matching/suggestions`, {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
@@ -886,11 +846,11 @@ const ProfilePage: React.FC = () => {
                   </h1>
                   <span
                     className={`inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-xs font-bold border shadow-xs ${getTierBadgeStyle(
-                      realStats.tier
+                      tierLabel
                     )}`}
                   >
                     <FiAward className="h-3.5 w-3.5" />
-                    {realStats.tier}
+                    {tierLabel}
                   </span>
                 </div>
 
@@ -999,11 +959,28 @@ const ProfilePage: React.FC = () => {
               <div className="h-11 w-11 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xl shrink-0 group-hover:scale-105 transition-transform">
                 <FiAward />
               </div>
-              <div>
+              <div className="min-w-0 flex-1">
                 <p className="text-[11px] font-medium text-muted-foreground">Hạng thành viên</p>
                 <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
-                  {realStats.tier}
+                  {tierLabel}
+                  {!!membership?.currentTier?.discountPercent && (
+                    <span className="ml-1.5 text-xs font-semibold">(-{membership.currentTier.discountPercent}%)</span>
+                  )}
                 </p>
+                {membership?.nextTier && (
+                  <div className="mt-1 space-y-1">
+                    <div className="h-1.5 w-full rounded-full bg-border overflow-hidden">
+                      <div className="h-full rounded-full bg-emerald-500" style={{ width: `${membership.progressPercent}%` }} />
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      Lên {membership.nextTier.name}:{' '}
+                      {[
+                        membership.spendToNextTier > 0 ? `chi tiêu thêm ${formatVND(membership.spendToNextTier)}` : null,
+                        membership.bookingsToNextTier > 0 ? `${membership.bookingsToNextTier} đơn nữa` : null,
+                      ].filter(Boolean).join(' hoặc ')}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

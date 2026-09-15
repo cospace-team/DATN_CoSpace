@@ -40,12 +40,14 @@ import java.util.stream.Collectors;
 public class PaymentController {
 
     private final PaymentService paymentService;
+    private final com.cospace.app.security.BranchAccessGuard branchAccessGuard;
 
     @Value("${app.frontend.base-url:http://localhost:5173}")
     private String frontendBaseUrl;
 
-    public PaymentController(PaymentService paymentService) {
+    public PaymentController(PaymentService paymentService, com.cospace.app.security.BranchAccessGuard branchAccessGuard) {
         this.paymentService = paymentService;
+        this.branchAccessGuard = branchAccessGuard;
     }
 
     @PostMapping("/momo/create")
@@ -72,6 +74,7 @@ public class PaymentController {
             @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody CreatePaymentRequest req) {
         UUID userId = requireSubject(jwt);
+        branchAccessGuard.requireAccessToBranch(jwt, paymentService.getBookingBranchId(req.getBookingId()));
         return paymentService.createCashPayment(userId, req.getBookingId());
     }
 
@@ -129,7 +132,7 @@ public class PaymentController {
     public ResponseEntity<Void> payosReturn(@RequestParam Map<String, String> allParams) {
         log.info("Received PayOS return params: {}", allParams);
         String orderCode = allParams.getOrDefault("orderCode", "");
-        String status = allParams.getOrDefault("status", "");
+        boolean cancelled = "true".equalsIgnoreCase(allParams.getOrDefault("cancel", ""));
         boolean success = false;
         try {
             success = paymentService.handlePayosReturn(allParams);
@@ -137,10 +140,17 @@ public class PaymentController {
             log.error("Error handling PayOS return: {}", ex.getMessage());
         }
 
+        // Never echo the incoming status param: only a verified payment may be reported as PAID.
+        String redirectStatus = success ? "PAID" : (cancelled ? "CANCELLED" : "PENDING");
+        String redirectMessage = success
+                ? "Thanh toán VietQR qua PayOS thành công!"
+                : (cancelled
+                        ? "Giao dịch thanh toán PayOS đã bị hủy."
+                        : "Chưa xác nhận được thanh toán. Hệ thống sẽ cập nhật khi PayOS báo kết quả.");
         String redirectUrl = frontendBaseUrl + "/customer/history" +
                 "?orderId=" + url("PAYOS-" + orderCode) +
-                "&status=" + url(success ? "PAID" : (status.isBlank() ? "CANCELLED" : status)) +
-                "&message=" + url(success ? "Thanh toán VietQR qua PayOS thành công!" : "Giao dịch thanh toán PayOS kết thúc.");
+                "&status=" + url(redirectStatus) +
+                "&message=" + url(redirectMessage);
 
         return ResponseEntity.status(HttpStatus.FOUND)
                 .header(HttpHeaders.LOCATION, redirectUrl)
@@ -158,13 +168,14 @@ public class PaymentController {
     }
 
     @PostMapping("/payos/simulate")
-    public ResponseEntity<Map<String, Object>> simulatePayosPayment(@RequestBody Map<String, Object> body) {
+    public ResponseEntity<Map<String, Object>> simulatePayosPayment(@AuthenticationPrincipal Jwt jwt,
+                                                                    @RequestBody Map<String, Object> body) {
         String orderCode = Objects.toString(body.get("orderCode"), "");
         if (orderCode.isBlank()) {
             throw new IllegalArgumentException("orderCode is required for simulation");
         }
         log.info("Simulating PayOS payment confirmation for orderCode: {}", orderCode);
-        paymentService.confirmPaymentByOrderCode(orderCode);
+        paymentService.simulatePayosPayment(requireSubject(jwt), orderCode);
         return ResponseEntity.ok(Map.of("success", true, "message", "Đã xác nhận thanh toán PayOS thành công (Mô phỏng)"));
     }
 

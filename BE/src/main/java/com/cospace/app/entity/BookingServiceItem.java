@@ -22,6 +22,12 @@ import java.util.UUID;
 @Table(name = "booking_services")
 public class BookingServiceItem {
 
+    /** Ordered but not paid yet: owed on the running tab (or covered by the booking's pending payment). */
+    public static final String STATUS_UNPAID = "unpaid";
+    public static final String STATUS_PAID = "paid";
+    /** Cancelled line: no longer counted in the booking's add-on amount. */
+    public static final String STATUS_VOID = "void";
+
     @Id
     @Column(nullable = false, updatable = false)
     private UUID id;
@@ -45,6 +51,22 @@ public class BookingServiceItem {
     @Column(name = "created_by")
     private UUID createdBy;
 
+    @Column(nullable = false, length = 16)
+    @Builder.Default
+    private String status = STATUS_UNPAID;
+
+    @Column(name = "payment_id")
+    private UUID paymentId;
+
+    @Column(name = "paid_at")
+    private OffsetDateTime paidAt;
+
+    @Column(name = "voided_at")
+    private OffsetDateTime voidedAt;
+
+    @Column(name = "voided_by")
+    private UUID voidedBy;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
@@ -52,6 +74,7 @@ public class BookingServiceItem {
     void prePersist() {
         if (id == null) id = UUID.randomUUID();
         if (createdAt == null) createdAt = OffsetDateTime.now(ZoneOffset.UTC);
+        if (status == null) status = STATUS_UNPAID;
         if (subtotal == 0 && unitPrice > 0 && quantity > 0) {
             subtotal = unitPrice * (long) quantity;
         }

@@ -1,11 +1,9 @@
 package com.cospace.app.controller;
 
-import com.cospace.app.entity.BookingServiceItem;
 import com.cospace.app.entity.ExtraServiceEntity;
 import com.cospace.app.repository.ExtraServiceRepository;
 import com.cospace.app.security.BranchAccessGuard;
 import com.cospace.app.service.AuditLogService;
-import com.cospace.app.service.BookingAddonService;
 import com.cospace.app.service.ExtraServiceService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +24,6 @@ import java.util.UUID;
 public class ExtraServiceController {
 
     private final ExtraServiceService extraServiceService;
-    private final BookingAddonService bookingAddonService;
     private final ExtraServiceRepository extraServiceRepository;
     private final BranchAccessGuard branchAccessGuard;
     private final AuditLogService auditLogService;
@@ -92,23 +89,5 @@ public class ExtraServiceController {
         auditLogService.log(httpServletRequest, UUID.fromString(jwt.getSubject()), "DELETE", "extra_services", existing.getId(),
                 Map.of("name", existing.getName(), "code", existing.getCode()), null);
         return ResponseEntity.ok(Map.of("success", true, "message", "Đã xóa vĩnh viễn dịch vụ."));
-    }
-
-    @PostMapping("/bookings/{bookingId}/addons")
-    public ResponseEntity<BookingServiceItem> addServiceToBooking(
-            @AuthenticationPrincipal Jwt jwt,
-            @PathVariable UUID bookingId,
-            @RequestBody Map<String, Object> req) {
-        UUID staffId = UUID.fromString(jwt.getSubject());
-        UUID serviceId = UUID.fromString(req.get("serviceId").toString());
-        int quantity = req.get("quantity") != null ? Integer.parseInt(req.get("quantity").toString()) : 1;
-
-        BookingServiceItem item = bookingAddonService.addServiceToBooking(staffId, bookingId, serviceId, quantity);
-        return ResponseEntity.status(HttpStatus.CREATED).body(item);
-    }
-
-    @GetMapping("/bookings/{bookingId}/addons")
-    public ResponseEntity<List<BookingServiceItem>> getBookingAddons(@PathVariable UUID bookingId) {
-        return ResponseEntity.ok(bookingAddonService.getBookingServices(bookingId));
     }
 }

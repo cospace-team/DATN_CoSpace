@@ -64,17 +64,12 @@ public class SupabaseJwtAuthenticationConverter implements Converter<Jwt, Abstra
             throw new InvalidBearerTokenException("Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.");
         }
 
-        // 2. Fallback to JWT claims
+        // 2. Fallback to JWT claims. Only app_metadata is trusted: Supabase lets users edit their own
+        // user_metadata (supabase.auth.updateUser), so a role there would be self-assigned.
         if (roleStr == null) {
             Map<String, Object> appMetadata = jwt.getClaimAsMap("app_metadata");
             if (appMetadata != null && appMetadata.containsKey("role")) {
                 roleStr = Objects.toString(appMetadata.get("role"), null);
-            }
-            if (roleStr == null) {
-                Map<String, Object> userMetadata = jwt.getClaimAsMap("user_metadata");
-                if (userMetadata != null && userMetadata.containsKey("role")) {
-                    roleStr = Objects.toString(userMetadata.get("role"), null);
-                }
             }
         }
 

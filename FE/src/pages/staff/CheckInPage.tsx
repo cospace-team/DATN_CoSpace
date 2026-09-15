@@ -3,7 +3,7 @@ import {
   FiHash, FiCheckCircle, FiAlertCircle, FiLogOut, FiClock, 
   FiInbox, FiSearch, FiUser, FiMapPin, FiCalendar, FiDollarSign, 
   FiCheck, FiAlertTriangle, FiRefreshCw, FiX, FiTag, FiPhone, FiInfo,
-  FiCamera, FiUsers, FiArrowRight
+  FiCamera, FiUsers, FiArrowRight, FiCoffee
 } from 'react-icons/fi';
 import { formatTime, formatDate, bookingStatusLabel, bookingStatusColor } from '../../utils/formatters';
 import { EmptyState } from '../../components/ui/EmptyState';
@@ -11,6 +11,8 @@ import { useLocation } from 'react-router-dom';
 import { staffApi, BookingWithDetailsDto, BranchTodayBookingDto } from '../../api/staffApi';
 import { useAuth } from '../../context/AuthContext';
 import QrScannerModal from '../../components/QrScannerModal';
+import BookingTabPanel from '../../components/staff/BookingTabPanel';
+import type { BookingTabDto } from '../../api/addonApi';
 
 import { BookingPackageDisplay, getBookingPackageDisplay } from '../../utils/bookingPackage';
 
@@ -62,6 +64,10 @@ const CheckInPage: React.FC = () => {
   const [selectedCheckoutItem, setSelectedCheckoutItem] = useState<BookingWithMeta | null>(null);
   const [checkoutNote, setCheckoutNote] = useState('');
   const [checkoutSubmitting, setCheckoutSubmitting] = useState(false);
+  // Running tab of the guest being checked out: checkout stays blocked while anything is owed.
+  const [checkoutTab, setCheckoutTab] = useState<BookingTabDto | null>(null);
+  // Guest whose running tab is open from the seated list.
+  const [tabItem, setTabItem] = useState<BookingWithMeta | null>(null);
 
   // QR Scanner Modal State
   const [showQrScanner, setShowQrScanner] = useState(false);
@@ -211,6 +217,7 @@ const CheckInPage: React.FC = () => {
   const openCheckoutModal = (ci: BookingWithMeta) => {
     setSelectedCheckoutItem(ci);
     setCheckoutNote('');
+    setCheckoutTab(null);
   };
 
 
@@ -771,7 +778,14 @@ const CheckInPage: React.FC = () => {
                             </td>
 
                             {/* Thao tác Check-out */}
-                            <td className="py-4 text-right">
+                            <td className="py-4 text-right whitespace-nowrap">
+                              <button
+                                onClick={() => setTabItem(ci)}
+                                className="btn btn-sm btn-outline border-border text-xs mr-2 shadow-sm"
+                                title="Gọi thêm dịch vụ / thu tiền dịch vụ"
+                              >
+                                <FiCoffee className="h-3.5 w-3.5 mr-1" /> Dịch vụ
+                              </button>
                               <button 
                                 onClick={() => openCheckoutModal(ci)} 
                                 className={`btn btn-sm transition-all shadow-sm ${
@@ -1070,6 +1084,14 @@ const CheckInPage: React.FC = () => {
               </div>
             </div>
 
+            {/* Dịch vụ gọi thêm: phải thu hết trước khi check-out */}
+            <BookingTabPanel
+              bookingId={selectedCheckoutItem.booking?.id}
+              branchId={selectedCheckoutItem.booking?.branchId || branchId}
+              onTabChange={setCheckoutTab}
+              compact
+            />
+
             {/* Ghi chú Check-out */}
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
@@ -1097,7 +1119,8 @@ const CheckInPage: React.FC = () => {
               <button 
                 type="button"
                 onClick={handleConfirmCheckout} 
-                disabled={checkoutSubmitting}
+                disabled={checkoutSubmitting || (checkoutTab?.unpaidAmount ?? 0) > 0}
+                title={(checkoutTab?.unpaidAmount ?? 0) > 0 ? 'Thu tiền dịch vụ gọi thêm trước khi check-out' : undefined}
                 className="btn btn-primary btn-sm text-xs font-bold px-4 py-2 flex items-center gap-1.5 shadow-sm"
               >
                 {checkoutSubmitting ? (
@@ -1114,6 +1137,32 @@ const CheckInPage: React.FC = () => {
                 )}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DỊCH VỤ GỌI THÊM */}
+      {tabItem && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
+          onClick={() => setTabItem(null)}
+        >
+          <div
+            className="bg-card border border-border rounded-2xl p-6 max-w-lg w-full shadow-2xl animate-scale-up space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-border">
+              <div>
+                <h3 className="font-bold text-foreground">Dịch vụ của {tabItem.customer?.fullName || 'khách'}</h3>
+                <p className="text-xs text-muted-foreground">
+                  {tabItem.workspace?.name} · #{tabItem.booking?.bookingCode}
+                </p>
+              </div>
+              <button onClick={() => setTabItem(null)} className="p-1.5 rounded-lg hover:bg-muted" aria-label="Đóng">
+                <FiX className="h-4 w-4" />
+              </button>
+            </div>
+            <BookingTabPanel bookingId={tabItem.booking?.id} branchId={tabItem.booking?.branchId || branchId} />
           </div>
         </div>
       )}

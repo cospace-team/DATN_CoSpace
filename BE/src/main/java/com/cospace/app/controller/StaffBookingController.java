@@ -25,10 +25,13 @@ public class StaffBookingController {
     private final BookingService bookingService;
 
     private final com.cospace.app.service.UserService userService;
+    private final com.cospace.app.security.BranchAccessGuard branchAccessGuard;
 
-    public StaffBookingController(BookingService bookingService, com.cospace.app.service.UserService userService) {
+    public StaffBookingController(BookingService bookingService, com.cospace.app.service.UserService userService,
+                                  com.cospace.app.security.BranchAccessGuard branchAccessGuard) {
         this.bookingService = bookingService;
         this.userService = userService;
+        this.branchAccessGuard = branchAccessGuard;
     }
 
     @PostMapping("/walkin")
@@ -38,7 +41,9 @@ public class StaffBookingController {
             @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody StaffBookingCreateRequest req) {
         UUID staffId = requireSubject(jwt);
-        
+        // Checked before anything is written, so a rejected request never leaves a walk-in user behind.
+        branchAccessGuard.requireAccessToBranch(jwt, bookingService.resolveBranchIdForWorkspace(req.getWorkspaceId()));
+
         UUID customerId = req.getCustomerId();
         if (customerId == null) {
             if (req.getCustomerName() == null || req.getCustomerPhone() == null) {
@@ -57,9 +62,11 @@ public class StaffBookingController {
     @GetMapping("/branches/{branchId}/workspaces-booking-status")
     @PreAuthorize("hasAnyRole('staff', 'branch_admin')")
     public org.springframework.http.ResponseEntity<java.util.List<com.cospace.app.dto.api.WorkspaceBookingStatusDto>> getWorkspaceBookingStatus(
+            @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID branchId,
             @org.springframework.web.bind.annotation.RequestParam(required = false) String date) {
-        return org.springframework.http.ResponseEntity.ok(bookingService.getWorkspaceBookingStatus(branchId, date));
+        UUID verifiedBranchId = branchAccessGuard.requireBranchAccess(jwt, branchId);
+        return org.springframework.http.ResponseEntity.ok(bookingService.getWorkspaceBookingStatus(verifiedBranchId, date));
     }
 
     private UUID requireSubject(Jwt jwt) {

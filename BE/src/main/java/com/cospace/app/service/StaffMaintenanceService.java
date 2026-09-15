@@ -30,17 +30,23 @@ public class StaffMaintenanceService {
     private final EntityManager entityManager;
     private final WorkspaceEntityRepository workspaceEntityRepository;
     private final com.cospace.app.repository.CheckinLogRepository checkinLogRepository;
+    private final CancellationService cancellationService;
+    private final NotificationService notificationService;
 
     public StaffMaintenanceService(WorkspaceMaintenanceRepository maintenanceRepository,
                                    BookingRepository bookingRepository,
                                    EntityManager entityManager,
                                    WorkspaceEntityRepository workspaceEntityRepository,
-                                   com.cospace.app.repository.CheckinLogRepository checkinLogRepository) {
+                                   com.cospace.app.repository.CheckinLogRepository checkinLogRepository,
+                                   CancellationService cancellationService,
+                                   NotificationService notificationService) {
         this.maintenanceRepository = maintenanceRepository;
         this.bookingRepository = bookingRepository;
         this.entityManager = entityManager;
         this.workspaceEntityRepository = workspaceEntityRepository;
         this.checkinLogRepository = checkinLogRepository;
+        this.cancellationService = cancellationService;
+        this.notificationService = notificationService;
     }
 
 
@@ -81,25 +87,16 @@ public class StaffMaintenanceService {
         List<Booking> overlappingBookings = bookingRepository.findOverlappingBookings(
                 request.getWorkspaceId(), startOffset, endOffset, activeStatuses);
 
-        for (Booking b : overlappingBookings) {
+        for (Booking candidate : overlappingBookings) {
+            // Lock and re-read: a payment or check-in may have changed the booking meanwhile.
+            Booking b = bookingRepository.findByIdWithLock(candidate.getId()).orElse(candidate);
             if (b.getStatus() == BookingStatus.PENDING_PAYMENT || b.getStatus() == BookingStatus.CONFIRMED) {
-                b.setStatus(BookingStatus.CANCELLED);
-                // Note: For confirmed bookings, refund logic should ideally be triggered here.
+                // Not used yet: cancel with a full refund of whatever was paid, and tell the customer.
+                cancellationService.cancelForMaintenance(b, request.getReason());
             } else if (b.getStatus() == BookingStatus.CHECKED_IN) {
-                b.setStatus(BookingStatus.COMPLETED); // Early checkout
-                if (nowUtc.isBefore(b.getEndAt())) {
-                    b.setEndAt(nowUtc);
-                }
-                // Close active checkin log to prevent orphaned seated guest records
-                checkinLogRepository.findActiveCheckinByBookingId(b.getId()).ifPresent(cl -> {
-                    cl.setCheckoutAt(nowUtc);
-                    cl.setNote((cl.getNote() != null ? cl.getNote() + " | " : "") + "Tự động check-out do bảo trì đột xuất");
-                    checkinLogRepository.save(cl);
-                });
+                handleBookingInUse(b, startOffset, nowUtc, request.getReason());
             }
         }
-
-        bookingRepository.saveAll(overlappingBookings);
 
         // 4. Create Maintenance record
         WorkspaceMaintenanceEntity maintenance = new WorkspaceMaintenanceEntity();
@@ -113,6 +110,37 @@ public class StaffMaintenanceService {
         maintenanceRepository.save(maintenance);
 
         return mapToDto(maintenance, overlappingBookings.size());
+    }
+
+    /**
+     * A customer is sitting in the workspace. If maintenance starts now they are checked out on the
+     * spot; if it starts later they keep the seat until then. Either way the lost time is refunded.
+     */
+    private void handleBookingInUse(Booking b, OffsetDateTime maintenanceStart, OffsetDateTime now, String reason) {
+        OffsetDateTime cutAt = maintenanceStart.isAfter(now) ? maintenanceStart : now;
+        long refunded = cancellationService.refundUnusedTimeForMaintenance(b, cutAt, reason);
+
+        if (cutAt.isBefore(b.getEndAt())) {
+            b.setEndAt(cutAt);
+        }
+        boolean checkoutNow = !maintenanceStart.isAfter(now);
+        if (checkoutNow) {
+            BookingStateMachine.transition(b, BookingStatus.COMPLETED);
+            // Close active checkin log to prevent orphaned seated guest records
+            checkinLogRepository.findActiveCheckinByBookingId(b.getId()).ifPresent(cl -> {
+                cl.setCheckoutAt(now);
+                cl.setNote((cl.getNote() != null ? cl.getNote() + " | " : "") + "Tự động check-out do bảo trì đột xuất");
+                checkinLogRepository.save(cl);
+            });
+        }
+        bookingRepository.save(b);
+
+        notificationService.createNotification(b.getUserId(),
+                checkoutNow ? "Kết thúc sớm do bảo trì" : "Thời gian sử dụng được rút ngắn do bảo trì",
+                String.format("Đơn %s %s vì không gian cần bảo trì.%s", b.getBookingCode(),
+                        checkoutNow ? "đã được check-out sớm" : "sẽ kết thúc sớm lúc " + cutAt.atZoneSameInstant(java.time.ZoneId.of("Asia/Ho_Chi_Minh")).toLocalTime(),
+                        refunded > 0 ? " Phần thời gian không sử dụng (" + RefundService.vnd(refunded) + ") sẽ được hoàn lại." : ""),
+                "BOOKING", b.getId(), "BOOKING");
     }
 
     @Transactional(readOnly = true)

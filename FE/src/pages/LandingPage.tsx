@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
-import { useMockData } from "../context/MockDataContext";
+import { customerSpaceApi, type BranchResponse, type StartingPriceResponse } from "../lib/spaceApi";
 import { formatVND } from "../utils/formatters";
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
@@ -91,7 +91,18 @@ const fadeUp = {
 
 const LandingPage: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
-  const { branches, workspaceTypes, pricePolicies, workspaces, floors, users } = useMockData();
+  // Public data straight from the backend: active branches and each workspace type's starting price.
+  const [branches, setBranches] = useState<BranchResponse[]>([]);
+  const [workspaceTypes, setWorkspaceTypes] = useState<StartingPriceResponse[]>([]);
+
+  useEffect(() => {
+    customerSpaceApi.listBranches()
+      .then((data) => setBranches(data.filter((b) => b.status === "active")))
+      .catch((err) => console.error("Failed to load branches", err));
+    customerSpaceApi.pricingSummary()
+      .then(setWorkspaceTypes)
+      .catch((err) => console.error("Failed to load pricing", err));
+  }, []);
   const navigate = useNavigate();
   const routerLocation = useLocation();
 
@@ -113,43 +124,35 @@ const LandingPage: React.FC = () => {
 
   // Dynamic real data logic
   const displayBranches: BranchCard[] = useMemo(() => {
+    const hhmm = (t?: string | null) => (t ? t.slice(0, 5) : null);
     return branches.map((b, idx) => {
       const img = defaultBranchImages[idx % defaultBranchImages.length];
-      const floorCount = floors.filter(f => f.branch_id === b.id).length;
-      const wsCount = workspaces.filter(w => {
-        const floor = floors.find(f => f.id === w.floor_id);
-        return floor?.branch_id === b.id;
-      }).length;
+      const hours = hhmm(b.openTime) && hhmm(b.closeTime) ? `${hhmm(b.openTime)} – ${hhmm(b.closeTime)}` : null;
 
       return {
         id: b.id,
         exploreBranchId: b.id,
         name: b.name,
-        tag: b.city || "TP. HCM",
+        tag: b.city || "Việt Nam",
         address: b.address,
-        description: `Cơ sở ${b.name} sở hữu không gian thiết kế độc bản. Cung cấp ${floorCount || 1} tầng chức năng với hơn ${wsCount || 10} vị trí làm việc.`,
+        description: `Cơ sở ${b.name} tại ${b.address}${hours ? `, mở cửa ${hours} hằng ngày` : ""}.`,
         badges: [
-          b.status === "active" ? "Đang hoạt động" : "Bảo trì",
-          `${wsCount || 10}+ Chỗ ngồi`
+          "Đang hoạt động",
+          ...(hours ? [`Mở cửa ${hours}`] : []),
         ],
         image: img,
         features: [
-          { text: `Vị trí trung tâm ${b.city}` },
+          { text: `Vị trí ${b.city || "trung tâm"}` },
           { text: `Wifi 6 & Lễ tân 24/7` }
         ],
       };
     });
-  }, [branches, floors, workspaces]);
+  }, [branches]);
 
   const displayServices: ServiceCard[] = useMemo(() => {
+    const unitLabel: Record<string, string> = { hour: "giờ", day: "ngày", week: "tuần", month: "tháng" };
     return workspaceTypes.map((wt) => {
-      const policy = pricePolicies.find(
-        (p) => p.workspace_type_id === wt.id && p.is_active
-      );
-
-      const priceLabel = policy
-        ? `Từ ${formatVND(policy.price)}/${policy.duration_unit === 'hour' ? 'giờ' : policy.duration_unit === 'day' ? 'ngày' : 'tháng'}`
-        : "Liên hệ báo giá";
+      const priceLabel = `Từ ${formatVND(wt.price)}/${unitLabel[wt.unit] || wt.unit}`;
 
       const category = wt.code.includes("meeting") ? "meeting" : "office";
       const isPopular = wt.code === "desk" || wt.code.includes("private");
@@ -162,17 +165,17 @@ const LandingPage: React.FC = () => {
       ];
 
       return {
-        id: wt.id,
+        id: wt.workspaceTypeId,
         title: wt.name,
         category: category as "office" | "meeting",
         tag: isPopular ? "Phổ biến" : undefined,
         price: priceLabel,
-        description: `Giải pháp ${wt.name.toLowerCase()} được tinh chỉnh tối đa cho cá nhân và tổ chức. Sức chứa chuẩn ${wt.capacity_default} người.`,
+        description: `Giải pháp ${wt.name.toLowerCase()} được tinh chỉnh tối đa cho cá nhân và tổ chức. Sức chứa chuẩn ${wt.capacityDefault} người.`,
         image,
         features,
       };
     });
-  }, [workspaceTypes, pricePolicies]);
+  }, [workspaceTypes]);
 
   useEffect(() => {
     if (displayBranches.length > 0 && !selectedBranchId) {
@@ -246,11 +249,6 @@ const LandingPage: React.FC = () => {
     }, 4000);
   };
 
-  const activeCustomerCount = useMemo(() => {
-    const custs = users.filter((u: { role: string }) => u.role === 'customer').length;
-    return custs * 15 + 180;
-  }, [users]);
-
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 scroll-smooth font-['Inter'] selection:bg-primary/25 selection:text-primary transition-colors duration-500">
       <PublicNavbar />
@@ -314,12 +312,11 @@ const LandingPage: React.FC = () => {
           >
             <Card className="bg-white/70 dark:bg-white/5 backdrop-blur-2xl rounded-[2.5rem] p-8 border-slate-200/60 dark:border-white/10 shadow-xl dark:shadow-2xl flex-1 flex flex-col justify-center relative overflow-hidden group transition-all duration-500 hover:border-slate-300 dark:hover:border-white/20 hover:bg-white/90 dark:hover:bg-white/[0.07]">
               <div className="relative z-10">
-                <p className="text-sm font-medium text-primary uppercase tracking-wider mb-3">Mạng lưới tin dùng</p>
+                <p className="text-sm font-medium text-primary uppercase tracking-wider mb-3">Mạng lưới CoSpace</p>
                 <div className="flex items-baseline gap-1">
-                  <p className="text-6xl font-display font-bold tracking-tight text-slate-900 dark:text-white">{activeCustomerCount}</p>
-                  <span className="text-primary text-3xl font-bold">+</span>
+                  <p className="text-6xl font-display font-bold tracking-tight text-slate-900 dark:text-white">{branches.length}</p>
                 </div>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">Startups & Doanh nghiệp</p>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">Chi nhánh đang hoạt động</p>
               </div>
               <div className="absolute -bottom-12 -right-12 w-48 h-48 bg-primary/20 rounded-full blur-[64px] group-hover:bg-primary/30 transition-colors duration-700" />
             </Card>
@@ -465,7 +462,7 @@ const LandingPage: React.FC = () => {
                 </div>
                 <h3 className="text-3xl lg:text-4xl font-display font-bold mb-4 text-white">Cộng đồng Member <br/>với {branches.length} Chi Nhánh</h3>
                 <p className="text-white/80 text-lg leading-relaxed font-light">
-                  Mạng lưới {workspaces.length}+ vị trí phủ sóng. Tham gia hệ sinh thái kết nối, gặp gỡ nhà đầu tư và đối tác ngay tại không gian CoSpace.
+                  Tham gia hệ sinh thái kết nối, gặp gỡ nhà đầu tư và đối tác ngay tại không gian CoSpace.
                 </p>
               </div>
               <div className="flex flex-col gap-3 w-full md:w-auto">
@@ -705,7 +702,7 @@ const LandingPage: React.FC = () => {
             <h5 className="font-display font-bold text-slate-900 dark:text-white mb-6 uppercase tracking-wider text-sm">Giải pháp</h5>
             <ul className="space-y-4 text-slate-600 dark:text-slate-400 font-light">
               {workspaceTypes.map(wt => (
-                <li key={wt.id}>
+                <li key={wt.workspaceTypeId}>
                   <a className="hover:text-primary transition-colors" href="#services">{wt.name}</a>
                 </li>
               ))}

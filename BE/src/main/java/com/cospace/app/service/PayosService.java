@@ -124,17 +124,51 @@ public class PayosService {
             }
 
         } catch (Exception ex) {
+            // No fake "already paid" fallback here: a checkout URL pointing at our own return endpoint
+            // with status=PAID would let the customer skip paying entirely.
             log.error("Failed to create PayOS payment link: {}", ex.getMessage());
-            // Fallback for offline or sandbox fallback
-            log.warn("Falling back to local simulated VietQR checkout URL.");
-            String mockCheckoutUrl = returnUrl + "?orderCode=" + orderCode + "&status=PAID&code=00&cancel=false";
-            String mockQrCode = "https://img.vietqr.io/image/970422-000012345678-compact2.png?amount=" + amount + "&addInfo=" + cleanDescription;
-            Map<String, Object> fallbackRes = new LinkedHashMap<>();
-            fallbackRes.put("orderCode", orderCode);
-            fallbackRes.put("checkoutUrl", mockCheckoutUrl);
-            fallbackRes.put("qrCode", mockQrCode);
-            fallbackRes.put("status", "PENDING");
-            return fallbackRes;
+            throw new IllegalStateException("Không tạo được liên kết thanh toán PayOS. Vui lòng thử lại sau.", ex);
+        }
+    }
+
+    /** Payment link state as reported by PayOS itself (never by the customer's browser). */
+    public record PaymentLinkStatus(String status, long amount, long amountPaid) {
+        public boolean isPaid() {
+            return "PAID".equalsIgnoreCase(status);
+        }
+    }
+
+    /**
+     * Asks PayOS for the real state of a payment link. Returns {@code null} when it cannot be
+     * verified (demo mode, network error, or an error response), so callers must treat
+     * {@code null} as "not paid".
+     */
+    public PaymentLinkStatus getPaymentLinkStatus(long orderCode) {
+        if (isDemoMode()) {
+            return null;
+        }
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("x-client-id", payosConfig.getClientId());
+            headers.set("x-api-key", payosConfig.getApiKey());
+
+            String url = payosConfig.getEndpoint() + "/v2/payment-requests/" + orderCode;
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(headers), String.class);
+
+            JsonNode root = objectMapper.readTree(response.getBody());
+            if (!"00".equals(root.path("code").asText(""))) {
+                log.warn("PayOS status lookup for orderCode {} returned code {}", orderCode, root.path("code").asText());
+                return null;
+            }
+            JsonNode data = root.path("data");
+            long amount = data.path("amount").asLong(0);
+            return new PaymentLinkStatus(
+                    data.path("status").asText(""),
+                    amount,
+                    data.path("amountPaid").asLong(amount));
+        } catch (Exception ex) {
+            log.warn("Could not verify PayOS payment status for orderCode {}: {}", orderCode, ex.getMessage());
+            return null;
         }
     }
 
@@ -147,7 +181,10 @@ public class PayosService {
         }
 
         if (isDemoMode()) {
-            return true;
+            // Demo mode has no real checksum key (the default one is public in the repo), so no
+            // webhook can be authentic. Demo payments are confirmed through the simulation flow instead.
+            log.warn("Rejecting PayOS webhook: PayOS is running in demo mode without real credentials.");
+            return false;
         }
 
         try {
@@ -169,7 +206,7 @@ public class PayosService {
         }
     }
 
-    private boolean isDemoMode() {
+    public boolean isDemoMode() {
         return payosConfig.getClientId() == null ||
                 payosConfig.getClientId().isBlank() ||
                 payosConfig.getClientId().startsWith("demo");

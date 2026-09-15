@@ -83,16 +83,26 @@ const VietQrCheckoutPage: React.FC = () => {
   const triggerSecretPayment = useCallback(async () => {
     if (isPaidSuccess || !orderCode) return;
     try {
-      await fetch(`${API_BASE_URL}/api/payments/payos/simulate`, {
+      const token = localStorage.getItem('workhub_access_token');
+      const res = await fetch(`${API_BASE_URL}/api/payments/payos/simulate`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ orderCode }),
       });
+      if (!res.ok) {
+        // Never show "paid" unless the backend actually recorded the payment.
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || 'Không thể xác nhận thanh toán.');
+      }
       handlePaymentConfirmed();
     } catch (err: any) {
-      handlePaymentConfirmed();
+      setPaymentStep('WAITING');
+      showToast(err.message || 'Không thể xác nhận thanh toán.', 'error');
     }
-  }, [isPaidSuccess, orderCode, handlePaymentConfirmed]);
+  }, [isPaidSuccess, orderCode, handlePaymentConfirmed, showToast]);
 
   // Manual Trigger: Trigger only when clicking logo or pressing F2
   const handleTriggerPayment = useCallback(() => {

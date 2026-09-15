@@ -34,25 +34,9 @@ CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status);
 -- 4. Ensure is_contract column exists
 ALTER TABLE bookings ADD COLUMN IF NOT EXISTS is_contract BOOLEAN NOT NULL DEFAULT false;
 
--- 5. Cleanup orphaned checkin logs and sync past checked in bookings
-UPDATE checkin_logs cl
-SET checkout_at = COALESCE(b.end_at, cl.checkin_at + interval '1 hour'),
-    note = COALESCE(cl.note || ' | Auto-closed past checkin', 'Auto-closed past checkin')
-FROM bookings b
-WHERE cl.booking_id = b.id 
-  AND cl.checkout_at IS NULL 
-  AND (b.status != 'CHECKED_IN' OR b.end_at < now());
-
-UPDATE bookings
-SET status = 'COMPLETED', updated_at = now()
-WHERE status = 'CHECKED_IN' AND end_at < now() AND is_contract = false;
-
--- 6. Truncate end_at to updated_at for past non-contract bookings completed early
-UPDATE bookings
-SET end_at = updated_at
-WHERE status IN ('COMPLETED', 'completed') 
-  AND end_at > updated_at 
-  AND is_contract = false;
+-- 5-6. (removed) This file used to close check-ins, complete bookings and rewrite end_at on
+-- every application start. Business data is never changed here any more: overdue guests and
+-- ended bookings are closed by BookingLifecycleScheduler, with notifications and an audit trail.
 
 -- 7. Fix exclusion constraint for bookings to only consider active occupying statuses
 ALTER TABLE bookings DROP CONSTRAINT IF EXISTS bookings_workspace_id_start_at_end_at_excl;
@@ -248,3 +232,168 @@ CREATE TABLE IF NOT EXISTS post_tags (
 );
 
 CREATE INDEX IF NOT EXISTS idx_post_tags_tag ON post_tags (tag_id);
+
+-- 21. Table 'amenities' (Tiện ích) & 'workspace_type_amenities' (Tiện ích gắn theo loại không gian)
+-- Both already exist in the core migration, re-declared here so a fresh DB gets them too.
+CREATE TABLE IF NOT EXISTS amenities (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(100) UNIQUE NOT NULL,
+    icon_name VARCHAR(50),
+    is_active BOOLEAN NOT NULL DEFAULT true
+);
+ALTER TABLE amenities ADD COLUMN IF NOT EXISTS description TEXT;
+ALTER TABLE amenities ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT now();
+
+CREATE TABLE IF NOT EXISTS workspace_type_amenities (
+    workspace_type_id UUID NOT NULL REFERENCES workspace_types(id) ON DELETE CASCADE,
+    amenity_id UUID NOT NULL REFERENCES amenities(id) ON DELETE CASCADE,
+    quantity INT NOT NULL DEFAULT 1,
+    PRIMARY KEY (workspace_type_id, amenity_id)
+);
+
+-- Seed only into an empty table, so amenities an admin later deletes are not re-created on restart.
+INSERT INTO amenities (name, icon_name, description)
+SELECT v.name, v.icon_name, v.description
+FROM (VALUES
+    ('Wi-Fi tốc độ cao', 'wifi', 'Internet cáp quang tốc độ cao'),
+    ('Điều hòa', 'wind', 'Điều hòa nhiệt độ trung tâm'),
+    ('Ổ cắm điện', 'zap', 'Ổ cắm điện tại chỗ ngồi'),
+    ('Màn hình / TV', 'monitor', 'Màn hình trình chiếu hoặc TV'),
+    ('Bảng trắng', 'edit-3', 'Bảng trắng và bút viết'),
+    ('Thiết bị hội nghị', 'video', 'Webcam, loa và micro hội nghị'),
+    ('Tủ khóa cá nhân', 'lock', 'Tủ khóa cất đồ cá nhân'),
+    ('Nước uống miễn phí', 'coffee', 'Trà, cà phê và nước lọc'),
+    ('Cách âm', 'volume-x', 'Không gian cách âm yên tĩnh'),
+    ('Máy in', 'printer', 'Máy in dùng chung')
+) AS v(name, icon_name, description)
+WHERE NOT EXISTS (SELECT 1 FROM amenities);
+
+INSERT INTO workspace_type_amenities (workspace_type_id, amenity_id, quantity)
+SELECT wt.id, a.id, 1
+FROM (VALUES
+    ('desk', 'Wi-Fi tốc độ cao'), ('desk', 'Điều hòa'), ('desk', 'Ổ cắm điện'), ('desk', 'Nước uống miễn phí'),
+    ('standing_desk', 'Wi-Fi tốc độ cao'), ('standing_desk', 'Điều hòa'), ('standing_desk', 'Ổ cắm điện'),
+    ('meeting_room', 'Wi-Fi tốc độ cao'), ('meeting_room', 'Điều hòa'), ('meeting_room', 'Màn hình / TV'),
+    ('meeting_room', 'Bảng trắng'), ('meeting_room', 'Thiết bị hội nghị'),
+    ('private_office', 'Wi-Fi tốc độ cao'), ('private_office', 'Điều hòa'), ('private_office', 'Ổ cắm điện'),
+    ('private_office', 'Tủ khóa cá nhân'), ('private_office', 'Máy in'),
+    ('phone_booth', 'Wi-Fi tốc độ cao'), ('phone_booth', 'Cách âm'),
+    ('event_space', 'Wi-Fi tốc độ cao'), ('event_space', 'Điều hòa'), ('event_space', 'Màn hình / TV')
+) AS v(type_code, amenity_name)
+JOIN workspace_types wt ON wt.code = v.type_code
+JOIN amenities a ON a.name = v.amenity_name
+WHERE NOT EXISTS (SELECT 1 FROM workspace_type_amenities)
+ON CONFLICT DO NOTHING;
+
+-- 22. Table 'membership_tiers' (Hạng thành viên)
+-- A customer reaches a tier when total paid spend >= min_total_spent OR paid booking count >=
+-- min_bookings (a threshold of 0 is ignored), and the highest qualifying tier by sort_order wins.
+CREATE TABLE IF NOT EXISTS membership_tiers (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    code VARCHAR(32) UNIQUE NOT NULL,
+    name VARCHAR(80) NOT NULL,
+    description TEXT,
+    min_total_spent BIGINT NOT NULL DEFAULT 0 CHECK (min_total_spent >= 0),
+    min_bookings INT NOT NULL DEFAULT 0 CHECK (min_bookings >= 0),
+    discount_percent INT NOT NULL DEFAULT 0 CHECK (discount_percent >= 0 AND discount_percent <= 100),
+    benefits TEXT,
+    color VARCHAR(20) NOT NULL DEFAULT '#94a3b8',
+    sort_order INT NOT NULL DEFAULT 0,
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+INSERT INTO membership_tiers (code, name, description, min_total_spent, min_bookings, discount_percent, benefits, color, sort_order)
+SELECT v.code, v.name, v.description, v.min_total_spent, v.min_bookings, v.discount_percent, v.benefits, v.color, v.sort_order
+FROM (VALUES
+    ('bronze', 'Bronze', 'Hạng mặc định cho mọi thành viên', 0::bigint, 0, 0, 'Tích lũy chi tiêu để lên hạng', '#b45309', 0),
+    ('silver', 'Silver', 'Thành viên thân thiết', 2000000::bigint, 3, 3, 'Giảm 3% mọi đơn đặt chỗ', '#64748b', 1),
+    ('gold', 'Gold', 'Thành viên vàng', 5000000::bigint, 10, 5, 'Giảm 5% mọi đơn đặt chỗ', '#ca8a04', 2),
+    ('platinum', 'Platinum', 'Thành viên bạch kim', 15000000::bigint, 20, 10, 'Giảm 10% mọi đơn đặt chỗ', '#7c3aed', 3)
+) AS v(code, name, description, min_total_spent, min_bookings, discount_percent, benefits, color, sort_order)
+WHERE NOT EXISTS (SELECT 1 FROM membership_tiers);
+
+-- users.membership_tier holds a membership_tiers.code (was a 'standard'/'premium' enum in the core migration).
+ALTER TABLE users ADD COLUMN IF NOT EXISTS membership_tier VARCHAR(32) NOT NULL DEFAULT 'standard';
+ALTER TABLE users ALTER COLUMN membership_tier TYPE VARCHAR(32) USING membership_tier::text;
+
+-- 23. Table 'promotions' (Khuyến mãi / mã giảm giá)
+CREATE TABLE IF NOT EXISTS promotions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    code VARCHAR(40) UNIQUE NOT NULL,
+    name VARCHAR(150) NOT NULL,
+    description TEXT,
+    discount_type VARCHAR(16) NOT NULL DEFAULT 'percent' CHECK (discount_type IN ('percent', 'fixed')),
+    discount_value BIGINT NOT NULL CHECK (discount_value > 0),
+    max_discount_amount BIGINT CHECK (max_discount_amount IS NULL OR max_discount_amount > 0),
+    min_order_amount BIGINT NOT NULL DEFAULT 0 CHECK (min_order_amount >= 0),
+    start_at TIMESTAMPTZ NOT NULL,
+    end_at TIMESTAMPTZ NOT NULL,
+    usage_limit INT CHECK (usage_limit IS NULL OR usage_limit > 0),
+    per_user_limit INT CHECK (per_user_limit IS NULL OR per_user_limit > 0),
+    branch_id UUID REFERENCES branches(id) ON DELETE CASCADE,
+    workspace_type_id UUID REFERENCES workspace_types(id) ON DELETE CASCADE,
+    min_tier_code VARCHAR(32),
+    is_public BOOLEAN NOT NULL DEFAULT true,
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT check_promotion_time CHECK (end_at > start_at),
+    CONSTRAINT check_promotion_percent CHECK (discount_type <> 'percent' OR discount_value <= 100)
+);
+CREATE INDEX IF NOT EXISTS idx_promotions_active_window ON promotions (is_active, start_at, end_at);
+
+-- 24. Booking discount breakdown: discount_amount = membership_discount_amount + promotion_discount_amount
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS membership_tier_code VARCHAR(32);
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS membership_discount_amount BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS promotion_id UUID REFERENCES promotions(id) ON DELETE SET NULL;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS promotion_code VARCHAR(40);
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS promotion_discount_amount BIGINT NOT NULL DEFAULT 0;
+CREATE INDEX IF NOT EXISTS idx_bookings_promotion_user ON bookings (promotion_id, user_id) WHERE promotion_id IS NOT NULL;
+
+-- 25. Table 'refunds' (Khoản hoàn tiền cần xử lý: hủy đơn, bảo trì, thanh toán muộn, thanh toán trùng)
+CREATE TABLE IF NOT EXISTS refunds (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    booking_id UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+    payment_id UUID REFERENCES payments(id) ON DELETE SET NULL,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    branch_id UUID NOT NULL REFERENCES branches(id) ON DELETE CASCADE,
+    amount BIGINT NOT NULL CHECK (amount > 0),
+    reason_type VARCHAR(32) NOT NULL CHECK (reason_type IN ('CANCELLATION', 'MAINTENANCE', 'LATE_PAYMENT', 'DUPLICATE_PAYMENT')),
+    reason TEXT,
+    status VARCHAR(16) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processed', 'rejected')),
+    resolution_note TEXT,
+    processed_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    processed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_refunds_queue ON refunds (status, branch_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_refunds_booking ON refunds (booking_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_refunds_payment_reason ON refunds (payment_id, reason_type) WHERE payment_id IS NOT NULL;
+
+-- Cancellations recorded before this table existed promised a refund nobody could act on:
+-- queue them once so they show up in the refund list.
+INSERT INTO refunds (booking_id, user_id, branch_id, amount, reason_type, reason, status, created_at, updated_at)
+SELECT c.booking_id, c.user_id, b.branch_id, c.refund_amount, 'CANCELLATION',
+       COALESCE('Hủy đơn: ' || c.reason, 'Hủy đơn'), 'pending', c.created_at, now()
+FROM booking_cancellations c
+JOIN bookings b ON b.id = c.booking_id
+WHERE c.refund_status = 'pending'
+  AND c.refund_amount > 0
+  AND NOT EXISTS (SELECT 1 FROM refunds r WHERE r.booking_id = c.booking_id AND r.reason_type IN ('CANCELLATION', 'MAINTENANCE'));
+
+-- 26. Running tab: every add-on line is either still owed (unpaid), settled (paid) or cancelled (void),
+-- and a payment says whether it paid for the booking itself or for add-ons collected at the counter.
+ALTER TABLE booking_services ADD COLUMN IF NOT EXISTS status VARCHAR(16) NOT NULL DEFAULT 'unpaid'
+    CHECK (status IN ('unpaid', 'paid', 'void'));
+ALTER TABLE booking_services ADD COLUMN IF NOT EXISTS payment_id UUID REFERENCES payments(id) ON DELETE SET NULL;
+ALTER TABLE booking_services ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ;
+ALTER TABLE booking_services ADD COLUMN IF NOT EXISTS voided_at TIMESTAMPTZ;
+ALTER TABLE booking_services ADD COLUMN IF NOT EXISTS voided_by UUID REFERENCES users(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_booking_services_booking_status ON booking_services (booking_id, status);
+
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS purpose VARCHAR(16) NOT NULL DEFAULT 'booking'
+    CHECK (purpose IN ('booking', 'addon'));

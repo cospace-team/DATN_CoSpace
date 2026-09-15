@@ -41,6 +41,7 @@ export const bookingStatusLabel: Record<string, string> = {
   completed: 'Hoàn thành',
   canceled: 'Đã hủy',
   expired: 'Hết hạn',
+  no_show: 'Không đến',
 };
 
 export const bookingStatusColor: Record<string, string> = {

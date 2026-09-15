@@ -68,6 +68,11 @@ public class User {
     @Column(name = "branch_id")
     private UUID branchId;
 
+    /** Code of the customer's current membership_tiers row, kept in sync by MembershipService. */
+    @Column(name = "membership_tier", nullable = false, length = 32)
+    @Builder.Default
+    private String membershipTier = "standard";
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
@@ -82,6 +87,7 @@ public class User {
         if (updatedAt == null) updatedAt = createdAt;
         if (status == null) status = Status.active;
         if (role == null) role = Role.customer;
+        if (membershipTier == null) membershipTier = "standard";
     }
 
     @PreUpdate

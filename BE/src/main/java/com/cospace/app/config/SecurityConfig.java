@@ -125,12 +125,12 @@ public class SecurityConfig {
                                                                 new AntPathRequestMatcher("/api/payments/payos/webhook"),
                                                                 new AntPathRequestMatcher("/api/payments/payos/notify"),
                                                                 new AntPathRequestMatcher("/api/payments/payos/return"),
-                                                                new AntPathRequestMatcher("/api/payments/payos/simulate"),
                                                                 new AntPathRequestMatcher("/api/payments/payos/status/**"),
                                                                 new AntPathRequestMatcher("/api/auth/register"),
                                                                 new AntPathRequestMatcher("/api/auth/login"),
                                                                 new AntPathRequestMatcher("/api/auth/refresh"),
                                                                 new AntPathRequestMatcher("/api/customer/spaces/branches"),
+                                                                new AntPathRequestMatcher("/api/customer/spaces/pricing-summary"),
                                                                 new AntPathRequestMatcher("/h2-console/**"),
                                                                 new AntPathRequestMatcher("/error"))
                                                 .permitAll()
@@ -139,6 +139,7 @@ public class SecurityConfig {
                                                 .requestMatchers("/api/bookings/branch-today", "/api/bookings/code/**").hasAnyRole("STAFF", "BRANCH_ADMIN", "SUPER_ADMIN", "ADMIN", "staff", "branch_admin", "admin")
                                                 .requestMatchers("/api/branch-admin/**").hasAnyRole("BRANCH_ADMIN", "SUPER_ADMIN", "ADMIN", "branch_admin", "admin")
                                                 .requestMatchers("/api/admin/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "super_admin", "admin")
+                                                .requestMatchers("/api/refunds/**").hasAnyRole("BRANCH_ADMIN", "SUPER_ADMIN", "ADMIN", "branch_admin", "super_admin", "admin")
                                                 .anyRequest().authenticated())
                                 .oauth2ResourceServer(oauth2 -> oauth2
                                                 .jwt(jwt -> jwt.decoder(jwtDecoder()).jwtAuthenticationConverter(jwtAuthenticationConverter))

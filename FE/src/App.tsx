@@ -12,7 +12,6 @@ import { AuthProvider, useAuth, UserRole } from "./context/AuthContext";
 import { ThemeProvider, useTheme } from "./context/ThemeProvider";
 import { ToastProvider } from "./components/Toast";
 import ErrorBoundary from "./components/ErrorBoundary";
-import { MockDataProvider } from "./context/MockDataContext";
 import { Button } from "./components/ui/button";
 import { Logo } from "./components/ui/Logo";
 import { NotificationBell } from "./components/notifications/NotificationBell";
@@ -40,6 +39,10 @@ import {
   FiMenu,
   FiChevronLeft,
   FiGrid,
+  FiStar,
+  FiGift,
+  FiAward,
+  FiRotateCcw,
 } from "react-icons/fi";
 
 // ── Pages (lazy-loaded so route changes show the Suspense loader) ──
@@ -63,6 +66,10 @@ const PricingPage = React.lazy(() => import("./pages/admin/PricingPage"));
 const UserManagementPage = React.lazy(() => import("./pages/admin/UserManagementPage"));
 const CancellationPoliciesPage = React.lazy(() => import("./pages/admin/CancellationPoliciesPage"));
 const ExtraServicesPage = React.lazy(() => import("./pages/admin/ExtraServicesPage"));
+const AmenitiesPage = React.lazy(() => import("./pages/admin/AmenitiesPage"));
+const PromotionsPage = React.lazy(() => import("./pages/admin/PromotionsPage"));
+const MembershipTiersPage = React.lazy(() => import("./pages/admin/MembershipTiersPage"));
+const RefundsPage = React.lazy(() => import("./pages/admin/RefundsPage"));
 const AuditLogPage = React.lazy(() => import("./pages/admin/AuditLogPage"));
 const ReportsPage = React.lazy(() => import("./pages/admin/ReportsPage"));
 const BADashboardPage = React.lazy(() => import("./pages/branch-admin/BADashboardPage"));
@@ -102,6 +109,7 @@ const branchAdminNav: NavItem[] = [
   { to: "/branch-admin/staff",       label: "Nhân viên",      icon: <FiUsers className="h-4 w-4" />   },
   { to: "/branch-admin/maintenance", label: "Bảo trì",        icon: <FiTool className="h-4 w-4" />    },
   { to: "/branch-admin/services",    label: "Dịch vụ thêm",   icon: <FiCoffee className="h-4 w-4" />  },
+  { to: "/branch-admin/refunds",     label: "Hoàn tiền",      icon: <FiRotateCcw className="h-4 w-4" /> },
 ];
 
 const adminNav: NavItem[] = [
@@ -112,6 +120,10 @@ const adminNav: NavItem[] = [
   { to: "/admin/users", label: "Người dùng", icon: <FiUsers className="h-4 w-4" /> },
   { to: "/admin/cancellation", label: "Chính sách hủy", icon: <FiShield className="h-4 w-4" /> },
   { to: "/admin/services", label: "Dịch vụ thêm", icon: <FiCoffee className="h-4 w-4" /> },
+  { to: "/admin/amenities", label: "Tiện ích", icon: <FiStar className="h-4 w-4" /> },
+  { to: "/admin/promotions", label: "Khuyến mãi", icon: <FiGift className="h-4 w-4" /> },
+  { to: "/admin/membership", label: "Hạng thành viên", icon: <FiAward className="h-4 w-4" /> },
+  { to: "/admin/refunds", label: "Hoàn tiền", icon: <FiRotateCcw className="h-4 w-4" /> },
   { to: "/admin/audit", label: "Nhật ký", icon: <FiFileText className="h-4 w-4" /> },
   { to: "/admin/reports", label: "Báo cáo", icon: <FiBarChart2 className="h-4 w-4" /> },
 ];
@@ -450,6 +462,10 @@ const AppShell: React.FC = () => {
                     <Route path="/admin/users"       element={<UserManagementPage />} />
                     <Route path="/admin/cancellation" element={<CancellationPoliciesPage />} />
                     <Route path="/admin/services"    element={<ExtraServicesPage />} />
+                    <Route path="/admin/amenities"   element={<AmenitiesPage />} />
+                    <Route path="/admin/promotions"  element={<PromotionsPage />} />
+                    <Route path="/admin/membership"  element={<MembershipTiersPage />} />
+                    <Route path="/admin/refunds"     element={<RefundsPage scope="admin" />} />
                     <Route path="/admin/audit"       element={<AuditLogPage />} />
                     <Route path="/admin/reports"     element={<ReportsPage />} />
                   </>
@@ -465,6 +481,7 @@ const AppShell: React.FC = () => {
                     <Route path="/branch-admin/staff"       element={<BAStaffPage />} />
                     <Route path="/branch-admin/maintenance" element={<BAMaintenancePage />} />
                     <Route path="/branch-admin/services"    element={<BAServicesPage />} />
+                    <Route path="/branch-admin/refunds"     element={<RefundsPage scope="branch" />} />
                   </>
                 )}
 
@@ -488,13 +505,11 @@ const AppShell: React.FC = () => {
 const App: React.FC = () => (
   <ThemeProvider>
     <AuthProvider>
-      <MockDataProvider>
-        <ToastProvider>
-          <BrowserRouter>
-            <AppShell />
-          </BrowserRouter>
-        </ToastProvider>
-      </MockDataProvider>
+      <ToastProvider>
+        <BrowserRouter>
+          <AppShell />
+        </BrowserRouter>
+      </ToastProvider>
     </AuthProvider>
   </ThemeProvider>
 );
