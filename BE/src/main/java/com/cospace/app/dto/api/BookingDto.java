@@ -34,6 +34,10 @@ public class BookingDto {
     private long pricePerUnit;
     private long subtotalAmount;
     private long discountAmount;
+    private String membershipTierCode;
+    private long membershipDiscountAmount;
+    private String promotionCode;
+    private long promotionDiscountAmount;
     private long addonAmount;
     private long taxAmount;
     private long serviceFeeAmount;

@@ -22,6 +22,7 @@ public class BookingExpiryScheduler {
 
     private final BookingRepository bookingRepository;
     private final PaymentRepository paymentRepository;
+    private final BookingAddonService bookingAddonService;
 
     /**
      * Runs every minute to check for and expire bookings that have passed their payment deadline.
@@ -47,7 +48,9 @@ public class BookingExpiryScheduler {
 
         for (Booking booking : expiredBookings) {
             log.info("Expiring booking with ID: {} and code: {}", booking.getId(), booking.getBookingCode());
-            booking.setStatus(BookingStatus.EXPIRED);
+            BookingStateMachine.transition(booking, BookingStatus.EXPIRED);
+            // Add-ons ordered with an unpaid booking will never be served.
+            bookingAddonService.voidUnpaid(booking, null);
             
             // Also expire any initiated or pending payment associated with this booking
             paymentRepository.findTopByBookingIdAndStatusInOrderByCreatedAtDesc(

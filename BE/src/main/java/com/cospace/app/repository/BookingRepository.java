@@ -42,6 +42,31 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
                                           @org.springframework.data.repository.query.Param("endAt") OffsetDateTime endAt, 
                                           @org.springframework.data.repository.query.Param("statuses") List<BookingStatus> statuses);
 
+    /** Bookings still holding a promotion redemption (expired/cancelled ones release it). */
+    @org.springframework.data.jpa.repository.Query("SELECT COUNT(b) FROM Booking b WHERE b.promotionId = :promotionId AND b.status NOT IN :releasedStatuses")
+    long countPromotionUsage(@org.springframework.data.repository.query.Param("promotionId") UUID promotionId,
+                             @org.springframework.data.repository.query.Param("releasedStatuses") Collection<BookingStatus> releasedStatuses);
+
+    @org.springframework.data.jpa.repository.Query("SELECT COUNT(b) FROM Booking b WHERE b.promotionId = :promotionId AND b.userId = :userId AND b.status NOT IN :releasedStatuses")
+    long countPromotionUsageByUser(@org.springframework.data.repository.query.Param("promotionId") UUID promotionId,
+                                   @org.springframework.data.repository.query.Param("userId") UUID userId,
+                                   @org.springframework.data.repository.query.Param("releasedStatuses") Collection<BookingStatus> releasedStatuses);
+
+    long countByPromotionId(UUID promotionId);
+
+    /** [count, sum(total_amount)] of a customer's bookings in the given (paid) statuses. */
+    @org.springframework.data.jpa.repository.Query("SELECT COUNT(b), COALESCE(SUM(b.totalAmount), 0L) FROM Booking b WHERE b.userId = :userId AND b.status IN :statuses")
+    List<Object[]> sumSpendByUser(@org.springframework.data.repository.query.Param("userId") UUID userId,
+                                  @org.springframework.data.repository.query.Param("statuses") Collection<BookingStatus> statuses);
+
+    @org.springframework.data.jpa.repository.Query("SELECT DISTINCT b.userId FROM Booking b")
+    List<UUID> findDistinctUserIds();
+
+    /** Ids of bookings in a status whose end time is already past — candidates for lifecycle clean-up. */
+    @org.springframework.data.jpa.repository.Query("SELECT b.id FROM Booking b WHERE b.status = :status AND b.endAt < :before")
+    List<UUID> findIdsByStatusAndEndAtBefore(@org.springframework.data.repository.query.Param("status") BookingStatus status,
+                                             @org.springframework.data.repository.query.Param("before") OffsetDateTime before);
+
     int countByBranchIdAndStatus(UUID branchId, BookingStatus status);
 
     int countByUserIdAndStatus(UUID userId, BookingStatus status);

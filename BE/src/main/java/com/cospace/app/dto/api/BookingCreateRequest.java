@@ -34,4 +34,11 @@ public class BookingCreateRequest {
 
     @Min(1)
     private int unitCount;
+
+    /** Optional promotion code; the membership-tier discount is applied automatically. */
+    private String promotionCode;
+
+    /** Add-on services ordered with the booking; priced on the server and paid with the booking. */
+    @jakarta.validation.Valid
+    private java.util.List<BookingAddonDto.LineRequest> addons;
 }

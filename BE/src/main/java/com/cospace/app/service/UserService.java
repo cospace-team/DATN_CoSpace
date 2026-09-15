@@ -227,6 +227,7 @@ public class UserService {
                 .company(profile.getCompany())
                 .contactPublic(profile.isContactPublic())
                 .contactLink(profile.getContactLink())
+                .membershipTier(user.getMembershipTier())
                 .createdAt(user.getCreatedAt())
                 .build();
     }

@@ -2,15 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FiChevronLeft, FiMapPin, FiCalendar, FiClock,
-  FiCheckCircle, FiAlertTriangle, FiMaximize, FiLock, FiExternalLink, FiX, FiCreditCard
+  FiCheckCircle, FiAlertTriangle, FiMaximize, FiLock, FiExternalLink, FiX, FiCreditCard, FiGift, FiAward
 } from 'react-icons/fi';
 import { formatVND, durationUnitLabel } from '../../utils/formatters';
 import { Button } from '../../components/ui/button';
 import { useAuth } from '../../context/AuthContext';
 import { bookingApi } from '../../lib/bookingApi';
 import { useToast } from '../../components/Toast';
-import { ADDON_SERVICES as MOCK_SERVICES } from '../../data/addonServices';
 import { resolveBranchId } from '../../data/branchAliases';
+import { describePromotion, promotionApi, type BookingQuoteDto, type PromotionDto } from '../../api/loyaltyApi';
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const BookingCheckoutPage: React.FC = () => {
   const location = useLocation();
@@ -28,19 +30,24 @@ const BookingCheckoutPage: React.FC = () => {
   const rawEndDate = state?.endDate ? new Date(state.endDate) : null;
   const bookingDurationUnit: 'hour' | 'day' | 'week' = state?.durationUnit || 'hour';
   const endDate = rawEndDate && bookingDurationUnit !== 'hour' ? rawEndDate : new Date(date);
-  const services = state?.services || {};
+  // Add-ons picked on the explore screen (real catalogue ids); the server prices them again.
+  const addons: { serviceId: string; quantity: number; name: string; price: number; unit: string }[] = state?.addons || [];
+  const addonRequest = addons.map(a => ({ serviceId: a.serviceId, quantity: a.quantity }));
   const basePrice = state?.price?.price || 0;
   const subtotal = state?.subtotal || 0;
   const addonTotal = state?.addonTotal || 0;
   const total = state?.total || 0;
 
-  // Derived display values
+  // Booked time span. Day/week bookings run from the start hour on the first date to the same
+  // hour on the end date, so "15 → 16" is exactly one day. The backend prices this span itself
+  // (a started unit counts in full); the unit count below only mirrors that for display.
   const isMultiDay = bookingDurationUnit !== 'hour';
-  const unitCount = isMultiDay
-    ? (bookingDurationUnit === 'week'
-        ? Math.max(1, Math.round(Math.abs(endDate.getTime() - date.getTime()) / (86_400_000 * 7)))
-        : Math.max(1, Math.round(Math.abs(endDate.getTime() - date.getTime()) / 86_400_000)))
-    : Math.max(1, endHour - startHour);
+  const startAtDate = new Date(date);
+  startAtDate.setHours(startHour, 0, 0, 0);
+  const endAtDate = new Date(isMultiDay ? endDate : date);
+  endAtDate.setHours(isMultiDay ? startHour : endHour, 0, 0, 0);
+  const unitMs = bookingDurationUnit === 'week' ? 7 * 86_400_000 : bookingDurationUnit === 'day' ? 86_400_000 : 3_600_000;
+  const estimatedUnitCount = Math.max(1, Math.ceil((endAtDate.getTime() - startAtDate.getTime()) / unitMs));
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeBooking, setActiveBooking] = useState<any | null>(null);
@@ -52,6 +59,76 @@ const BookingCheckoutPage: React.FC = () => {
   // to that authoritative deadline so it can never drift from what the backend will actually expire.
   const [softDeadline] = useState(() => Date.now() + 15 * 60 * 1000);
   const [timeLeft, setTimeLeft] = useState(15 * 60);
+
+  // Server-side price quote: applies the membership-tier discount and the promotion code, so the
+  // invoice shows exactly what createBooking will charge.
+  const branchId = workspace ? resolveBranchId(workspace.branch_id || workspace.branchId) : '';
+  const workspaceTypeId: string = workspace ? (workspace.workspace_type_id || workspace.workspaceTypeId || '') : '';
+  const [quote, setQuote] = useState<BookingQuoteDto | null>(null);
+  const [quoteError, setQuoteError] = useState('');
+  const [promoInput, setPromoInput] = useState('');
+  const [appliedPromoCode, setAppliedPromoCode] = useState<string | null>(null);
+  const [promoError, setPromoError] = useState('');
+  const [isApplyingPromo, setIsApplyingPromo] = useState(false);
+  const [availablePromos, setAvailablePromos] = useState<PromotionDto[]>([]);
+
+  const requestQuote = (promotionCode: string | null) =>
+    promotionApi.quote({
+      workspaceId: workspace.id,
+      unit: bookingDurationUnit,
+      startAt: startAtDate.toISOString(),
+      endAt: endAtDate.toISOString(),
+      promotionCode,
+      addons: addonRequest,
+    });
+
+  useEffect(() => {
+    if (!workspace || !UUID_RE.test(workspace.id)) return;
+    // The quote is the server's verdict: price, discounts, add-ons, and whether the slot is bookable
+    // at all (opening hours, past time). Without it the customer cannot pay.
+    requestQuote(null)
+      .then((q) => { setQuote(q); setQuoteError(''); })
+      .catch((e: any) => { setQuote(null); setQuoteError(e.message || 'Không thể tính giá đơn đặt chỗ.'); });
+    if (UUID_RE.test(branchId)) {
+      promotionApi
+        .available(branchId, UUID_RE.test(workspaceTypeId) ? workspaceTypeId : undefined)
+        .then(setAvailablePromos)
+        .catch(() => setAvailablePromos([]));
+    }
+  }, [workspace?.id, bookingDurationUnit, startAtDate.getTime(), endAtDate.getTime()]);
+
+  const applyPromo = async (code: string) => {
+    const normalized = code.trim().toUpperCase();
+    if (!normalized) return;
+    setIsApplyingPromo(true);
+    setPromoError('');
+    try {
+      const q = await requestQuote(normalized);
+      setQuote(q);
+      setAppliedPromoCode(q.promotionCode);
+      setPromoInput('');
+    } catch (e: any) {
+      setPromoError(e.message || 'Mã khuyến mãi không hợp lệ');
+    } finally {
+      setIsApplyingPromo(false);
+    }
+  };
+
+  const removePromo = async () => {
+    setAppliedPromoCode(null);
+    setPromoError('');
+    try {
+      setQuote(await requestQuote(null));
+    } catch {
+      setQuote(null);
+    }
+  };
+
+  const unitCount = quote ? quote.unitCount : estimatedUnitCount;
+  const rentalSubtotal = quote ? quote.subtotalAmount : subtotal;
+  const displayBasePrice = quote ? quote.pricePerUnit : basePrice;
+  const addonAmount = quote ? quote.addonAmount : addonTotal;
+  const grandTotal = quote ? quote.totalAmount : total;
 
   useEffect(() => {
     const deadlineMs = activeBooking?.paymentDeadlineAt
@@ -108,10 +185,6 @@ const BookingCheckoutPage: React.FC = () => {
     if (holdExpired) return;
     setIsProcessing(true);
     try {
-      // 1. Build startAt/endAt based on durationUnit
-      const startAtDate = new Date(date);
-      startAtDate.setHours(startHour, 0, 0, 0);
-
       const now = new Date();
       now.setMinutes(0, 0, 0); // Allow booking for the current hour even if minutes have passed
       
@@ -121,31 +194,35 @@ const BookingCheckoutPage: React.FC = () => {
         return;
       }
 
-      let endAtDate: Date;
-      if (isMultiDay) {
-        // For day/week bookings: end at 23:59:59 of the selected end date
-        endAtDate = new Date(endDate);
-        endAtDate.setHours(23, 59, 59, 999);
-      } else {
-        // For hour bookings: same day, specified end hour
-        endAtDate = new Date(date);
-        endAtDate.setHours(endHour, 0, 0, 0);
-      }
-
       let bookingRes = activeBooking;
       if (!bookingRes) {
         bookingRes = await bookingApi.createBooking({
-          branchId: resolveBranchId(workspace.branch_id || workspace.branchId),
+          branchId,
           workspaceId: workspace.id,
-          workspaceTypeId: workspace.workspace_type_id || workspace.workspaceTypeId || 'wst-desk',
+          workspaceTypeId,
           startAt: startAtDate.toISOString(),
           endAt: endAtDate.toISOString(),
           unit: bookingDurationUnit,
           unitCount: unitCount,
-          services,
+          addons: addonRequest,
           source: 'web',
+          promotionCode: appliedPromoCode,
         });
         setActiveBooking(bookingRes);
+      }
+
+      // Discounts covered the whole booking: the backend already confirmed it, nothing to pay.
+      if (bookingRes.totalAmount <= 0 && bookingRes.status?.toString().toLowerCase() === 'confirmed') {
+        showToast(`Đặt chỗ thành công! Đơn ${bookingRes.bookingCode} được miễn phí nhờ ưu đãi.`, 'success');
+        navigate('/customer/history', {
+          state: {
+            message: `Đặt chỗ thành công! Mã đơn của bạn là ${bookingRes.bookingCode}.`,
+            newBookingCode: bookingRes.bookingCode,
+            branchName: state.branchName || "CoSpace Chi nhánh",
+          }
+        });
+        setIsProcessing(false);
+        return;
       }
 
       // 2. Handle Payment Flow
@@ -164,7 +241,7 @@ const BookingCheckoutPage: React.FC = () => {
 
       if (paymentMethod === 'payos') {
         showToast('Đang kết nối cổng thanh toán VietQR (PayOS)...', 'info');
-        const payosRes = await bookingApi.createPayosPayment(bookingRes.id, total);
+        const payosRes = await bookingApi.createPayosPayment(bookingRes.id, bookingRes.totalAmount);
 
         if (payosRes.checkoutUrl && payosRes.checkoutUrl.startsWith('http')) {
           window.location.href = payosRes.checkoutUrl;
@@ -184,7 +261,7 @@ const BookingCheckoutPage: React.FC = () => {
 
       // 3. Request MoMo Sandbox Payment API & redirect to MoMo Gateway
       showToast('Đang chuyển hướng sang cổng thanh toán MoMo Sandbox...', 'info');
-      const momoRes = await bookingApi.createMomoPayment(bookingRes.id, total);
+      const momoRes = await bookingApi.createMomoPayment(bookingRes.id, bookingRes.totalAmount);
 
       if (momoRes.payUrl && momoRes.payUrl.startsWith('http')) {
         window.location.href = momoRes.payUrl;
@@ -303,36 +380,91 @@ const BookingCheckoutPage: React.FC = () => {
           </section>
 
           {/* Add-ons List */}
-          {Object.keys(services).length > 0 && (
+          {addons.length > 0 && (
             <section className="rounded-3xl border border-border bg-card p-6 shadow-sm space-y-4">
-              <h3 className="font-semibold text-xl   text-foreground flex items-center gap-3">
-                <div className="w-8 h-8 bg-emerald-50 dark:bg-emerald-950/30 dark:bg-emerald-950/300 rounded-full flex items-center justify-center text-white text-sm">{Object.keys(services).length}</div>
+              <h3 className="font-semibold text-xl text-foreground flex items-center gap-3">
+                <div className="w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center text-white text-sm">{addons.length}</div>
                 Dịch vụ bổ sung
               </h3>
               <div className="space-y-4">
-                {Object.keys(services).map(id => {
-                  const service = MOCK_SERVICES.find(s => s.id === id);
-                  if (!service) return null;
-                  return (
-                    <div key={service.id} className="flex items-center justify-between p-4 rounded-3xl border border-border bg-muted/50 hover:bg-muted/50 transition-colors">
-                      <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-3xl bg-card border border-border text-foreground flex items-center justify-center text-xl shadow-sm">
-                          {service.icon}
-                        </div>
-                        <div>
-                          <p className="font-semibold text-lg text-foreground">{service.name}</p>
-                          <p className="text-xs font-medium text-foreground/70  tracking-tight">{formatVND(service.price)} / lượt</p>
-                        </div>
-                      </div>
-                      <span className="text-lg font-mono font-semibold px-4 py-2 rounded-3xl bg-slate-900 text-white border border-border shadow-sm">
-                        + {formatVND(service.price)}
-                      </span>
+                {addons.map(addon => (
+                  <div key={addon.serviceId} className="flex items-center justify-between p-4 rounded-3xl border border-border bg-muted/50">
+                    <div>
+                      <p className="font-semibold text-lg text-foreground">{addon.name}</p>
+                      <p className="text-xs font-medium text-foreground/70">{formatVND(addon.price)} / {addon.unit} × {addon.quantity}</p>
                     </div>
-                  );
-                })}
+                    <span className="text-lg font-mono font-semibold px-4 py-2 rounded-3xl bg-slate-900 text-white border border-border shadow-sm">
+                      + {formatVND(addon.price * addon.quantity)}
+                    </span>
+                  </div>
+                ))}
               </div>
+              <p className="text-xs text-muted-foreground">Dịch vụ đặt kèm được thanh toán cùng đơn. Dịch vụ gọi thêm tại quầy sẽ thanh toán trước khi check-out.</p>
             </section>
           )}
+
+          {/* Promotion code */}
+          <section className="rounded-3xl border border-border bg-card p-6 shadow-sm space-y-4">
+            <h3 className="font-semibold text-xl text-foreground flex items-center gap-2">
+              <FiGift className="text-foreground" /> Mã khuyến mãi
+            </h3>
+
+            {appliedPromoCode ? (
+              <div className="flex items-center justify-between gap-3 p-4 rounded-2xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30">
+                <div>
+                  <p className="font-mono font-semibold text-emerald-700 dark:text-emerald-300">{appliedPromoCode}</p>
+                  <p className="text-sm text-emerald-700/80 dark:text-emerald-300/80">
+                    {quote?.promotionName} · giảm {formatVND(quote?.promotionDiscountAmount || 0)}
+                  </p>
+                </div>
+                {!activeBooking && (
+                  <button onClick={removePromo} className="p-2 rounded-full hover:bg-emerald-100 dark:hover:bg-emerald-900/40" aria-label="Bỏ mã khuyến mãi">
+                    <FiX className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <input
+                    className="input-field flex-1 font-mono uppercase"
+                    placeholder="Nhập mã khuyến mãi"
+                    value={promoInput}
+                    disabled={!!activeBooking || !quote}
+                    onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
+                    onKeyDown={(e) => { if (e.key === 'Enter') applyPromo(promoInput); }}
+                  />
+                  <Button onClick={() => applyPromo(promoInput)} disabled={!promoInput.trim() || isApplyingPromo || !!activeBooking || !quote}>
+                    {isApplyingPromo ? 'Đang kiểm tra...' : 'Áp dụng'}
+                  </Button>
+                </div>
+                {promoError && <p className="text-sm text-destructive">{promoError}</p>}
+                {!quote && <p className="text-xs text-muted-foreground">Mã khuyến mãi chỉ áp dụng khi kết nối được máy chủ.</p>}
+              </div>
+            )}
+
+            {!appliedPromoCode && !activeBooking && availablePromos.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground">Ưu đãi dành cho bạn</p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {availablePromos.map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => applyPromo(p.code)}
+                      disabled={isApplyingPromo}
+                      className="text-left p-3 rounded-2xl border border-dashed border-border hover:border-primary hover:bg-primary/5 transition-colors"
+                    >
+                      <p className="font-mono text-sm font-semibold text-primary">{p.code}</p>
+                      <p className="text-sm font-medium">{describePromotion(p, formatVND)}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {p.name}{p.minOrderAmount > 0 ? ` · đơn từ ${formatVND(p.minOrderAmount)}` : ''}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
 
           {/* Payment Method Selector */}
           <section className="rounded-3xl border border-border bg-card p-6 shadow-sm space-y-6">
@@ -441,14 +573,32 @@ const BookingCheckoutPage: React.FC = () => {
             <div className="p-6 space-y-4">
               <div className="flex flex-col gap-2 p-4 bg-muted/50 rounded-3xl border border-border">
                 <div className="flex justify-between items-center text-sm font-medium text-foreground/70">
-                  <span className="">Tiền thuê ({formatVND(basePrice)}) × {unitCount}{bookingDurationUnit === 'week' ? ' tuần' : bookingDurationUnit === 'day' ? ' ngày' : 'h'}</span>
-                  <span className="font-semibold text-foreground font-mono text-lg">{formatVND(subtotal)}</span>
+                  <span className="">Tiền thuê ({formatVND(displayBasePrice)}) × {unitCount}{bookingDurationUnit === 'week' ? ' tuần' : bookingDurationUnit === 'day' ? ' ngày' : 'h'}</span>
+                  <span className="font-semibold text-foreground font-mono text-lg">{formatVND(rentalSubtotal)}</span>
                 </div>
+
+                {quote && quote.membershipDiscountAmount > 0 && (
+                  <div className="flex justify-between items-center text-sm font-medium text-emerald-700 dark:text-emerald-400 border-t border-border/10 pt-2 mt-2">
+                    <span className="flex items-center gap-1.5">
+                      <FiAward className="h-4 w-4" /> Hạng {quote.membershipTierName} (-{quote.membershipDiscountPercent}%)
+                    </span>
+                    <span className="font-semibold font-mono text-lg">-{formatVND(quote.membershipDiscountAmount)}</span>
+                  </div>
+                )}
+
+                {quote && quote.promotionDiscountAmount > 0 && (
+                  <div className="flex justify-between items-center text-sm font-medium text-emerald-700 dark:text-emerald-400 border-t border-border/10 pt-2 mt-2">
+                    <span className="flex items-center gap-1.5">
+                      <FiGift className="h-4 w-4" /> Mã {quote.promotionCode}
+                    </span>
+                    <span className="font-semibold font-mono text-lg">-{formatVND(quote.promotionDiscountAmount)}</span>
+                  </div>
+                )}
                 
-                {addonTotal > 0 && (
+                {addonAmount > 0 && (
                   <div className="flex justify-between items-center text-sm font-medium text-foreground/70 border-t border-border/10 pt-2 mt-2">
                     <span className="">Dịch vụ cộng thêm</span>
-                    <span className="font-semibold text-foreground font-mono text-lg">+{formatVND(addonTotal)}</span>
+                    <span className="font-semibold text-foreground font-mono text-lg">+{formatVND(addonAmount)}</span>
                   </div>
                 )}
               </div>
@@ -459,17 +609,20 @@ const BookingCheckoutPage: React.FC = () => {
                     <span className="font-semibold text-lg block text-foreground ">Tổng cộng</span>
                     <span className="text-[10px] font-medium text-foreground/50  tracking-tight">Đã bao gồm VAT</span>
                   </div>
-                  <span className="font-semibold text-3xl text-foreground font-mono">{formatVND(total)}</span>
+                  <span className="font-semibold text-3xl text-foreground font-mono">{formatVND(grandTotal)}</span>
                 </div>
               </div>
             </div>
 
             <div className="p-6 bg-slate-900 space-y-4">
+              {!activeBooking && quoteError && (
+                <p className="text-sm text-rose-300 bg-rose-500/10 border border-rose-500/30 rounded-2xl p-3">{quoteError}</p>
+              )}
               <button 
                 onClick={handleCreateBooking} 
-                disabled={isProcessing || timeLeft <= 0}
+                disabled={isProcessing || timeLeft <= 0 || (!activeBooking && !quote)}
                 className={`w-full py-5 text-lg font-semibold tracking-tight border border-border rounded-3xl shadow-sm hover:-translate-y-1 hover:shadow-sm transition-all flex justify-center items-center gap-3 ${
-                  isProcessing || timeLeft <= 0 ? 'bg-gray-600 text-white opacity-50 cursor-not-allowed' : 'bg-[#A50064] text-white hover:bg-[#8A0053]'
+                  isProcessing || timeLeft <= 0 || (!activeBooking && !quote) ? 'bg-gray-600 text-white opacity-50 cursor-not-allowed' : 'bg-[#A50064] text-white hover:bg-[#8A0053]'
                 }`}
               >
                 {isProcessing ? (

@@ -300,6 +300,28 @@ export interface BranchResponse {
   address: string;
   city: string;
   status: string;
+  /** "HH:mm:ss" in Vietnam time; null when the branch has no fixed hours. */
+  openTime: string | null;
+  closeTime: string | null;
+}
+
+/** Price per unit a customer pays at a branch (branch policy, else the system-wide one). */
+export interface BranchPriceResponse {
+  workspaceTypeId: string;
+  workspaceTypeCode: string;
+  workspaceTypeName: string;
+  unit: "hour" | "day" | "week" | "month";
+  price: number;
+}
+
+/** Cheapest starting price of a workspace type across branches (public). */
+export interface StartingPriceResponse {
+  workspaceTypeId: string;
+  code: string;
+  name: string;
+  capacityDefault: number;
+  unit: "hour" | "day" | "week" | "month";
+  price: number;
 }
 
 export interface PublicWorkspaceAvailability {
@@ -315,6 +337,12 @@ export const customerSpaceApi = {
 
   listFloors: (branchId: string) =>
     apiFetch<FloorResponse[]>(`${API}/api/customer/spaces/branches/${branchId}/floors`),
+
+  listPrices: (branchId: string) =>
+    apiFetch<BranchPriceResponse[]>(`${API}/api/customer/spaces/branches/${branchId}/prices`),
+
+  pricingSummary: () =>
+    apiFetch<StartingPriceResponse[]>(`${API}/api/customer/spaces/pricing-summary`),
 
   listWorkspaces: (branchId: string, floorId: string) =>
     apiFetch<WorkspaceResponse[]>(
