@@ -14,6 +14,8 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
 
     List<Booking> findByUserIdOrderByCreatedAtDesc(UUID userId);
 
+    org.springframework.data.domain.Page<Booking> findByUserIdOrderByCreatedAtDesc(UUID userId, org.springframework.data.domain.Pageable pageable);
+
     Optional<Booking> findByIdAndUserId(UUID id, UUID userId);
 
     List<Booking> findAllByStatusAndPaymentDeadlineAtBefore(BookingStatus status, OffsetDateTime now);

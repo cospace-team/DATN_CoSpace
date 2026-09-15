@@ -13,6 +13,8 @@ import { useAuth } from '../../context/AuthContext';
 import QrScannerModal from '../../components/QrScannerModal';
 import BookingTabPanel from '../../components/staff/BookingTabPanel';
 import type { BookingTabDto } from '../../api/addonApi';
+import { CheckoutModal } from './checkin/CheckoutModal';
+import { TodayScheduleTab } from './checkin/TodayScheduleTab';
 
 import { BookingPackageDisplay, getBookingPackageDisplay } from '../../utils/bookingPackage';
 
@@ -807,339 +809,34 @@ const CheckInPage: React.FC = () => {
                 )}
               </>
             ) : (
-              /* Lịch trình khách hôm nay Section */
-              <div className="space-y-4">
-                {/* Header Tabs & Search */}
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                  <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-xl w-full sm:w-auto border border-border/50">
-                    <button 
-                      onClick={() => setScheduleTab('all')} 
-                      className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
-                        scheduleTab === 'all' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      <span>Tất cả</span>
-                      <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-muted-foreground/15 font-mono">{todayCounts.all}</span>
-                    </button>
-                    <button 
-                      onClick={() => setScheduleTab('incoming')} 
-                      className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
-                        scheduleTab === 'incoming' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      <span>Sắp đến</span>
-                      <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 font-mono font-bold">{todayCounts.incoming}</span>
-                    </button>
-                    <button 
-                      onClick={() => setScheduleTab('seated')} 
-                      className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
-                        scheduleTab === 'seated' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      <span>Đang ngồi</span>
-                      <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-mono font-bold">{todayCounts.seated}</span>
-                    </button>
-                    <button 
-                      onClick={() => setScheduleTab('completed')} 
-                      className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
-                        scheduleTab === 'completed' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      <span>Hoàn tất</span>
-                      <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-muted-foreground/15 font-mono">{todayCounts.completed}</span>
-                    </button>
-                  </div>
-
-                  <div className="relative w-full sm:w-64">
-                    <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground w-3.5 h-3.5" />
-                    <input 
-                      type="text"
-                      placeholder="Tìm tên, SĐT, mã vé, bàn..."
-                      value={scheduleSearch}
-                      onChange={(e) => setScheduleSearch(e.target.value)}
-                      className="w-full bg-muted/40 border border-border rounded-xl pl-10 pr-8 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary focus:bg-background transition-all"
-                    />
-                    {scheduleSearch && (
-                      <button 
-                        onClick={() => setScheduleSearch('')}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5"
-                      >
-                        <FiX className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Danh sách thẻ đặt chỗ hôm nay */}
-                {filteredTodayBookings.length === 0 ? (
-                  <EmptyState 
-                    icon={FiClock} 
-                    title={branchBookingsToday.length === 0 ? "Hôm nay chưa có lượt đặt nào" : "Không tìm thấy khách phù hợp"} 
-                    description="Các lượt đặt chỗ trực tuyến và tại quầy trong ngày sẽ hiển thị tại đây." 
-                    className="py-12" 
-                  />
-                ) : (
-                  <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
-                    {filteredTodayBookings.map((b) => {
-                      const pkg = getBookingPackageDisplay(b);
-                      return (
-                        <div 
-                          key={b.id} 
-                          className={`p-4 rounded-2xl border transition-all duration-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3.5 ${
-                            b.status === 'CONFIRMED' 
-                              ? 'bg-card border-border/80 hover:border-primary/50 shadow-xs' 
-                              : b.status === 'CHECKED_IN' 
-                                ? 'bg-emerald-50/20 dark:bg-emerald-950/10 border-emerald-500/20' 
-                                : 'bg-muted/30 border-border/40 opacity-75'
-                          }`}
-                        >
-                          <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                            {/* Cột trái: Thông tin gói hoặc Avatar */}
-                            {pkg.isMultiDay ? (
-                              <div className="text-center shrink-0 w-20 bg-amber-500/10 py-1.5 px-1 rounded-xl border border-amber-500/20">
-                                <p className="text-xs font-bold text-amber-600 dark:text-amber-400 leading-tight">{pkg.progressText}</p>
-                                <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight font-mono">{pkg.dateRangeText}</p>
-                                <span className={`inline-block mt-1 text-[9px] font-semibold px-1.5 py-0.2 rounded border ${pkg.badgeClass}`}>
-                                  {pkg.packageType}
-                                </span>
-                              </div>
-                            ) : (
-                              <div className={`w-11 h-11 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 shadow-xs ${
-                                b.status === 'CONFIRMED' 
-                                  ? 'bg-primary/10 text-primary border border-primary/20' 
-                                  : b.status === 'CHECKED_IN' 
-                                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' 
-                                    : 'bg-muted text-muted-foreground'
-                              }`}>
-                                {b.customerName ? b.customerName.trim().charAt(0).toUpperCase() : 'K'}
-                              </div>
-                            )}
-
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <p className="font-bold text-sm text-foreground truncate">{b.customerName || 'Khách vãng lai'}</p>
-                                <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
-                                  b.status === 'CONFIRMED'
-                                    ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400'
-                                    : b.status === 'CHECKED_IN'
-                                      ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
-                                      : 'bg-muted text-muted-foreground'
-                                }`}>
-                                  {bookingStatusLabel[b.status?.toLowerCase()] || b.status}
-                                </span>
-                                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${pkg.badgeClass}`}>
-                                  {pkg.packageType}
-                                </span>
-                              </div>
-                              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground mt-1">
-                                <span className="font-mono text-primary font-medium">#{b.bookingCode}</span>
-                                <span>•</span>
-                                <span className="flex items-center gap-1"><FiMapPin className="w-3 h-3 text-primary shrink-0" /> {b.workspaceName || 'Không gian'}</span>
-                                <span>•</span>
-                                <span className="flex items-center gap-1 font-medium text-foreground">
-                                  <FiClock className="w-3 h-3 text-muted-foreground shrink-0" /> {pkg.timeSlotText}
-                                </span>
-                                {pkg.isMultiDay && (
-                                  <>
-                                    <span>•</span>
-                                    <span className="flex items-center gap-1 text-[11px] text-amber-600 dark:text-amber-400 font-medium">
-                                      <FiCalendar className="w-3 h-3 shrink-0" /> {pkg.dateRangeText} ({pkg.progressText})
-                                    </span>
-                                  </>
-                                )}
-                                {b.customerPhone && (
-                                  <>
-                                    <span>•</span>
-                                    <span className="flex items-center gap-1"><FiPhone className="w-3 h-3 shrink-0" /> {b.customerPhone}</span>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
-                            {b.status === 'CONFIRMED' ? (
-                              <button
-                                onClick={() => handleSelectBookingForCheckin(b.bookingCode)}
-                                className="btn btn-primary btn-sm rounded-xl px-3.5 py-1.5 text-xs font-bold shadow-sm flex items-center gap-1.5 hover:scale-[1.02] transition-transform"
-                                title="Điền mã và chuẩn bị Check-in"
-                              >
-                                <FiCheckCircle className="w-3.5 h-3.5" />
-                                <span>{pkg.isMultiDay ? 'Check-in hôm nay' : 'Check-in ngay'}</span>
-                              </button>
-                            ) : b.status === 'CHECKED_IN' ? (
-                              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
-                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> Đang ngồi
-                              </span>
-                            ) : (
-                              <span className="text-xs font-medium text-muted-foreground px-3 py-1 bg-muted rounded-xl">
-                                Đã hoàn tất
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+              <TodayScheduleTab
+                scheduleTab={scheduleTab}
+                setScheduleTab={setScheduleTab}
+                todayCounts={todayCounts}
+                scheduleSearch={scheduleSearch}
+                setScheduleSearch={setScheduleSearch}
+                filteredTodayBookings={filteredTodayBookings}
+                branchBookingsTodayLength={branchBookingsToday.length}
+                onSelectBookingForCheckin={handleSelectBookingForCheckin}
+              />
             )}
           </div>
         </div>
       </div>
 
       {/* MODAL XÁC NHẬN CHECK-OUT */}
-      {selectedCheckoutItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-card border border-border rounded-2xl p-6 max-w-lg w-full shadow-2xl animate-scale-up space-y-5">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-border">
-              <div className="flex items-center gap-2.5">
-                <div className={`p-2 rounded-xl ${selectedCheckoutItem.meta?.timeStatus === 'overdue' ? 'bg-red-500/10 text-red-600' : 'bg-primary/10 text-primary'}`}>
-                  <FiLogOut className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-lg">
-                    {selectedCheckoutItem.meta?.pkg?.isMultiDay ? 'Xác nhận Check-out ca hôm nay' : 'Xác nhận Check-out'}
-                  </h3>
-                  <p className="text-xs text-muted-foreground">
-                    {selectedCheckoutItem.meta?.pkg?.isMultiDay 
-                      ? `Giải phóng vị trí hôm nay. Khách vẫn còn ${selectedCheckoutItem.meta.pkg.progressText || 'ngày tiếp theo'} trong gói và có thể check-in tiếp các ngày sau.` 
-                      : 'Giải phóng vị trí và hoàn tất phiên sử dụng không gian'}
-                  </p>
-                </div>
-              </div>
-              <button 
-                onClick={() => setSelectedCheckoutItem(null)} 
-                disabled={checkoutSubmitting}
-                className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted"
-              >
-                <FiX className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Overdue Warning Alert */}
-            {selectedCheckoutItem.meta?.timeStatus === 'overdue' && (
-              <div className="rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 p-4 flex items-start gap-3">
-                <FiAlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-bold text-red-800 dark:text-red-300">Khách hàng ngồi quá giờ dự kiến!</p>
-                  <p className="text-xs text-red-700 dark:text-red-400 mt-0.5 leading-relaxed">
-                    Khách đã sử dụng quá thời gian đăng ký <strong>{formatMinutes(selectedCheckoutItem.meta.overdueMinutes)}</strong>. Vui lòng kiểm tra và thu phụ phí nếu có trước khi giải phóng bàn.
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Session Summary Card */}
-            <div className="bg-muted/40 rounded-xl p-4 border border-border space-y-3 text-xs">
-              <div className="flex justify-between items-center py-1 border-b border-border/50">
-                <span className="text-muted-foreground">Khách hàng:</span>
-                <span className="font-bold text-foreground text-sm">{selectedCheckoutItem.customer?.fullName || 'Khách vãng lai'}</span>
-              </div>
-              <div className="flex justify-between items-center py-1 border-b border-border/50">
-                <span className="text-muted-foreground">Vị trí không gian:</span>
-                <span className="font-bold text-primary">{selectedCheckoutItem.workspace?.name}</span>
-              </div>
-              <div className="flex justify-between items-center py-1 border-b border-border/50">
-                <span className="text-muted-foreground">Mã đặt chỗ:</span>
-                <span className="font-mono font-bold">#{selectedCheckoutItem.booking?.bookingCode}</span>
-              </div>
-              <div className="flex justify-between items-center py-1 border-b border-border/50">
-                <span className="text-muted-foreground">Gói dịch vụ:</span>
-                <span className="font-semibold text-foreground flex items-center gap-1.5">
-                  <span className={`px-2 py-0.2 rounded-full text-[10px] border ${selectedCheckoutItem.meta?.pkg?.badgeClass}`}>
-                    {selectedCheckoutItem.meta?.pkg?.packageType}
-                  </span>
-                  {selectedCheckoutItem.meta?.pkg?.progressText && (
-                    <span className="text-amber-600 font-bold text-xs">{selectedCheckoutItem.meta.pkg.progressText}</span>
-                  )}
-                </span>
-              </div>
-              <div className="flex justify-between items-center py-1 border-b border-border/50">
-                <span className="text-muted-foreground">Giờ vào thực tế:</span>
-                <span className="font-medium">
-                  {formatTime(selectedCheckoutItem.activeCheckin?.checkinAt || '')}
-                  {!selectedCheckoutItem.meta?.isCheckedInToday && (
-                    <span className="text-amber-600 font-semibold ml-1.5">
-                      ({formatDate(selectedCheckoutItem.activeCheckin?.checkinAt || '')})
-                    </span>
-                  )}
-                </span>
-              </div>
-              <div className="flex justify-between items-center py-1 border-b border-border/50">
-                <span className="text-muted-foreground">Khung giờ sử dụng:</span>
-                <span className="font-medium">
-                  {selectedCheckoutItem.meta?.pkg?.isMultiDay 
-                    ? `Hôm nay: ${selectedCheckoutItem.meta.pkg.timeSlotText} (Hạn: ${selectedCheckoutItem.meta.pkg.dateRangeText})`
-                    : `${formatTime(selectedCheckoutItem.booking?.startAt)} - ${formatTime(selectedCheckoutItem.booking?.endAt)}`
-                  }
-                </span>
-              </div>
-              <div className="flex justify-between items-center py-1">
-                <span className="text-muted-foreground font-semibold">
-                  {selectedCheckoutItem.meta?.isCheckedInToday ? 'Thời gian ngồi hôm nay:' : 'Thời gian phiên chưa đóng:'}
-                </span>
-                <span className="font-bold text-primary text-sm">{selectedCheckoutItem.meta?.durationFormatted}</span>
-              </div>
-            </div>
-
-            {/* Dịch vụ gọi thêm: phải thu hết trước khi check-out */}
-            <BookingTabPanel
-              bookingId={selectedCheckoutItem.booking?.id}
-              branchId={selectedCheckoutItem.booking?.branchId || branchId}
-              onTabChange={setCheckoutTab}
-              compact
-            />
-
-            {/* Ghi chú Check-out */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                Ghi chú khi Check-out (Tùy chọn)
-              </label>
-              <textarea 
-                value={checkoutNote}
-                onChange={e => setCheckoutNote(e.target.value)}
-                rows={2}
-                placeholder="Ví dụ: Khách trả trễ 15p, bàn giao thiết bị đầy đủ, đã thu phụ phí..."
-                className="input-field text-xs resize-none w-full !h-auto py-2.5"
-              />
-            </div>
-
-            {/* Modal Actions */}
-            <div className="flex items-center justify-end gap-3 pt-2">
-              <button 
-                type="button"
-                onClick={() => setSelectedCheckoutItem(null)} 
-                disabled={checkoutSubmitting}
-                className="btn btn-secondary btn-sm text-xs font-semibold px-4 py-2"
-              >
-                Hủy bỏ
-              </button>
-              <button 
-                type="button"
-                onClick={handleConfirmCheckout} 
-                disabled={checkoutSubmitting || (checkoutTab?.unpaidAmount ?? 0) > 0}
-                title={(checkoutTab?.unpaidAmount ?? 0) > 0 ? 'Thu tiền dịch vụ gọi thêm trước khi check-out' : undefined}
-                className="btn btn-primary btn-sm text-xs font-bold px-4 py-2 flex items-center gap-1.5 shadow-sm"
-              >
-                {checkoutSubmitting ? (
-                  <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <>
-                    <FiCheck className="h-4 w-4" />
-                    <span>
-                      {selectedCheckoutItem.meta?.pkg?.isMultiDay 
-                        ? 'Xác nhận Check-out ca hôm nay' 
-                        : 'Xác nhận Check-out'}
-                    </span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <CheckoutModal
+        selectedCheckoutItem={selectedCheckoutItem}
+        onClose={() => setSelectedCheckoutItem(null)}
+        checkoutSubmitting={checkoutSubmitting}
+        checkoutNote={checkoutNote}
+        setCheckoutNote={setCheckoutNote}
+        checkoutTab={checkoutTab}
+        setCheckoutTab={setCheckoutTab}
+        onConfirmCheckout={handleConfirmCheckout}
+        branchId={branchId}
+        formatMinutes={formatMinutes}
+      />
 
       {/* MODAL DỊCH VỤ GỌI THÊM */}
       {tabItem && (

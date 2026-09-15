@@ -26,10 +26,9 @@ public class BookingExpiryScheduler {
 
     /**
      * Runs every minute to check for and expire bookings that have passed their payment deadline.
-     * This is a critical business process to release workspaces that were held but not paid for.
+     * Each booking is expired in its own transaction so one failure never blocks the rest.
      */
     @Scheduled(fixedRate = 60000) // Run every 60 seconds
-    @Transactional
     public void expirePendingBookings() {
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         log.info("Running BookingExpiryScheduler at {}", now);
@@ -46,20 +45,39 @@ public class BookingExpiryScheduler {
 
         log.warn("Found {} bookings to expire.", expiredBookings.size());
 
+        int expired = 0;
         for (Booking booking : expiredBookings) {
-            log.info("Expiring booking with ID: {} and code: {}", booking.getId(), booking.getBookingCode());
-            BookingStateMachine.transition(booking, BookingStatus.EXPIRED);
-            // Add-ons ordered with an unpaid booking will never be served.
-            bookingAddonService.voidUnpaid(booking, null);
-            
-            // Also expire any initiated or pending payment associated with this booking
-            paymentRepository.findTopByBookingIdAndStatusInOrderByCreatedAtDesc(
-                    booking.getId(), List.of(PaymentStatus.INITIATED, PaymentStatus.PENDING)
-            ).ifPresent(payment -> {
-                log.info("Expiring pending payment ID: {} for booking: {}", payment.getId(), booking.getId());
-                payment.setStatus(PaymentStatus.EXPIRED);
-                paymentRepository.save(payment);
-            });
+            try {
+                expireSingleBooking(booking);
+                expired++;
+            } catch (RuntimeException e) {
+                log.error("Failed to expire booking {}: {}", booking.getId(), e.getMessage(), e);
+            }
         }
+        if (expired > 0) {
+            log.info("Successfully expired {} bookings.", expired);
+        }
+    }
+
+    @Transactional
+    public void expireSingleBooking(Booking booking) {
+        if (booking == null || booking.getStatus() != BookingStatus.PENDING_PAYMENT) {
+            return; // already handled by concurrent process
+        }
+
+        log.info("Expiring booking with ID: {} and code: {}", booking.getId(), booking.getBookingCode());
+        BookingStateMachine.transition(booking, BookingStatus.EXPIRED);
+        // Add-ons ordered with an unpaid booking will never be served.
+        bookingAddonService.voidUnpaid(booking, null);
+        bookingRepository.save(booking);
+
+        // Also expire any initiated or pending payment associated with this booking
+        paymentRepository.findTopByBookingIdAndStatusInOrderByCreatedAtDesc(
+                booking.getId(), List.of(PaymentStatus.INITIATED, PaymentStatus.PENDING)
+        ).ifPresent(payment -> {
+            log.info("Expiring pending payment ID: {} for booking: {}", payment.getId(), booking.getId());
+            payment.setStatus(PaymentStatus.EXPIRED);
+            paymentRepository.save(payment);
+        });
     }
 }

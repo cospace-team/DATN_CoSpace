@@ -17,6 +17,7 @@ import { Logo } from "./components/ui/Logo";
 import { NotificationBell } from "./components/notifications/NotificationBell";
 import { ChatWidget } from "./components/chatbot/ChatWidget";
 import { SuspenseLoader } from "./components/SuspenseLoader";
+import { useSEO } from "./hooks/useSEO";
 import {
   FiMapPin,
   FiCalendar,
@@ -49,6 +50,7 @@ import {
 const LoginPage = React.lazy(() => import("./pages/LoginPage"));
 const LandingPage = React.lazy(() => import("./pages/LandingPage"));
 const LocationsPage = React.lazy(() => import("./pages/LocationPage"));
+const NotFoundPage = React.lazy(() => import("./pages/NotFoundPage"));
 const ExplorePage = React.lazy(() => import("./pages/customer/ExplorePage"));
 const BookingCheckoutPage = React.lazy(() => import("./pages/customer/BookingCheckoutPage"));
 const VietQrCheckoutPage = React.lazy(() => import("./pages/customer/VietQrCheckoutPage"));
@@ -198,7 +200,24 @@ const AppShell: React.FC = () => {
         </Suspense>
       );
     }
-    return <Navigate to="/login" replace />;
+
+    // Protected areas require login with redirect back
+    const isKnownProtectedRoute =
+      location.pathname.startsWith("/customer") ||
+      location.pathname.startsWith("/staff") ||
+      location.pathname.startsWith("/admin") ||
+      location.pathname.startsWith("/branch-admin");
+
+    if (isKnownProtectedRoute) {
+      return <Navigate to={`/login?redirect=${encodeURIComponent(location.pathname + location.search)}`} replace />;
+    }
+
+    // Unknown public URLs show 404
+    return (
+      <Suspense fallback={<SuspenseLoader fullScreen label="Đang tải trang..." />}>
+        <NotFoundPage />
+      </Suspense>
+    );
   }
 
   const navItems =
@@ -235,6 +254,8 @@ const AppShell: React.FC = () => {
   // Find current nav label for breadcrumb
   const currentNavItem = navItems.find((item) => location.pathname.startsWith(item.to));
   const pageTitle = currentNavItem?.label || "Dashboard";
+
+  useSEO({ title: pageTitle });
 
   const backendPillClass =
     backendStatus === "ok"
@@ -485,8 +506,8 @@ const AppShell: React.FC = () => {
                   </>
                 )}
 
-                {/* Default redirect */}
-                <Route path="*" element={<Navigate to={defaultRoute} replace />} />
+                {/* 404 Not Found */}
+                <Route path="*" element={<NotFoundPage />} />
               </Routes>
             </Suspense>
           </ErrorBoundary>

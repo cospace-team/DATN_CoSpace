@@ -49,8 +49,17 @@ public class BookingController {
     }
 
     @GetMapping("/my")
-    public List<BookingDto> myBookings(@AuthenticationPrincipal Jwt jwt) {
+    public Object myBookings(
+            @AuthenticationPrincipal Jwt jwt,
+            @org.springframework.web.bind.annotation.RequestParam(value = "page", required = false) Integer page,
+            @org.springframework.web.bind.annotation.RequestParam(value = "size", required = false, defaultValue = "10") Integer size) {
         UUID userId = requireSubject(jwt);
+        if (page != null) {
+            // Paginated: FE sends ?page=0&size=10
+            return bookingService.listMyBookings(userId,
+                    org.springframework.data.domain.PageRequest.of(page, Math.min(size, 50)));
+        }
+        // Backward compatible: return full list (chatbot, legacy)
         return bookingService.listMyBookings(userId);
     }
 

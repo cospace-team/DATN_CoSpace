@@ -9,6 +9,7 @@ import { Card } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import PublicNavbar from "../components/PublicNavbar";
 import { Logo } from "../components/ui/Logo";
+import { useSEO } from "../hooks/useSEO";
 import {
   FiArrowRight,
   FiX,
@@ -90,6 +91,11 @@ const fadeUp = {
 };
 
 const LandingPage: React.FC = () => {
+  useSEO({
+    title: "Không Gian Làm Việc Linh Hoạt & Đẳng Cấp",
+    description: "CoSpace - Nền tảng đặt chỗ co-working space thông minh, linh hoạt theo giờ, ngày, tháng. Đặt chỗ tức thì, bản đồ trực quan, thanh toán tiện lợi.",
+  });
+
   const { isAuthenticated, user } = useAuth();
   // Public data straight from the backend: active branches and each workspace type's starting price.
   const [branches, setBranches] = useState<BranchResponse[]>([]);

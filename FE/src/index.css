@@ -378,6 +378,7 @@
 .toast-item.success { border-left: 3px solid hsl(var(--success)); }
 .toast-item.error { border-left: 3px solid hsl(var(--destructive)); }
 .toast-item.info { border-left: 3px solid hsl(var(--info)); }
+.toast-item.warning { border-left: 3px solid hsl(var(--warning)); }
 
 /* ══════════════════════════════════════════════════════════════
    MOBILE BOTTOM NAV

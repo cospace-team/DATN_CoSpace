@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
-import { FiCheckCircle, FiAlertCircle, FiInfo, FiX } from 'react-icons/fi';
+import { FiCheckCircle, FiAlertCircle, FiInfo, FiAlertTriangle, FiX } from 'react-icons/fi';
 
-type ToastType = 'success' | 'error' | 'info';
+type ToastType = 'success' | 'error' | 'info' | 'warning';
 
 interface Toast {
   id: string;
@@ -27,6 +27,7 @@ const ICONS: Record<ToastType, ReactNode> = {
   success: <FiCheckCircle className="h-5 w-5 text-success shrink-0" />,
   error: <FiAlertCircle className="h-5 w-5 text-destructive shrink-0" />,
   info: <FiInfo className="h-5 w-5 text-info shrink-0" />,
+  warning: <FiAlertTriangle className="h-5 w-5 text-amber-500 shrink-0" />,
 };
 
 export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) => {

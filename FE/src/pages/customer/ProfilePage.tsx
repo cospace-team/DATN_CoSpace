@@ -45,6 +45,10 @@ import { bookingApi } from '../../lib/bookingApi';
 import { membershipApi, type MyMembershipDto } from '../../api/loyaltyApi';
 import { formatVND } from '../../utils/formatters';
 import { API_BASE_URL } from '../../config/api';
+import { PartnerDetailsModal, type PartnerSuggestion } from './profile/PartnerDetailsModal';
+import { AvatarModal } from './profile/AvatarModal';
+import { ProfileSecurityTab } from './profile/ProfileSecurityTab';
+import { ProfileNetworkTab } from './profile/ProfileNetworkTab';
 
 // ── BANNER THEMES ──
 const BANNER_THEMES = [
@@ -89,24 +93,6 @@ const SUGGESTED_SKILLS = [
   'Đầu tư',
   'Data Science',
 ];
-
-/** A suggested networking partner, as returned by /api/matching/suggestions. */
-interface PartnerSuggestion {
-  id: string;
-  name: string;
-  profession: string;
-  company: string;
-  avatar: string;
-  matchScore: number;
-  commonTags: string[];
-  contactPublic: boolean;
-  email: string;
-  phone: string;
-  bio: string;
-  linkedin: string;
-  github: string;
-  [key: string]: any;
-}
 
 const ProfilePage: React.FC = () => {
   const { user, updateProfile, changePassword } = useAuth();
@@ -531,6 +517,38 @@ const ProfilePage: React.FC = () => {
       showToast(err instanceof Error ? err.message : 'Có lỗi xảy ra khi đổi mật khẩu', 'error');
     } finally {
       setIsSavingPassword(false);
+    }
+  };
+
+  const handleToggleContactPublic = async (nextVal: boolean) => {
+    setProfileForm(prev => ({ ...prev, contactPublic: nextVal }));
+    try {
+      await updateProfile({
+        fullName: profileForm.fullName,
+        email: profileForm.email,
+        phone: profileForm.phone,
+        avatarUrl: customAvatarUrl || user?.avatarUrl,
+        bio: profileForm.bio,
+        profession: profileForm.profession,
+        company: profileForm.company,
+        contactPublic: nextVal,
+        contactLink: socialLinks.website,
+      });
+      showToast(
+        nextVal ? 'Đã bật công khai liên hệ' : 'Đã ẩn liên hệ cá nhân',
+        'info'
+      );
+    } catch {
+      showToast('Không thể lưu cài đặt quyền riêng tư', 'error');
+    }
+  };
+
+  const handleConnectPartner = (partner: PartnerSuggestion) => {
+    if (partner.contactPublic) {
+      window.location.href = `mailto:${partner.email}?subject=Ket noi tu CoSpace`;
+    } else {
+      showToast(`Đã gửi yêu cầu kết nối tới ${partner.name}!`, 'success');
+      setSelectedPartner(null);
     }
   };
 
@@ -1612,687 +1630,64 @@ const ProfilePage: React.FC = () => {
           5. TAB CONTENT 2: CO-WORKING NETWORKING COMMUNITY
           ══════════════════════════════════════════════════════════════ */}
       {activeTab === 'network' && (
-        <div className="space-y-6">
-          {/* Network Header & Search / Filters */}
-          <div className="bg-card rounded-3xl border border-border p-6 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            <div>
-              <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
-                <FiUsers className="text-indigo-500" /> Mạng lưới Đối tác & Đồng nghiệp
-              </h2>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Thuật toán đối sánh Jaccard dựa trên kỹ năng & lĩnh vực thực tế từ Database
-              </p>
-            </div>
-
-            {/* Filter Mode & Search Input */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-              {/* Filter Tabs: Best Matches vs All */}
-              <div className="flex items-center p-1 bg-muted/60 rounded-2xl border border-border shrink-0">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setNetworkFilterMode('best');
-                    setVisiblePartnersCount(6);
-                  }}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                    networkFilterMode === 'best'
-                      ? 'bg-primary text-primary-foreground shadow-xs'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  ⭐ Phù hợp nhất
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setNetworkFilterMode('all');
-                    setVisiblePartnersCount(6);
-                  }}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                    networkFilterMode === 'all'
-                      ? 'bg-primary text-primary-foreground shadow-xs'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  🌐 Tất cả ({partnersList.length})
-                </button>
-              </div>
-
-              {/* Search Box */}
-              <div className="relative w-full sm:w-64">
-                <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  placeholder="Tìm tên, chuyên môn, skill..."
-                  className="w-full pl-10 pr-4 py-2 text-xs bg-muted/50 border border-border rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-primary/30 text-foreground"
-                />
-              </div>
-
-              {selectedTagFilter && (
-                <button
-                  type="button"
-                  onClick={() => setSelectedTagFilter(null)}
-                  className="px-3 py-2 bg-muted text-xs font-semibold rounded-xl text-muted-foreground hover:text-foreground border border-border flex items-center gap-1 shrink-0 cursor-pointer"
-                >
-                  Xóa lọc: {selectedTagFilter} <FiX className="h-3 w-3" />
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Partner Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {isLoadingPartners &&
-              [...Array(4)].map((_, i) => (
-                <div
-                  key={`partner-skeleton-${i}`}
-                  className="bg-card border border-border rounded-3xl p-6 shadow-sm"
-                >
-                  <div className="flex items-start justify-between gap-3 mb-4">
-                    <div className="flex items-center gap-3.5">
-                      <Skeleton className="h-14 w-14 rounded-2xl" />
-                      <div className="space-y-2">
-                        <Skeleton className="h-4 w-32" />
-                        <Skeleton className="h-3 w-24" />
-                      </div>
-                    </div>
-                    <Skeleton className="h-6 w-14 rounded-full" />
-                  </div>
-                  <Skeleton className="h-3 w-full mb-2" />
-                  <Skeleton className="h-3 w-4/5 mb-4" />
-                  <div className="flex gap-2">
-                    <Skeleton className="h-6 w-16 rounded-full" />
-                    <Skeleton className="h-6 w-20 rounded-full" />
-                    <Skeleton className="h-6 w-14 rounded-full" />
-                  </div>
-                </div>
-              ))}
-
-            {!isLoadingPartners &&
-              sortedAndFilteredPartners.slice(0, visiblePartnersCount).map(partner => {
-                // Match score badge color calculation
-                let badgeColor =
-                  'bg-slate-100 text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700';
-                if (partner.matchScore >= 80) {
-                  badgeColor =
-                    'bg-emerald-100 text-emerald-950 border-emerald-300 dark:bg-emerald-950/70 dark:text-emerald-200 dark:border-emerald-800';
-                } else if (partner.matchScore >= 60) {
-                  badgeColor =
-                    'bg-indigo-100 text-indigo-950 border-indigo-300 dark:bg-indigo-950/70 dark:text-indigo-200 dark:border-indigo-800';
-                }
-
-                return (
-                  <div
-                    key={partner.id}
-                    className="bg-card border border-border rounded-3xl p-6 shadow-sm hover:shadow-md hover:border-primary/40 transition-all flex flex-col justify-between relative group"
-                  >
-                    {/* Top Header: Avatar & Match Score */}
-                    <div className="flex items-start justify-between gap-3 mb-4">
-                      <div className="flex items-center gap-3.5">
-                        {renderAvatarElement(partner.avatar, partner.name, 'h-14 w-14', 'text-xl')}
-                        <div>
-                          <h3 className="text-base font-bold text-foreground group-hover:text-primary transition-colors">
-                            {partner.name}
-                          </h3>
-                          <p className="text-xs font-medium text-muted-foreground">
-                            {partner.profession}
-                          </p>
-                          <p className="text-[11px] font-semibold text-primary/90 mt-0.5">
-                            @{partner.company}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div
-                        className={`px-3 py-1 rounded-full text-xs font-bold border shadow-2xs shrink-0 ${badgeColor}`}
-                      >
-                        {partner.matchScore}% Match
-                      </div>
-                    </div>
-
-                    {/* Partner Bio */}
-                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2 mb-4 bg-muted/30 p-3 rounded-2xl border border-border/40">
-                      "{partner.bio}"
-                    </p>
-
-                    {/* Common Tags */}
-                    <div className="mb-5">
-                      <p className="text-[10px] font-semibold text-muted-foreground mb-1.5">
-                        Kỹ năng tương đồng:
-                      </p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {partner.commonTags.map(tag => (
-                          <button
-                            key={tag}
-                            type="button"
-                            onClick={() => setSelectedTagFilter(tag)}
-                            className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-lg border transition-colors cursor-pointer ${
-                              selectedTagFilter === tag
-                                ? 'bg-primary text-primary-foreground border-primary'
-                                : 'bg-muted/50 text-foreground border-border/60 hover:bg-muted'
-                            }`}
-                          >
-                            {tag}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex items-center gap-2 pt-2 border-t border-border/60">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedPartner(partner)}
-                        className="flex-1 py-2.5 px-4 rounded-xl text-xs font-semibold border border-border bg-muted/40 hover:bg-muted text-foreground transition-colors cursor-pointer"
-                      >
-                        Xem chi tiết
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (partner.contactPublic) {
-                            window.location.href = `mailto:${partner.email}?subject=Ket noi tu CoSpace`;
-                          } else {
-                            showToast(`${partner.name} đang ẩn thông tin liên hệ trực tiếp.`, 'info');
-                          }
-                        }}
-                        className="py-2.5 px-4 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors flex items-center gap-1.5 cursor-pointer"
-                      >
-                        <FiMessageCircle className="h-3.5 w-3.5" /> Kết nối
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-          </div>
-
-          {/* Expand / View More Button */}
-          {!isLoadingPartners && sortedAndFilteredPartners.length > visiblePartnersCount && (
-            <div className="text-center pt-2">
-              <button
-                type="button"
-                onClick={() => setVisiblePartnersCount(prev => prev + 6)}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-card border border-border hover:border-primary/50 text-foreground font-semibold text-xs transition-all shadow-xs hover:shadow cursor-pointer"
-              >
-                <span>
-                  Xem thêm đối tác khác (còn{' '}
-                  {sortedAndFilteredPartners.length - visiblePartnersCount} người)
-                </span>
-                <FiChevronDown className="h-4 w-4 text-primary" />
-              </button>
-            </div>
-          )}
-
-          {/* Empty State */}
-          {!isLoadingPartners && sortedAndFilteredPartners.length === 0 && (
-            <div className="text-center py-16 bg-card rounded-3xl border border-border px-4">
-              <FiUsers className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-50" />
-              <h3 className="text-base font-bold text-foreground">Không tìm thấy đối tác phù hợp</h3>
-              <p className="text-xs text-muted-foreground mt-1 max-w-md mx-auto">
-                {networkFilterMode === 'best'
-                  ? 'Chưa có đối tác nào đạt độ tương đồng trên 50%. Hãy cập nhật thêm kỹ năng ở hồ sơ của bạn hoặc chuyển sang xem tất cả thành viên.'
-                  : 'Hãy thử tìm kiếm với từ khóa khác hoặc xóa bộ lọc tag.'}
-              </p>
-              {networkFilterMode === 'best' && (
-                <button
-                  type="button"
-                  onClick={() => setNetworkFilterMode('all')}
-                  className="mt-4 px-4 py-2 bg-primary/10 text-primary border border-primary/20 rounded-xl text-xs font-semibold hover:bg-primary/20 transition-colors cursor-pointer"
-                >
-                  Xem tất cả thành viên trong mạng lưới
-                </button>
-              )}
-            </div>
-          )}
-        </div>
+        <ProfileNetworkTab
+          networkFilterMode={networkFilterMode}
+          setNetworkFilterMode={setNetworkFilterMode}
+          visiblePartnersCount={visiblePartnersCount}
+          setVisiblePartnersCount={setVisiblePartnersCount}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          selectedTagFilter={selectedTagFilter}
+          setSelectedTagFilter={setSelectedTagFilter}
+          partnersList={partnersList}
+          sortedAndFilteredPartners={sortedAndFilteredPartners}
+          isLoadingPartners={isLoadingPartners}
+          renderAvatar={renderAvatarElement}
+          onSelectPartner={setSelectedPartner}
+          onConnect={handleConnectPartner}
+        />
       )}
 
       {/* ══════════════════════════════════════════════════════════════
           6. TAB CONTENT 3: ACCOUNT & SECURITY / PRIVACY
           ══════════════════════════════════════════════════════════════ */}
       {activeTab === 'security' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Password Change Form */}
-          <div className="lg:col-span-2">
-            <section className="bg-card rounded-3xl border border-border p-6 shadow-sm">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                  <FiLock className="h-5 w-5" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-foreground">Đổi mật khẩu tài khoản</h2>
-                  <p className="text-xs text-muted-foreground">Đảm bảo tài khoản của bạn luôn được bảo vệ an toàn</p>
-                </div>
-              </div>
-
-              <form onSubmit={handlePasswordChange} className="space-y-4 max-w-xl">
-                <div>
-                  <label className="block text-xs font-semibold text-foreground mb-1.5">
-                    Mật khẩu hiện tại
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showOldPassword ? 'text' : 'password'}
-                      value={passwordForm.oldPassword}
-                      onChange={e => setPasswordForm({ ...passwordForm, oldPassword: e.target.value })}
-                      placeholder="••••••••"
-                      className="w-full px-4 py-2.5 bg-muted/40 border border-border rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/30 pr-10"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowOldPassword(!showOldPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
-                    >
-                      {showOldPassword ? <FiEyeOff className="h-4 w-4" /> : <FiEye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-foreground mb-1.5">
-                    Mật khẩu mới
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showNewPassword ? 'text' : 'password'}
-                      value={passwordForm.newPassword}
-                      onChange={e => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-                      placeholder="Ít nhất 6 ký tự"
-                      className="w-full px-4 py-2.5 bg-muted/40 border border-border rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/30 pr-10"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowNewPassword(!showNewPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
-                    >
-                      {showNewPassword ? <FiEyeOff className="h-4 w-4" /> : <FiEye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-foreground mb-1.5">
-                    Xác nhận mật khẩu mới
-                  </label>
-                  <input
-                    type="password"
-                    value={passwordForm.confirmNewPassword}
-                    onChange={e =>
-                      setPasswordForm({ ...passwordForm, confirmNewPassword: e.target.value })
-                    }
-                    placeholder="••••••••"
-                    className="w-full px-4 py-2.5 bg-muted/40 border border-border rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/30"
-                    required
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isSavingPassword}
-                  className="inline-flex items-center gap-2 px-6 py-2.5 bg-primary text-primary-foreground font-semibold rounded-xl text-sm hover:bg-primary/90 transition-all shadow-md active:scale-95 disabled:opacity-50 mt-2 cursor-pointer"
-                >
-                  {isSavingPassword && <Spinner size="sm" />}
-                  {isSavingPassword ? 'Đang cập nhật...' : 'Cập nhật mật khẩu'}
-                </button>
-              </form>
-            </section>
-          </div>
-
-          {/* Privacy & Account Settings */}
-          <div className="space-y-6">
-            <section className="bg-card rounded-3xl border border-border p-6 shadow-sm">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
-                  <FiSettings className="h-5 w-5" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-foreground">Quyền riêng tư</h2>
-                  <p className="text-xs text-muted-foreground">Tùy chỉnh khả năng hiển thị hồ sơ</p>
-                </div>
-              </div>
-
-              {/* Public Contact Switch */}
-              <div className="p-4 rounded-2xl bg-muted/30 border border-border/60 space-y-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h3 className="text-sm font-semibold text-foreground">Công khai liên hệ</h3>
-                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                      Cho phép người dùng khác trong CoSpace xem email và số điện thoại của bạn.
-                    </p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
-                    <input
-                      type="checkbox"
-                      className="sr-only peer"
-                      checked={profileForm.contactPublic}
-                      onChange={async e => {
-                        const nextVal = e.target.checked;
-                        setProfileForm(prev => ({ ...prev, contactPublic: nextVal }));
-                        try {
-                          await updateProfile({
-                            fullName: profileForm.fullName,
-                            email: profileForm.email,
-                            phone: profileForm.phone,
-                            avatarUrl: customAvatarUrl || user?.avatarUrl,
-                            bio: profileForm.bio,
-                            profession: profileForm.profession,
-                            company: profileForm.company,
-                            contactPublic: nextVal,
-                            contactLink: socialLinks.website,
-                          });
-                          showToast(
-                            nextVal ? 'Đã bật công khai liên hệ' : 'Đã ẩn liên hệ cá nhân',
-                            'info'
-                          );
-                        } catch (err) {
-                          showToast('Không thể lưu cài đặt quyền riêng tư', 'error');
-                        }
-                      }}
-                    />
-                    <div className="w-11 h-6 bg-muted-foreground/30 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                  </label>
-                </div>
-
-                <div className="pt-2 border-t border-border/40 text-[11px] text-muted-foreground flex items-center gap-1.5">
-                  {profileForm.contactPublic ? (
-                    <>
-                      <FiCheckCircle className="text-emerald-500 h-3.5 w-3.5 shrink-0" />
-                      <span>Thông tin liên hệ của bạn đang hiển thị</span>
-                    </>
-                  ) : (
-                    <>
-                      <FiEyeOff className="text-amber-500 h-3.5 w-3.5 shrink-0" />
-                      <span>Thông tin liên hệ của bạn đang được ẩn</span>
-                    </>
-                  )}
-                </div>
-              </div>
-            </section>
-          </div>
-        </div>
+        <ProfileSecurityTab
+          passwordForm={passwordForm}
+          setPasswordForm={setPasswordForm}
+          showOldPassword={showOldPassword}
+          setShowOldPassword={setShowOldPassword}
+          showNewPassword={showNewPassword}
+          setShowNewPassword={setShowNewPassword}
+          isSavingPassword={isSavingPassword}
+          onPasswordChange={handlePasswordChange}
+          contactPublic={profileForm.contactPublic}
+          onToggleContactPublic={handleToggleContactPublic}
+        />
       )}
 
       {/* ══════════════════════════════════════════════════════════════
-          7. MODAL: PARTNER DETAILS MODAL
+          7. MODALS
           ══════════════════════════════════════════════════════════════ */}
-      {selectedPartner && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-          <div className="bg-card rounded-3xl max-w-lg w-full border border-border shadow-2xl overflow-hidden animate-scale-in relative">
-            {/* Header Banner */}
-            <div className="h-28 bg-gradient-to-r from-indigo-600 to-purple-600 relative">
-              <button
-                onClick={() => setSelectedPartner(null)}
-                className="absolute top-4 right-4 h-9 w-9 rounded-full bg-black/30 hover:bg-black/50 text-white flex items-center justify-center transition-colors cursor-pointer"
-              >
-                <FiX className="h-5 w-5" />
-              </button>
-            </div>
+      <PartnerDetailsModal
+        partner={selectedPartner}
+        onClose={() => setSelectedPartner(null)}
+        renderAvatar={renderAvatarElement}
+        onConnect={handleConnectPartner}
+      />
 
-            <div className="px-6 pb-6 pt-0 relative">
-              {/* Partner Avatar & % Match */}
-              <div className="flex items-end justify-between -mt-12 mb-4">
-                {renderAvatarElement(
-                  selectedPartner.avatar,
-                  selectedPartner.name,
-                  'h-20 w-20 ring-4 ring-card',
-                  'text-3xl'
-                )}
-                <span className="px-3 py-1 rounded-full text-xs font-bold bg-indigo-500 text-white shadow-sm">
-                  {selectedPartner.matchScore}% Match
-                </span>
-              </div>
-
-              <div>
-                <h3 className="text-xl font-bold text-foreground">{selectedPartner.name}</h3>
-                <p className="text-xs font-medium text-muted-foreground">
-                  {selectedPartner.profession} @{' '}
-                  <strong className="text-foreground">{selectedPartner.company}</strong>
-                </p>
-              </div>
-
-              {/* Bio */}
-              <div className="my-4 p-3.5 rounded-2xl bg-muted/40 border border-border/60 text-xs text-muted-foreground leading-relaxed">
-                "{selectedPartner.bio}"
-              </div>
-
-              {/* Skills */}
-              <div className="mb-5">
-                <p className="text-[11px] font-semibold text-muted-foreground mb-1.5">
-                  Điểm chung & Kỹ năng:
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {selectedPartner.commonTags.map(tag => (
-                    <span
-                      key={tag}
-                      className="px-2.5 py-0.5 rounded-lg text-xs font-semibold bg-primary/10 text-primary border border-primary/20"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {/* Contact Info if Public */}
-              {selectedPartner.contactPublic ? (
-                <div className="space-y-2.5 pt-3 border-t border-border/60">
-                  <p className="text-[11px] font-semibold text-muted-foreground">Thông tin liên hệ:</p>
-                  <div className="flex items-center gap-3 text-xs">
-                    <FiMail className="text-primary h-4 w-4 shrink-0" />
-                    <a
-                      href={`mailto:${selectedPartner.email}`}
-                      className="font-medium text-foreground hover:underline"
-                    >
-                      {selectedPartner.email}
-                    </a>
-                  </div>
-                  <div className="flex items-center gap-3 text-xs">
-                    <FiPhone className="text-emerald-500 h-4 w-4 shrink-0" />
-                    <a
-                      href={`tel:${selectedPartner.phone}`}
-                      className="font-medium text-foreground hover:underline"
-                    >
-                      {selectedPartner.phone}
-                    </a>
-                  </div>
-                </div>
-              ) : (
-                <div className="p-3.5 rounded-2xl bg-muted/50 border border-dashed border-border text-center text-xs text-muted-foreground flex items-center justify-center gap-2">
-                  <FiEyeOff className="h-4 w-4" />
-                  <span>Đối tác chọn ẩn thông tin liên hệ trực tiếp</span>
-                </div>
-              )}
-
-              <div className="mt-6">
-                <button
-                  onClick={() => {
-                    if (selectedPartner.contactPublic) {
-                      window.location.href = `mailto:${selectedPartner.email}?subject=Ket noi tu CoSpace`;
-                    } else {
-                      showToast(`Đã gửi yêu cầu kết nối tới ${selectedPartner.name}!`, 'success');
-                      setSelectedPartner(null);
-                    }
-                  }}
-                  className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl text-sm hover:bg-primary/90 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <FiMessageCircle className="h-4 w-4" /> Gửi lời chào kết nối
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ══════════════════════════════════════════════════════════════
-          8. MODAL: CHANGE AVATAR MODAL (FILE UPLOAD & PRESETS)
-          ══════════════════════════════════════════════════════════════ */}
-      {showAvatarModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-          <div className="bg-card rounded-3xl max-w-lg w-full border border-border shadow-2xl p-6 animate-scale-in max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-5">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-primary/10 text-primary">
-                  <FiCamera className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-foreground">Đổi ảnh đại diện</h3>
-                  <p className="text-xs text-muted-foreground">Tải ảnh từ máy tính hoặc chọn mẫu có sẵn</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowAvatarModal(false)}
-                className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-              >
-                <FiX className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="space-y-5">
-              {/* Preview Current / Selected Avatar */}
-              <div className="flex items-center gap-4 p-3.5 rounded-2xl bg-muted/40 border border-border/80">
-                <div className="h-16 w-16 rounded-2xl overflow-hidden border-2 border-primary/30 shadow-md bg-card shrink-0 flex items-center justify-center">
-                  {customAvatarUrl || user?.avatarUrl ? (
-                    <img
-                      src={customAvatarUrl || user?.avatarUrl}
-                      alt="Avatar Preview"
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="h-full w-full bg-gradient-to-tr from-primary to-secondary flex items-center justify-center text-white text-2xl font-bold">
-                      {user?.fullName ? user.fullName.charAt(0).toUpperCase() : 'U'}
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold text-foreground">Ảnh đang chọn</p>
-                  <p className="text-[11px] text-muted-foreground truncate">
-                    {customAvatarUrl?.startsWith('data:image')
-                      ? 'Ảnh tải lên từ máy tính cá nhân'
-                      : customAvatarUrl || user?.avatarUrl || 'Ảnh mặc định theo chữ cái'}
-                  </p>
-                  {customAvatarUrl && (
-                    <button
-                      type="button"
-                      onClick={() => setCustomAvatarUrl('')}
-                      className="mt-1 text-[11px] font-semibold text-rose-500 hover:underline inline-flex items-center gap-1 cursor-pointer"
-                    >
-                      <FiTrash2 className="h-3 w-3" /> Bỏ ảnh này, dùng mặc định
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Option 1: File Upload from Computer */}
-              <div>
-                <label className="block text-xs font-bold text-foreground mb-1.5">
-                  1. Tải ảnh trực tiếp từ máy tính
-                </label>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleAvatarFileUpload}
-                  accept="image/png, image/jpeg, image/webp"
-                  className="hidden"
-                />
-                <div
-                  onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-border hover:border-primary/60 bg-muted/20 hover:bg-muted/40 rounded-2xl p-5 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 group"
-                >
-                  <div className="h-11 w-11 rounded-2xl bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 transition-transform">
-                    {isUploadingAvatar ? <Spinner size="sm" /> : <FiUploadCloud className="h-6 w-6" />}
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">
-                      {isUploadingAvatar ? 'Đang xử lý tối ưu ảnh...' : 'Nhấn để chọn ảnh từ máy tính'}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">
-                      Hỗ trợ định dạng PNG, JPG, WebP (Tối đa 5MB)
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Option 2: Pre-selected Curated Avatars */}
-              <div>
-                <p className="text-xs font-bold text-foreground mb-2">
-                  2. Hoặc chọn nhanh ảnh đại diện mẫu:
-                </p>
-                <div className="grid grid-cols-4 gap-2.5">
-                  {[
-                    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
-                    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80',
-                    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&auto=format&fit=crop&q=80',
-                    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&auto=format&fit=crop&q=80',
-                    'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&auto=format&fit=crop&q=80',
-                    'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=200&auto=format&fit=crop&q=80',
-                    'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=200&auto=format&fit=crop&q=80',
-                    'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=200&auto=format&fit=crop&q=80',
-                  ].map((url, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => setCustomAvatarUrl(url)}
-                      className={`h-16 rounded-2xl overflow-hidden border-2 transition-all cursor-pointer relative group ${
-                        customAvatarUrl === url
-                          ? 'border-primary scale-105 shadow-md ring-2 ring-primary/20'
-                          : 'border-transparent opacity-80 hover:opacity-100 hover:scale-102'
-                      }`}
-                    >
-                      <img src={url} alt={`Avatar Preset ${idx + 1}`} className="h-full w-full object-cover" />
-                      {customAvatarUrl === url && (
-                        <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
-                          <FiCheck className="h-5 w-5 text-white drop-shadow-md" />
-                        </div>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Option 3: External URL */}
-              <div>
-                <label className="block text-xs font-bold text-foreground mb-1.5">
-                  3. Hoặc dán đường dẫn ảnh trực tiếp (URL)
-                </label>
-                <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border rounded-xl">
-                  <FiImage className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <input
-                    type="url"
-                    value={customAvatarUrl?.startsWith('data:') ? '' : customAvatarUrl}
-                    onChange={e => setCustomAvatarUrl(e.target.value)}
-                    placeholder="https://images.unsplash.com/photo-..."
-                    className="bg-transparent text-xs w-full focus:outline-none font-medium"
-                  />
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-border/80">
-                <button
-                  type="button"
-                  onClick={() => setShowAvatarModal(false)}
-                  className="px-4 py-2.5 rounded-xl text-xs font-semibold border border-border hover:bg-muted text-foreground transition-colors cursor-pointer"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    await handleSaveProfile();
-                    setShowAvatarModal(false);
-                  }}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-md transition-all cursor-pointer"
-                >
-                  <FiCheck className="h-4 w-4" /> Lưu ảnh đại diện
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <AvatarModal
+        isOpen={showAvatarModal}
+        onClose={() => setShowAvatarModal(false)}
+        customAvatarUrl={customAvatarUrl}
+        setCustomAvatarUrl={setCustomAvatarUrl}
+        userAvatarUrl={user?.avatarUrl}
+        userFullName={user?.fullName}
+        onSave={handleSaveProfile}
+        isUploading={isUploadingAvatar}
+        onFileUpload={handleAvatarFileUpload}
+        fileInputRef={fileInputRef}
+      />
     </div>
   );
 };

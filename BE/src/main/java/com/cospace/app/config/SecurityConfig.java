@@ -139,6 +139,7 @@ public class SecurityConfig {
                                                 .requestMatchers("/api/bookings/branch-today", "/api/bookings/code/**").hasAnyRole("STAFF", "BRANCH_ADMIN", "SUPER_ADMIN", "ADMIN", "staff", "branch_admin", "admin")
                                                 .requestMatchers("/api/branch-admin/**").hasAnyRole("BRANCH_ADMIN", "SUPER_ADMIN", "ADMIN", "branch_admin", "admin")
                                                 .requestMatchers("/api/admin/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "super_admin", "admin")
+                                                .requestMatchers("/api/reports/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "BRANCH_ADMIN", "super_admin", "admin", "branch_admin")
                                                 .requestMatchers("/api/refunds/**").hasAnyRole("BRANCH_ADMIN", "SUPER_ADMIN", "ADMIN", "branch_admin", "super_admin", "admin")
                                                 .anyRequest().authenticated())
                                 .oauth2ResourceServer(oauth2 -> oauth2

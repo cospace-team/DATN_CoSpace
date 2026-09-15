@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { Button } from "../components/ui/button";
 import { Logo } from "../components/ui/Logo";
+import { useSEO } from "../hooks/useSEO";
 import { 
   FiMail, 
   FiLock, 
@@ -24,6 +25,11 @@ const LoginPage: React.FC = () => {
   } = useAuth();
 
   const [view, setView] = useState<"login" | "register">("login");
+
+  useSEO({
+    title: view === "login" ? "Đăng Nhập" : "Đăng Ký Tài Khoản",
+    description: "Đăng nhập tài khoản CoSpace để trải nghiệm hệ sinh thái không gian làm việc chuyên nghiệp, đặt chỗ tiện lợi.",
+  });
   const [isSubmittingGoogle, setIsSubmittingGoogle] = useState(false);
   const [isSubmittingEmail, setIsSubmittingEmail] = useState(false);
   const [isSubmittingRegister, setIsSubmittingRegister] = useState(false);
@@ -453,6 +459,66 @@ const LoginPage: React.FC = () => {
                 )}
                 <span>Tiếp tục với Google</span>
               </button>
+
+              {/* Demo Accounts Quick-Select */}
+              <div className="pt-2">
+                <div className="rounded-2xl border border-dashed border-border/80 bg-muted/30 p-3.5 space-y-2.5">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    <FiZap className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Tài khoản Demo (1-click điền)</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEmail("superadmin@cospace.vn");
+                        setPassword("Superadmin@123");
+                        setSuccessMessage("Đã chọn: Super Admin");
+                      }}
+                      className="px-2.5 py-1.5 rounded-lg border border-border bg-card hover:bg-muted text-foreground text-left font-medium transition-colors truncate"
+                      title="Admin Hệ Thống - Toàn quyền cấu hình"
+                    >
+                      👑 Super Admin
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEmail("admin.q1@cospace.vn");
+                        setPassword("Staff@123");
+                        setSuccessMessage("Đã chọn: Branch Admin (Q1)");
+                      }}
+                      className="px-2.5 py-1.5 rounded-lg border border-border bg-card hover:bg-muted text-foreground text-left font-medium transition-colors truncate"
+                      title="Quản lý chi nhánh Quận 1"
+                    >
+                      🏢 Quản lý Q1
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEmail("staff1.q1@cospace.vn");
+                        setPassword("Staff@123");
+                        setSuccessMessage("Đã chọn: Nhân viên Lễ tân (Q1)");
+                      }}
+                      className="px-2.5 py-1.5 rounded-lg border border-border bg-card hover:bg-muted text-foreground text-left font-medium transition-colors truncate"
+                      title="Lễ tân check-in / check-out / dịch vụ"
+                    >
+                      🏷️ Lễ tân Q1
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEmail("nguyenvana@demo.cospace.vn");
+                        setPassword("Staff@123");
+                        setSuccessMessage("Đã chọn: Khách hàng (An)");
+                      }}
+                      className="px-2.5 py-1.5 rounded-lg border border-border bg-card hover:bg-muted text-foreground text-left font-medium transition-colors truncate"
+                      title="Khách hàng đặt chỗ & kết nối"
+                    >
+                      👤 Khách hàng
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 

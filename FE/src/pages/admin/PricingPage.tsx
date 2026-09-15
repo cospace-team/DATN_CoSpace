@@ -16,6 +16,8 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { adminApi, type AdminPricePolicyDto } from '../../api/adminApi';
 import { adminWorkspaceTypeApi, adminBranchApi, type WorkspaceTypeResponse, type AdminBranchDto } from '../../lib/spaceApi';
 import { staffApi, type ExtraServiceDto, type CancellationPolicyDto } from '../../api/staffApi';
+import { ExtraServicesTab } from './pricing/ExtraServicesTab';
+import { CancellationTab } from './pricing/CancellationTab';
 
 const DURATION_UNITS: Array<AdminPricePolicyDto['durationUnit']> = ['hour', 'day', 'week', 'month'];
 
@@ -875,256 +877,26 @@ const PricingPage: React.FC = () => {
           TAB 2: EXTRA SERVICES PRICING & TOGGLE
          ══════════════════════════════════════════════════════════════════════ */}
       {pricingHubTab === 'services' && (
-        <div className="space-y-4">
-          <div className="p-4 bg-primary/5 border border-primary/20 rounded-2xl flex items-start gap-3 text-xs text-primary">
-            <FiInfo className="h-5 w-5 shrink-0 mt-0.5" />
-            <div>
-              <p className="font-bold text-sm">Cơ chế an toàn doanh thu & Demo trực tiếp:</p>
-              <p className="mt-0.5 text-foreground/80">
-                1. <strong>Không ảnh hưởng đơn cũ</strong>: Đơn giá dịch vụ được ghi nhận (snapshot) cố định vào từng đơn đặt chỗ ngay lúc gọi món. Sửa tên hoặc thay đổi giá không làm thay đổi lịch sử đơn cũ.
-              </p>
-              <p className="mt-0.5 text-foreground/80">
-                2. <strong>Công tắc Bật/Tắt (Toggle)</strong>: Bạn có thể bật hoặc tạm ngưng các dịch vụ bên dưới để thấy khách hàng chỉ có thể chọn các dịch vụ đang hoạt động.
-              </p>
-            </div>
-          </div>
-
-          <Card className="overflow-hidden border-border shadow-sm">
-            <CardHeader className="bg-muted/20 border-b border-border px-6 py-4 flex flex-row items-center justify-between">
-              <div>
-                <CardTitle className="text-base font-bold flex items-center gap-2">
-                  Danh mục Dịch vụ gia tăng ({filteredExtraServices.length} dịch vụ)
-                </CardTitle>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Quản lý giá bán và trạng thái cung ứng của các món ăn, thức uống, thiết bị văn phòng và tiện ích sự kiện.
-                </p>
-              </div>
-            </CardHeader>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left">
-                <thead className="bg-muted/40 text-muted-foreground uppercase text-xs">
-                  <tr>
-                    <th className="px-6 py-4 font-semibold">Tên dịch vụ</th>
-                    <th className="px-6 py-4 font-semibold">Phân loại</th>
-                    <th className="px-6 py-4 font-semibold">Đơn vị</th>
-                    <th className="px-6 py-4 font-semibold">Giá bán (VND)</th>
-                    <th className="px-6 py-4 font-semibold">Phạm vi áp dụng</th>
-                    <th className="px-6 py-4 font-semibold text-center">Trạng thái (Bật/Tắt)</th>
-                    <th className="px-6 py-4 font-semibold text-right">Thao tác</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {isLoading ? (
-                    Array.from({ length: 4 }).map((_, i) => (
-                      <tr key={`skel-svc-${i}`}>
-                        <td className="px-6 py-4"><Skeleton className="h-4 w-40" /></td>
-                        <td className="px-6 py-4"><Skeleton className="h-6 w-20 rounded-full" /></td>
-                        <td className="px-6 py-4"><Skeleton className="h-4 w-12" /></td>
-                        <td className="px-6 py-4"><Skeleton className="h-4 w-24" /></td>
-                        <td className="px-6 py-4"><Skeleton className="h-6 w-24 rounded-full" /></td>
-                        <td className="px-6 py-4 text-center"><Skeleton className="h-6 w-24 mx-auto rounded-full" /></td>
-                        <td className="px-6 py-4 text-right"><Skeleton className="h-8 w-16 ml-auto rounded-lg" /></td>
-                      </tr>
-                    ))
-                  ) : filteredExtraServices.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="py-12 text-center text-muted-foreground">
-                        Không có dịch vụ nào phù hợp với bộ lọc hiện tại.
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredExtraServices.map(svc => (
-                      <tr key={svc.id} className={`hover:bg-muted/20 transition-colors ${!svc.isActive ? 'bg-muted/10 opacity-70' : ''}`}>
-                        <td className="px-6 py-4">
-                          <div className="font-bold text-foreground text-sm">{svc.name}</div>
-                          <div className="text-[11px] text-muted-foreground font-mono mt-0.5">{svc.code}</div>
-                          {svc.description && <div className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{svc.description}</div>}
-                        </td>
-                        <td className="px-6 py-4">
-                          <Badge variant="neutral" className="gap-1 font-medium text-xs">
-                            <span>
-                              {svc.serviceType === 'drink' ? '☕'
-                                : svc.serviceType === 'meal' ? '🥐'
-                                : svc.serviceType === 'printing' ? '🖨️'
-                                : svc.serviceType === 'equipment' ? '📽️'
-                                : svc.serviceType === 'facility' ? '🚪'
-                                : '✨'}
-                            </span>
-                            <span className="capitalize">{svc.serviceType}</span>
-                          </Badge>
-                        </td>
-                        <td className="px-6 py-4 text-muted-foreground font-medium">{svc.unit}</td>
-                        <td className="px-6 py-4 font-bold text-primary text-base">{formatVND(svc.price)}</td>
-                        <td className="px-6 py-4">
-                          {svc.branchId ? (
-                            <Badge variant="info" className="gap-1">
-                              <FiMapPin className="h-3 w-3" /> Chi nhánh riêng
-                            </Badge>
-                          ) : (
-                            <Badge variant="neutral" className="gap-1">
-                              <FiGlobe className="h-3 w-3" /> Toàn hệ thống
-                            </Badge>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <button
-                            onClick={() => toggleServiceActive(svc)}
-                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all ${
-                              svc.isActive 
-                                ? 'bg-success/15 text-success hover:bg-success/25 border border-success/30' 
-                                : 'bg-muted text-muted-foreground hover:bg-muted/80 border border-border'
-                            }`}
-                            title="Bấm để bật hoặc tắt phục vụ"
-                          >
-                            <span className={`w-2 h-2 rounded-full ${svc.isActive ? 'bg-success' : 'bg-muted-foreground'}`} />
-                            {svc.isActive ? 'ĐANG PHỤC VỤ' : 'TẠM NGƯNG'}
-                          </button>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <button onClick={() => openEditService(svc)} className="btn btn-ghost btn-sm !p-1.5" title="Sửa dịch vụ"><FiEdit2 className="h-4 w-4" /></button>
-                            <button onClick={() => deleteService(svc)} className="btn btn-ghost btn-sm !p-1.5 text-destructive hover:!text-destructive" title="Xóa"><FiTrash2 className="h-4 w-4" /></button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        </div>
+        <ExtraServicesTab
+          isLoading={isLoading}
+          filteredExtraServices={filteredExtraServices}
+          onToggleActive={toggleServiceActive}
+          onOpenEdit={openEditService}
+          onDelete={deleteService}
+        />
       )}
 
       {/* ══════════════════════════════════════════════════════════════════════
           TAB 3: CANCELLATION POLICIES & PENALTY RATES
          ══════════════════════════════════════════════════════════════════════ */}
       {pricingHubTab === 'cancellation' && (
-        <div className="space-y-4">
-          <div className="p-4 bg-primary/5 border border-primary/20 rounded-2xl flex items-start gap-3 text-xs text-primary">
-            <FiShield className="h-5 w-5 shrink-0 mt-0.5" />
-            <div>
-              <p className="font-bold text-sm">Nguyên tắc Bảo toàn Tài chính (Rule #40 & Priority Engine):</p>
-              <p className="mt-0.5 text-foreground/80">
-                1. <strong>Bảo đảm phương trình cân đối</strong>: Số tiền hoàn lại (`refund_amount`) + Phí phạt hủy (`penalty_amount`) luôn chính xác bằng Tổng tiền đơn hàng (`total_amount`).
-              </p>
-              <p className="mt-0.5 text-foreground/80">
-                2. <strong>Thứ tự ưu tiên</strong>: Hệ thống so khớp quy tắc theo thứ tự `priority DESC` (Chi nhánh trước, Toàn hệ thống sau). Quy tắc đầu tiên thỏa mãn điều kiện thời gian sẽ được áp dụng.
-              </p>
-            </div>
-          </div>
-
-          <Card className="overflow-hidden border-border shadow-sm">
-            <CardHeader className="bg-muted/20 border-b border-border px-6 py-4 flex flex-row items-center justify-between">
-              <div>
-                <CardTitle className="text-base font-bold flex items-center gap-2">
-                  Chính sách Hủy đơn & Biểu phí phạt ({filteredCancellationPolicies.length} quy tắc)
-                </CardTitle>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Quy định tỷ lệ hoàn tiền theo mốc ân hạn (Grace Hours) và khoảng cách thời gian trước giờ nhận phòng (Before Start Days).
-                </p>
-              </div>
-            </CardHeader>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left">
-                <thead className="bg-muted/40 text-muted-foreground uppercase text-xs">
-                  <tr>
-                    <th className="px-6 py-4 font-semibold">Tên chính sách</th>
-                    <th className="px-6 py-4 font-semibold">Loại quy tắc</th>
-                    <th className="px-6 py-4 font-semibold">Khung thời gian</th>
-                    <th className="px-6 py-4 font-semibold">Tỷ lệ hoàn tiền</th>
-                    <th className="px-6 py-4 font-semibold">Phí phạt giữ lại</th>
-                    <th className="px-6 py-4 font-semibold text-center">Độ ưu tiên</th>
-                    <th className="px-6 py-4 font-semibold text-center">Trạng thái</th>
-                    <th className="px-6 py-4 font-semibold text-right">Thao tác</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {isLoading ? (
-                    Array.from({ length: 4 }).map((_, i) => (
-                      <tr key={`skel-cancel-${i}`}>
-                        <td className="px-6 py-4"><Skeleton className="h-4 w-40" /></td>
-                        <td className="px-6 py-4"><Skeleton className="h-6 w-24 rounded-full" /></td>
-                        <td className="px-6 py-4"><Skeleton className="h-4 w-20" /></td>
-                        <td className="px-6 py-4"><Skeleton className="h-4 w-16" /></td>
-                        <td className="px-6 py-4"><Skeleton className="h-4 w-16" /></td>
-                        <td className="px-6 py-4 text-center"><Skeleton className="h-4 w-10 mx-auto" /></td>
-                        <td className="px-6 py-4 text-center"><Skeleton className="h-6 w-20 mx-auto rounded-full" /></td>
-                        <td className="px-6 py-4 text-right"><Skeleton className="h-8 w-16 ml-auto rounded-lg" /></td>
-                      </tr>
-                    ))
-                  ) : filteredCancellationPolicies.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="py-12 text-center text-muted-foreground">
-                        Không có chính sách hủy nào phù hợp với bộ lọc hiện tại.
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredCancellationPolicies.map(pol => (
-                      <tr key={pol.id} className={`hover:bg-muted/20 transition-colors ${!pol.isActive ? 'bg-muted/10 opacity-70' : ''}`}>
-                        <td className="px-6 py-4">
-                          <div className="font-bold text-foreground text-sm">{pol.name}</div>
-                          <div className="mt-0.5">
-                            {pol.branchId ? (
-                              <span className="text-[11px] text-primary font-medium flex items-center gap-1">
-                                <FiMapPin className="h-3 w-3" /> Chi nhánh riêng
-                              </span>
-                            ) : (
-                              <span className="text-[11px] text-muted-foreground flex items-center gap-1">
-                                <FiGlobe className="h-3 w-3" /> Toàn hệ thống
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <Badge variant="neutral" className="text-xs">
-                            {pol.ruleType === 'GRACE_HOURS' ? 'Ân hạn sau đặt' : 'Trước khi nhận chỗ'}
-                          </Badge>
-                        </td>
-                        <td className="px-6 py-4 font-mono text-xs">
-                          {pol.ruleType === 'GRACE_HOURS' 
-                            ? `${pol.minValue}h - ${pol.maxValue}h sau khi đặt` 
-                            : `${pol.minValue} - ${pol.maxValue} ngày trước giờ nhận`}
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="font-bold text-success text-base">{pol.refundPercent}%</span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="font-bold text-destructive text-base">{100 - pol.refundPercent}%</span>
-                        </td>
-                        <td className="px-6 py-4 text-center font-mono font-bold text-foreground">
-                          {pol.priority}
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <button
-                            onClick={() => toggleCancelPolicyActive(pol)}
-                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all ${
-                              pol.isActive 
-                                ? 'bg-success/15 text-success hover:bg-success/25 border border-success/30' 
-                                : 'bg-muted text-muted-foreground hover:bg-muted/80 border border-border'
-                            }`}
-                            title="Bấm để kích hoạt hoặc tạm ngưng"
-                          >
-                            <span className={`w-2 h-2 rounded-full ${pol.isActive ? 'bg-success' : 'bg-muted-foreground'}`} />
-                            {pol.isActive ? 'ÁP DỤNG' : 'TẠM TẮT'}
-                          </button>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <button onClick={() => openEditCancellation(pol)} className="btn btn-ghost btn-sm !p-1.5" title="Sửa"><FiEdit2 className="h-4 w-4" /></button>
-                            <button onClick={() => deleteCancellation(pol)} className="btn btn-ghost btn-sm !p-1.5 text-destructive hover:!text-destructive" title="Xóa"><FiTrash2 className="h-4 w-4" /></button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        </div>
+        <CancellationTab
+          isLoading={isLoading}
+          filteredCancellationPolicies={filteredCancellationPolicies}
+          onToggleActive={toggleCancelPolicyActive}
+          onOpenEdit={openEditCancellation}
+          onDelete={deleteCancellation}
+        />
       )}
 
       {/* ── MODAL 1: ADD / EDIT SINGLE WORKSPACE PRICE ── */}

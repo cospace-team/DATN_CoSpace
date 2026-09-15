@@ -95,6 +95,10 @@ public class BookingService {
         }
 
         // Rule #33: Rate limit - Tối đa 3 đơn chờ thanh toán cho mỗi người dùng
+        // Advisory Lock on user to prevent race condition: 2 concurrent requests both reading count=2
+        entityManager.createNativeQuery("SELECT pg_advisory_xact_lock(hashtext(:key))")
+                .setParameter("key", "rate_limit:" + userId.toString())
+                .getSingleResult();
         int pendingCount = bookingRepository.countByUserIdAndStatus(userId, BookingStatus.PENDING_PAYMENT);
         if (pendingCount >= 3) {
             throw new IllegalStateException("Bạn đang có 3 đơn đặt chỗ chờ thanh toán. Vui lòng hoàn tất thanh toán hoặc hủy đơn cũ trước khi đặt tiếp.");
@@ -369,10 +373,18 @@ public class BookingService {
         if (userId == null) {
             throw new IllegalArgumentException("Missing user id");
         }
-        return bookingRepository.findByUserIdOrderByCreatedAtDesc(userId)
-                .stream()
-                .map(this::toDto)
-                .collect(Collectors.toList());
+        return toDtoList(bookingRepository.findByUserIdOrderByCreatedAtDesc(userId));
+    }
+
+    /** Paginated version for FE — avoids loading all bookings into memory. */
+    @Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<BookingDto> listMyBookings(UUID userId, org.springframework.data.domain.Pageable pageable) {
+        if (userId == null) {
+            throw new IllegalArgumentException("Missing user id");
+        }
+        org.springframework.data.domain.Page<Booking> page = bookingRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
+        List<BookingDto> dtos = toDtoList(page.getContent());
+        return new org.springframework.data.domain.PageImpl<>(dtos, pageable, page.getTotalElements());
     }
 
     @Transactional(readOnly = true)
@@ -402,10 +414,7 @@ public class BookingService {
         OffsetDateTime todayEnd = todayVn.plusDays(1).toOffsetDateTime().withOffsetSameInstant(ZoneOffset.UTC);
         
         // Use overlap logic to include bookings spanning across today (contracts, overnight stays)
-        return bookingRepository.findBookingsInInterval(branchId, todayStart, todayEnd)
-                .stream()
-                .map(this::toDto)
-                .collect(Collectors.toList());
+        return toDtoList(bookingRepository.findBookingsInInterval(branchId, todayStart, todayEnd));
     }
 
 
@@ -568,14 +577,88 @@ public class BookingService {
                 .map(BranchEntity::getName)
                 .orElse(null);
 
-        String customerName = userRepository.findById(b.getUserId())
-                .map(com.cospace.app.entity.User::getFullName)
-                .orElse(null);
+        // F-02/F-05 fix: single findById instead of two separate calls for name and phone
+        com.cospace.app.entity.User customer = userRepository.findById(b.getUserId()).orElse(null);
+        String customerName = customer != null ? customer.getFullName() : null;
+        String customerPhone = customer != null ? customer.getPhone() : null;
 
-        String customerPhone = userRepository.findById(b.getUserId())
-                .map(com.cospace.app.entity.User::getPhone)
-                .orElse(null);
+        return buildDto(b, workspaceName, branchName, customerName, customerPhone, latestPaymentOpt);
+    }
 
+    /**
+     * Batch-optimized conversion: prefetches all related entities in bulk to avoid N+1 queries.
+     * Use this for list APIs (listMyBookings, getBranchTodayBookings) instead of stream().map(toDto).
+     */
+    public List<BookingDto> toDtoList(List<Booking> bookings) {
+        if (bookings.isEmpty()) return List.of();
+
+        // Collect all unique IDs
+        java.util.Set<UUID> workspaceIds = new java.util.HashSet<>();
+        java.util.Set<UUID> branchIds = new java.util.HashSet<>();
+        java.util.Set<UUID> userIds = new java.util.HashSet<>();
+        java.util.Set<UUID> bookingIds = new java.util.HashSet<>();
+        for (Booking b : bookings) {
+            workspaceIds.add(b.getWorkspaceId());
+            branchIds.add(b.getBranchId());
+            userIds.add(b.getUserId());
+            bookingIds.add(b.getId());
+        }
+
+        // Batch fetch all related entities (1 query each instead of N)
+        java.util.Map<UUID, String> workspaceNames = workspaceEntityRepository.findAllById(workspaceIds)
+                .stream().collect(java.util.stream.Collectors.toMap(WorkspaceEntity::getId, WorkspaceEntity::getName));
+        java.util.Map<UUID, String> branchNames = branchEntityRepository.findAllById(branchIds)
+                .stream().collect(java.util.stream.Collectors.toMap(BranchEntity::getId, BranchEntity::getName));
+        java.util.Map<UUID, com.cospace.app.entity.User> users = userRepository.findAllById(userIds)
+                .stream().collect(java.util.stream.Collectors.toMap(com.cospace.app.entity.User::getId, u -> u));
+
+        // Batch fetch latest payments per booking
+        java.util.Map<UUID, Payment> latestPayments = new java.util.HashMap<>();
+        for (UUID bid : bookingIds) {
+            paymentRepository.findTopByBookingIdOrderByCreatedAtDesc(bid).ifPresent(p -> latestPayments.put(bid, p));
+        }
+
+        // Batch fetch cancellations for cancelled bookings
+        java.util.Map<UUID, com.cospace.app.entity.BookingCancellation> cancellations = new java.util.HashMap<>();
+        for (Booking b : bookings) {
+            if (b.getStatus() == BookingStatus.CANCELLED) {
+                bookingCancellationRepository.findByBookingId(b.getId()).ifPresent(c -> cancellations.put(b.getId(), c));
+            }
+        }
+
+        List<BookingDto> result = new java.util.ArrayList<>(bookings.size());
+        for (Booking b : bookings) {
+            com.cospace.app.entity.User customer = users.get(b.getUserId());
+            BookingDto dto = buildDto(b,
+                    workspaceNames.get(b.getWorkspaceId()),
+                    branchNames.get(b.getBranchId()),
+                    customer != null ? customer.getFullName() : null,
+                    customer != null ? customer.getPhone() : null,
+                    Optional.ofNullable(latestPayments.get(b.getId())));
+
+            // Attach cancellation info if present
+            if (b.getStatus() == BookingStatus.CANCELLED) {
+                com.cospace.app.entity.BookingCancellation c = cancellations.get(b.getId());
+                if (c != null) {
+                    dto = dto.toBuilder()
+                            .cancellationReason(c.getReason())
+                            .refundPercent(c.getRefundPercent())
+                            .refundAmount(c.getRefundAmount())
+                            .penaltyAmount(c.getPenaltyAmount())
+                            .refundStatus(c.getRefundStatus())
+                            .cancelledAt(c.getCreatedAt() != null ? c.getCreatedAt().toString() : null)
+                            .policyName(c.getAppliedRuleJson() != null && c.getAppliedRuleJson().get("policy_name") != null
+                                    ? c.getAppliedRuleJson().get("policy_name").toString() : null)
+                            .build();
+                }
+            }
+            result.add(dto);
+        }
+        return result;
+    }
+
+    private BookingDto buildDto(Booking b, String workspaceName, String branchName,
+                                String customerName, String customerPhone, Optional<Payment> latestPaymentOpt) {
         BookingDto.BookingDtoBuilder builder = BookingDto.builder()
                 .id(b.getId())
                 .bookingCode(b.getBookingCode())
