@@ -11,6 +11,8 @@ import java.util.UUID;
 public interface WorkspaceTypeRepository extends JpaRepository<WorkspaceType, UUID> {
     Optional<WorkspaceType> findByCode(String code);
 
+    boolean existsByCode(String code);
+
     default Optional<WorkspaceType> findByString(String idStr) {
         try {
             return findById(UUID.fromString(idStr));

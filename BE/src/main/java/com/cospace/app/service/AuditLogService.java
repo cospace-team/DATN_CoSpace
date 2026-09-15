@@ -1,10 +1,12 @@
 package com.cospace.app.service;
 
+import com.cospace.app.config.CacheConfig;
 import com.cospace.app.entity.AuditLogEntity;
 import com.cospace.app.repository.AuditLogRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -59,6 +61,7 @@ public class AuditLogService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(CacheConfig.AUDIT_LOGS)
     public Page<AuditLogEntity> searchAuditLogs(UUID userId, String entityName, String action, int page, int size) {
         Pageable pageable = PageRequest.of(Math.max(0, page), Math.min(100, Math.max(1, size)));
         return auditLogRepository.searchAuditLogs(userId, entityName, action, pageable);

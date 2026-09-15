@@ -205,6 +205,92 @@ export const workspaceTypeApi = {
     ),
 };
 
+export interface WorkspaceTypeRequest {
+  code: string;
+  name: string;
+  capacityDefault: number;
+}
+
+/* ─── Admin: system-wide Workspace Type management ─── */
+
+export const adminWorkspaceTypeApi = {
+  list: () =>
+    apiFetch<WorkspaceTypeResponse[]>(`${API}/api/admin/workspace-types`),
+
+  create: (req: WorkspaceTypeRequest) =>
+    apiFetch<WorkspaceTypeResponse>(`${API}/api/admin/workspace-types`, {
+      method: "POST",
+      body: JSON.stringify(req),
+    }),
+
+  update: (id: string, req: WorkspaceTypeRequest) =>
+    apiFetch<WorkspaceTypeResponse>(`${API}/api/admin/workspace-types/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(req),
+    }),
+
+  delete: (id: string) =>
+    apiFetch<{ message: string }>(`${API}/api/admin/workspace-types/${id}`, {
+      method: "DELETE",
+    }),
+};
+
+/* ─── Admin: system-wide Branch management ─── */
+
+export interface AdminBranchDto {
+  id: string;
+  code: string;
+  name: string;
+  address: string;
+  city: string;
+  timezone: string;
+  openTime: string | null;
+  closeTime: string | null;
+  status: "active" | "inactive";
+  createdAt: string;
+}
+
+export interface CreateBranchRequest {
+  code: string;
+  name: string;
+  address: string;
+  city?: string;
+  timezone?: string;
+  openTime?: string;
+  closeTime?: string;
+}
+
+export interface UpdateBranchRequest {
+  name?: string;
+  address?: string;
+  city?: string;
+  timezone?: string;
+  openTime?: string;
+  closeTime?: string;
+  status?: "active" | "inactive";
+}
+
+export const adminBranchApi = {
+  list: () => apiFetch<AdminBranchDto[]>(`${API}/api/admin/branches`),
+
+  create: (req: CreateBranchRequest) =>
+    apiFetch<AdminBranchDto>(`${API}/api/admin/branches`, {
+      method: "POST",
+      body: JSON.stringify(req),
+    }),
+
+  update: (id: string, req: UpdateBranchRequest) =>
+    apiFetch<AdminBranchDto>(`${API}/api/admin/branches/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(req),
+    }),
+
+  deactivate: (id: string) =>
+    apiFetch<{ message: string }>(`${API}/api/admin/branches/${id}`, {
+      method: "DELETE",
+    }),
+};
+
 /* ─── Branch Response (public listing) ─── */
 
 export interface BranchResponse {

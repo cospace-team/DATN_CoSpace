@@ -1,5 +1,6 @@
 package com.cospace.app.service;
 
+import com.cospace.app.config.CacheConfig;
 import com.cospace.app.dto.api.ReportOverviewDto;
 import com.cospace.app.entity.Booking;
 import com.cospace.app.entity.BookingStatus;
@@ -15,6 +16,7 @@ import com.cospace.app.repository.UserRepository;
 import com.cospace.app.repository.WorkspaceTypeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -65,6 +67,7 @@ public class ReportService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(CacheConfig.REPORTS_OVERVIEW)
     public ReportOverviewDto getOverview(UUID branchId, LocalDate dateFrom, LocalDate dateTo, String groupBy) {
         OffsetDateTime start = (dateFrom != null) ? vnStartOfDay(dateFrom) : null;
         OffsetDateTime end = (dateTo != null) ? vnEndOfDay(dateTo) : null;

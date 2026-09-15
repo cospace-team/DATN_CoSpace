@@ -1,9 +1,12 @@
 package com.cospace.app.service;
 
+import com.cospace.app.config.CacheConfig;
 import com.cospace.app.entity.ExtraServiceEntity;
 import com.cospace.app.repository.BookingServiceItemRepository;
 import com.cospace.app.repository.ExtraServiceRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +23,7 @@ public class ExtraServiceService {
     private final BookingServiceItemRepository bookingServiceItemRepository;
 
     @Transactional(readOnly = true)
+    @Cacheable(CacheConfig.EXTRA_SERVICES)
     public List<ExtraServiceEntity> getAvailableServices(UUID branchId) {
         List<ExtraServiceEntity> result = new ArrayList<>();
         if (branchId != null) {
@@ -30,6 +34,7 @@ public class ExtraServiceService {
     }
 
     @Transactional
+    @CacheEvict(value = CacheConfig.EXTRA_SERVICES, allEntries = true)
     public ExtraServiceEntity createService(ExtraServiceEntity service) {
         return extraServiceRepository.save(service);
     }
@@ -41,6 +46,7 @@ public class ExtraServiceService {
      * wiping the service's name, unit and price on a simple on/off toggle.
      */
     @Transactional
+    @CacheEvict(value = CacheConfig.EXTRA_SERVICES, allEntries = true)
     public ExtraServiceEntity updateService(UUID id, Map<String, Object> updates) {
         ExtraServiceEntity existing = extraServiceRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Dịch vụ không tồn tại"));
@@ -77,6 +83,7 @@ public class ExtraServiceService {
      * case is rejected with a clear message instead of letting the FK violation surface as a 500.
      */
     @Transactional
+    @CacheEvict(value = CacheConfig.EXTRA_SERVICES, allEntries = true)
     public void deleteService(UUID id) {
         ExtraServiceEntity existing = extraServiceRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Dịch vụ không tồn tại"));

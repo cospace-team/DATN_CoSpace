@@ -8,6 +8,8 @@ import com.cospace.app.service.AuditLogService;
 import com.cospace.app.service.CancellationService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -32,6 +34,7 @@ public class CancellationPolicyController {
     private final HttpServletRequest httpServletRequest;
 
     @GetMapping("/cancellation-policies")
+    @Cacheable(com.cospace.app.config.CacheConfig.CANCELLATION_POLICIES)
     public ResponseEntity<List<CancellationPolicy>> getPolicies(
             @RequestParam(name = "branchId", required = false) UUID branchId) {
         List<CancellationPolicy> policies = new ArrayList<>();
@@ -44,6 +47,7 @@ public class CancellationPolicyController {
 
     @PostMapping("/cancellation-policies")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN', 'BRANCH_ADMIN', 'super_admin', 'admin', 'branch_admin')")
+    @CacheEvict(value = com.cospace.app.config.CacheConfig.CANCELLATION_POLICIES, allEntries = true)
     public ResponseEntity<CancellationPolicy> createPolicy(
             @AuthenticationPrincipal Jwt jwt,
             @RequestBody CancellationPolicy policy) {
@@ -60,6 +64,7 @@ public class CancellationPolicyController {
 
     @PutMapping("/cancellation-policies/{id}")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN', 'BRANCH_ADMIN', 'super_admin', 'admin', 'branch_admin')")
+    @CacheEvict(value = com.cospace.app.config.CacheConfig.CANCELLATION_POLICIES, allEntries = true)
     public ResponseEntity<CancellationPolicy> updatePolicy(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID id,
@@ -86,6 +91,7 @@ public class CancellationPolicyController {
 
     @DeleteMapping("/cancellation-policies/{id}")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN', 'BRANCH_ADMIN', 'super_admin', 'admin', 'branch_admin')")
+    @CacheEvict(value = com.cospace.app.config.CacheConfig.CANCELLATION_POLICIES, allEntries = true)
     public ResponseEntity<?> deletePolicy(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
         CancellationPolicy existing = policyRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Chính sách hủy không tồn tại"));

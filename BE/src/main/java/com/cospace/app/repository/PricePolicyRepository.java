@@ -21,4 +21,6 @@ public interface PricePolicyRepository extends JpaRepository<PricePolicy, UUID> 
     List<PricePolicy> findByBranchIdAndIsActiveTrue(UUID branchId);
 
     List<PricePolicy> findByBranchIdIsNullAndIsActiveTrue();
+
+    long countByWorkspaceTypeId(UUID workspaceTypeId);
 }
