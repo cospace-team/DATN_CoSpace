@@ -1,5 +1,6 @@
 package com.cospace.app.entity;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -37,8 +38,8 @@ public class ExtraServiceEntity {
     @Column(nullable = false, length = 120)
     private String name;
 
-    // One of: drink, meal, printing, other — drives which icon the branch-admin UI shows.
-    @Column(name = "service_type", nullable = false, length = 20)
+    // Service category: drink, meal, printing, equipment, facility, other, etc.
+    @Column(name = "service_type", nullable = false, length = 50)
     @Builder.Default
     private String serviceType = "other";
 
@@ -52,9 +53,20 @@ public class ExtraServiceEntity {
     @Builder.Default
     private String unit = "item";
 
+    @JsonProperty("isActive")
     @Column(name = "is_active", nullable = false)
     @Builder.Default
     private boolean isActive = true;
+
+    @JsonProperty("isActive")
+    public boolean getIsActive() {
+        return this.isActive;
+    }
+
+    @JsonProperty("isActive")
+    public void setIsActive(boolean isActive) {
+        this.isActive = isActive;
+    }
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;

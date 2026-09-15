@@ -9,8 +9,19 @@ import { Button } from '../../components/ui/button';
 import { useAuth } from '../../context/AuthContext';
 import { bookingApi } from '../../lib/bookingApi';
 import { useToast } from '../../components/Toast';
-import { ADDON_SERVICES as MOCK_SERVICES } from '../../data/addonServices';
 import { resolveBranchId } from '../../data/branchAliases';
+import { customerSpaceApi, type ExtraServiceResponse } from '../../lib/spaceApi';
+
+const getServiceIcon = (type?: string, name?: string) => {
+  const n = (name || '').toLowerCase();
+  const t = (type || '').toLowerCase();
+  if (t === 'drink' || n.includes('cà phê') || n.includes('trà') || n.includes('nước')) return '☕';
+  if (t === 'printing' || n.includes('in') || n.includes('scan')) return '🖨️';
+  if (t === 'meal' || n.includes('bánh') || n.includes('cơm') || n.includes('ăn')) return '🥪';
+  if (n.includes('màn hình') || n.includes('máy chiếu')) return '🖥️';
+  if (n.includes('bút') || n.includes('bảng')) return '📝';
+  return '✨';
+};
 
 const BookingCheckoutPage: React.FC = () => {
   const location = useLocation();
@@ -41,6 +52,17 @@ const BookingCheckoutPage: React.FC = () => {
         ? Math.max(1, Math.round(Math.abs(endDate.getTime() - date.getTime()) / (86_400_000 * 7)))
         : Math.max(1, Math.round(Math.abs(endDate.getTime() - date.getTime()) / 86_400_000)))
     : Math.max(1, endHour - startHour);
+
+  const [serviceDetails, setServiceDetails] = useState<ExtraServiceResponse[]>(state?.serviceDetails || []);
+
+  useEffect(() => {
+    if (serviceDetails.length === 0 && Object.keys(services).length > 0 && workspace) {
+      const branchId = resolveBranchId(workspace.branch_id || workspace.branchId);
+      customerSpaceApi.listExtraServices(branchId).then(data => {
+        if (data) setServiceDetails(data);
+      }).catch(err => console.error("Failed to load extra services in checkout", err));
+    }
+  }, [workspace, services, serviceDetails.length]);
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeBooking, setActiveBooking] = useState<any | null>(null);
@@ -305,27 +327,31 @@ const BookingCheckoutPage: React.FC = () => {
           {/* Add-ons List */}
           {Object.keys(services).length > 0 && (
             <section className="rounded-3xl border border-border bg-card p-6 shadow-sm space-y-4">
-              <h3 className="font-semibold text-xl   text-foreground flex items-center gap-3">
-                <div className="w-8 h-8 bg-emerald-50 dark:bg-emerald-950/30 dark:bg-emerald-950/300 rounded-full flex items-center justify-center text-white text-sm">{Object.keys(services).length}</div>
+              <h3 className="font-semibold text-xl text-foreground flex items-center gap-3">
+                <div className="w-8 h-8 bg-emerald-50 dark:bg-emerald-950/30 rounded-full flex items-center justify-center text-white text-sm">{Object.keys(services).length}</div>
                 Dịch vụ bổ sung
               </h3>
               <div className="space-y-4">
                 {Object.keys(services).map(id => {
-                  const service = MOCK_SERVICES.find(s => s.id === id);
-                  if (!service) return null;
+                  const service = serviceDetails.find(s => s.id === id);
+                  const serviceName = service?.name || 'Dịch vụ gia tăng';
+                  const servicePrice = service?.price || 0;
+                  const serviceIcon = getServiceIcon(service?.serviceType, serviceName);
                   return (
-                    <div key={service.id} className="flex items-center justify-between p-4 rounded-3xl border border-border bg-muted/50 hover:bg-muted/50 transition-colors">
+                    <div key={id} className="flex items-center justify-between p-4 rounded-3xl border border-border bg-muted/50 hover:bg-muted/50 transition-colors">
                       <div className="flex items-center gap-4">
                         <div className="h-12 w-12 rounded-3xl bg-card border border-border text-foreground flex items-center justify-center text-xl shadow-sm">
-                          {service.icon}
+                          {serviceIcon}
                         </div>
                         <div>
-                          <p className="font-semibold text-lg text-foreground">{service.name}</p>
-                          <p className="text-xs font-medium text-foreground/70  tracking-tight">{formatVND(service.price)} / lượt</p>
+                          <p className="font-semibold text-lg text-foreground">{serviceName}</p>
+                          <p className="text-xs font-medium text-foreground/70 tracking-tight">
+                            {servicePrice > 0 ? `${formatVND(servicePrice)} / lượt` : 'Đã bao gồm'}
+                          </p>
                         </div>
                       </div>
                       <span className="text-lg font-mono font-semibold px-4 py-2 rounded-3xl bg-slate-900 text-white border border-border shadow-sm">
-                        + {formatVND(service.price)}
+                        + {formatVND(servicePrice)}
                       </span>
                     </div>
                   );

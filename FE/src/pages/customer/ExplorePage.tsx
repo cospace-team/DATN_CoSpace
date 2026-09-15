@@ -44,13 +44,24 @@ import {
   type WorkspaceResponse,
   type BranchResponse,
   type PublicWorkspaceAvailability,
+  type ExtraServiceResponse,
 } from "../../lib/spaceApi";
 import { useToast } from "../../components/Toast";
 import FloorPlanViewer from "../../components/floor-plan/FloorPlanViewer";
 import type { FloorLayout } from "../../types/floorPlan";
 import { resolveBranchId } from "../../data/branchAliases";
-import { ADDON_SERVICES as MOCK_SERVICES } from "../../data/addonServices";
 import { Skeleton } from "../../components/ui/Skeleton";
+
+const getServiceIcon = (type?: string, name?: string) => {
+  const n = (name || '').toLowerCase();
+  const t = (type || '').toLowerCase();
+  if (t === 'drink' || n.includes('cà phê') || n.includes('trà') || n.includes('nước')) return '☕';
+  if (t === 'printing' || n.includes('in') || n.includes('scan')) return '🖨️';
+  if (t === 'meal' || n.includes('bánh') || n.includes('cơm') || n.includes('ăn')) return '🥪';
+  if (n.includes('màn hình') || n.includes('máy chiếu')) return '🖥️';
+  if (n.includes('bút') || n.includes('bảng')) return '📝';
+  return '✨';
+};
 
 /* ── Types ── */
 type ViewMode = "map" | "day" | "grid" | "list";
@@ -179,6 +190,7 @@ const BookingPanel: React.FC<{
   onClose: () => void;
   onChangeStartHour: (hour: number) => void;
   checkAvailability?: (startHour: number, endHour: number, endDate: Date, unit: string) => string;
+  availableServices?: ExtraServiceResponse[];
   onBookNow: (
     endHour: number,
     services: Record<string, number>,
@@ -199,6 +211,7 @@ const BookingPanel: React.FC<{
   onClose,
   onChangeStartHour,
   checkAvailability,
+  availableServices = [],
   onBookNow,
 }) => {
   const price = getPrice();
@@ -239,7 +252,7 @@ const BookingPanel: React.FC<{
 
   const subtotal = unitCount * (price?.price || 0);
   const addonTotal = Object.keys(services).reduce((sum, id) => {
-    const s = MOCK_SERVICES.find((x) => x.id === id);
+    const s = availableServices.find((x) => x.id === id);
     return sum + (s?.price || 0);
   }, 0);
   const total = subtotal + addonTotal;
@@ -460,27 +473,31 @@ const BookingPanel: React.FC<{
             Dịch vụ thêm
           </p>
           <div className="space-y-2">
-            {MOCK_SERVICES.map((s) => (
-              <label
-                key={s.id}
-                htmlFor={`addon-${s.id}-${selectedWs}`}
-                className="flex items-center gap-3 text-sm cursor-pointer"
-              >
-                <input
-                  id={`addon-${s.id}-${selectedWs}`}
-                  type="checkbox"
-                  checked={!!services[s.id]}
-                  onChange={(e) => handleServiceChange(s.id, e.target.checked)}
-                  className="rounded accent-[var(--brand-primary)]"
-                />
-                <span className="flex items-center gap-1.5">
-                  {s.icon} {s.name}
-                </span>
-                <span className="ml-auto text-xs text-[var(--text-tertiary)]">
-                  +{formatVND(s.price)}
-                </span>
-              </label>
-            ))}
+            {availableServices.length === 0 ? (
+              <p className="text-xs text-[var(--text-tertiary)] italic">Không có dịch vụ đi kèm</p>
+            ) : (
+              availableServices.filter((s) => s.isActive !== false).map((s) => (
+                <label
+                  key={s.id}
+                  htmlFor={`addon-${s.id}-${selectedWs}`}
+                  className="flex items-center gap-3 text-sm cursor-pointer"
+                >
+                  <input
+                    id={`addon-${s.id}-${selectedWs}`}
+                    type="checkbox"
+                    checked={!!services[s.id]}
+                    onChange={(e) => handleServiceChange(s.id, e.target.checked)}
+                    className="rounded accent-[var(--brand-primary)]"
+                  />
+                  <span className="flex items-center gap-1.5">
+                    {getServiceIcon(s.serviceType, s.name)} {s.name}
+                  </span>
+                  <span className="ml-auto text-xs text-[var(--text-tertiary)]">
+                    +{formatVND(s.price)}
+                  </span>
+                </label>
+              ))
+            )}
           </div>
         </div>
 
@@ -575,7 +592,23 @@ const ExplorePage: React.FC = () => {
     return saved ? Number(saved) : null;
   });
   
-  // Persist states to sessionStorage
+  const [availableServices, setAvailableServices] = useState<ExtraServiceResponse[]>([]);
+
+  // Load available extra services when branch changes
+  useEffect(() => {
+    const loadServices = async () => {
+      try {
+        const resolvedBranchId = resolveBranchId(selectedBranch);
+        const data = await customerSpaceApi.listExtraServices(resolvedBranchId);
+        setAvailableServices(data || []);
+      } catch (err) {
+        console.error("Failed to load extra services:", err);
+      }
+    };
+    loadServices();
+  }, [selectedBranch]);
+
+  // Persist selectedBranch to sessionStorage
   useEffect(() => {
     sessionStorage.setItem("selectedBranch", selectedBranch);
   }, [selectedBranch]);
@@ -982,6 +1015,7 @@ const ExplorePage: React.FC = () => {
     const price = getPrice(selectedWsData.workspace_type_id);
     const branchObj = branches.find((b) => b.id === selectedBranch);
     const branchName = branchObj ? branchObj.name : "CoSpace Chi nhánh";
+    const selectedServiceDetails = availableServices.filter((s) => !!services[s.id]);
 
     navigate("/customer/checkout", {
       state: {
@@ -994,6 +1028,7 @@ const ExplorePage: React.FC = () => {
         endDate: endDate,
         durationUnit: durationUnit,
         services: services,
+        serviceDetails: selectedServiceDetails,
         subtotal: subtotal,
         addonTotal: addonTotal,
         total: subtotal + addonTotal,
@@ -1212,14 +1247,22 @@ const ExplorePage: React.FC = () => {
                       }}
                     />
                   ) : (
-                    <div className="flex flex-col items-center justify-center p-12 text-center bg-card border border-border rounded-2xl max-w-md shadow-sm">
-                      <FiMap className="h-12 w-12 text-foreground mb-4" />
-                      <p className="text-base font-medium text-foreground tracking-tight">
-                        Tầng này chưa được thiết lập sơ đồ.
+                    <div className="flex flex-col items-center justify-center p-10 text-center bg-card border border-border rounded-3xl max-w-md shadow-sm animate-fade-in">
+                      <div className="h-14 w-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mb-3">
+                        <FiMap className="h-7 w-7" />
+                      </div>
+                      <p className="text-base font-semibold text-foreground tracking-tight">
+                        Khu vực tầng này đang cập nhật sơ đồ
                       </p>
-                      <p className="text-sm text-foreground opacity-70 mt-2 font-semibold">
-                        Vui lòng quay lại sau hoặc liên hệ quản trị viên.
+                      <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+                        Sơ đồ mặt bằng chi tiết của tầng đang được hoàn thiện. Quý khách vui lòng chọn tầng khác hoặc chuyển sang chế độ danh sách để xem chỗ ngồi khả dụng.
                       </p>
+                      <button
+                        onClick={() => setViewMode("list")}
+                        className="btn btn-outline btn-sm mt-4 text-xs font-medium"
+                      >
+                        Chuyển sang xem dạng danh sách
+                      </button>
                     </div>
                   )}
                 </div>
@@ -1570,6 +1613,7 @@ const ExplorePage: React.FC = () => {
                 onClose={() => setSelectedWs(null)}
                 onChangeStartHour={(h) => setSelectedHour(h)}
                 checkAvailability={(stH, endH, endD, unit) => getWsAvailability(selectedWs, selectedDate, stH, endD, unit === 'hour' ? endH : undefined)}
+                availableServices={availableServices}
                 onBookNow={handleBookNow}
               />
             </div>
@@ -1594,6 +1638,7 @@ const ExplorePage: React.FC = () => {
                   onClose={() => setSelectedWs(null)}
                   onChangeStartHour={(h) => setSelectedHour(h)}
                   checkAvailability={(stH, endH, endD, unit) => getWsAvailability(selectedWs, selectedDate, stH, endD, unit === 'hour' ? endH : undefined)}
+                  availableServices={availableServices}
                   onBookNow={handleBookNow}
                 />
               </div>

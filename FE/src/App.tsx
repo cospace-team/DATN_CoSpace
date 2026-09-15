@@ -58,6 +58,7 @@ const MaintenancePage = React.lazy(() => import("./pages/staff/MaintenancePage")
 const WalkinBookingPage = React.lazy(() => import("./pages/staff/WalkinBookingPage"));
 const AdminDashboardPage = React.lazy(() => import("./pages/admin/AdminDashboardPage"));
 const BranchManagementPage = React.lazy(() => import("./pages/admin/BranchManagementPage"));
+const AdminWorkspacePage = React.lazy(() => import("./pages/admin/AdminWorkspacePage"));
 const PricingPage = React.lazy(() => import("./pages/admin/PricingPage"));
 const UserManagementPage = React.lazy(() => import("./pages/admin/UserManagementPage"));
 const CancellationPoliciesPage = React.lazy(() => import("./pages/admin/CancellationPoliciesPage"));
@@ -106,6 +107,7 @@ const branchAdminNav: NavItem[] = [
 const adminNav: NavItem[] = [
   { to: "/admin/dashboard", label: "Tổng quan", icon: <FiActivity className="h-4 w-4" /> },
   { to: "/admin/branches", label: "Chi nhánh", icon: <FiMapPin className="h-4 w-4" /> },
+  { to: "/admin/workspaces", label: "Không gian", icon: <FiGrid className="h-4 w-4" /> },
   { to: "/admin/pricing", label: "Bảng giá", icon: <FiTag className="h-4 w-4" /> },
   { to: "/admin/users", label: "Người dùng", icon: <FiUsers className="h-4 w-4" /> },
   { to: "/admin/cancellation", label: "Chính sách hủy", icon: <FiShield className="h-4 w-4" /> },
@@ -187,22 +189,22 @@ const AppShell: React.FC = () => {
     return <Navigate to="/login" replace />;
   }
 
-  const isBranchAdmin = (user.role === "admin" || (user.role as string) === "branch_admin") && !!user.branchId;
-  const isSuperAdmin  = (user.role as string) === "super_admin" || (user.role === "admin" && !user.branchId);
-
   const navItems =
-    isBranchAdmin ? branchAdminNav
-    : isSuperAdmin  ? adminNav
+    user.role === "branch_admin" ? branchAdminNav
+    : user.role === "super_admin" ? adminNav
     : user.role === "staff" ? staffNav
     : customerNav;
+
   const roleLabel: Record<UserRole, string> = {
     customer: "Khách hàng",
     staff: "Nhân viên",
-    admin: isBranchAdmin ? `Quản lý chi nhánh` : "Quản trị viên",
+    branch_admin: "Quản lý chi nhánh",
+    super_admin: "Quản trị viên tổng",
   };
+
   const defaultRoute =
-    isBranchAdmin ? "/branch-admin/dashboard"
-    : isSuperAdmin  ? "/admin/dashboard"
+    user.role === "branch_admin" ? "/branch-admin/dashboard"
+    : user.role === "super_admin" ? "/admin/dashboard"
     : user.role === "staff" ? "/staff/dashboard"
     : "/customer/explore";
 
@@ -439,14 +441,14 @@ const AppShell: React.FC = () => {
                 )}
 
                 {/* Super Admin */}
-                {isSuperAdmin && (
+                {user.role === 'super_admin' && (
                   <>
                     <Route path="/admin/dashboard"   element={<AdminDashboardPage />} />
                     <Route path="/admin/branches"    element={<BranchManagementPage />} />
+                    <Route path="/admin/workspaces"  element={<AdminWorkspacePage />} />
                     <Route path="/admin/pricing"     element={<PricingPage />} />
                     <Route path="/admin/users"       element={<UserManagementPage />} />
                     <Route path="/admin/cancellation" element={<CancellationPoliciesPage />} />
-
                     <Route path="/admin/services"    element={<ExtraServicesPage />} />
                     <Route path="/admin/audit"       element={<AuditLogPage />} />
                     <Route path="/admin/reports"     element={<ReportsPage />} />
@@ -454,7 +456,7 @@ const AppShell: React.FC = () => {
                 )}
 
                 {/* Branch Admin */}
-                {isBranchAdmin && (
+                {user.role === 'branch_admin' && (
                   <>
                     <Route path="/branch-admin/dashboard"   element={<BADashboardPage />} />
                     <Route path="/branch-admin/workspaces"  element={<BAWorkspacePage />} />

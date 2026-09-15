@@ -31,8 +31,10 @@ const PublicNavbar: React.FC = () => {
   const handleDashboard = () => {
     if (isAuthenticated && user) {
       const route =
-        user.role === "admin"
-          ? user.branchId ? "/branch-admin/dashboard" : "/admin/dashboard"
+        user.role === "super_admin"
+          ? "/admin/dashboard"
+          : user.role === "branch_admin"
+          ? "/branch-admin/dashboard"
           : user.role === "staff"
           ? "/staff/dashboard"
           : "/customer/explore";

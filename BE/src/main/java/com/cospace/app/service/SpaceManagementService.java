@@ -7,14 +7,17 @@ import com.cospace.app.dto.api.SpaceDto.WorkspaceTypeResponse;
 import com.cospace.app.dto.api.SpaceDto.FloorResponse;
 import com.cospace.app.dto.api.SpaceDto.CreateFloorRequest;
 import com.cospace.app.dto.api.SpaceDto.UpdateFloorRequest;
+import com.cospace.app.entity.BranchEntity;
 import com.cospace.app.entity.Floor;
 import com.cospace.app.entity.WorkspaceEntity;
 import com.cospace.app.entity.WorkspaceType;
 import com.cospace.app.repository.BookingRepository;
+import com.cospace.app.repository.BranchEntityRepository;
 import com.cospace.app.repository.FloorRepository;
 import com.cospace.app.repository.WorkspaceEntityRepository;
 import com.cospace.app.repository.WorkspaceTypeRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -33,7 +36,17 @@ public class SpaceManagementService {
     private final WorkspaceEntityRepository workspaceRepository;
     private final WorkspaceTypeRepository workspaceTypeRepository;
     private final BookingRepository bookingRepository;
+    private final BranchEntityRepository branchEntityRepository;
     private final ObjectMapper objectMapper;
+
+    private void validateBranchActive(UUID branchId) {
+        if (branchId == null) return;
+        branchEntityRepository.findById(branchId).ifPresent(branch -> {
+            if (branch.getStatus() == BranchEntity.BranchStatus.inactive) {
+                throw new IllegalArgumentException("Chi nhánh đang tạm ngưng hoạt động. Vui lòng kích hoạt chi nhánh trước khi cấu hình không gian.");
+            }
+        });
+    }
 
     /* ═══════════════════════ Workspace Types ═══════════════════════ */
 
@@ -53,6 +66,8 @@ public class SpaceManagementService {
 
     @Transactional
     public FloorResponse createFloor(UUID branchId, CreateFloorRequest req) {
+        validateBranchActive(branchId);
+
         if (floorRepository.existsByBranchIdAndFloorNo(branchId, req.getFloorNo())) {
             throw new IllegalArgumentException("Tầng số " + req.getFloorNo() + " đã tồn tại trong chi nhánh này.");
         }
@@ -68,8 +83,12 @@ public class SpaceManagementService {
                 .isPublished(true)
                 .build();
 
-        floor = floorRepository.save(floor);
-        return toResponse(floor);
+        try {
+            floor = floorRepository.saveAndFlush(floor);
+            return toResponse(floor);
+        } catch (DataIntegrityViolationException e) {
+            throw new IllegalArgumentException("Tầng số " + req.getFloorNo() + " đã tồn tại trong chi nhánh này. Vui lòng chọn số tầng khác.");
+        }
     }
 
     @Transactional
@@ -77,9 +96,10 @@ public class SpaceManagementService {
         Floor floor = floorRepository.findById(floorId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy tầng."));
 
-        if (!floor.getBranchId().equals(branchId)) {
+        if (branchId != null && !floor.getBranchId().equals(branchId)) {
             throw new IllegalArgumentException("Tầng không thuộc chi nhánh của bạn.");
         }
+        validateBranchActive(floor.getBranchId());
 
         if (req.getName() != null && !req.getName().isBlank()) {
             floor.setName(req.getName());
@@ -142,8 +162,12 @@ public class SpaceManagementService {
             }
         }
 
-        floor = floorRepository.save(floor);
-        return toResponse(floor);
+        try {
+            floor = floorRepository.saveAndFlush(floor);
+            return toResponse(floor);
+        } catch (DataIntegrityViolationException e) {
+            throw new IllegalArgumentException("Tầng số " + req.getFloorNo() + " đã tồn tại trong chi nhánh này. Vui lòng chọn số tầng khác.");
+        }
     }
 
     @Transactional
@@ -151,7 +175,7 @@ public class SpaceManagementService {
         Floor floor = floorRepository.findById(floorId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy tầng."));
 
-        if (!floor.getBranchId().equals(branchId)) {
+        if (branchId != null && !floor.getBranchId().equals(branchId)) {
             throw new IllegalArgumentException("Tầng không thuộc chi nhánh của bạn.");
         }
 
@@ -175,7 +199,7 @@ public class SpaceManagementService {
         // Verify floor belongs to branch
         Floor floor = floorRepository.findById(floorId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy tầng."));
-        if (!floor.getBranchId().equals(branchId)) {
+        if (branchId != null && !floor.getBranchId().equals(branchId)) {
             throw new IllegalArgumentException("Tầng không thuộc chi nhánh của bạn.");
         }
 
@@ -189,9 +213,10 @@ public class SpaceManagementService {
         // Verify floor belongs to branch
         Floor floor = floorRepository.findById(req.getFloorId())
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy tầng."));
-        if (!floor.getBranchId().equals(branchId)) {
+        if (branchId != null && !floor.getBranchId().equals(branchId)) {
             throw new IllegalArgumentException("Tầng không thuộc chi nhánh của bạn.");
         }
+        validateBranchActive(floor.getBranchId());
 
         // Verify workspace type exists
         workspaceTypeRepository.findByString(req.getWorkspaceTypeId())
@@ -218,8 +243,12 @@ public class SpaceManagementService {
                 .status(WorkspaceEntity.Status.active)
                 .build();
 
-        ws = workspaceRepository.save(ws);
-        return toResponse(ws);
+        try {
+            ws = workspaceRepository.saveAndFlush(ws);
+            return toResponse(ws);
+        } catch (DataIntegrityViolationException e) {
+            throw new IllegalArgumentException("Mã không gian hoặc phần tử SVG đã tồn tại trong tầng này.");
+        }
     }
 
     @Transactional
@@ -230,9 +259,10 @@ public class SpaceManagementService {
         // Verify workspace's floor belongs to branch
         Floor floor = floorRepository.findById(ws.getFloorId())
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy tầng."));
-        if (!floor.getBranchId().equals(branchId)) {
+        if (branchId != null && !floor.getBranchId().equals(branchId)) {
             throw new IllegalArgumentException("Workspace không thuộc chi nhánh của bạn.");
         }
+        validateBranchActive(floor.getBranchId());
 
         if (req.getCode() != null && !req.getCode().isBlank() && !req.getCode().equals(ws.getCode())) {
             if (workspaceRepository.existsByFloorIdAndCode(ws.getFloorId(), req.getCode())) {
@@ -266,8 +296,12 @@ public class SpaceManagementService {
             }
         }
 
-        ws = workspaceRepository.save(ws);
-        return toResponse(ws);
+        try {
+            ws = workspaceRepository.saveAndFlush(ws);
+            return toResponse(ws);
+        } catch (DataIntegrityViolationException e) {
+            throw new IllegalArgumentException("Mã không gian hoặc phần tử SVG đã tồn tại trong tầng này.");
+        }
     }
 
     @Transactional
@@ -277,7 +311,7 @@ public class SpaceManagementService {
 
         Floor floor = floorRepository.findById(ws.getFloorId())
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy tầng."));
-        if (!floor.getBranchId().equals(branchId)) {
+        if (branchId != null && !floor.getBranchId().equals(branchId)) {
             throw new IllegalArgumentException("Workspace không thuộc chi nhánh của bạn.");
         }
 

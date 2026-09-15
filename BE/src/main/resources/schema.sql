@@ -3,6 +3,10 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS btree_gist;
 
+-- 0. Ensure 'users' table has password column for self-hosted auth
+ALTER TABLE users ADD COLUMN IF NOT EXISTS password VARCHAR(255);
+UPDATE users SET password = password_hash WHERE password IS NULL AND password_hash IS NOT NULL;
+
 -- 1. Ensure 'bookings' table status and price snapshot columns exist
 ALTER TABLE bookings ADD COLUMN IF NOT EXISTS status VARCHAR(32) NOT NULL DEFAULT 'PENDING_PAYMENT';
 ALTER TABLE bookings ALTER COLUMN status TYPE VARCHAR(32);

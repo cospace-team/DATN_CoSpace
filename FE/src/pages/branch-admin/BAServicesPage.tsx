@@ -45,7 +45,7 @@ const BAServicesPage: React.FC = () => {
       setIsLoading(true);
       setApiError('');
       try {
-        const data = await staffApi.getExtraServices(branchId);
+        const data = await staffApi.getExtraServices(branchId, true);
         setServices(data);
       } catch (e: any) {
         setApiError(e.message || 'Không thể tải dịch vụ.');

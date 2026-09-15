@@ -198,7 +198,8 @@ const LandingPage: React.FC = () => {
   const handleBookingRedirect = (branchExploreId?: string) => {
     if (isAuthenticated && user) {
       const defaultRoute =
-        user.role === 'admin' ? (user.branchId ? "/branch-admin/dashboard" : "/admin/dashboard")
+        user.role === 'super_admin' ? "/admin/dashboard"
+        : user.role === 'branch_admin' ? "/branch-admin/dashboard"
         : user.role === 'staff' ? "/staff/dashboard"
         : `/customer/explore${branchExploreId ? `?branchId=${branchExploreId}` : ""}`;
       navigate(defaultRoute, { state: { branchId: branchExploreId } });

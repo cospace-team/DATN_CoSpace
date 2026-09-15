@@ -54,14 +54,20 @@ public class CancellationService {
         Map<String, Object> appliedRule = new HashMap<>();
 
         if (booking.getStatus() == BookingStatus.CONFIRMED) {
-            // Compute hours before start
-            long hoursBefore = 0;
-            if (booking.getStartAt().isAfter(now)) {
-                hoursBefore = Duration.between(now, booking.getStartAt()).toHours();
+            // Compute time elapsed since booking creation (for GRACE_HOURS rule)
+            long hoursSinceCreated = 0;
+            if (booking.getCreatedAt() != null) {
+                hoursSinceCreated = Math.max(0, Duration.between(booking.getCreatedAt(), now).toHours());
             }
 
-            // Find matching policy: branch-specific first, then global
-            CancellationPolicy matchedPolicy = findApplicablePolicy(booking.getBranchId(), hoursBefore);
+            // Compute hours before start
+            long hoursBeforeStart = 0;
+            if (booking.getStartAt().isAfter(now)) {
+                hoursBeforeStart = Duration.between(now, booking.getStartAt()).toHours();
+            }
+
+            // Find matching policy: branch-specific first, then global (highest priority first)
+            CancellationPolicy matchedPolicy = findApplicablePolicy(booking.getBranchId(), hoursSinceCreated, hoursBeforeStart);
 
             if (matchedPolicy != null) {
                 refundPercent = matchedPolicy.getRefundPercent().intValue();
@@ -69,12 +75,14 @@ public class CancellationService {
                 appliedRule.put("policy_name", matchedPolicy.getName());
                 appliedRule.put("refund_percent", refundPercent);
                 appliedRule.put("rule_type", matchedPolicy.getRuleType());
-                appliedRule.put("hours_before", hoursBefore);
+                appliedRule.put("hours_since_created", hoursSinceCreated);
+                appliedRule.put("hours_before_start", hoursBeforeStart);
             } else {
                 // Rule #39: Default 0% refund
                 appliedRule.put("policy_name", "DEFAULT_NO_REFUND");
                 appliedRule.put("refund_percent", 0);
-                appliedRule.put("hours_before", hoursBefore);
+                appliedRule.put("hours_since_created", hoursSinceCreated);
+                appliedRule.put("hours_before_start", hoursBeforeStart);
             }
         } else {
             // PENDING_PAYMENT -> no refund
@@ -121,16 +129,36 @@ public class CancellationService {
         return cancellation;
     }
 
-    private CancellationPolicy findApplicablePolicy(UUID branchId, long hoursBefore) {
-        List<CancellationPolicy> policies = new ArrayList<>();
+    private CancellationPolicy findApplicablePolicy(UUID branchId, long hoursSinceCreated, long hoursBeforeStart) {
+        // 1. Check branch-specific rules first (ordered by priority DESC)
         if (branchId != null) {
-            policies.addAll(policyRepository.findByBranchIdAndIsActiveTrueOrderByPriorityAsc(branchId));
+            List<CancellationPolicy> branchPolicies = policyRepository.findByBranchIdAndIsActiveTrueOrderByPriorityDesc(branchId);
+            CancellationPolicy matched = matchPolicy(branchPolicies, hoursSinceCreated, hoursBeforeStart);
+            if (matched != null) {
+                return matched;
+            }
         }
-        policies.addAll(policyRepository.findByBranchIdIsNullAndIsActiveTrueOrderByPriorityAsc());
 
+        // 2. Fallback to global defaults (ordered by priority DESC)
+        List<CancellationPolicy> globalPolicies = policyRepository.findByBranchIdIsNullAndIsActiveTrueOrderByPriorityDesc();
+        return matchPolicy(globalPolicies, hoursSinceCreated, hoursBeforeStart);
+    }
+
+    private CancellationPolicy matchPolicy(List<CancellationPolicy> policies, long hoursSinceCreated, long hoursBeforeStart) {
         for (CancellationPolicy p : policies) {
-            if ("hours_before".equalsIgnoreCase(p.getRuleType())) {
-                if (hoursBefore >= p.getMinValue() && hoursBefore <= p.getMaxValue()) {
+            String ruleType = p.getRuleType() != null ? p.getRuleType().trim().toUpperCase() : "";
+            if ("GRACE_HOURS".equals(ruleType)) {
+                // Rule: Hủy trong N giờ đầu sau khi đặt (VD: min 0, max 2)
+                if (hoursSinceCreated >= p.getMinValue() && hoursSinceCreated <= p.getMaxValue()) {
+                    return p;
+                }
+            } else if ("BEFORE_START_DAYS".equals(ruleType)) {
+                long daysBefore = hoursBeforeStart / 24;
+                if (daysBefore >= p.getMinValue() && daysBefore <= p.getMaxValue()) {
+                    return p;
+                }
+            } else if ("BEFORE_START_HOURS".equals(ruleType) || "HOURS_BEFORE".equals(ruleType)) {
+                if (hoursBeforeStart >= p.getMinValue() && hoursBeforeStart <= p.getMaxValue()) {
                     return p;
                 }
             }

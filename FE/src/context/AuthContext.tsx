@@ -9,7 +9,7 @@ import React, {
 } from "react";
 import { supabase } from "../lib/supabase";
 
-export type UserRole = "customer" | "staff" | "admin";
+export type UserRole = "super_admin" | "branch_admin" | "staff" | "customer";
 
 export interface AuthUser {
   id: string;
@@ -38,30 +38,36 @@ interface AuthContextValue {
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
-const ROLE_LIST: UserRole[] = ["customer", "staff", "admin"];
+const ROLE_LIST: UserRole[] = ["super_admin", "branch_admin", "staff", "customer"];
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-const normalizeRole = (role: unknown): UserRole => {
+const normalizeRole = (role: unknown, branchId?: string | null): UserRole => {
   if (typeof role !== "string") return "customer";
   const normalized = role.toLowerCase().trim();
-  if (normalized === "branch_admin" || normalized === "super_admin" || normalized === "admin") {
-    return "admin";
-  }
+  if (normalized === "super_admin") return "super_admin";
+  if (normalized === "branch_admin") return "branch_admin";
   if (normalized === "staff") return "staff";
+  if (normalized === "admin") {
+    // Tương thích ngược: có branchId -> branch_admin, ngược lại -> super_admin
+    return branchId ? "branch_admin" : "super_admin";
+  }
   return "customer";
 };
 
-const mapBackendUser = (dataUser: any, prevUser?: AuthUser | null): AuthUser => ({
-  id: dataUser.id,
-  email: dataUser.email,
-  fullName: dataUser.fullName || dataUser.full_name || prevUser?.fullName || "",
-  avatarUrl: dataUser.avatarUrl || dataUser.avatar_url || prevUser?.avatarUrl || "",
-  role: normalizeRole(dataUser.role || prevUser?.role),
-  branchId: dataUser.branchId || dataUser.branch_id || prevUser?.branchId || null,
-  branchName: dataUser.branchName || dataUser.branch_name || prevUser?.branchName || null,
-  phone: dataUser.phone || prevUser?.phone || "",
-});
+const mapBackendUser = (dataUser: any, prevUser?: AuthUser | null): AuthUser => {
+  const branchId = dataUser.branchId || dataUser.branch_id || prevUser?.branchId || null;
+  return {
+    id: dataUser.id,
+    email: dataUser.email,
+    fullName: dataUser.fullName || dataUser.full_name || prevUser?.fullName || "",
+    avatarUrl: dataUser.avatarUrl || dataUser.avatar_url || prevUser?.avatarUrl || "",
+    role: normalizeRole(dataUser.role || prevUser?.role, branchId),
+    branchId,
+    branchName: dataUser.branchName || dataUser.branch_name || prevUser?.branchName || null,
+    phone: dataUser.phone || prevUser?.phone || "",
+  };
+};
 
 /** Expiry of a JWT in epoch milliseconds, or null if it can't be read. */
 const readTokenExpiry = (token: string): number | null => {

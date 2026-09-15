@@ -1,16 +1,20 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   FiLayers, FiGrid, FiPlus, FiEdit2, FiX, FiCheck, FiAlertCircle,
-  FiTrash2, FiUploadCloud, FiCheckCircle, FiLayout, FiMap,
+  FiTrash2, FiUploadCloud, FiCheckCircle, FiLayout, FiMap, FiMapPin,
 } from 'react-icons/fi';
 import FloorPlanEditor from '../../components/floor-plan/FloorPlanEditor';
 import FloorPlanViewer from '../../components/floor-plan/FloorPlanViewer';
 import {
-  floorApi, workspaceApi, workspaceTypeApi,
-  type FloorResponse, type WorkspaceResponse, type WorkspaceTypeResponse,
+  floorApi, workspaceApi, workspaceTypeApi, adminWorkspaceTypeApi, adminBranchApi,
+  type FloorResponse, type WorkspaceResponse, type WorkspaceTypeResponse, type AdminBranchDto,
 } from '../../lib/spaceApi';
 import type { FloorLayout } from '../../types/floorPlan';
 import { createDefaultLayout } from '../../data/elementCatalog';
+
+export interface BAWorkspacePageProps {
+  isSuperAdminView?: boolean;
+}
 
 /* ── Modal shell ── */
 const Modal: React.FC<{ title: string; onClose: () => void; children: React.ReactNode }> = ({
@@ -39,7 +43,11 @@ type ModalMode =
   | { type: 'assign-ws-layout'; element: any }
   | null;
 
-const BAWorkspacePage: React.FC = () => {
+const BAWorkspacePage: React.FC<BAWorkspacePageProps> = ({ isSuperAdminView = false }) => {
+  /* ── Branches for Super Admin ── */
+  const [branches, setBranches] = useState<AdminBranchDto[]>([]);
+  const [selectedBranchId, setSelectedBranchId] = useState<string>('');
+
   /* ── State ── */
   const [floors, setFloors] = useState<FloorResponse[]>([]);
   const [workspaces, setWorkspaces] = useState<WorkspaceResponse[]>([]);
@@ -53,46 +61,100 @@ const BAWorkspacePage: React.FC = () => {
   const [showEditorPopup, setShowEditorPopup] = useState(false);
   const [assigningWsId, setAssigningWsId] = useState<string | null>(null);
   const [assigningWsCode, setAssigningWsCode] = useState<string | null>(null);
+  const [isSubmittingFloor, setIsSubmittingFloor] = useState(false);
 
   // Form state
   const [floorForm, setFloorForm] = useState({ floor_no: '', name: '', svgContent: '' });
   const [wsForm, setWsForm] = useState({ code: '', name: '', workspace_type_id: '', capacity: '1', svg_element_id: '', status: 'active' });
 
+  const activeBranchId = isSuperAdminView ? selectedBranchId : undefined;
   const currentFloor = floors.find((f) => f.id === selectedFloorId);
+
+  const currentBranch = useMemo(() => {
+    if (!isSuperAdminView) return null;
+    return branches.find((b) => b.id === selectedBranchId) || null;
+  }, [isSuperAdminView, branches, selectedBranchId]);
+  const isBranchInactive = currentBranch?.status === 'inactive';
 
   const showSuccess = (msg: string) => { setSuccessMsg(msg); setTimeout(() => setSuccessMsg(''), 3000); };
   const showError = (msg: string) => { setErrorMsg(msg); setTimeout(() => setErrorMsg(''), 5000); };
 
+  /* ── Fetch branches for Super Admin ── */
+  useEffect(() => {
+    if (!isSuperAdminView) return;
+    const loadBranches = async () => {
+      try {
+        const bList = await adminBranchApi.list();
+        setBranches(bList);
+        if (bList.length > 0 && !selectedBranchId) {
+          setSelectedBranchId(bList[0].id);
+        }
+      } catch (err: any) {
+        showError(err.message || 'Không thể tải danh sách chi nhánh');
+      }
+    };
+    loadBranches();
+  }, [isSuperAdminView]);
+
+  /* ── Reset state when switching branch to avoid stale floor crossover ── */
+  useEffect(() => {
+    if (isSuperAdminView && selectedBranchId) {
+      setSelectedFloorId('');
+      setFloors([]);
+      setWorkspaces([]);
+    }
+  }, [isSuperAdminView, selectedBranchId]);
+
   /* ── Data fetching ── */
   const fetchFloors = useCallback(async () => {
+    if (isSuperAdminView && !selectedBranchId) return;
     try {
-      const data = await floorApi.list();
+      const data = await floorApi.list(activeBranchId);
       setFloors(data);
-      if (data.length > 0 && !selectedFloorId) setSelectedFloorId(data[0].id);
+      if (data.length > 0) {
+        setSelectedFloorId(prev => (data.some(f => f.id === prev) ? prev : data[0].id));
+      } else {
+        setSelectedFloorId('');
+        setWorkspaces([]);
+      }
     } catch (e: any) { showError(e.message); }
-  }, [selectedFloorId]);
+  }, [activeBranchId, isSuperAdminView, selectedBranchId]);
 
   const fetchWorkspaces = useCallback(async (floorId: string) => {
     try {
-      const data = await workspaceApi.listByFloor(floorId);
+      const data = await workspaceApi.listByFloor(floorId, activeBranchId);
       setWorkspaces(data);
     } catch (e: any) { showError(e.message); }
-  }, []);
+  }, [activeBranchId]);
 
   const fetchWsTypes = useCallback(async () => {
     try {
-      const data = await workspaceTypeApi.list();
-      setWsTypes(data);
-    } catch (e: any) { console.error('Failed to load workspace types', e); }
-  }, []);
+      const data = await workspaceTypeApi.list(activeBranchId);
+      if (data && data.length > 0) {
+        setWsTypes(data);
+        return;
+      }
+    } catch (e: any) {
+      console.warn('Failed to load workspace types via branch-admin API:', e);
+    }
+    try {
+      const adminData = await adminWorkspaceTypeApi.list();
+      if (adminData && adminData.length > 0) {
+        setWsTypes(adminData);
+      }
+    } catch (err) {
+      console.error('Failed to load admin workspace types fallback:', err);
+    }
+  }, [activeBranchId]);
 
   useEffect(() => {
+    if (isSuperAdminView && !selectedBranchId) return;
     (async () => {
       setLoading(true);
       await Promise.all([fetchFloors(), fetchWsTypes()]);
       setLoading(false);
     })();
-  }, [fetchFloors, fetchWsTypes]);
+  }, [fetchFloors, fetchWsTypes, isSuperAdminView, selectedBranchId]);
 
   useEffect(() => {
     if (selectedFloorId) fetchWorkspaces(selectedFloorId);
@@ -154,17 +216,26 @@ const BAWorkspacePage: React.FC = () => {
         if (wsTypes.length > 0) {
           const lowercaseType = el.type.toLowerCase();
           let matched = null;
-          if (lowercaseType.includes('desk')) {
+          if (lowercaseType.includes('desk') || lowercaseType.includes('chair')) {
             matched = wsTypes.find(t => t.code.toLowerCase().includes('desk') || t.name.toLowerCase().includes('bàn') || t.name.toLowerCase().includes('desk'));
           } else if (lowercaseType.includes('meeting')) {
             matched = wsTypes.find(t => t.code.toLowerCase().includes('meeting') || t.name.toLowerCase().includes('họp') || t.name.toLowerCase().includes('meeting'));
           } else if (lowercaseType.includes('office') || lowercaseType.includes('private')) {
             matched = wsTypes.find(t => t.code.toLowerCase().includes('office') || t.name.toLowerCase().includes('phòng riêng') || t.name.toLowerCase().includes('office'));
+          } else if (lowercaseType.includes('booth') || lowercaseType.includes('phone')) {
+            matched = wsTypes.find(t => t.code.toLowerCase().includes('booth') || t.name.toLowerCase().includes('cabin'));
+          } else if (lowercaseType.includes('event')) {
+            matched = wsTypes.find(t => t.code.toLowerCase().includes('event') || t.name.toLowerCase().includes('sự kiện'));
           }
           if (matched) {
             typeId = matched.id;
             capacity = el.seatCount || matched.capacityDefault || 1;
           }
+        }
+
+        if (!typeId) {
+          console.warn(`[handleSyncOrphans] Không thể xác định workspaceTypeId cho element ${el.id} (${el.type})`);
+          continue;
         }
 
         let baseCode = '';
@@ -174,7 +245,9 @@ const BAWorkspacePage: React.FC = () => {
         if (!baseCode) {
           const typePrefix = el.type === 'desk' || el.type === 'standing_desk' ? 'DESK'
             : el.type === 'meeting_room' ? 'MEET'
-            : el.type === 'private_office' ? 'OFFICE' : 'WS';
+            : el.type === 'private_office' ? 'OFFICE'
+            : el.type === 'phone_booth' ? 'BOOTH'
+            : el.type === 'event_space' ? 'EVENT' : 'WS';
           baseCode = `${typePrefix}-${Math.floor(100 + Math.random() * 900)}`;
         }
 
@@ -185,29 +258,33 @@ const BAWorkspacePage: React.FC = () => {
           counter++;
         }
 
-        const newWs = await workspaceApi.create({
-          floorId: currentFloor.id,
-          workspaceTypeId: typeId,
-          code: finalCode,
-          name: el.label || (el.type === 'meeting_room' ? 'Phòng họp' : el.type === 'private_office' ? 'Phòng riêng' : 'Bàn làm việc'),
-          capacity: capacity,
-          svgElementId: el.id,
-        });
+        try {
+          const newWs = await workspaceApi.create({
+            floorId: currentFloor.id,
+            workspaceTypeId: typeId,
+            code: finalCode,
+            name: el.label || (el.type === 'meeting_room' ? 'Phòng họp' : el.type === 'private_office' ? 'Phòng riêng' : 'Bàn làm việc'),
+            capacity: capacity,
+            svgElementId: el.id,
+          }, activeBranchId);
 
-        updatedElements[idx] = {
-          ...el,
-          workspaceId: newWs.id,
-          label: el.label || finalCode,
-        };
+          updatedElements[idx] = {
+            ...el,
+            workspaceId: newWs.id,
+            label: el.label || finalCode,
+          };
 
-        tempWorkspaces.push(newWs);
-        autoCreatedCount++;
+          tempWorkspaces.push(newWs);
+          autoCreatedCount++;
+        } catch (createErr) {
+          console.warn(`[handleSyncOrphans] Lỗi tạo workspace cho ${el.id}:`, createErr);
+        }
       }
 
       const finalLayout = { ...currentLayout, elements: updatedElements };
       const updated = await floorApi.update(currentFloor.id, {
         layoutJson: JSON.stringify(finalLayout),
-      });
+      }, activeBranchId);
 
       setFloors((prev) =>
         prev.map((f) => (f.id === updated.id ? updated : f))
@@ -225,7 +302,8 @@ const BAWorkspacePage: React.FC = () => {
   const openFloorModal = (mode: 'add' | 'edit', floor?: FloorResponse) => {
     setErrorMsg('');
     if (mode === 'add') {
-      setFloorForm({ floor_no: String(floors.length + 1), name: '', svgContent: '' });
+      const nextNo = floors.length > 0 ? Math.max(...floors.map((f) => f.floorNo || 0)) + 1 : 1;
+      setFloorForm({ floor_no: String(nextNo), name: '', svgContent: '' });
       setModal({ type: 'add-floor' });
     } else if (floor) {
       setFloorForm({ floor_no: String(floor.floorNo), name: floor.name, svgContent: floor.svgContent || '' });
@@ -236,13 +314,17 @@ const BAWorkspacePage: React.FC = () => {
   const saveFloor = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!floorForm.name.trim()) { setErrorMsg('Vui lòng nhập tên tầng.'); return; }
+    if (isSubmittingFloor) return;
+    setIsSubmittingFloor(true);
     try {
       if (modal?.type === 'add-floor') {
+        const nextNo = floors.length > 0 ? Math.max(...floors.map((f) => f.floorNo || 0)) + 1 : 1;
+        const targetFloorNo = parseInt(floorForm.floor_no) || nextNo;
         const newFloor = await floorApi.create({
-          floorNo: parseInt(floorForm.floor_no) || floors.length + 1,
+          floorNo: targetFloorNo,
           name: floorForm.name,
           svgContent: floorForm.svgContent || undefined,
-        });
+        }, activeBranchId);
         setFloors((prev) => [...prev, newFloor]);
         setSelectedFloorId(newFloor.id);
         showSuccess('Thêm tầng mới thành công!');
@@ -251,12 +333,13 @@ const BAWorkspacePage: React.FC = () => {
           name: floorForm.name,
           floorNo: parseInt(floorForm.floor_no) || undefined,
           svgContent: floorForm.svgContent || undefined,
-        });
+        }, activeBranchId);
         setFloors((prev) => prev.map((f) => (f.id === updated.id ? updated : f)));
         showSuccess('Cập nhật thông tin tầng thành công!');
       }
       setModal(null);
     } catch (e: any) { setErrorMsg(e.message); }
+    finally { setIsSubmittingFloor(false); }
   };
 
   const deleteFloor = (floorId: string, floorName: string) => {
@@ -265,7 +348,7 @@ const BAWorkspacePage: React.FC = () => {
 
   const handleConfirmDeleteFloor = async (floorId: string, floorName: string) => {
     try {
-      await floorApi.delete(floorId);
+      await floorApi.delete(floorId, activeBranchId);
       setFloors((prev) => prev.filter((f) => f.id !== floorId));
       setWorkspaces([]);
       if (selectedFloorId === floorId) {
@@ -319,7 +402,7 @@ const BAWorkspacePage: React.FC = () => {
           name: wsForm.name,
           capacity: parseInt(wsForm.capacity) || 1,
           svgElementId: finalSvgElementId,
-        });
+        }, activeBranchId);
         setWorkspaces((prev) => [...prev, newWs]);
         showSuccess('Thêm không gian thành công!');
       } else if (modal?.type === 'edit-ws') {
@@ -329,7 +412,7 @@ const BAWorkspacePage: React.FC = () => {
           capacity: parseInt(wsForm.capacity) || 1,
           svgElementId: finalSvgElementId,
           status: wsForm.status,
-        });
+        }, activeBranchId);
         setWorkspaces((prev) => prev.map((w) => (w.id === updated.id ? updated : w)));
         showSuccess('Cập nhật không gian thành công!');
       }
@@ -343,7 +426,7 @@ const BAWorkspacePage: React.FC = () => {
 
   const handleConfirmDeleteWorkspace = async (wsId: string, wsCode: string) => {
     try {
-      await workspaceApi.delete(wsId);
+      await workspaceApi.delete(wsId, activeBranchId);
       setWorkspaces((prev) => prev.filter((w) => w.id !== wsId));
 
       // Clean up orphan workspaceId references in the current floor layout
@@ -360,7 +443,7 @@ const BAWorkspacePage: React.FC = () => {
             };
             const updated = await floorApi.update(currentFloor.id, {
               layoutJson: JSON.stringify(cleaned),
-            });
+            }, activeBranchId);
             setFloors((prev) => prev.map((f) => (f.id === updated.id ? updated : f)));
           }
         } catch {
@@ -393,7 +476,7 @@ const BAWorkspacePage: React.FC = () => {
       const updatedLayout = { ...currentLayout, elements: updatedElements };
       const updated = await floorApi.update(currentFloor.id, {
         layoutJson: JSON.stringify(updatedLayout),
-      });
+      }, activeBranchId);
 
       setFloors((prev) => prev.map((f) => (f.id === updated.id ? updated : f)));
       // Refetch workspaces so the table display and svgElementIds are in sync
@@ -405,7 +488,7 @@ const BAWorkspacePage: React.FC = () => {
   };
 
   const handleFloorPlanElementClick = (el: any) => {
-    const LINKABLE_TYPES = ['desk', 'chair', 'standing_desk', 'meeting_room', 'private_office'];
+    const LINKABLE_TYPES = ['desk', 'chair', 'standing_desk', 'meeting_room', 'private_office', 'phone_booth', 'event_space', 'custom_workspace'];
     if (!LINKABLE_TYPES.includes(el.type)) return;
 
     if (assigningWsId) {
@@ -447,12 +530,60 @@ const BAWorkspacePage: React.FC = () => {
       {/* Header */}
       <div className="bg-card rounded-3xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow">
         <div className="flex items-center justify-between flex-wrap gap-4">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Sơ đồ & Không gian</h1>
-          <button className="btn btn-primary btn-sm flex items-center gap-2" onClick={() => openFloorModal('add')}>
-            <FiPlus className="h-4 w-4" /> Thêm Tầng Mới
-          </button>
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground font-heading">
+              {isSuperAdminView ? 'Cấu hình Không gian Chi nhánh' : 'Sơ đồ & Không gian'}
+            </h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              {isSuperAdminView
+                ? 'Quản trị sơ đồ mặt bằng, danh sách tầng và cấu hình vị trí làm việc của các chi nhánh'
+                : 'Quản lý sơ đồ mặt bằng, danh sách tầng và thiết lập chỗ ngồi tại chi nhánh'}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3 flex-wrap">
+            {isSuperAdminView && (
+              <div className="flex items-center gap-2 bg-muted/50 border border-border px-3.5 py-1.5 rounded-2xl shadow-xs">
+                <FiMapPin className="h-4 w-4 text-primary shrink-0" />
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Chi nhánh:</span>
+                <select
+                  value={selectedBranchId}
+                  onChange={(e) => setSelectedBranchId(e.target.value)}
+                  className="bg-transparent text-sm font-semibold text-foreground focus:outline-none cursor-pointer"
+                >
+                  {branches.map((b) => (
+                    <option key={b.id} value={b.id} className="bg-card text-foreground">
+                      {b.name} ({b.city})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <button
+              className="btn btn-primary btn-sm flex items-center gap-2 shadow-xs"
+              onClick={() => openFloorModal('add')}
+              disabled={(isSuperAdminView && !selectedBranchId) || isBranchInactive}
+              title={isBranchInactive ? 'Chi nhánh đang tạm ngưng hoạt động' : undefined}
+            >
+              <FiPlus className="h-4 w-4" /> Thêm Tầng Mới
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Inactive Branch Warning Banner */}
+      {isBranchInactive && (
+        <div className="bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 px-6 py-4 rounded-2xl flex items-start gap-3 shadow-xs">
+          <FiAlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+          <div>
+            <h3 className="font-semibold text-sm">Chi nhánh đang tạm ngưng hoạt động (Inactive)</h3>
+            <p className="text-xs text-amber-800/80 dark:text-amber-300/80 mt-0.5">
+              Chi nhánh này hiện đã tạm dừng hoạt động. Bạn chỉ có thể xem dữ liệu không gian ở chế độ Đọc (Read-only). Vui lòng chuyển trạng thái chi nhánh sang "Hoạt động" tại trang Quản lý Chi nhánh nếu muốn thêm mới hoặc cập nhật sơ đồ.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Floors tab bar */}
       <div className="bg-card rounded-3xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow">
@@ -581,15 +712,32 @@ const BAWorkspacePage: React.FC = () => {
                 }}
               />
             ) : (
-              <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground">
-                <FiLayout className="h-12 w-12 opacity-30" />
-                <p className="font-medium">Chưa có layout cho tầng này</p>
-                <button
-                  onClick={() => setShowEditorPopup(true)}
-                  className="btn btn-primary btn-sm flex items-center gap-2 mt-1"
-                >
-                  <FiEdit2 className="h-3.5 w-3.5" /> Tạo Layout
-                </button>
+              <div className="flex flex-col items-center justify-center h-full gap-4 text-muted-foreground p-6 text-center border border-dashed border-border/80 rounded-2xl bg-muted/10">
+                <div className="h-16 w-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shadow-inner">
+                  <FiMap className="h-8 w-8" />
+                </div>
+                <div>
+                  <h3 className="text-base font-semibold text-foreground">Tầng này chưa có sơ đồ mặt bằng</h3>
+                  <p className="text-xs text-muted-foreground max-w-md mt-1">
+                    Bạn có thể thiết kế trực quan bằng công cụ kéo thả Floor Plan Editor hoặc tải lên file SVG kiến trúc sẵn có để gán không gian.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 mt-1">
+                  <button
+                    onClick={() => setShowEditorPopup(true)}
+                    disabled={isBranchInactive}
+                    className="btn btn-primary btn-sm flex items-center gap-2 shadow-md hover:shadow-primary/20"
+                  >
+                    <FiEdit2 className="h-3.5 w-3.5" /> Mở trình thiết kế sơ đồ
+                  </button>
+                  <button
+                    onClick={() => openFloorModal('edit', currentFloor)}
+                    disabled={isBranchInactive}
+                    className="btn btn-outline btn-sm flex items-center gap-2"
+                  >
+                    <FiUploadCloud className="h-3.5 w-3.5" /> Tải file SVG
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -603,7 +751,12 @@ const BAWorkspacePage: React.FC = () => {
             <h2 className="font-semibold flex items-center gap-2 text-lg">
               <FiGrid className="h-5 w-5 text-primary" /> Workspace tại {currentFloor.name}
             </h2>
-            <button className="btn btn-primary btn-sm flex items-center gap-2" onClick={() => openWsModal('add')}>
+            <button 
+              className="btn btn-primary btn-sm flex items-center gap-2" 
+              onClick={() => openWsModal('add')}
+              disabled={isBranchInactive}
+              title={isBranchInactive ? 'Chi nhánh đang tạm ngưng hoạt động' : undefined}
+            >
               <FiPlus className="h-4 w-4" /> Thêm không gian
             </button>
           </div>
@@ -958,7 +1111,7 @@ const BAWorkspacePage: React.FC = () => {
                 try {
                   const updatedElements = [...layout.elements];
                   let autoCreatedCount = 0;
-                  const LINKABLE_TYPES = ['desk', 'chair', 'standing_desk', 'meeting_room', 'private_office'];
+                  const LINKABLE_TYPES = ['desk', 'chair', 'standing_desk', 'meeting_room', 'private_office', 'phone_booth', 'event_space', 'custom_workspace'];
                   const unlinkedIndices = updatedElements
                     .map((el, idx) => ({ el, idx }))
                     .filter(({ el }) => 
@@ -966,28 +1119,41 @@ const BAWorkspacePage: React.FC = () => {
                       (!el.workspaceId || !workspaces.some(w => w.id === el.workspaceId))
                     );
 
+                  let unassignedCount = 0;
                   if (unlinkedIndices.length > 0) {
                     const tempWorkspaces = [...workspaces];
                     for (const { el, idx } of unlinkedIndices) {
                       // 1. Determine workspace type id
                       let typeId = wsTypes[0]?.id; // Default fallback
-                      let capacity = el.seatCount || 1;
+                      let matched = null;
 
                       if (wsTypes.length > 0) {
                         const lowercaseType = el.type.toLowerCase();
-                        let matched = null;
-                        if (lowercaseType.includes('desk')) {
-                          matched = wsTypes.find(t => t.code.toLowerCase().includes('desk') || t.name.toLowerCase().includes('bàn') || t.name.toLowerCase().includes('desk'));
+                        if (lowercaseType.includes('desk') || lowercaseType.includes('chair')) {
+                          matched = wsTypes.find(t => t.code.toLowerCase().includes('desk') || t.name.toLowerCase().includes('bàn'));
                         } else if (lowercaseType.includes('meeting')) {
-                          matched = wsTypes.find(t => t.code.toLowerCase().includes('meeting') || t.name.toLowerCase().includes('họp') || t.name.toLowerCase().includes('meeting'));
+                          matched = wsTypes.find(t => t.code.toLowerCase().includes('meeting') || t.name.toLowerCase().includes('họp'));
                         } else if (lowercaseType.includes('office') || lowercaseType.includes('private')) {
-                          matched = wsTypes.find(t => t.code.toLowerCase().includes('office') || t.name.toLowerCase().includes('phòng riêng') || t.name.toLowerCase().includes('office'));
+                          matched = wsTypes.find(t => t.code.toLowerCase().includes('office') || t.name.toLowerCase().includes('phòng riêng'));
+                        } else if (lowercaseType.includes('booth') || lowercaseType.includes('phone')) {
+                          matched = wsTypes.find(t => t.code.toLowerCase().includes('booth') || t.name.toLowerCase().includes('cabin'));
+                        } else if (lowercaseType.includes('event')) {
+                          matched = wsTypes.find(t => t.code.toLowerCase().includes('event') || t.name.toLowerCase().includes('sự kiện'));
                         }
                         if (matched) {
                           typeId = matched.id;
-                          capacity = el.seatCount || matched.capacityDefault || 1;
                         }
                       }
+
+                      // If no workspaceTypeId could be resolved, do not call API with invalid data!
+                      if (!typeId) {
+                        console.warn(`[FloorPlanEditor onSave] Không thể xác định workspaceTypeId cho phần tử ${el.id} (${el.type}). Bỏ qua tự động tạo.`);
+                        unassignedCount++;
+                        continue;
+                      }
+
+                      // Ensure capacity is always >= 1 to satisfy BE validation
+                      const capacity = Math.max(1, el.seatCount || matched?.capacityDefault || 1);
 
                       // 2. Generate clean unique code
                       let baseCode = '';
@@ -997,7 +1163,9 @@ const BAWorkspacePage: React.FC = () => {
                       if (!baseCode) {
                         const typePrefix = el.type === 'desk' || el.type === 'standing_desk' ? 'DESK'
                           : el.type === 'meeting_room' ? 'MEET'
-                          : el.type === 'private_office' ? 'OFFICE' : 'WS';
+                          : el.type === 'private_office' ? 'OFFICE'
+                          : el.type === 'phone_booth' ? 'BOOTH'
+                          : el.type === 'event_space' ? 'EVENT' : 'WS';
                         baseCode = `${typePrefix}-${Math.floor(100 + Math.random() * 900)}`;
                       }
 
@@ -1008,42 +1176,57 @@ const BAWorkspacePage: React.FC = () => {
                         counter++;
                       }
 
-                      // 3. Call API to create workspace
-                      const newWs = await workspaceApi.create({
-                        floorId: currentFloor.id,
-                        workspaceTypeId: typeId,
-                        code: finalCode,
-                        name: el.label || (el.type === 'meeting_room' ? 'Phòng họp' : el.type === 'private_office' ? 'Phòng riêng' : 'Bàn làm việc'),
-                        capacity: capacity,
-                        svgElementId: el.id,
-                      });
+                      const finalName = el.label?.trim() || (
+                        el.type === 'meeting_room' ? 'Phòng họp'
+                        : el.type === 'private_office' ? 'Phòng riêng'
+                        : el.type === 'phone_booth' ? 'Phone Booth'
+                        : el.type === 'event_space' ? 'Khu sự kiện'
+                        : 'Bàn làm việc'
+                      );
 
-                      // 4. Update the layout element
-                      updatedElements[idx] = {
-                        ...el,
-                        workspaceId: newWs.id,
-                        label: el.label || finalCode,
-                      };
+                      // 3. Call API to create workspace (passing activeBranchId for super_admin support)
+                      try {
+                        const newWs = await workspaceApi.create({
+                          floorId: currentFloor.id,
+                          workspaceTypeId: typeId,
+                          code: finalCode,
+                          name: finalName,
+                          capacity: capacity,
+                          svgElementId: el.id,
+                        }, activeBranchId);
 
-                      tempWorkspaces.push(newWs);
-                      autoCreatedCount++;
+                        // 4. Update the layout element
+                        updatedElements[idx] = {
+                          ...el,
+                          workspaceId: newWs.id,
+                          label: el.label || finalCode,
+                        };
+
+                        tempWorkspaces.push(newWs);
+                        autoCreatedCount++;
+                      } catch (wsErr) {
+                        console.warn(`[FloorPlanEditor onSave] Không thể tự động tạo workspace cho ${el.id} (${finalCode}):`, wsErr);
+                        unassignedCount++;
+                      }
                     }
                   }
 
                   const finalLayout = { ...layout, elements: updatedElements };
                   const updated = await floorApi.update(currentFloor.id, {
                     layoutJson: JSON.stringify(finalLayout),
-                  });
+                  }, activeBranchId);
 
                   setFloors((prev) =>
                     prev.map((f) => (f.id === updated.id ? updated : f))
                   );
                   await fetchWorkspaces(currentFloor.id);
 
-                  if (autoCreatedCount > 0) {
+                  if (autoCreatedCount > 0 && unassignedCount === 0) {
                     showSuccess(`Đã lưu sơ đồ và tự động tạo ${autoCreatedCount} workspace tương ứng!`);
+                  } else if (unassignedCount > 0) {
+                    showSuccess(`Đã lưu sơ đồ! (${autoCreatedCount > 0 ? `Đã tạo ${autoCreatedCount} workspace, ` : ''}có ${unassignedCount} vị trí chưa gán workspace, bạn có thể chọn và gán sau)`);
                   } else {
-                    showSuccess('Layout đã được lưu thành công!');
+                    showSuccess('Sơ đồ mặt bằng đã được lưu thành công!');
                   }
                   setShowEditorPopup(false);
                 } catch (err: any) {

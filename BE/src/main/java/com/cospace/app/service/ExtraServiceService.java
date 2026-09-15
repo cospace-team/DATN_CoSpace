@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -25,12 +26,30 @@ public class ExtraServiceService {
     @Transactional(readOnly = true)
     @Cacheable(CacheConfig.EXTRA_SERVICES)
     public List<ExtraServiceEntity> getAvailableServices(UUID branchId) {
-        List<ExtraServiceEntity> result = new ArrayList<>();
-        if (branchId != null) {
-            result.addAll(extraServiceRepository.findByBranchIdAndIsActiveTrue(branchId));
+        // LinkedHashMap keeps insertion order and allows branch overrides by code
+        Map<String, ExtraServiceEntity> merged = new LinkedHashMap<>();
+        // 1. Global active defaults
+        for (ExtraServiceEntity s : extraServiceRepository.findByBranchIdIsNullAndIsActiveTrue()) {
+            merged.put(s.getCode(), s);
         }
-        result.addAll(extraServiceRepository.findByBranchIdIsNullAndIsActiveTrue());
-        return result;
+        // 2. Branch-specific overrides (replaces global with branch custom price/name)
+        if (branchId != null) {
+            for (ExtraServiceEntity s : extraServiceRepository.findByBranchIdAndIsActiveTrue(branchId)) {
+                merged.put(s.getCode(), s);
+            }
+        }
+        return new ArrayList<>(merged.values());
+    }
+
+    /**
+     * For Admin / Branch Admin management UI: returns all services including inactive ones.
+     */
+    @Transactional(readOnly = true)
+    public List<ExtraServiceEntity> getAllServices(UUID branchId) {
+        if (branchId != null) {
+            return extraServiceRepository.findByBranchId(branchId);
+        }
+        return extraServiceRepository.findByBranchIdIsNull();
     }
 
     @Transactional
@@ -71,6 +90,8 @@ public class ExtraServiceService {
         }
         if (updates.containsKey("isActive") && updates.get("isActive") != null) {
             existing.setActive(Boolean.parseBoolean(updates.get("isActive").toString()));
+        } else if (updates.containsKey("active") && updates.get("active") != null) {
+            existing.setActive(Boolean.parseBoolean(updates.get("active").toString()));
         }
         return extraServiceRepository.save(existing);
     }

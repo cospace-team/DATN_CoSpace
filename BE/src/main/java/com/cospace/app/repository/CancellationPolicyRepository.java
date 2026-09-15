@@ -13,4 +13,8 @@ public interface CancellationPolicyRepository extends JpaRepository<Cancellation
     List<CancellationPolicy> findByBranchIdAndIsActiveTrueOrderByPriorityAsc(UUID branchId);
 
     List<CancellationPolicy> findByBranchIdIsNullAndIsActiveTrueOrderByPriorityAsc();
+
+    List<CancellationPolicy> findByBranchIdAndIsActiveTrueOrderByPriorityDesc(UUID branchId);
+
+    List<CancellationPolicy> findByBranchIdIsNullAndIsActiveTrueOrderByPriorityDesc();
 }

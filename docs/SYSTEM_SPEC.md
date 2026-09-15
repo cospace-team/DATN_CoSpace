@@ -505,7 +505,7 @@ Customer cập nhật profile → chọn skills/interests từ danh sách tags c
 | `cancel_rule_type` | GRACE_HOURS, BEFORE_START_DAYS |
 | `refund_status` | none, pending, confirmed, rejected |
 | `tag_category` | skill, interest, industry |
-| `service_type` | drink, meal, printing, other |
+| `service_type` | VARCHAR(50) — Phân loại dịch vụ gia tăng: drink, meal, printing, equipment, facility, other hoặc tùy biến mở rộng |
 | `membership_tier` | standard, premium |
 
 ### 6.3 Key Constraints & Indexes
