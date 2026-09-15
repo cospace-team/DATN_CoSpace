@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect, useMemo, Suspense } from "react";
 import {
   BrowserRouter,
   Routes,
@@ -162,6 +162,24 @@ const AppShell: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
 
+  const navItems: NavItem[] = useMemo(() => {
+    if (!user) return customerNav;
+    return user.role === "branch_admin" ? branchAdminNav
+      : user.role === "super_admin" ? adminNav
+      : user.role === "staff" ? staffNav
+      : customerNav;
+  }, [user]);
+
+  // Find current nav label for breadcrumb and document title
+  const currentNavItem = useMemo(
+    () => navItems.find((item: NavItem) => location.pathname.startsWith(item.to)),
+    [navItems, location.pathname]
+  );
+  const pageTitle = currentNavItem?.label || "CoSpace";
+
+  // Always call useSEO at the top-level before ANY early returns
+  useSEO({ title: pageTitle });
+
   useEffect(() => {
     setSidebarOpen(false);
   }, [location.pathname]);
@@ -220,12 +238,6 @@ const AppShell: React.FC = () => {
     );
   }
 
-  const navItems =
-    user.role === "branch_admin" ? branchAdminNav
-    : user.role === "super_admin" ? adminNav
-    : user.role === "staff" ? staffNav
-    : customerNav;
-
   const roleLabel: Record<UserRole, string> = {
     customer: "Khách hàng",
     staff: "Nhân viên",
@@ -250,12 +262,6 @@ const AppShell: React.FC = () => {
     }
     return <Navigate to={defaultRoute} replace />;
   }
-
-  // Find current nav label for breadcrumb
-  const currentNavItem = navItems.find((item) => location.pathname.startsWith(item.to));
-  const pageTitle = currentNavItem?.label || "Dashboard";
-
-  useSEO({ title: pageTitle });
 
   const backendPillClass =
     backendStatus === "ok"
