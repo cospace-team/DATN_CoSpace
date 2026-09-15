@@ -233,7 +233,13 @@ public class PaymentService {
         String orderCodeStr = String.valueOf(orderCodeObj);
         Payment payment = paymentRepository.findByOrderId("PAYOS-" + orderCodeStr)
                 .or(() -> paymentRepository.findByOrderId(orderCodeStr))
-                .orElseThrow(() -> new IllegalArgumentException("Payment not found for orderCode=" + orderCodeStr));
+                .orElse(null);
+        if (payment == null) {
+            // Signed by PayOS but not one of our orders, e.g. the test call PayOS sends when the webhook
+            // URL is registered. Acknowledge it (PayOS requires a 2xx) without changing anything.
+            log.warn("PayOS webhook for unknown orderCode={} acknowledged without changes", orderCodeStr);
+            return;
+        }
 
         if (payment.getStatus() == PaymentStatus.PAID) {
             log.info("Payment {} is already paid. Ignoring PayOS webhook.", payment.getId());

@@ -223,12 +223,15 @@ class PaymentServiceTest {
         }
 
         @Test
-        void unknownOrderCodeIsRejected() {
+        void unknownOrderCodeIsAcknowledgedWithoutChanges() {
+            // PayOS sends a signed test webhook (fake orderCode) when the webhook URL is registered.
             when(payosService.verifyWebhookSignature(anyMap(), anyString())).thenReturn(true);
             when(paymentRepository.findByOrderId(anyString())).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> paymentService.handlePayosWebhook(payosWebhook(999L, "00")))
-                    .isInstanceOf(IllegalArgumentException.class);
+            paymentService.handlePayosWebhook(payosWebhook(999L, "00"));
+
+            verify(paymentRepository, never()).save(any());
+            verifyNoInteractions(bookingRepository);
         }
     }
 
