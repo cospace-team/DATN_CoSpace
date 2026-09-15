@@ -188,14 +188,15 @@ public class PayosService {
         }
 
         try {
-            // Sort data keys alphabetically
+            // Sort data keys alphabetically. Like the official PayOS SDKs, null values are signed as an
+            // empty string ("key="), not skipped: real webhooks carry null counter-account fields.
             TreeMap<String, Object> sortedMap = new TreeMap<>(data);
             StringBuilder sb = new StringBuilder();
             for (Map.Entry<String, Object> entry : sortedMap.entrySet()) {
-                if (entry.getValue() != null) {
-                    if (sb.length() > 0) sb.append("&");
-                    sb.append(entry.getKey()).append("=").append(entry.getValue());
-                }
+                Object value = entry.getValue();
+                String text = (value == null || "null".equals(value) || "undefined".equals(value)) ? "" : value.toString();
+                if (sb.length() > 0) sb.append("&");
+                sb.append(entry.getKey()).append("=").append(text);
             }
 
             String expected = hmacSHA256(sb.toString(), payosConfig.getChecksumKey());

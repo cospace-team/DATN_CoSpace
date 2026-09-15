@@ -104,12 +104,13 @@ class PayosServiceTest {
         }
 
         @Test
-        void skipsNullValuesWhenBuildingSignature() throws Exception {
+        void signsNullValuesAsEmptyStringLikePayos() throws Exception {
             Map<String, Object> data = new HashMap<>(webhookData());
-            String signature = signatureOf(webhookData());
             data.put("counterAccountName", null);
+            String raw = "amount=150000&code=00&counterAccountName=&description=BK WH ABC234&orderCode=123456789&reference=FT123";
 
-            assertThat(service.verifyWebhookSignature(data, signature)).isTrue();
+            assertThat(service.verifyWebhookSignature(data, hmacSha256Hex(raw, CHECKSUM_KEY))).isTrue();
+            assertThat(service.verifyWebhookSignature(data, signatureOf(webhookData()))).isFalse();
         }
     }
 
