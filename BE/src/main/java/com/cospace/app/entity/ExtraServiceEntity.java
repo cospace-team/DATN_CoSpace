@@ -63,6 +63,14 @@ public class ExtraServiceEntity {
         return this.isActive;
     }
 
+    public boolean isActive() {
+        return this.isActive;
+    }
+
+    public void setActive(boolean active) {
+        this.isActive = active;
+    }
+
     @JsonProperty("isActive")
     public void setIsActive(boolean isActive) {
         this.isActive = isActive;

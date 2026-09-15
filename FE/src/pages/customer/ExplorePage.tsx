@@ -196,6 +196,7 @@ const BookingPanel: React.FC<{
     return Math.max(1, Math.ceil(daysDiff(toMidnight(selectedDate), endDate) / 7));
   }, [durationUnit, endHour, selectedHour, selectedDate, endDate]);
 
+  const subtotal = (price?.price || 0) * unitCount;
   const allAddons = (addonServices && addonServices.length > 0) ? addonServices : availableServices;
   const addonTotal = Object.keys(services).reduce((sum, id) => {
     const s = allAddons.find((x: any) => x.id === id);

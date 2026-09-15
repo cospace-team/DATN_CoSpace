@@ -1,9 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-<<<<<<< HEAD
-import { FiSearch, FiCode, FiX, FiShield, FiCalendar, FiGlobe, FiAlertCircle, FiRefreshCw } from 'react-icons/fi';
-=======
-import { FiSearch, FiCode, FiChevronDown, FiFilter, FiX, FiEye, FiShield, FiCalendar, FiGlobe } from 'react-icons/fi';
->>>>>>> origin/feat/business-rules-loyalty-refunds
+import { FiSearch, FiCode, FiX, FiShield, FiCalendar, FiGlobe, FiAlertCircle, FiRefreshCw, FiFilter } from 'react-icons/fi';
 import { formatDateTime } from '../../utils/formatters';
 import { Skeleton } from '../../components/ui/Skeleton';
 
@@ -92,7 +88,6 @@ const AuditLogPage: React.FC = () => {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
-<<<<<<< HEAD
   const [logs, setLogs] = useState<AuditLogItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -149,63 +144,6 @@ const AuditLogPage: React.FC = () => {
 
       const matchAction = actionFilter === 'all' || l.action === actionFilter;
       const matchRole = roleFilter === 'all' || l.actorRole === roleFilter;
-=======
-  const [liveLogs, setLiveLogs] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState('');
-
-  useEffect(() => {
-    const fetchAuditLogs = async () => {
-      setIsLoading(true);
-      try {
-        const token = localStorage.getItem('workhub_access_token');
-        if (!token) return;
-        const res = await fetch(`${API_BASE_URL}/api/admin/audit-logs?size=100`, {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
-          }
-        });
-        if (res.ok) {
-          const json = await res.json();
-          setLiveLogs(Array.isArray(json.content) ? json.content : []);
-        } else {
-          const err = await res.json().catch(() => ({}));
-          setLoadError(err.message || `Không tải được nhật ký hệ thống (${res.status}).`);
-        }
-      } catch (err) {
-        console.error('Cannot fetch audit logs', err);
-        setLoadError('Không kết nối được máy chủ để tải nhật ký hệ thống.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchAuditLogs();
-  }, []);
-
-  const logsSource = useMemo(() => {
-    return liveLogs.map(l => ({
-        id: l.id,
-        actor_user_id: l.userId || 'system',
-        actor_name: l.userName || (l.userId ? `Người dùng ${String(l.userId).slice(0, 8)}` : 'Hệ thống'),
-        actor_role: l.userRole || (l.userId ? '—' : 'system'),
-        action: l.action,
-        target_table: l.entityName || '',
-        target_id: l.entityId || '',
-        metadata: l.newValues || l.oldValues || {},
-        old_values: l.oldValues,
-        new_values: l.newValues,
-        ip_address: l.ipAddress || '',
-        created_at: l.createdAt
-      }));
-  }, [liveLogs]);
-
-  const uniqueActions = useMemo(() => [...new Set(logsSource.map(l => l.action))], [logsSource]);
-  const actorUsers = useMemo(() => {
-    const ids = [...new Set(logsSource.map(l => l.actor_user_id))];
-    return ids.map(id => ({ id, name: logsSource.find(l => l.actor_user_id === id)?.actor_name || id }));
-  }, [logsSource]);
->>>>>>> origin/feat/business-rules-loyalty-refunds
 
       let matchDate = true;
       if (dateFrom) {
@@ -217,34 +155,11 @@ const AuditLogPage: React.FC = () => {
         matchDate = matchDate && new Date(l.createdAt) <= to;
       }
 
-<<<<<<< HEAD
       return matchSearch && matchAction && matchRole && matchDate;
     });
   }, [logs, search, actionFilter, roleFilter, dateFrom, dateTo]);
 
   const totalPages = Math.ceil(totalElements / pageSize);
-=======
-  const actionColor: Record<string, string> = {
-    CREATE: 'badge-success',
-    UPDATE: 'badge-warning',
-    UPDATE_STATUS: 'badge-warning',
-    DELETE: 'badge-danger',
-    VOID: 'badge-danger',
-    SETTLE_TAB: 'badge-success',
-  };
-
-  const actionLabel: Record<string, string> = {
-    CREATE: 'Tạo mới',
-    UPDATE: 'Cập nhật',
-    UPDATE_STATUS: 'Đổi trạng thái',
-    DELETE: 'Xóa',
-    VOID: 'Hủy dịch vụ',
-    SETTLE_TAB: 'Thu tiền dịch vụ',
-  };
-
-  const hasActiveFilters = search !== '' || userFilter !== 'all' || actionFilter !== 'all' || dateFrom !== '' || dateTo !== '';
-  const clearFilters = () => { setSearch(''); setUserFilter('all'); setActionFilter('all'); setDateFrom(''); setDateTo(''); };
->>>>>>> origin/feat/business-rules-loyalty-refunds
 
   return (
     <div className="space-y-6">
@@ -354,8 +269,8 @@ const AuditLogPage: React.FC = () => {
         </div>
       </div>
 
-      {loadError && (
-        <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">{loadError}</div>
+      {error && (
+        <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</div>
       )}
 
       {/* Logs Table */}
@@ -421,7 +336,6 @@ const AuditLogPage: React.FC = () => {
                         <span className={`badge ${actionColor[l.action] || 'badge-neutral'}`}>
                           {actionLabel[l.action] || l.action}
                         </span>
-                        <span className="ml-2 text-xs text-muted-foreground font-mono">{l.target_table}</span>
                       </td>
                       <td className="text-sm text-muted-foreground">
                         {entityLabel[l.entityName] || l.entityName}

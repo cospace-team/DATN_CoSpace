@@ -11,6 +11,7 @@ import { bookingApi } from '../../lib/bookingApi';
 import { useToast } from '../../components/Toast';
 import { customerSpaceApi, type ExtraServiceResponse } from '../../lib/spaceApi';
 import { describePromotion, promotionApi, type BookingQuoteDto, type PromotionDto } from '../../api/loyaltyApi';
+import { resolveBranchId } from '../../data/branchAliases';
 
 const getServiceIcon = (type?: string, name?: string) => {
   const n = (name || '').toLowerCase();
@@ -44,6 +45,7 @@ const BookingCheckoutPage: React.FC = () => {
   // Add-ons picked on the explore screen (real catalogue ids); the server prices them again.
   const addons: { serviceId: string; quantity: number; name: string; price: number; unit: string }[] = state?.addons || [];
   const addonRequest = addons.map(a => ({ serviceId: a.serviceId, quantity: a.quantity }));
+  const services: Record<string, number> = state?.services || {};
   const basePrice = state?.price?.price || 0;
   const subtotal = state?.subtotal || 0;
   const addonTotal = state?.addonTotal || 0;
