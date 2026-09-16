@@ -38,7 +38,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @TestPropertySource(properties = {
         "app.jwt.secret=" + SecurityConfigRouteAuthorizationTest.SECRET,
         "spring.security.oauth2.resourceserver.jwt.issuer-uri=https://example.supabase.co/auth/v1",
-        "app.cors.allowed-origins=https://app.cospace.example"
+        "app.cors.allowed-origins=https://app.cospace.example,https://cospace-*-acme.vercel.app"
 })
 class SecurityConfigRouteAuthorizationTest {
 
@@ -106,6 +106,28 @@ class SecurityConfigRouteAuthorizationTest {
                             .header("Origin", "https://app.cospace.example")
                             .header("Access-Control-Request-Method", "POST"))
                     .andExpect(status().isOk());
+        }
+
+        @Test
+        void corsPreflightFromWildcardOriginSucceeds() throws Exception {
+            // Vercel gives each deployment its own <project>-<hash>-<team> host, so the allowlist has
+            // to match a shape rather than a fixed string.
+            mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                            .options("/api/bookings")
+                            .header("Origin", "https://cospace-9958dbwqt-acme.vercel.app")
+                            .header("Access-Control-Request-Method", "POST"))
+                    .andExpect(status().isOk());
+        }
+
+        @Test
+        void corsPreflightFromLookalikeOfWildcardOriginIsRejected() throws Exception {
+            // The pattern is anchored to one Vercel account: a host that merely ends in .vercel.app
+            // must not slip through.
+            mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                            .options("/api/bookings")
+                            .header("Origin", "https://cospace-9958dbwqt-attacker.vercel.app")
+                            .header("Access-Control-Request-Method", "POST"))
+                    .andExpect(status().isForbidden());
         }
 
         @Test

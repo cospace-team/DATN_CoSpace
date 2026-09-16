@@ -176,12 +176,20 @@ public class SecurityConfig {
                                 .filter(origin -> !origin.isEmpty())
                                 .toList();
 
-                configuration.setAllowedOrigins(
+                // Patterns rather than exact origins: Vercel mints a fresh
+                // "<project>-<hash>-<team>.vercel.app" host on every deployment, so those can never be
+                // enumerated ahead of time. An entry without a wildcard still matches exactly, so
+                // plain origins keep behaving as before.
+                configuration.setAllowedOriginPatterns(
                                 allowedOrigins.isEmpty() ? List.of("http://localhost:5173") : allowedOrigins);
                 configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
                 configuration.setAllowedHeaders(List.of("*"));
                 configuration.setExposedHeaders(List.of("Authorization", "Content-Type"));
-                configuration.setAllowCredentials(true);
+                // Credentials stay off: the frontend authenticates purely with an Authorization:
+                // Bearer header and never sends cookies, so allowing them would buy nothing while
+                // making a wildcard pattern genuinely dangerous — a matching origin could then drive
+                // authenticated requests using the browser's stored credentials.
+                configuration.setAllowCredentials(false);
 
                 UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
                 source.registerCorsConfiguration("/**", configuration);
