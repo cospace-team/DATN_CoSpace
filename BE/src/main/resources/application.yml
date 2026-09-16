@@ -1,5 +1,6 @@
 server:
-  port: 8080
+  # Render/Heroku-style hosts inject the port to bind to; 8080 stays the local default.
+  port: ${PORT:8080}
   servlet:
     context-path: /
 
