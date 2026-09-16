@@ -39,7 +39,16 @@ export interface CustomerBookingItem {
   refundStatus?: string;
   policyName?: string;
   cancelledAt?: string;
+  paymentDeadlineAt?: string;
 }
+
+/** Remaining hold time as mm:ss. */
+const formatCountdown = (ms: number) => {
+  const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+};
 
 const BookingHistoryPage: React.FC = () => {
   const location = useLocation();
@@ -60,6 +69,34 @@ const BookingHistoryPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [apiLoaded, setApiLoaded] = useState(false);
   const [payingId, setPayingId] = useState<string | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+
+  const hasPendingHold = bookings.some((b) => b.status === "pending_payment" && b.paymentDeadlineAt);
+
+  // Tick once a second while an unpaid booking is being held.
+  useEffect(() => {
+    if (!hasPendingHold) return;
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [hasPendingHold]);
+
+  // When a hold runs out the server releases the slot; mirror that locally right away.
+  useEffect(() => {
+    const expiredIds = bookings
+      .filter(
+        (b) =>
+          b.status === "pending_payment" &&
+          b.paymentDeadlineAt &&
+          new Date(b.paymentDeadlineAt).getTime() <= now,
+      )
+      .map((b) => b.id);
+    if (expiredIds.length === 0) return;
+    setBookings((prev) =>
+      prev.map((b) => (expiredIds.includes(b.id) ? { ...b, status: "expired" } : b)),
+    );
+    if (showCancelModal && expiredIds.includes(showCancelModal)) setShowCancelModal(null);
+    setErrorMessage("Đơn chờ thanh toán đã quá 15 phút nên đã tự động hủy và trả lại chỗ.");
+  }, [now, bookings, showCancelModal]);
 
   const handlePayNow = async (bookingId: string, amount: number) => {
     setPayingId(bookingId);
@@ -173,6 +210,7 @@ const BookingHistoryPage: React.FC = () => {
             refundStatus: b.refundStatus,
             policyName: b.policyName,
             cancelledAt: b.cancelledAt,
+            paymentDeadlineAt: b.paymentDeadlineAt,
           };
         });
         setBookings(mapped);
@@ -203,6 +241,7 @@ const BookingHistoryPage: React.FC = () => {
   };
 
   const [isCanceling, setIsCanceling] = useState(false);
+  const selectedCancelBooking = bookings.find((b) => b.id === showCancelModal);
 
   const handleCancel = async () => {
     if (!showCancelModal) return;
@@ -230,7 +269,11 @@ const BookingHistoryPage: React.FC = () => {
       setShowCancelModal(null);
       setActiveTab("canceled");
 
-      if (result.refundAmount > 0) {
+      if (selectedCancelBooking?.status === "pending_payment") {
+        setSuccessMessage(
+          "Đã hủy đơn chưa thanh toán. Chỗ đã được trả lại ngay, bạn không mất phí nào.",
+        );
+      } else if (result.refundAmount > 0) {
         setSuccessMessage(
           `Hủy đơn thành công! Bạn được hoàn ${formatVND(result.refundAmount)} (${result.refundPercent}% giá trị đơn) theo chính sách hủy.`,
         );
@@ -249,8 +292,6 @@ const BookingHistoryPage: React.FC = () => {
       setIsCanceling(false);
     }
   };
-
-  const selectedCancelBooking = bookings.find((b) => b.id === showCancelModal);
 
   return (
     <div className="max-w-5xl mx-auto py-8 px-4 font-sans animate-fade-in">
@@ -378,8 +419,18 @@ const BookingHistoryPage: React.FC = () => {
                             ? "✓ Hoàn thành"
                             : booking.status === "no_show"
                               ? "× Không đến"
-                              : "× Đã hủy"}
+                              : booking.status === "expired"
+                                ? "⌛ Hết hạn thanh toán"
+                                : "× Đã hủy"}
                   </span>
+                  {booking.status === "pending_payment" && booking.paymentDeadlineAt && (
+                    <span
+                      className="px-3 py-1 text-xs font-semibold font-mono rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 shadow-sm"
+                      title="Hết thời gian này, đơn sẽ tự động hủy và trả lại chỗ"
+                    >
+                      Giữ chỗ còn {formatCountdown(new Date(booking.paymentDeadlineAt).getTime() - now)}
+                    </span>
+                  )}
                 </div>
 
                 <div>
@@ -422,7 +473,14 @@ const BookingHistoryPage: React.FC = () => {
                 </div>
 
                 {/* Modern Cancellation Breakdown Card */}
-                {(booking.status === "canceled" || booking.status === "cancelled") && (
+                {(booking.status === "canceled" || booking.status === "cancelled") &&
+                  booking.policyName === "PENDING_PAYMENT_CANCEL" && (
+                  <div className="p-4 rounded-2xl bg-muted/50 border border-border text-xs text-muted-foreground">
+                    Đơn được hủy khi chưa thanh toán: không phát sinh phí và chỗ đã được trả lại.
+                  </div>
+                )}
+                {(booking.status === "canceled" || booking.status === "cancelled") &&
+                  booking.policyName !== "PENDING_PAYMENT_CANCEL" && (
                   <div className="p-4 rounded-2xl bg-rose-500/5 border border-rose-500/20 text-xs space-y-3 animate-fade-in">
                     <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-rose-500/15">
                       <span className="font-semibold text-foreground flex items-center gap-1.5">
@@ -521,6 +579,11 @@ const BookingHistoryPage: React.FC = () => {
                 {(booking.status === "completed" || booking.status === "checked_out") && (
                   <div className="py-2.5 px-4 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs font-semibold flex items-center justify-center gap-1.5 w-full">
                     <FiCheckCircle className="h-4 w-4" /> Đã hoàn thành
+                  </div>
+                )}
+                {booking.status === "expired" && (
+                  <div className="py-2.5 px-4 rounded-xl bg-muted text-muted-foreground border border-border text-xs font-semibold flex items-center justify-center gap-1.5 w-full">
+                    <FiClock className="h-4 w-4" /> Hết hạn thanh toán
                   </div>
                 )}
                 {(booking.status === "canceled" || booking.status === "cancelled") && (
@@ -655,10 +718,17 @@ const BookingHistoryPage: React.FC = () => {
                   {formatVND(selectedCancelBooking.totalAmount)}
                 </span>
               </div>
-              <p className="text-xs font-medium text-foreground/70 leading-relaxed">
-                Số tiền hoàn lại sẽ được tính theo chính sách hủy đang áp dụng tại chi nhánh
-                (phụ thuộc thời điểm hủy so với giờ nhận chỗ) và hiển thị ngay sau khi bạn xác nhận.
-              </p>
+              {selectedCancelBooking.status === "pending_payment" ? (
+                <p className="text-xs font-medium text-foreground/70 leading-relaxed">
+                  Đơn chưa được thanh toán nên bạn không mất phí. Đơn sẽ bị hủy và chỗ được trả lại
+                  ngay khi bạn xác nhận, không cần chờ hết 15 phút giữ chỗ.
+                </p>
+              ) : (
+                <p className="text-xs font-medium text-foreground/70 leading-relaxed">
+                  Số tiền hoàn lại sẽ được tính theo chính sách hủy đang áp dụng tại chi nhánh
+                  (phụ thuộc thời điểm hủy so với giờ nhận chỗ) và hiển thị ngay sau khi bạn xác nhận.
+                </p>
+              )}
             </div>
 
             <div className="flex gap-4">
