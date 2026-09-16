@@ -25,10 +25,10 @@ public class BookingExpiryScheduler {
     private final BookingAddonService bookingAddonService;
 
     /**
-     * Runs every minute to check for and expire bookings that have passed their payment deadline.
+     * Runs every 30 seconds to check for and expire bookings that have passed their payment deadline.
      * This is a critical business process to release workspaces that were held but not paid for.
      */
-    @Scheduled(fixedRate = 60000) // Run every 60 seconds
+    @Scheduled(fixedRate = 30000) // Run every 30 seconds
     @Transactional
     public void expirePendingBookings() {
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
@@ -47,19 +47,29 @@ public class BookingExpiryScheduler {
         log.warn("Found {} bookings to expire.", expiredBookings.size());
 
         for (Booking booking : expiredBookings) {
-            log.info("Expiring booking with ID: {} and code: {}", booking.getId(), booking.getBookingCode());
-            BookingStateMachine.transition(booking, BookingStatus.EXPIRED);
-            // Add-ons ordered with an unpaid booking will never be served.
-            bookingAddonService.voidUnpaid(booking, null);
-            
-            // Also expire any initiated or pending payment associated with this booking
-            paymentRepository.findTopByBookingIdAndStatusInOrderByCreatedAtDesc(
-                    booking.getId(), List.of(PaymentStatus.INITIATED, PaymentStatus.PENDING)
-            ).ifPresent(payment -> {
-                log.info("Expiring pending payment ID: {} for booking: {}", payment.getId(), booking.getId());
-                payment.setStatus(PaymentStatus.EXPIRED);
-                paymentRepository.save(payment);
-            });
+            expire(booking);
         }
+    }
+
+    /**
+     * Releases one unpaid booking whose 15-minute hold has run out. Callers that need the slot back
+     * right away (e.g. someone booking the same time) use this instead of waiting for the next run.
+     */
+    @Transactional
+    public void expire(Booking booking) {
+        log.info("Expiring booking with ID: {} and code: {}", booking.getId(), booking.getBookingCode());
+        BookingStateMachine.transition(booking, BookingStatus.EXPIRED);
+        bookingRepository.save(booking);
+        // Add-ons ordered with an unpaid booking will never be served.
+        bookingAddonService.voidUnpaid(booking, null);
+
+        // Also expire any initiated or pending payment associated with this booking
+        paymentRepository.findTopByBookingIdAndStatusInOrderByCreatedAtDesc(
+                booking.getId(), List.of(PaymentStatus.INITIATED, PaymentStatus.PENDING)
+        ).ifPresent(payment -> {
+            log.info("Expiring pending payment ID: {} for booking: {}", payment.getId(), booking.getId());
+            payment.setStatus(PaymentStatus.EXPIRED);
+            paymentRepository.save(payment);
+        });
     }
 }

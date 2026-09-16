@@ -47,11 +47,12 @@ public class BookingService {
     private final MembershipService membershipService;
     private final PromotionService promotionService;
     private final BookingAddonService bookingAddonService;
+    private final BookingExpiryScheduler bookingExpiryScheduler;
 
     /** Business time zone: opening hours and "today" are always Vietnam local time, whatever the server runs in. */
     public static final java.time.ZoneId BUSINESS_ZONE = java.time.ZoneId.of("Asia/Ho_Chi_Minh");
 
-    public BookingService(BookingRepository bookingRepository, PaymentRepository paymentRepository, PricingService pricingService, WorkspaceEntityRepository workspaceEntityRepository, com.cospace.app.repository.FloorRepository floorRepository, BranchEntityRepository branchEntityRepository, UserRepository userRepository, CheckinLogRepository checkinLogRepository, jakarta.persistence.EntityManager entityManager, com.cospace.app.repository.WorkspaceMaintenanceRepository workspaceMaintenanceRepository, com.cospace.app.repository.BookingCancellationRepository bookingCancellationRepository, MembershipService membershipService, PromotionService promotionService, BookingAddonService bookingAddonService) {
+    public BookingService(BookingRepository bookingRepository, PaymentRepository paymentRepository, PricingService pricingService, WorkspaceEntityRepository workspaceEntityRepository, com.cospace.app.repository.FloorRepository floorRepository, BranchEntityRepository branchEntityRepository, UserRepository userRepository, CheckinLogRepository checkinLogRepository, jakarta.persistence.EntityManager entityManager, com.cospace.app.repository.WorkspaceMaintenanceRepository workspaceMaintenanceRepository, com.cospace.app.repository.BookingCancellationRepository bookingCancellationRepository, MembershipService membershipService, PromotionService promotionService, BookingAddonService bookingAddonService, BookingExpiryScheduler bookingExpiryScheduler) {
         this.bookingRepository = bookingRepository;
         this.paymentRepository = paymentRepository;
         this.pricingService = pricingService;
@@ -66,6 +67,7 @@ public class BookingService {
         this.membershipService = membershipService;
         this.promotionService = promotionService;
         this.bookingAddonService = bookingAddonService;
+        this.bookingExpiryScheduler = bookingExpiryScheduler;
     }
 
     @Transactional
@@ -133,7 +135,17 @@ public class BookingService {
         
         List<Booking> overlappingBookings = bookingRepository.findOverlappingBookings(
                 req.getWorkspaceId(), startOffset, endOffset, activeStatuses);
-                
+        // An unpaid hold frees its slot the moment its 15 minutes run out, not at the scheduler's next run.
+        OffsetDateTime checkedAt = OffsetDateTime.now(ZoneOffset.UTC);
+        overlappingBookings = overlappingBookings.stream()
+                .filter(b -> {
+                    if (!isHoldExpired(b, checkedAt)) return true;
+                    bookingExpiryScheduler.expire(b);
+                    return false;
+                })
+                .collect(Collectors.toList());
+        entityManager.flush();
+
         if (!overlappingBookings.isEmpty()) {
             throw new IllegalArgumentException("Vị trí đã có người đặt trong khoảng thời gian này.");
         }
@@ -484,6 +496,7 @@ public class BookingService {
 
         List<Booking> intervalBookings = bookingRepository.findBookingsInInterval(branchId, from, to).stream()
                 .filter(b -> activeStatuses.contains(b.getStatus()))
+                .filter(b -> !isHoldExpired(b, OffsetDateTime.now(ZoneOffset.UTC)))
                 .collect(Collectors.toList());
 
         return workspaces.stream().map(ws -> {
@@ -511,6 +524,13 @@ public class BookingService {
                     .busySlots(slots)
                     .build();
         }).collect(Collectors.toList());
+    }
+
+    /** An unpaid booking whose payment deadline has passed no longer holds its workspace. */
+    private static boolean isHoldExpired(Booking b, OffsetDateTime now) {
+        return b.getStatus() == BookingStatus.PENDING_PAYMENT
+                && b.getPaymentDeadlineAt() != null
+                && !now.isBefore(b.getPaymentDeadlineAt());
     }
 
     public com.cospace.app.dto.api.BookingWithDetailsDto toBookingWithDetailsDto(Booking b) {
