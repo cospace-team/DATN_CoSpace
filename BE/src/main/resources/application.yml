@@ -78,6 +78,13 @@ gemini:
   base-url: https://generativelanguage.googleapis.com/v1beta
 
 app:
+  jwt:
+    # Signing key for the tokens this backend issues itself (local email/password login).
+    # Deliberately has no fallback: a missing APP_JWT_SECRET must fail startup rather than let the
+    # app run on a key that is readable in the source. Minimum 48 bytes (HS384), see JwtUtil.
+    secret: ${APP_JWT_SECRET}
+    expiration: ${APP_JWT_EXPIRATION:3600}
+    refresh-expiration: ${APP_JWT_REFRESH_EXPIRATION:2592000}
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173}
   frontend:

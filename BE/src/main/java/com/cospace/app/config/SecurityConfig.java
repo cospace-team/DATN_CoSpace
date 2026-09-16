@@ -35,7 +35,9 @@ public class SecurityConfig {
                 this.jwtAuthenticationConverter = jwtAuthenticationConverter;
         }
 
-        @Value("${app.jwt.secret:defaultSecretKeyWhichIsVeryLongAndSecureForLocalAuth1234!@#}")
+        // Must stay in lockstep with JwtUtil, which signs with this same key. No default here either:
+        // see the comment on JwtUtil#jwtSecret.
+        @Value("${app.jwt.secret}")
         private String jwtSecret;
 
         @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri:https://ozaiknomajljfqiepels.supabase.co/auth/v1}")

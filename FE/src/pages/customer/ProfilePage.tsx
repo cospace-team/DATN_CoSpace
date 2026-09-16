@@ -256,7 +256,7 @@ const ProfilePage: React.FC = () => {
     // 1. Fetch Master Tags from Database
     const fetchMasterTags = async () => {
       try {
-        const res = await fetch('http://localhost:8080/api/tags');
+        const res = await fetch(`${API_BASE_URL}/api/tags`);
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data)) {
@@ -272,7 +272,7 @@ const ProfilePage: React.FC = () => {
     // 2. Fetch Networking Profile (Skills, Bio, Links) from Database
     const fetchNetworkingProfile = async () => {
       try {
-        const res = await fetch('http://localhost:8080/api/profiles/me/networking', {
+        const res = await fetch(`${API_BASE_URL}/api/profiles/me/networking`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.ok) {
@@ -331,7 +331,7 @@ const ProfilePage: React.FC = () => {
     // 3. Fetch User profile details
     const fetchProfile = async () => {
       try {
-        const response = await fetch('http://localhost:8080/api/users/profile', {
+        const response = await fetch(`${API_BASE_URL}/api/users/profile`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -475,7 +475,7 @@ const ProfilePage: React.FC = () => {
       // 2. Persist networking profile with real skills into database
       const token = localStorage.getItem('workhub_access_token');
       if (token) {
-        await fetch('http://localhost:8080/api/profiles/me/networking', {
+        await fetch(`${API_BASE_URL}/api/profiles/me/networking`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -552,7 +552,7 @@ const ProfilePage: React.FC = () => {
         email: (socialLinks.email || '').trim(),
         website: (socialLinks.website || '').trim(),
       });
-      const res = await fetch('http://localhost:8080/api/profiles/me/networking', {
+      const res = await fetch(`${API_BASE_URL}/api/profiles/me/networking`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -645,7 +645,7 @@ const ProfilePage: React.FC = () => {
       // 2. Update networking profile in DB
       const token = localStorage.getItem('workhub_access_token');
       if (token) {
-        await fetch('http://localhost:8080/api/profiles/me/networking', {
+        await fetch(`${API_BASE_URL}/api/profiles/me/networking`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
