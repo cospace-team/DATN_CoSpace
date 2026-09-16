@@ -472,6 +472,9 @@ const UserManagementPage: React.FC = () => {
                       <span className={`badge ${roleBadge[u.role] || 'badge-neutral'}`}>
                         <FiShield className="h-3 w-3" /> {roleLabel[u.role] || u.role}
                       </span>
+                      {u.role === 'customer' && u.membershipTier && u.membershipTier !== 'standard' && (
+                        <span className="block text-xs text-muted-foreground mt-1 capitalize">Hạng {u.membershipTier}</span>
+                      )}
                     </td>
                     <td className="max-w-[180px]">
                       {branchDisplay ? (

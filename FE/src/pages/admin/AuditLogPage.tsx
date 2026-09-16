@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { FiSearch, FiCode, FiChevronDown, FiFilter, FiX, FiEye, FiShield, FiCalendar, FiGlobe } from 'react-icons/fi';
-import { auditLogs, getUser, users } from '../../data/mockData';
 import { formatDateTime } from '../../utils/formatters';
 import { Skeleton } from '../../components/ui/Skeleton';
 
@@ -13,8 +12,9 @@ const AuditLogPage: React.FC = () => {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [liveLogs, setLiveLogs] = useState<any[] | null>(null);
+  const [liveLogs, setLiveLogs] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
     const fetchAuditLogs = async () => {
@@ -30,12 +30,14 @@ const AuditLogPage: React.FC = () => {
         });
         if (res.ok) {
           const json = await res.json();
-          if (json.content && Array.isArray(json.content) && json.content.length > 0) {
-            setLiveLogs(json.content);
-          }
+          setLiveLogs(Array.isArray(json.content) ? json.content : []);
+        } else {
+          const err = await res.json().catch(() => ({}));
+          setLoadError(err.message || `Không tải được nhật ký hệ thống (${res.status}).`);
         }
       } catch (err) {
-        console.warn('Cannot fetch live audit logs, using fallback:', err);
+        console.error('Cannot fetch audit logs', err);
+        setLoadError('Không kết nối được máy chủ để tải nhật ký hệ thống.');
       } finally {
         setIsLoading(false);
       }
@@ -44,28 +46,26 @@ const AuditLogPage: React.FC = () => {
   }, []);
 
   const logsSource = useMemo(() => {
-    if (liveLogs && liveLogs.length > 0) {
-      return liveLogs.map(l => ({
+    return liveLogs.map(l => ({
         id: l.id,
         actor_user_id: l.userId || 'system',
-        actor_role: 'system',
+        actor_name: l.userName || (l.userId ? `Người dùng ${String(l.userId).slice(0, 8)}` : 'Hệ thống'),
+        actor_role: l.userRole || (l.userId ? '—' : 'system'),
         action: l.action,
         target_table: l.entityName || '',
         target_id: l.entityId || '',
         metadata: l.newValues || l.oldValues || {},
         old_values: l.oldValues,
         new_values: l.newValues,
-        ip_address: l.ipAddress || '127.0.0.1',
+        ip_address: l.ipAddress || '',
         created_at: l.createdAt
       }));
-    }
-    return auditLogs;
   }, [liveLogs]);
 
   const uniqueActions = useMemo(() => [...new Set(logsSource.map(l => l.action))], [logsSource]);
   const actorUsers = useMemo(() => {
     const ids = [...new Set(logsSource.map(l => l.actor_user_id))];
-    return ids.map(id => ({ id, name: getUser(id)?.full_name || id }));
+    return ids.map(id => ({ id, name: logsSource.find(l => l.actor_user_id === id)?.actor_name || id }));
   }, [logsSource]);
 
   const filtered = useMemo(() =>
@@ -87,19 +87,21 @@ const AuditLogPage: React.FC = () => {
   );
 
   const actionColor: Record<string, string> = {
-    CREATE_BOOKING: 'badge-success',
-    CHECKIN: 'badge-info',
-    UPDATE_PRICE: 'badge-warning',
-    CONFIRM_PAYMENT: 'badge-success',
-    CANCEL_BOOKING: 'badge-danger',
+    CREATE: 'badge-success',
+    UPDATE: 'badge-warning',
+    UPDATE_STATUS: 'badge-warning',
+    DELETE: 'badge-danger',
+    VOID: 'badge-danger',
+    SETTLE_TAB: 'badge-success',
   };
 
   const actionLabel: Record<string, string> = {
-    CREATE_BOOKING: 'Tạo booking',
-    CHECKIN: 'Check-in',
-    UPDATE_PRICE: 'Cập nhật giá',
-    CONFIRM_PAYMENT: 'Xác nhận thanh toán',
-    CANCEL_BOOKING: 'Hủy booking',
+    CREATE: 'Tạo mới',
+    UPDATE: 'Cập nhật',
+    UPDATE_STATUS: 'Đổi trạng thái',
+    DELETE: 'Xóa',
+    VOID: 'Hủy dịch vụ',
+    SETTLE_TAB: 'Thu tiền dịch vụ',
   };
 
   const hasActiveFilters = search !== '' || userFilter !== 'all' || actionFilter !== 'all' || dateFrom !== '' || dateTo !== '';
@@ -174,10 +176,14 @@ const AuditLogPage: React.FC = () => {
         {hasActiveFilters && (
           <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
             <FiFilter className="h-3.5 w-3.5" />
-            <span>{filtered.length} bản ghi từ {auditLogs.length} tổng</span>
+            <span>{filtered.length} bản ghi từ {logsSource.length} tổng</span>
           </div>
         )}
       </div>
+
+      {loadError && (
+        <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">{loadError}</div>
+      )}
 
       {/* Audit Table */}
       <div className="bg-card rounded-3xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow overflow-x-auto">
@@ -217,7 +223,6 @@ const AuditLogPage: React.FC = () => {
               </tr>
             ) : (
               filtered.map(l => {
-                const actor = getUser(l.actor_user_id);
                 const isExpanded = expandedId === l.id;
                 return (
                   <React.Fragment key={l.id}>
@@ -226,9 +231,9 @@ const AuditLogPage: React.FC = () => {
                       <td>
                         <div className="flex items-center gap-2">
                           <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
-                            {(actor?.full_name || '?').charAt(0)}
+                            {(l.actor_name || '?').charAt(0)}
                           </div>
-                          <span className="font-medium text-sm">{actor?.full_name || l.actor_user_id}</span>
+                          <span className="font-medium text-sm">{l.actor_name}</span>
                         </div>
                       </td>
                       <td>
@@ -238,6 +243,7 @@ const AuditLogPage: React.FC = () => {
                         <span className={`badge ${actionColor[l.action] || 'badge-neutral'}`}>
                           {actionLabel[l.action] || l.action}
                         </span>
+                        <span className="ml-2 text-xs text-muted-foreground font-mono">{l.target_table}</span>
                       </td>
                     </tr>
                     {isExpanded && (

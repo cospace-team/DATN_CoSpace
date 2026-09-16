@@ -20,7 +20,6 @@ import { Button } from "../../components/ui/button";
 import { formatVND } from "../../utils/formatters";
 import { bookingApi, type BookingResponse } from "../../lib/bookingApi";
 import { startPayment } from "../../lib/startPayment";
-import { workspaces, branches } from "../../data/mockData";
 
 export interface CustomerBookingItem {
   id: string;
@@ -42,46 +41,6 @@ export interface CustomerBookingItem {
   cancelledAt?: string;
 }
 
-// Initial Mock Bookings
-const MOCK_BOOKINGS: CustomerBookingItem[] = [
-  {
-    id: "b1",
-    code: "WH-8823",
-    workspaceName: "Hot Desk HD-01",
-    branchName: "CoSpace Chi nhánh Quận 1",
-    date: new Date(),
-    startTime: "09:00",
-    endTime: "11:00",
-    status: "confirmed",
-    totalAmount: 100000,
-    paymentMethod: "momo",
-  },
-  {
-    id: "b2",
-    code: "WH-5512",
-    workspaceName: "Phòng họp Meeting Lotus",
-    branchName: "CoSpace Chi nhánh Quận 3",
-    date: new Date(Date.now() - 86400000 * 2),
-    startTime: "14:00",
-    endTime: "16:00",
-    status: "completed",
-    totalAmount: 450000,
-    paymentMethod: "momo",
-  },
-  {
-    id: "b3",
-    code: "WH-9911",
-    workspaceName: "Văn phòng riêng Private Bamboo",
-    branchName: "CoSpace Chi nhánh Quận 1",
-    date: new Date(Date.now() + 86400000 * 5),
-    startTime: "08:00",
-    endTime: "18:00",
-    status: "confirmed",
-    totalAmount: 1200000,
-    paymentMethod: "momo",
-  },
-];
-
 const BookingHistoryPage: React.FC = () => {
   const location = useLocation();
   const state = location.state as any;
@@ -97,8 +56,7 @@ const BookingHistoryPage: React.FC = () => {
     state?.message || null,
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  // Start empty — API data fills this in. Mock only shown if API unavailable.
-  const [bookings, setBookings] = useState<typeof MOCK_BOOKINGS>([]);
+  const [bookings, setBookings] = useState<CustomerBookingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [apiLoaded, setApiLoaded] = useState(false);
   const [payingId, setPayingId] = useState<string | null>(null);
@@ -182,31 +140,6 @@ const BookingHistoryPage: React.FC = () => {
     }
   }, [location.search]);
 
-  // Optimistic UI: Insert placeholder while API data loads
-  // This will be replaced immediately when fetchBookings() completes
-  useEffect(() => {
-    if (state?.newBookingCode && !apiLoaded) {
-      setBookings((prev) => {
-        if (prev.some((b) => b.code === state.newBookingCode)) {
-          return prev; // Prevent duplicate in React Strict Mode
-        }
-        const newBooking = {
-          id: "b-new-" + Math.random().toString(36).substr(2, 9),
-          code: state.newBookingCode,
-          workspaceName: "Chỗ ngồi vừa đặt",
-          branchName: state.branchName || "CoSpace Chi nhánh",
-          date: new Date(),
-          startTime: "Hôm nay",
-          endTime: "Theo giờ đặt",
-          status: "pending_payment", // Correct status after booking creation
-          totalAmount: 0,
-          paymentMethod: "momo",
-        };
-        return [newBooking, ...prev];
-      });
-    }
-  }, [state, apiLoaded]);
-
   // Load real API bookings if available
   useEffect(() => {
     const fetchBookings = async () => {
@@ -215,14 +148,11 @@ const BookingHistoryPage: React.FC = () => {
         const apiBookings = await bookingApi.getMyBookings(true);
         // Always replace with API data (even empty array) so real state is shown
         const mapped = (apiBookings || []).map((b) => {
-          const workspace = workspaces.find((w) => w.id === b.workspaceId);
-          const branch = branches.find((br) => br.id === b.branchId);
-          
           return {
             id: b.id,
             code: b.bookingCode,
-            workspaceName: b.workspaceName || (workspace ? workspace.name : `Chỗ ngồi ${b.workspaceId?.slice(0, 6) ?? ''}`),
-            branchName: b.branchName || (branch ? branch.name : "CoSpace Chi nhánh"),
+            workspaceName: b.workspaceName || `Chỗ ngồi ${b.workspaceId?.slice(0, 6) ?? ''}`,
+            branchName: b.branchName || "CoSpace",
           date: new Date(b.startAt),
           startTime: new Date(b.startAt).toLocaleTimeString("vi-VN", {
             hour: "2-digit",
@@ -247,10 +177,10 @@ const BookingHistoryPage: React.FC = () => {
         });
         setBookings(mapped);
         setApiLoaded(true);
-      } catch (err) {
-        console.warn("API unavailable, falling back to mock bookings");
-        setBookings(MOCK_BOOKINGS);
+      } catch (err: any) {
+        setBookings([]);
         setApiLoaded(false);
+        setErrorMessage(err?.message || "Không tải được lịch sử đặt chỗ. Vui lòng thử lại sau.");
       } finally {
         setLoading(false);
       }
@@ -501,17 +431,21 @@ const BookingHistoryPage: React.FC = () => {
                       </span>
                       <span
                         className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
-                          (booking.refundPercent ?? 0) > 0
-                            ? booking.refundStatus === "processed"
+                          (booking.refundAmount ?? 0) > 0
+                            ? booking.refundStatus === "processed" || booking.refundStatus === "confirmed"
                               ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-                              : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                              : booking.refundStatus === "rejected"
+                                ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20"
+                                : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
                             : "bg-muted text-muted-foreground border border-border"
                         }`}
                       >
-                        {(booking.refundPercent ?? 0) > 0
-                          ? booking.refundStatus === "processed"
+                        {(booking.refundAmount ?? 0) > 0
+                          ? booking.refundStatus === "processed" || booking.refundStatus === "confirmed"
                             ? "✓ Đã hoàn tiền"
-                            : "⏳ Đang xử lý hoàn tiền"
+                            : booking.refundStatus === "rejected"
+                              ? "× Yêu cầu hoàn tiền bị từ chối"
+                              : "⏳ Đang xử lý hoàn tiền"
                           : "× Không áp dụng hoàn tiền"}
                       </span>
                     </div>

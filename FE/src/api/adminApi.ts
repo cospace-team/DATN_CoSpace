@@ -15,6 +15,8 @@ export interface AdminUserDto {
   company?: string;
   contactPublic?: boolean;
   contactLink?: string;
+  /** membership_tiers code, e.g. "gold"; "standard" until the tier is first computed */
+  membershipTier?: string;
   createdAt?: string;
 }
 

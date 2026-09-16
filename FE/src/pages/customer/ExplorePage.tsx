@@ -23,16 +23,7 @@ import {
   FiChevronDown,
 } from "react-icons/fi";
 import { useNavigate, useLocation } from "react-router-dom";
-import {
-  branches,
-  floors as mockFloors,
-  workspaces,
-  workspaceTypes,
-  pricePolicies,
-  getWorkspaceType,
-  bookings,
-  Workspace,
-} from "../../data/mockData";
+import { WorkspaceAmenities } from "../../components/WorkspaceAmenities";
 import {
   formatVND,
   durationUnitLabel,
@@ -43,108 +34,56 @@ import {
   type FloorResponse,
   type WorkspaceResponse,
   type BranchResponse,
+  type BranchPriceResponse,
   type PublicWorkspaceAvailability,
 } from "../../lib/spaceApi";
 import { useToast } from "../../components/Toast";
 import FloorPlanViewer from "../../components/floor-plan/FloorPlanViewer";
 import type { FloorLayout } from "../../types/floorPlan";
 import { resolveBranchId } from "../../data/branchAliases";
-import { ADDON_SERVICES as MOCK_SERVICES } from "../../data/addonServices";
+import { addonApi, type ExtraServiceDto } from "../../api/addonApi";
 import { Skeleton } from "../../components/ui/Skeleton";
 
 /* ── Types ── */
 type ViewMode = "map" | "day" | "grid" | "list";
 
-interface ZoneConfig {
+/** Workspace as shown on the explore screens, built from the API response. */
+interface ExploreWorkspace {
   id: string;
+  workspace_type_id: string;
+  workspaceTypeName: string;
+  code: string;
   name: string;
-  color: string;
-  bgColor: string;
-  borderColor: string;
-  workspaceIds: string[];
+  capacity: number;
+  svg_element_id: string;
+  status: string;
+  floor_id: string;
+  branch_id: string;
 }
 
-/* ── Zone configuration for floor plan ── */
-const ZONES: ZoneConfig[] = [
-  {
-    id: "zone-mgmt",
-    name: "Quản lý",
-    color: "#EF4444",
-    bgColor: "rgba(239,68,68,0.08)",
-    borderColor: "rgba(239,68,68,0.25)",
-    workspaceIds: ["ws-0011", "ws-0012"],
-  },
-  {
-    id: "zone-tech",
-    name: "Công nghệ",
-    color: "#22C55E",
-    bgColor: "rgba(34,197,94,0.08)",
-    borderColor: "rgba(34,197,94,0.25)",
-    workspaceIds: ["ws-0001", "ws-0002", "ws-0003", "ws-0004"],
-  },
-  {
-    id: "zone-creative",
-    name: "Sáng tạo",
-    color: "#F59E0B",
-    bgColor: "rgba(245,158,11,0.08)",
-    borderColor: "rgba(245,158,11,0.25)",
-    workspaceIds: ["ws-0005", "ws-0006", "ws-0007", "ws-0008"],
-  },
-  {
-    id: "zone-meeting",
-    name: "Phòng họp",
-    color: "#3B82F6",
-    bgColor: "rgba(59,130,246,0.08)",
-    borderColor: "rgba(59,130,246,0.25)",
-    workspaceIds: ["ws-0009", "ws-0010", "ws-0013"],
-  },
-];
+type PriceUnit = "hour" | "day" | "week" | "month";
 
-const toMockFloorResponse = (floorId: string): FloorResponse | null => {
-  const floor = mockFloors.find((f) => f.id === floorId);
-  if (!floor) return null;
+interface UnitPrice {
+  price: number;
+  duration_unit: PriceUnit;
+}
 
-  const workspaceCount = workspaces.filter(
-    (w) => w.floor_id === floor.id,
-  ).length;
-  return {
-    id: floor.id,
-    floorNo: floor.floor_no,
-    name: floor.name,
-    svgContent: null,
-    layoutJson: null,
-    mapVersion: floor.map_version,
-    isPublished: floor.is_published,
-    workspaceCount,
+const DEFAULT_OPEN_HOUR = 6;
+const DEFAULT_CLOSE_HOUR = 23;
+
+/** Whole bookable hours [openHour, closeHour) of a branch, from its "HH:mm:ss" opening hours. */
+const branchHourRange = (branch?: Pick<BranchResponse, "openTime" | "closeTime"> | null) => {
+  const toMinutes = (t?: string | null) => {
+    if (!t) return null;
+    const [h, m] = t.split(":").map(Number);
+    return h * 60 + (m || 0);
   };
-};
-
-const toMockWorkspaceResponse = (
-  workspaceId: string,
-): WorkspaceResponse | null => {
-  const workspace = workspaces.find((w) => w.id === workspaceId);
-  if (!workspace) return null;
-
-  const type = workspaceTypes.find((t) => t.id === workspace.workspace_type_id);
-  return {
-    id: workspace.id,
-    code: workspace.code,
-    name: workspace.name,
-    workspaceTypeId: workspace.workspace_type_id,
-    workspaceTypeName: type?.name || "",
-    capacity: workspace.capacity,
-    svgElementId: workspace.svg_element_id,
-    status: workspace.status,
-  };
-};
-
-const mapDbWsTypeIdToMock = (dbWsTypeId: string): string => {
-  if (dbWsTypeId === "a1000000-0000-0000-0000-000000000001") return "wst-desk";
-  if (dbWsTypeId === "a1000000-0000-0000-0000-000000000002")
-    return "wst-meeting";
-  if (dbWsTypeId === "a1000000-0000-0000-0000-000000000003")
-    return "wst-private";
-  return dbWsTypeId;
+  const open = toMinutes(branch?.openTime);
+  const close = toMinutes(branch?.closeTime);
+  if (open == null || close == null || close <= open) {
+    return { openHour: DEFAULT_OPEN_HOUR, closeHour: DEFAULT_CLOSE_HOUR };
+  }
+  return { openHour: Math.ceil(open / 60), closeHour: Math.floor(close / 60) };
 };
 
 /* ── Booking Panel (shared between desktop sidebar and mobile bottom sheet) ── */
@@ -168,14 +107,17 @@ const daysDiff = (from: Date, to: Date): number =>
   Math.max(1, Math.round((to.getTime() - from.getTime()) / 86_400_000));
 
 const BookingPanel: React.FC<{
-  ws: Workspace;
+  ws: ExploreWorkspace;
   wsType: any;
   wsAvail: string | null;
   selectedWs: string;
   selectedHour: number;
   initialEndHour: number;
   selectedDate: Date;
-  getPrice: () => any;
+  getPrice: (unit: DurationUnitMode) => UnitPrice | undefined;
+  addonServices: ExtraServiceDto[];
+  openHour: number;
+  closeHour: number;
   onClose: () => void;
   onChangeStartHour: (hour: number) => void;
   checkAvailability?: (startHour: number, endHour: number, endDate: Date, unit: string) => string;
@@ -196,24 +138,27 @@ const BookingPanel: React.FC<{
   initialEndHour,
   selectedDate,
   getPrice,
+  addonServices,
+  openHour,
+  closeHour,
   onClose,
   onChangeStartHour,
   checkAvailability,
   onBookNow,
 }) => {
-  const price = getPrice();
-  const ZONES_REF = ZONES;
 
   const [endHour, setEndHour] = useState(initialEndHour);
   const [services, setServices] = useState<Record<string, number>>({});
   const [durationUnit, setDurationUnit] = useState<DurationUnitMode>('hour');
   const [endDate, setEndDate] = useState<Date>(toMidnight(selectedDate));
+  const price = getPrice(durationUnit);
 
   useEffect(() => {
     let validEndHour = initialEndHour;
     if (validEndHour <= selectedHour) {
       validEndHour = selectedHour + 1;
     }
+    validEndHour = Math.min(validEndHour, closeHour);
     setEndHour(validEndHour);
     setServices({});
     setDurationUnit('hour');
@@ -234,13 +179,13 @@ const BookingPanel: React.FC<{
     if (durationUnit === 'hour') return Math.max(1, endHour - selectedHour);
     if (durationUnit === 'day') return daysDiff(toMidnight(selectedDate), endDate);
     // week
-    return Math.max(1, Math.round(daysDiff(toMidnight(selectedDate), endDate) / 7));
+    return Math.max(1, Math.ceil(daysDiff(toMidnight(selectedDate), endDate) / 7));
   }, [durationUnit, endHour, selectedHour, selectedDate, endDate]);
 
   const subtotal = unitCount * (price?.price || 0);
   const addonTotal = Object.keys(services).reduce((sum, id) => {
-    const s = MOCK_SERVICES.find((x) => x.id === id);
-    return sum + (s?.price || 0);
+    const s = addonServices.find((x) => x.id === id);
+    return sum + (s?.price || 0) * (services[id] || 1);
   }, 0);
   const total = subtotal + addonTotal;
 
@@ -305,26 +250,10 @@ const BookingPanel: React.FC<{
               <p className="text-xs text-[var(--text-tertiary)]">Mã</p>
               <p className="text-sm font-mono">{ws.code}</p>
             </div>
-            <div>
-              <p className="text-xs text-[var(--text-tertiary)]">Khu vực</p>
-              {(() => {
-                const zone = ZONES_REF.find((z) =>
-                  z.workspaceIds.includes(selectedWs),
-                );
-                return zone ? (
-                  <p
-                    className="text-sm font-semibold"
-                    style={{ color: zone.color }}
-                  >
-                    {zone.name}
-                  </p>
-                ) : (
-                  <p className="text-sm">—</p>
-                );
-              })()}
-            </div>
           </div>
         </div>
+
+        <WorkspaceAmenities workspaceTypeId={ws.workspace_type_id} workspaceTypeCode={wsType?.code} />
 
         {/* Price */}
         {price && (
@@ -337,6 +266,12 @@ const BookingPanel: React.FC<{
               /{durationUnitLabel[price.duration_unit]?.toLowerCase()}
             </p>
           </div>
+        )}
+
+        {!price && (
+          <p className="rounded-2xl bg-[var(--state-danger-bg)] border border-[var(--state-danger-border)] p-3 text-xs text-[var(--state-danger)]">
+            Chi nhánh chưa có giá cho loại thời gian này. Vui lòng chọn loại thời gian khác.
+          </p>
         )}
 
         {/* Duration unit toggle */}
@@ -379,7 +314,7 @@ const BookingPanel: React.FC<{
                   onChange={(e) => onChangeStartHour(Number(e.target.value))}
                   className="input-field mt-1 text-sm bg-transparent border-b border-border focus:outline-none w-full"
                 >
-                  {Array.from({ length: 17 }, (_, i) => i + 6).map((h) => (
+                  {Array.from({ length: Math.max(0, closeHour - openHour) }, (_, i) => i + openHour).map((h) => (
                     <option key={h} value={h}>
                       {String(h).padStart(2, '0')}:00
                     </option>
@@ -400,7 +335,7 @@ const BookingPanel: React.FC<{
                   className="input-field mt-1 text-sm bg-transparent border-b border-border focus:outline-none w-full"
                 >
                   {Array.from(
-                    { length: 23 - selectedHour },
+                    { length: Math.max(0, closeHour - selectedHour) },
                     (_, i) => selectedHour + i + 1,
                   ).map((h) => (
                     <option key={h} value={h}>
@@ -460,7 +395,10 @@ const BookingPanel: React.FC<{
             Dịch vụ thêm
           </p>
           <div className="space-y-2">
-            {MOCK_SERVICES.map((s) => (
+            {addonServices.length === 0 && (
+              <p className="text-xs text-[var(--text-tertiary)]">Chi nhánh chưa có dịch vụ thêm.</p>
+            )}
+            {addonServices.map((s) => (
               <label
                 key={s.id}
                 htmlFor={`addon-${s.id}-${selectedWs}`}
@@ -473,11 +411,9 @@ const BookingPanel: React.FC<{
                   onChange={(e) => handleServiceChange(s.id, e.target.checked)}
                   className="rounded accent-[var(--brand-primary)]"
                 />
-                <span className="flex items-center gap-1.5">
-                  {s.icon} {s.name}
-                </span>
+                <span className="flex items-center gap-1.5">{s.name}</span>
                 <span className="ml-auto text-xs text-[var(--text-tertiary)]">
-                  +{formatVND(s.price)}
+                  +{formatVND(s.price)}/{s.unit}
                 </span>
               </label>
             ))}
@@ -494,7 +430,7 @@ const BookingPanel: React.FC<{
       </div>
 
       {/* Book button */}
-      {currentAvail === "available" && (
+      {currentAvail === "available" && price && (
         <button
           className="btn btn-primary w-full mt-5"
           onClick={() => onBookNow(endHour, services, subtotal, addonTotal, endDate, durationUnit)}
@@ -540,11 +476,11 @@ const ExplorePage: React.FC = () => {
     if (normalizedStateBranchId) {
       return normalizedStateBranchId;
     }
-    return branches[0]?.id || "";
+    return "";
   }, [location.search, location.state]);
 
   const [selectedBranch, setSelectedBranch] = useState(() => {
-    return initialBranchId || sessionStorage.getItem("selectedBranch") || branches[0]?.id || "";
+    return initialBranchId || sessionStorage.getItem("selectedBranch") || "";
   });
 
   // Restore selectedFloor and selectedWs from URL search params or sessionStorage
@@ -625,10 +561,9 @@ const ExplorePage: React.FC = () => {
 
 
 
-  const [showTags, setShowTags] = useState(false);
-
-  // API-loaded branches (with mock fallback)
-  const [apiBranches, setApiBranches] = useState<Array<{id: string; code: string; name: string; address: string; status: string}>>([]);
+  const [apiBranches, setApiBranches] = useState<BranchResponse[]>([]);
+  const [branchPrices, setBranchPrices] = useState<BranchPriceResponse[]>([]);
+  const [addonServices, setAddonServices] = useState<ExtraServiceDto[]>([]);
 
   // Database-loaded floors, workspaces and user bookings
   const [dbFloors, setDbFloors] = useState<FloorResponse[]>([]);
@@ -638,35 +573,63 @@ const ExplorePage: React.FC = () => {
   const [workspacesLoading, setWorkspacesLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
 
-  // Load branches from API on mount, fallback to mock
+  // Branches come only from the API; if they cannot be loaded the page says so.
   useEffect(() => {
     let active = true;
     const loadBranches = async () => {
       try {
         const data = await customerSpaceApi.listBranches();
-        if (active && data && data.length > 0) {
-          setApiBranches(data);
-          // If no branch selected yet, pick first from API
-          if (!selectedBranch) {
-            setSelectedBranch(data[0].id);
-          }
+        if (!active) return;
+        setApiBranches(data);
+        const usable = data.filter((b) => b.status === "active");
+        setSelectedBranch((prev) => {
+          const resolved = resolveBranchId(prev);
+          return usable.some((b) => b.id === resolved) ? resolved : (usable[0]?.id ?? "");
+        });
+        if (usable.length === 0) {
+          setErrorMsg("Hiện chưa có chi nhánh nào nhận đặt chỗ.");
+          setLoading(false);
         }
       } catch (err) {
-        console.warn('Failed to load branches from API, using mock data:', err);
-        // Keep using mock branches from mockData
+        console.error("Failed to load branches", err);
+        if (active) {
+          setErrorMsg("Không tải được danh sách chi nhánh. Vui lòng kiểm tra kết nối và thử lại.");
+          setLoading(false);
+        }
       }
     };
     loadBranches();
     return () => { active = false; };
   }, []);
 
-  // Merged branch list: prefer API data, fallback to mock
-  const activeBranches = useMemo(() => {
-    if (apiBranches.length > 0) {
-      return apiBranches.filter(b => b.status === 'active');
-    }
-    return branches.filter(b => b.status === 'active');
-  }, [apiBranches]);
+  const activeBranches = useMemo(() => apiBranches.filter((b) => b.status === "active"), [apiBranches]);
+
+  const { openHour, closeHour } = useMemo(
+    () => branchHourRange(apiBranches.find((b) => b.id === resolveBranchId(selectedBranch))),
+    [apiBranches, selectedBranch],
+  );
+
+  // Keep the selected hour inside the branch's opening hours.
+  useEffect(() => {
+    if (selectedHour < openHour) setSelectedHour(openHour);
+    else if (selectedHour >= closeHour) setSelectedHour(Math.max(openHour, closeHour - 1));
+  }, [openHour, closeHour]);
+
+  // Real prices and add-on services of the selected branch.
+  useEffect(() => {
+    let active = true;
+    const resolvedId = resolveBranchId(selectedBranch);
+    setBranchPrices([]);
+    setAddonServices([]);
+    if (!resolvedId) return;
+    customerSpaceApi.listPrices(resolvedId)
+      .then((data) => { if (active) setBranchPrices(data); })
+      .catch((err) => console.error("Failed to load branch prices", err));
+    addonApi.listServices(resolvedId)
+      .then((data) => { if (active) setAddonServices(data); })
+      .catch((err) => console.error("Failed to load add-on services", err));
+    return () => { active = false; };
+  }, [selectedBranch]);
 
   // Fetch branch-wide booking status (ALL customers, not just the current one) to color the
   // availability map correctly — bookingApi.getMyBookings() only ever reflects the caller's own
@@ -696,53 +659,26 @@ const ExplorePage: React.FC = () => {
 
   // Load floors when selected branch changes
   useEffect(() => {
+    const resolvedId = resolveBranchId(selectedBranch);
+    if (!resolvedId) return;
     let active = true;
     const loadFloors = async () => {
       setLoading(true);
       setErrorMsg("");
       try {
-        const resolvedId = resolveBranchId(selectedBranch);
-        if (resolvedId) {
-          const data = await customerSpaceApi.listFloors(resolvedId);
-          if (active) {
-            setDbFloors(data);
-            const savedFloorId = sessionStorage.getItem("selectedFloorId");
-            const hasSaved = savedFloorId && data.some((f) => f.id === savedFloorId);
-            setSelectedFloor(hasSaved ? savedFloorId : (data.length > 0 ? data[0].id : ""));
-          }
-          return;
-        }
-
-        const fallbackFloors = mockFloors
-          .filter((f) => f.branch_id === selectedBranch)
-          .map((f) => toMockFloorResponse(f.id))
-          .filter((floor): floor is FloorResponse => !!floor)
-          .sort((a, b) => a.floorNo - b.floorNo);
-
+        const data = await customerSpaceApi.listFloors(resolvedId);
         if (active) {
-          setDbFloors(fallbackFloors);
-          setSelectedFloor(
-            fallbackFloors.length > 0 ? fallbackFloors[0].id : "",
-          );
+          setDbFloors(data);
+          const savedFloorId = sessionStorage.getItem("selectedFloorId");
+          const hasSaved = savedFloorId && data.some((f) => f.id === savedFloorId);
+          setSelectedFloor(hasSaved ? savedFloorId : (data.length > 0 ? data[0].id : ""));
         }
       } catch (err: any) {
         console.error("Failed to load floors from DB", err);
         if (active) {
-          const fallbackFloors = mockFloors
-            .filter((f) => f.branch_id === selectedBranch)
-            .map((f) => toMockFloorResponse(f.id))
-            .filter((floor): floor is FloorResponse => !!floor)
-            .sort((a, b) => a.floorNo - b.floorNo);
-
-          if (fallbackFloors.length > 0) {
-            setDbFloors(fallbackFloors);
-            setSelectedFloor(fallbackFloors[0].id);
-            setErrorMsg("");
-          } else {
-            setErrorMsg("Không thể tải sơ đồ tầng từ database.");
-            setDbFloors([]);
-            setSelectedFloor("");
-          }
+          setErrorMsg("Không thể tải sơ đồ tầng. Vui lòng thử lại sau.");
+          setDbFloors([]);
+          setSelectedFloor("");
         }
       } finally {
         if (active) setLoading(false);
@@ -756,7 +692,8 @@ const ExplorePage: React.FC = () => {
 
   // Load workspaces when selected floor changes
   useEffect(() => {
-    if (!selectedFloor) {
+    const resolvedBranchId = resolveBranchId(selectedBranch);
+    if (!selectedFloor || !resolvedBranchId) {
       setDbWorkspaces([]);
       setWorkspacesLoading(false);
       return;
@@ -765,34 +702,13 @@ const ExplorePage: React.FC = () => {
     const loadWorkspaces = async () => {
       setWorkspacesLoading(true);
       try {
-        const resolvedBranchId = resolveBranchId(selectedBranch);
-        if (resolvedBranchId) {
-          const data = await customerSpaceApi.listWorkspaces(
-            resolvedBranchId,
-            selectedFloor,
-          );
-          if (active) {
-            setDbWorkspaces(data);
-          }
-          return;
-        }
-
-        const fallbackWorkspaces = workspaces
-          .filter((ws) => ws.floor_id === selectedFloor)
-          .map((ws) => toMockWorkspaceResponse(ws.id))
-          .filter((workspace): workspace is WorkspaceResponse => !!workspace);
-
-        if (active) {
-          setDbWorkspaces(fallbackWorkspaces);
-        }
+        const data = await customerSpaceApi.listWorkspaces(resolvedBranchId, selectedFloor);
+        if (active) setDbWorkspaces(data);
       } catch (err) {
         console.error("Failed to load workspaces from DB", err);
         if (active) {
-          const fallbackWorkspaces = workspaces
-            .filter((ws) => ws.floor_id === selectedFloor)
-            .map((ws) => toMockWorkspaceResponse(ws.id))
-            .filter((workspace): workspace is WorkspaceResponse => !!workspace);
-          setDbWorkspaces(fallbackWorkspaces);
+          setDbWorkspaces([]);
+          setErrorMsg("Không thể tải danh sách chỗ ngồi. Vui lòng thử lại sau.");
         }
       } finally {
         if (active) setWorkspacesLoading(false);
@@ -808,34 +724,26 @@ const ExplorePage: React.FC = () => {
   const currentFloor = selectedFloor || branchFloors[0]?.id || "";
   const currentFloorData = branchFloors.find((f) => f.id === currentFloor);
 
-  // Map dbWorkspaces to mock-compatible objects
-  const mappedWorkspaces = useMemo(() => {
-    return dbWorkspaces.map((ws) => {
-      const mock = workspaces.find(
-        (w) => w.code.toLowerCase() === ws.code.toLowerCase(),
-      );
-      return {
-        id: ws.id,
-        mockId: mock?.id || ws.id,
-        workspace_type_id:
-          mock?.workspace_type_id || mapDbWsTypeIdToMock(ws.workspaceTypeId),
-        workspaceTypeName: ws.workspaceTypeName,
-        code: ws.code,
-        name: ws.name,
-        capacity: ws.capacity,
-        svg_element_id: ws.svgElementId,
-        status: ws.status,
-        floor_id: currentFloor,
-        branch_id: resolveBranchId(selectedBranch),
-      };
-    });
+  const mappedWorkspaces = useMemo<ExploreWorkspace[]>(() => {
+    return dbWorkspaces.map((ws) => ({
+      id: ws.id,
+      workspace_type_id: ws.workspaceTypeId,
+      workspaceTypeName: ws.workspaceTypeName,
+      code: ws.code,
+      name: ws.name,
+      capacity: ws.capacity,
+      svg_element_id: ws.svgElementId,
+      status: ws.status,
+      floor_id: currentFloor,
+      branch_id: resolveBranchId(selectedBranch),
+    }));
   }, [dbWorkspaces, currentFloor, selectedBranch]);
 
   const floorWorkspaces = mappedWorkspaces;
 
   const getWsAvailability = useCallback(
     (wsId: string, checkDate?: Date, checkHour?: number, checkEndDate?: Date, checkEndHour?: number) => {
-      const ws = mappedWorkspaces.find((w) => w.id === wsId || w.mockId === wsId);
+      const ws = mappedWorkspaces.find((w) => w.id === wsId);
       if (!ws) return "unassigned";
       if (
         ws.status.toLowerCase() === "maintenance" ||
@@ -866,25 +774,10 @@ const ExplorePage: React.FC = () => {
          }
       }
 
-      // Check mock static bookings
-      const activeMockBooking = bookings.find((b) => {
-        if (b.workspace_id !== ws.id && b.workspace_id !== ws.mockId)
-          return false;
-        if (["canceled", "expired", "completed"].includes(b.status.toLowerCase()))
-          return false;
-        const start = new Date(b.start_at);
-        const end = new Date(b.end_at);
-        return checkTimeStart < end && start < checkTimeEnd;
-      });
-
-      if (activeMockBooking) {
-        return `booked|${new Date(activeMockBooking.start_at).getHours()}|${new Date(activeMockBooking.end_at).getHours()}`;
-      }
-
       // Check branch-wide availability from API — covers bookings made by ANY customer, not
       // just the current one (bookingApi.getMyBookings() only ever returns the caller's own).
       const wsAvailability = branchAvailability.find(
-        (a) => a.workspaceId === ws.id || a.workspaceId === ws.mockId,
+        (a) => a.workspaceId === ws.id,
       );
       const activeBusySlot = wsAvailability?.busySlots.find((slot) => {
         const start = new Date(slot.startAt);
@@ -902,25 +795,27 @@ const ExplorePage: React.FC = () => {
   );
 
   const selectedWsData = selectedWs
-    ? mappedWorkspaces.find((w) => w.id === selectedWs || w.mockId === selectedWs)
+    ? mappedWorkspaces.find((w) => w.id === selectedWs)
     : null;
   const selectedWsType = selectedWsData
-    ? getWorkspaceType(selectedWsData.workspace_type_id)
+    ? {
+        id: selectedWsData.workspace_type_id,
+        name: selectedWsData.workspaceTypeName,
+        code: branchPrices.find((p) => p.workspaceTypeId === selectedWsData.workspace_type_id)?.workspaceTypeCode,
+      }
     : null;
   const selectedWsAvail = selectedWs ? getWsAvailability(selectedWs) : null;
 
-  const getPrice = (wsTypeId: string) => {
-    const bp = pricePolicies.find(
-      (p) =>
-        p.workspace_type_id === wsTypeId &&
-        p.branch_id === selectedBranch &&
-        p.is_active,
-    );
-    const gp = pricePolicies.find(
-      (p) => p.workspace_type_id === wsTypeId && !p.branch_id && p.is_active,
-    );
-    return bp || gp;
+  const getPrice = (wsTypeId: string, unit: PriceUnit): UnitPrice | undefined => {
+    const p = branchPrices.find((x) => x.workspaceTypeId === wsTypeId && x.unit === unit);
+    return p ? { price: p.price, duration_unit: p.unit } : undefined;
   };
+
+  /** Headline price on cards and rows: the shortest unit the type can be booked by. */
+  const getDisplayPrice = (wsTypeId: string): UnitPrice | undefined =>
+    (["hour", "day", "week", "month"] as PriceUnit[])
+      .map((u) => getPrice(wsTypeId, u))
+      .find((p): p is UnitPrice => !!p);
 
   const formatDateShort = (d: Date) =>
     d
@@ -979,9 +874,19 @@ const ExplorePage: React.FC = () => {
         return;
     }
 
-    const price = getPrice(selectedWsData.workspace_type_id);
-    const branchObj = branches.find((b) => b.id === selectedBranch);
-    const branchName = branchObj ? branchObj.name : "CoSpace Chi nhánh";
+    const price = getPrice(selectedWsData.workspace_type_id, durationUnit);
+    if (!price) {
+      showToast("Chi nhánh chưa có giá cho loại thời gian này.", "error");
+      return;
+    }
+    const branchObj = apiBranches.find((b) => b.id === resolveBranchId(selectedBranch));
+    const branchName = branchObj ? branchObj.name : "CoSpace";
+    const addons = Object.entries(services)
+      .map(([serviceId, quantity]) => {
+        const s = addonServices.find((x) => x.id === serviceId);
+        return s ? { serviceId, quantity, name: s.name, price: s.price, unit: s.unit } : null;
+      })
+      .filter((a): a is NonNullable<typeof a> => a !== null);
 
     navigate("/customer/checkout", {
       state: {
@@ -993,7 +898,7 @@ const ExplorePage: React.FC = () => {
         endHour: endHour,
         endDate: endDate,
         durationUnit: durationUnit,
-        services: services,
+        addons,
         subtotal: subtotal,
         addonTotal: addonTotal,
         total: subtotal + addonTotal,
@@ -1132,8 +1037,8 @@ const ExplorePage: React.FC = () => {
           <FiClock className="h-4 w-4 text-foreground" />
           <input
             type="range"
-            min={6}
-            max={22}
+            min={openHour}
+            max={Math.max(openHour, closeHour - 1)}
             value={selectedHour}
             onChange={(e) => {
               setSelectedHour(Number(e.target.value));
@@ -1168,17 +1073,6 @@ const ExplorePage: React.FC = () => {
 
         <div className="flex-1" />
 
-        {/* Space tags toggle */}
-        <button
-          onClick={() => setShowTags(!showTags)}
-          className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-medium transition-all border border-border shadow-sm shrink-0 ${
-            showTags
-              ? "bg-slate-900 text-white"
-              : "bg-card text-foreground hover:bg-muted"
-          }`}
-        >
-          <FiTag className="h-4 w-4" /> KHU VỰC
-        </button>
       </div>
 
       {/* ── Main Content ── */}
@@ -1225,25 +1119,6 @@ const ExplorePage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Zone legend (bottom) */}
-              {showTags && (
-                <div className="absolute bottom-6 left-6 right-6 z-10 flex items-center justify-center gap-6 px-6 py-4 rounded-2xl bg-card border border-border shadow-sm slide-in-up">
-                  <span className="text-xs font-medium text-foreground tracking-tight">
-                    Khu vực:
-                  </span>
-                  {ZONES.map((z) => (
-                    <div key={z.id} className="flex items-center gap-2">
-                      <span
-                        className="h-4 w-6 rounded border border-border"
-                        style={{ background: z.color }}
-                      />
-                      <span className="text-xs font-medium text-foreground">
-                        {z.name}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
             </>
           ) : viewMode === "list" ? (
             /* ── LIST VIEW ── */
@@ -1254,7 +1129,6 @@ const ExplorePage: React.FC = () => {
                     <tr className="bg-muted border-b border-border">
                       <th className="px-4 py-3 font-medium text-foreground tracking-tight text-xs">Workspace</th>
                       <th className="px-4 py-3 font-medium text-foreground tracking-tight text-xs">Loại</th>
-                      <th className="px-4 py-3 font-medium text-foreground tracking-tight text-xs">Khu vực</th>
                       <th className="px-4 py-3 font-medium text-foreground tracking-tight text-xs">Sức chứa</th>
                       <th className="px-4 py-3 font-medium text-foreground tracking-tight text-xs">Trạng thái</th>
                       <th className="px-4 py-3 font-medium text-foreground tracking-tight text-xs">Giá</th>
@@ -1267,7 +1141,6 @@ const ExplorePage: React.FC = () => {
                         <tr key={`ws-skeleton-${i}`} className="border-b border-border last:border-b-0">
                           <td className="px-4 py-4"><Skeleton className="h-4 w-40" /></td>
                           <td className="px-4 py-4"><Skeleton className="h-4 w-24" /></td>
-                          <td className="px-4 py-4"><Skeleton className="h-5 w-16 rounded-lg" /></td>
                           <td className="px-4 py-4"><Skeleton className="h-4 w-8" /></td>
                           <td className="px-4 py-4"><Skeleton className="h-6 w-16 rounded-full" /></td>
                           <td className="px-4 py-4"><Skeleton className="h-4 w-20" /></td>
@@ -1280,11 +1153,7 @@ const ExplorePage: React.FC = () => {
                         selectedDate,
                         selectedHour,
                       );
-                      const wsType = getWorkspaceType(ws.workspace_type_id);
-                      const price = getPrice(ws.workspace_type_id);
-                      const zone = ZONES.find((z) =>
-                        z.workspaceIds.includes(ws.mockId),
-                      );
+                      const price = getDisplayPrice(ws.workspace_type_id);
                       return (
                         <tr
                           key={ws.id}
@@ -1302,22 +1171,7 @@ const ExplorePage: React.FC = () => {
                             {ws.name} <span className="text-xs opacity-70">({ws.code})</span>
                           </td>
                           <td className="px-4 py-4 text-foreground text-sm">
-                            {ws.workspaceTypeName ||
-                              wsType?.name ||
-                              ws.workspace_type_id}
-                          </td>
-                          <td className="px-4 py-4">
-                            {zone && (
-                              <span
-                                className="px-2 py-1 rounded-lg text-[10px] font-medium tracking-tight border border-border"
-                                style={{
-                                  background: zone.color,
-                                  color: "#FFF",
-                                }}
-                              >
-                                {zone.name}
-                              </span>
-                            )}
+                            {ws.workspaceTypeName || "—"}
                           </td>
                           <td className="px-4 py-4 text-foreground font-medium">{ws.capacity || "—"}</td>
                           <td className="px-4 py-4">
@@ -1371,16 +1225,12 @@ const ExplorePage: React.FC = () => {
             <div className="p-6 overflow-y-auto h-full bg-muted/50">
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {floorWorkspaces.map((ws) => {
-                  const zone = ZONES.find((z) =>
-                    z.workspaceIds.includes(ws.mockId),
-                  );
                   const avail = getWsAvailability(
                     ws.id,
                     selectedDate,
                     selectedHour,
                   );
-                  const wsType = getWorkspaceType(ws.workspace_type_id);
-                  const price = getPrice(ws.workspace_type_id);
+                  const price = getDisplayPrice(ws.workspace_type_id);
                   return (
                     <div
                       key={ws.id}
@@ -1409,14 +1259,6 @@ const ExplorePage: React.FC = () => {
                               ? "Đang có khách"
                               : "Đang bảo trì"}
                         </span>
-                        {zone && (
-                          <span
-                            className="text-[10px] font-semibold px-2 py-0.5 rounded-full border border-border"
-                            style={{ backgroundColor: zone.bgColor, color: zone.color }}
-                          >
-                            {zone.name}
-                          </span>
-                        )}
                       </div>
                       <h3 className="text-lg font-bold text-foreground group-hover:text-primary transition-colors flex items-center justify-between">
                         <span>{ws.name}</span>
@@ -1426,7 +1268,7 @@ const ExplorePage: React.FC = () => {
                       </h3>
                       <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1.5">
                         <FiUsers className="h-3.5 w-3.5 text-primary" />
-                        <span>{ws.workspaceTypeName || wsType?.name || 'Không gian làm việc'}</span>
+                        <span>{ws.workspaceTypeName || 'Không gian làm việc'}</span>
                         <span>·</span>
                         <span>{ws.capacity} chỗ ngồi</span>
                       </p>
@@ -1463,7 +1305,7 @@ const ExplorePage: React.FC = () => {
                       Workspace
                     </div>
                     <div className="flex-1 flex">
-                      {Array.from({ length: 17 }, (_, i) => i + 6).map((h) => (
+                      {Array.from({ length: Math.max(0, closeHour - openHour) }, (_, i) => i + openHour).map((h) => (
                         <div
                           key={h}
                           className={`flex-1 p-2 text-center text-xs border-r last:border-r-0 border-border ${h === selectedHour ? "bg-slate-900 font-medium text-white" : "text-foreground font-medium"}`}
@@ -1484,7 +1326,7 @@ const ExplorePage: React.FC = () => {
                           {ws.name}
                         </div>
                         <div className="flex-1 flex">
-                          {Array.from({ length: 17 }, (_, i) => i + 6).map(
+                          {Array.from({ length: Math.max(0, closeHour - openHour) }, (_, i) => i + openHour).map(
                             (h) => {
                               const avail = getWsAvailability(
                                 ws.id,
@@ -1564,9 +1406,12 @@ const ExplorePage: React.FC = () => {
                 wsAvail={selectedWsAvail}
                 selectedWs={selectedWs}
                 selectedHour={selectedHour}
-                initialEndHour={selectedEndHour || Math.min(selectedHour + 1, 22)}
+                initialEndHour={selectedEndHour || Math.min(selectedHour + 1, closeHour)}
                 selectedDate={selectedDate}
-                getPrice={() => getPrice(selectedWsData.workspace_type_id)}
+                getPrice={(unit) => getPrice(selectedWsData.workspace_type_id, unit)}
+                addonServices={addonServices}
+                openHour={openHour}
+                closeHour={closeHour}
                 onClose={() => setSelectedWs(null)}
                 onChangeStartHour={(h) => setSelectedHour(h)}
                 checkAvailability={(stH, endH, endD, unit) => getWsAvailability(selectedWs, selectedDate, stH, endD, unit === 'hour' ? endH : undefined)}
@@ -1588,9 +1433,12 @@ const ExplorePage: React.FC = () => {
                   wsAvail={selectedWsAvail}
                   selectedWs={selectedWs}
                   selectedHour={selectedHour}
-                  initialEndHour={selectedEndHour || Math.min(selectedHour + 1, 22)}
+                  initialEndHour={selectedEndHour || Math.min(selectedHour + 1, closeHour)}
                   selectedDate={selectedDate}
-                  getPrice={() => getPrice(selectedWsData.workspace_type_id)}
+                  getPrice={(unit) => getPrice(selectedWsData.workspace_type_id, unit)}
+                  addonServices={addonServices}
+                  openHour={openHour}
+                  closeHour={closeHour}
                   onClose={() => setSelectedWs(null)}
                   onChangeStartHour={(h) => setSelectedHour(h)}
                   checkAvailability={(stH, endH, endD, unit) => getWsAvailability(selectedWs, selectedDate, stH, endD, unit === 'hour' ? endH : undefined)}

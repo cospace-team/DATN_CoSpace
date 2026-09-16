@@ -53,7 +53,8 @@ public class ReportService {
     private static final ZoneId VN_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
 
     private static final Set<BookingStatus> REVENUE_STATUSES = Set.of(
-            BookingStatus.COMPLETED, BookingStatus.CHECKED_IN, BookingStatus.CHECKED_OUT, BookingStatus.CONFIRMED);
+            BookingStatus.COMPLETED, BookingStatus.CHECKED_IN, BookingStatus.CHECKED_OUT, BookingStatus.CONFIRMED,
+            BookingStatus.NO_SHOW);
 
     private final BookingRepository bookingRepository;
     private final PaymentRepository paymentRepository;

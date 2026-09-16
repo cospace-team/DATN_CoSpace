@@ -42,14 +42,18 @@ public class PaymentService {
     private final BookingService bookingService;
     private final MomoService momoService;
     private final PayosService payosService;
+    private final RefundService refundService;
+    private final BookingAddonService bookingAddonService;
     private final ObjectMapper objectMapper;
 
-    public PaymentService(PaymentRepository paymentRepository, BookingRepository bookingRepository, BookingService bookingService, MomoService momoService, PayosService payosService) {
+    public PaymentService(PaymentRepository paymentRepository, BookingRepository bookingRepository, BookingService bookingService, MomoService momoService, PayosService payosService, RefundService refundService, BookingAddonService bookingAddonService) {
         this.paymentRepository = paymentRepository;
         this.bookingRepository = bookingRepository;
         this.bookingService = bookingService;
         this.momoService = momoService;
         this.payosService = payosService;
+        this.refundService = refundService;
+        this.bookingAddonService = bookingAddonService;
         this.objectMapper = new ObjectMapper();
     }
 
@@ -66,6 +70,7 @@ public class PaymentService {
         }
         
         BookingDto booking = bookingService.getMyBooking(userId, bookingId);
+        requireOnlinePayable(booking);
 
         Payment payment = Payment.builder()
                 .id(UUID.randomUUID())
@@ -111,6 +116,7 @@ public class PaymentService {
         }
 
         BookingDto booking = bookingService.getMyBooking(userId, bookingId);
+        requireOnlinePayable(booking);
 
         long orderCode = (System.currentTimeMillis() % 1000000000L) * 1000 + (RANDOM.nextInt(900) + 100);
         String orderId = "PAYOS-" + orderCode;
@@ -146,6 +152,10 @@ public class PaymentService {
     public CashCreatePaymentResponse createCashPayment(UUID staffId, UUID bookingId) {
         Booking booking = bookingRepository.findByIdWithLock(bookingId)
                 .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
+        requirePayable(booking.getStatus(), booking.getPaymentDeadlineAt(), booking.getTotalAmount());
+        if (paymentRepository.existsByBookingIdAndStatusAndPurpose(bookingId, PaymentStatus.PAID, Payment.PURPOSE_BOOKING)) {
+            throw new IllegalStateException("Đơn đặt chỗ này đã được thanh toán.");
+        }
 
         Payment payment = Payment.builder()
                 .id(UUID.randomUUID())
@@ -161,7 +171,7 @@ public class PaymentService {
                 .build();
         paymentRepository.save(payment);
 
-        confirmBooking(booking.getId());
+        confirmBooking(payment);
 
         return toCashCreateResponse(payment);
     }
@@ -173,12 +183,10 @@ public class PaymentService {
             throw new IllegalArgumentException("Missing orderId");
         }
 
+        // partnerCode comes from the request itself, so it can never be a reason to skip verification.
         if (!momoService.verifyCallbackSignature(params, params.get("signature"))) {
-            log.warn("MoMo signature mismatch for orderId={}. params={}", orderId, params);
-            if (!"MOMO".equalsIgnoreCase(params.get("partnerCode"))) {
-                throw new IllegalArgumentException("Invalid signature");
-            }
-            log.info("Bypassing signature verification for sandbox partnerCode MOMO.");
+            log.warn("MoMo signature mismatch for orderId={}", orderId);
+            throw new IllegalArgumentException("Invalid signature");
         }
 
         Payment payment = paymentRepository.findByOrderId(orderId)
@@ -199,7 +207,7 @@ public class PaymentService {
         if ("0".equals(resultCode)) {
             payment.setStatus(PaymentStatus.PAID);
             payment.setPaidAt(OffsetDateTime.now(ZoneOffset.UTC));
-            confirmBooking(payment.getBookingId());
+            confirmBooking(payment);
         } else {
             payment.setStatus(PaymentStatus.FAILED);
         }
@@ -225,7 +233,13 @@ public class PaymentService {
         String orderCodeStr = String.valueOf(orderCodeObj);
         Payment payment = paymentRepository.findByOrderId("PAYOS-" + orderCodeStr)
                 .or(() -> paymentRepository.findByOrderId(orderCodeStr))
-                .orElseThrow(() -> new IllegalArgumentException("Payment not found for orderCode=" + orderCodeStr));
+                .orElse(null);
+        if (payment == null) {
+            // Signed by PayOS but not one of our orders, e.g. the test call PayOS sends when the webhook
+            // URL is registered. Acknowledge it (PayOS requires a 2xx) without changing anything.
+            log.warn("PayOS webhook for unknown orderCode={} acknowledged without changes", orderCodeStr);
+            return;
+        }
 
         if (payment.getStatus() == PaymentStatus.PAID) {
             log.info("Payment {} is already paid. Ignoring PayOS webhook.", payment.getId());
@@ -239,7 +253,7 @@ public class PaymentService {
         if ("00".equals(code) || "0".equals(code)) {
             payment.setStatus(PaymentStatus.PAID);
             payment.setPaidAt(OffsetDateTime.now(ZoneOffset.UTC));
-            confirmBooking(payment.getBookingId());
+            confirmBooking(payment);
             log.info("PayOS payment {} marked as PAID for booking {}", payment.getId(), payment.getBookingId());
         } else {
             payment.setStatus(PaymentStatus.FAILED);
@@ -247,51 +261,91 @@ public class PaymentService {
         paymentRepository.save(payment);
     }
 
+    /**
+     * Handles the browser redirect back from PayOS. The query string (status, code, cancel) is
+     * controlled by whoever opens the URL, so it is never trusted: the payment's state is taken from
+     * our own database or verified directly with PayOS.
+     *
+     * @return true only if the payment is confirmed as paid
+     */
     @Transactional
     public boolean handlePayosReturn(Map<String, String> params) {
-        String orderCodeStr = params.getOrDefault("orderCode", "");
-        if (orderCodeStr.isBlank()) {
+        String orderCodeStr = params.getOrDefault("orderCode", "").trim();
+        if (orderCodeStr.startsWith("PAYOS-")) {
+            orderCodeStr = orderCodeStr.substring("PAYOS-".length());
+        }
+        long orderCode;
+        try {
+            orderCode = Long.parseLong(orderCodeStr);
+        } catch (NumberFormatException ex) {
             return false;
         }
-        String status = params.getOrDefault("status", "");
-        String code = params.getOrDefault("code", "");
-        String cancel = params.getOrDefault("cancel", "false");
 
-        boolean isPaid = ("PAID".equalsIgnoreCase(status) || "00".equals(code)) && !"true".equalsIgnoreCase(cancel);
-        Payment payment = paymentRepository.findByOrderId("PAYOS-" + orderCodeStr)
-                .or(() -> paymentRepository.findByOrderId(orderCodeStr))
+        String lookupCode = orderCodeStr;
+        Payment payment = paymentRepository.findByOrderId("PAYOS-" + lookupCode)
+                .or(() -> paymentRepository.findByOrderId(lookupCode))
                 .orElse(null);
-
-        if (payment != null) {
-            payment.setRawCallback(safeJson(params));
-            if (isPaid) {
-                if (payment.getStatus() != PaymentStatus.PAID) {
-                    payment.setStatus(PaymentStatus.PAID);
-                    payment.setPaidAt(OffsetDateTime.now(ZoneOffset.UTC));
-                    paymentRepository.save(payment);
-                    confirmBooking(payment.getBookingId());
-                }
-                return true;
-            } else if ("true".equalsIgnoreCase(cancel) || "CANCELLED".equalsIgnoreCase(status)) {
-                payment.setStatus(PaymentStatus.FAILED);
-                paymentRepository.save(payment);
-            }
+        if (payment == null) {
+            return false;
         }
-        return isPaid;
+        if (payment.getStatus() == PaymentStatus.PAID) {
+            return true;
+        }
+
+        PayosService.PaymentLinkStatus verified = payosService.getPaymentLinkStatus(orderCode);
+        if (verified == null) {
+            return false;
+        }
+
+        if (verified.isPaid() && verified.amountPaid() >= payment.getAmount()) {
+            payment.setStatus(PaymentStatus.PAID);
+            payment.setPaidAt(OffsetDateTime.now(ZoneOffset.UTC));
+            payment.setRawCallback(safeJson(Map.of("source", "payos_status_lookup", "status", verified)));
+            paymentRepository.save(payment);
+            confirmBooking(payment);
+            return true;
+        }
+
+        if ("CANCELLED".equalsIgnoreCase(verified.status()) || "EXPIRED".equalsIgnoreCase(verified.status())) {
+            payment.setStatus(PaymentStatus.FAILED);
+            payment.setRawCallback(safeJson(Map.of("source", "payos_status_lookup", "status", verified)));
+            paymentRepository.save(payment);
+        }
+        return false;
     }
 
+    /**
+     * Demo-only stand-in for the PayOS webhook, used by the internal VietQR checkout screen. It is
+     * refused whenever real PayOS credentials are configured, and only the customer who owns the
+     * payment may trigger it, for a booking that is still awaiting payment.
+     */
     @Transactional
-    public void confirmPaymentByOrderCode(String orderCode) {
+    public void simulatePayosPayment(UUID callerId, String orderCode) {
+        if (!payosService.isDemoMode()) {
+            throw new IllegalStateException("Mô phỏng thanh toán chỉ khả dụng khi PayOS chạy ở chế độ demo.");
+        }
         String orderId = orderCode.startsWith("PAYOS-") ? orderCode : "PAYOS-" + orderCode;
         Payment payment = paymentRepository.findByOrderId(orderId)
                 .or(() -> paymentRepository.findByOrderId(orderCode))
                 .orElseThrow(() -> new IllegalArgumentException("Payment not found for orderCode: " + orderCode));
+        if (!payment.getUserId().equals(callerId)) {
+            throw new org.springframework.security.access.AccessDeniedException("Bạn không có quyền xác nhận giao dịch này.");
+        }
+        if (payment.getStatus() == PaymentStatus.PAID) {
+            return;
+        }
+        if (payment.getStatus() != PaymentStatus.INITIATED && payment.getStatus() != PaymentStatus.PENDING) {
+            throw new IllegalStateException("Giao dịch không còn ở trạng thái chờ thanh toán.");
+        }
+        Booking booking = bookingRepository.findById(payment.getBookingId())
+                .orElseThrow(() -> new IllegalStateException("Booking not found for payment"));
+        requirePayable(booking.getStatus(), booking.getPaymentDeadlineAt(), booking.getTotalAmount());
 
         payment.setStatus(PaymentStatus.PAID);
         payment.setPaidAt(OffsetDateTime.now(ZoneOffset.UTC));
         paymentRepository.save(payment);
 
-        confirmBooking(payment.getBookingId());
+        confirmBooking(payment);
     }
 
     @Transactional(readOnly = true)
@@ -313,19 +367,63 @@ public class PaymentService {
                 .collect(Collectors.toList());
     }
 
-    private void confirmBooking(UUID bookingId) {
-        Booking booking = bookingRepository.findByIdWithLock(bookingId)
+    /** Branch of a booking, so controllers can verify staff access before acting on it. */
+    @Transactional(readOnly = true)
+    public UUID getBookingBranchId(UUID bookingId) {
+        return bookingRepository.findById(bookingId)
+                .map(Booking::getBranchId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thông tin đặt chỗ."));
+    }
+
+    private void requireOnlinePayable(BookingDto booking) {
+        OffsetDateTime deadline = booking.getPaymentDeadlineAt() == null ? null : OffsetDateTime.parse(booking.getPaymentDeadlineAt());
+        requirePayable(booking.getStatus(), deadline, booking.getTotalAmount());
+    }
+
+    /** A booking can take a payment only while it is awaiting one, within its hold, with something to pay. */
+    private static void requirePayable(BookingStatus status, OffsetDateTime paymentDeadlineAt, long totalAmount) {
+        if (status != BookingStatus.PENDING_PAYMENT) {
+            throw new IllegalStateException("Đơn đặt chỗ không ở trạng thái chờ thanh toán (hiện tại: " + status + ").");
+        }
+        if (paymentDeadlineAt != null && !OffsetDateTime.now(ZoneOffset.UTC).isBefore(paymentDeadlineAt)) {
+            throw new IllegalStateException("Đơn đặt chỗ đã quá hạn thanh toán. Vui lòng đặt lại.");
+        }
+        if (totalAmount <= 0) {
+            throw new IllegalStateException("Đơn đặt chỗ không có số tiền cần thanh toán.");
+        }
+    }
+
+    /**
+     * Applies a payment that has just been received. Money that arrives when the booking no longer
+     * needs it — the hold already expired or was cancelled, or another payment already covered it —
+     * is never kept silently: it is queued as a refund for staff to return.
+     */
+    private void confirmBooking(Payment payment) {
+        Booking booking = bookingRepository.findByIdWithLock(payment.getBookingId())
                 .orElseThrow(() -> new IllegalStateException("Booking not found for payment confirmation"));
-        
-        // Rule #26: Late Webhook (Ghost Payment) check
-        if (booking.getStatus() == BookingStatus.EXPIRED || booking.getStatus() == BookingStatus.CANCELLED) {
-            log.warn("Late payment received for booking {} with status {}. Needs refund processing.", 
-                    bookingId, booking.getStatus());
+
+        if (booking.getStatus() == BookingStatus.PENDING_PAYMENT) {
+            BookingStateMachine.transition(booking, BookingStatus.CONFIRMED);
+            bookingRepository.save(booking);
+            // Add-ons ordered at checkout were part of this payment's amount.
+            bookingAddonService.markPreordersPaid(booking.getId(), payment.getId());
             return;
         }
 
-        booking.setStatus(BookingStatus.CONFIRMED);
-        bookingRepository.save(booking);
+        // Rule #26: Late Webhook (Ghost Payment)
+        if (booking.getStatus() == BookingStatus.EXPIRED || booking.getStatus() == BookingStatus.CANCELLED) {
+            log.warn("Late payment {} received for booking {} with status {}. Queuing refund.",
+                    payment.getId(), booking.getId(), booking.getStatus());
+            refundService.requestRefund(booking, payment.getId(), payment.getAmount(), com.cospace.app.entity.Refund.REASON_LATE_PAYMENT,
+                    "Thanh toán về sau khi đơn đã " + BookingStateMachine.label(booking.getStatus()).toLowerCase(java.util.Locale.ROOT) + ".");
+            return;
+        }
+
+        if (paymentRepository.existsByBookingIdAndStatusAndPurposeAndIdNot(booking.getId(), PaymentStatus.PAID, Payment.PURPOSE_BOOKING, payment.getId())) {
+            log.warn("Duplicate payment {} received for already-paid booking {}. Queuing refund.", payment.getId(), booking.getId());
+            refundService.requestRefund(booking, payment.getId(), payment.getAmount(), com.cospace.app.entity.Refund.REASON_DUPLICATE_PAYMENT,
+                    "Đơn đã được thanh toán trước đó, khoản thanh toán trùng sẽ được hoàn lại.");
+        }
     }
 
     private PaymentDto toDto(Payment p) {

@@ -1,7 +1,7 @@
 /**
- * bookingApi.ts — API client for CoSpace Booking & MoMo Payment Engine.
- * Supports dual execution: Spring Boot REST Backend with automatic fallback
- * to reactive MockDataContext state when offline or running in mock mode.
+ * bookingApi.ts — API client for CoSpace Booking & payment endpoints.
+ * Every result comes from the backend: when it cannot be reached the call fails with a clear
+ * message instead of pretending a booking or payment went through.
  */
 
 import { supabase } from './supabase';
@@ -14,8 +14,11 @@ export interface BookingCreatePayload {
   endAt: string;   // ISO String
   unit: 'hour' | 'day' | 'week' | 'month';
   unitCount: number;
-  services?: Record<string, number>;
+  /** Add-on services ordered with the booking; priced on the server and paid with it. */
+  addons?: { serviceId: string; quantity: number }[];
   source?: 'web' | 'walkin';
+  /** Optional promotion code; the backend also applies the membership-tier discount. */
+  promotionCode?: string | null;
 }
 
 export interface BookingResponse {
@@ -34,6 +37,10 @@ export interface BookingResponse {
   status: 'pending_payment' | 'confirmed' | 'checked_in' | 'completed' | 'canceled' | 'expired';
   subtotalAmount: number;
   discountAmount: number;
+  membershipTierCode?: string | null;
+  membershipDiscountAmount?: number;
+  promotionCode?: string | null;
+  promotionDiscountAmount?: number;
   addonAmount: number;
   totalAmount: number;
   paymentDeadlineAt?: string;
@@ -99,51 +106,26 @@ export const bookingApi = {
    * Create a new workspace booking
    */
   async createBooking(payload: BookingCreatePayload): Promise<BookingResponse> {
+    const headers = await getAuthHeader();
+    let res: Response;
     try {
-      const headers = await getAuthHeader();
-      const res = await fetch(`${API_BASE_URL}/api/bookings`, {
+      res = await fetch(`${API_BASE_URL}/api/bookings`, {
         method: 'POST',
         headers,
         body: JSON.stringify(payload),
       });
+    } catch {
+      throw new Error('Không kết nối được máy chủ. Đơn đặt chỗ chưa được tạo, vui lòng thử lại.');
+    }
 
-      if (res.ok) {
-        const data = await res.json();
-        sessionStorage.removeItem(CACHE_KEY); // Invalidate cache
-        return data;
-      }
+    // Surface the server's own error (overlap, opening hours, invalid promotion code, rate limit...).
+    if (!res.ok) {
       const errorData = await res.json().catch(() => ({}));
       throw new Error(errorData.message || `Lỗi tạo đơn đặt chỗ (${res.status})`);
-    } catch (err: any) {
-      console.warn('[bookingApi] Fallback to client state calculation:', err.message);
-      // Fallback response for offline / mock mode
-      const now = new Date();
-      const deadline = new Date(now.getTime() + 15 * 60 * 1000); // 15 mins deadline
-
-      const code = 'WH-' + Math.random().toString(36).substring(2, 8).toUpperCase();
-      const mockBooking: BookingResponse = {
-        id: crypto.randomUUID(),
-        bookingCode: code,
-        userId: crypto.randomUUID(),
-        workspaceId: payload.workspaceId,
-        workspaceTypeId: payload.workspaceTypeId,
-        branchId: payload.branchId,
-        startAt: payload.startAt,
-        endAt: payload.endAt,
-        unit: payload.unit,
-        unitCount: payload.unitCount,
-        status: 'pending_payment',
-        subtotalAmount: 100000 * payload.unitCount,
-        discountAmount: 0,
-        addonAmount: 0,
-        totalAmount: 100000 * payload.unitCount,
-        paymentDeadlineAt: deadline.toISOString(),
-        source: payload.source || 'web',
-        createdAt: now.toISOString(),
-      };
-      sessionStorage.removeItem(CACHE_KEY); // Invalidate cache
-      return mockBooking;
     }
+    const data = await res.json();
+    sessionStorage.removeItem(CACHE_KEY); // Invalidate cache
+    return data;
   },
 
   /**
@@ -175,16 +157,13 @@ export const bookingApi = {
         sessionStorage.setItem(CACHE_KEY, JSON.stringify({ data, timestamp: Date.now() }));
         return data;
       }
-      throw new Error(`Failed to fetch bookings (${res.status})`);
-    } catch (err) {
-      console.warn('[bookingApi] Using fallback mock data');
-      const cached = sessionStorage.getItem(CACHE_KEY);
-      if (cached) {
-        try {
-          return JSON.parse(cached).data;
-        } catch (e) {}
-      }
-      return [];
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.message || `Không tải được danh sách đơn đặt chỗ (${res.status})`);
+    } catch (err: any) {
+      // Never answer "you have no bookings" when the list simply could not be loaded.
+      throw new Error(err?.message?.startsWith('Không tải được')
+        ? err.message
+        : 'Không kết nối được máy chủ để tải danh sách đơn đặt chỗ.');
     }
   },
 
@@ -284,10 +263,8 @@ export const bookingApi = {
       }
       const errorData = await res.json().catch(() => ({}));
       return { success: false, message: errorData.message || `Lỗi thanh toán (${res.status})` };
-    } catch (err: any) {
-      console.warn('[bookingApi] Cash payment fallback:', err.message);
-      // Fallback for offline mode
-      return { success: true, message: 'Đã lưu yêu cầu thanh toán tiền mặt (Offline)' };
+    } catch {
+      return { success: false, message: 'Không kết nối được máy chủ. Thanh toán chưa được ghi nhận.' };
     }
   },
 };

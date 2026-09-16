@@ -35,6 +35,11 @@ import io.hypersistence.utils.hibernate.type.basic.PostgreSQLEnumType;
 })
 public class Payment {
 
+    /** Pays for the booking itself (rental and add-ons ordered with it). */
+    public static final String PURPOSE_BOOKING = "booking";
+    /** Settles add-ons put on the running tab after the booking was paid. */
+    public static final String PURPOSE_ADDON = "addon";
+
     @Id
     @Column(nullable = false, updatable = false)
     private UUID id;
@@ -79,6 +84,10 @@ public class Payment {
     @Column(name = "raw_callback", columnDefinition = "text")
     private String rawCallback;
 
+    @Column(name = "purpose", nullable = false, length = 16)
+    @Builder.Default
+    private String purpose = PURPOSE_BOOKING;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
@@ -99,6 +108,9 @@ public class Payment {
         }
         if (status == null) {
             status = PaymentStatus.INITIATED;
+        }
+        if (purpose == null) {
+            purpose = PURPOSE_BOOKING;
         }
     }
 

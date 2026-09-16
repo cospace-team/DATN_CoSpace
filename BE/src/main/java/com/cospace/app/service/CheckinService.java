@@ -26,15 +26,18 @@ public class CheckinService {
     private final BookingRepository bookingRepository;
     private final BookingService bookingService;
     private final UserRepository userRepository;
+    private final BookingAddonService bookingAddonService;
 
     public CheckinService(CheckinLogRepository checkinLogRepository,
                           BookingRepository bookingRepository,
                           BookingService bookingService,
-                          UserRepository userRepository) {
+                          UserRepository userRepository,
+                          BookingAddonService bookingAddonService) {
         this.checkinLogRepository = checkinLogRepository;
         this.bookingRepository = bookingRepository;
         this.bookingService = bookingService;
         this.userRepository = userRepository;
+        this.bookingAddonService = bookingAddonService;
     }
 
     @Transactional
@@ -88,7 +91,10 @@ public class CheckinService {
 
         checkinLog = checkinLogRepository.save(checkinLog);
 
-        booking.setStatus(BookingStatus.CHECKED_IN);
+        // A multi-day pass may already be CHECKED_IN from an earlier day whose log was closed.
+        if (booking.getStatus() != BookingStatus.CHECKED_IN) {
+            BookingStateMachine.transition(booking, BookingStatus.CHECKED_IN);
+        }
         bookingRepository.save(booking);
 
         return toDto(checkinLog);
@@ -101,6 +107,12 @@ public class CheckinService {
 
         if (checkinLog.getCheckoutAt() != null) {
             throw new IllegalArgumentException("Lượt Check-in này đã được giải phóng (Check-out) trước đó.");
+        }
+
+        long owed = bookingAddonService.unpaidAmount(checkinLog.getBookingId());
+        if (owed > 0) {
+            throw new IllegalStateException("Khách còn " + RefundService.vnd(owed)
+                    + " tiền dịch vụ gọi thêm chưa thanh toán. Vui lòng thu tiền trước khi check-out.");
         }
 
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
@@ -131,9 +143,11 @@ public class CheckinService {
                 || (booking.getUnit() == DurationUnit.day && booking.getUnitCount() > 1);
 
         if (isMultiDayPass && now.isBefore(booking.getEndAt())) {
-            booking.setStatus(BookingStatus.CONFIRMED);
+            if (booking.getStatus() != BookingStatus.CONFIRMED) {
+                BookingStateMachine.transition(booking, BookingStatus.CONFIRMED);
+            }
         } else {
-            booking.setStatus(BookingStatus.COMPLETED);
+            BookingStateMachine.transition(booking, BookingStatus.COMPLETED);
             // Early checkout: Truncate endAt to actual checkout time to immediately release the physical space
             if (now.isBefore(booking.getEndAt())) {
                 booking.setEndAt(now);

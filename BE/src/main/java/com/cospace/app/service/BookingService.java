@@ -44,8 +44,14 @@ public class BookingService {
     private final jakarta.persistence.EntityManager entityManager;
     private final com.cospace.app.repository.WorkspaceMaintenanceRepository workspaceMaintenanceRepository;
     private final com.cospace.app.repository.BookingCancellationRepository bookingCancellationRepository;
+    private final MembershipService membershipService;
+    private final PromotionService promotionService;
+    private final BookingAddonService bookingAddonService;
 
-    public BookingService(BookingRepository bookingRepository, PaymentRepository paymentRepository, PricingService pricingService, WorkspaceEntityRepository workspaceEntityRepository, com.cospace.app.repository.FloorRepository floorRepository, BranchEntityRepository branchEntityRepository, UserRepository userRepository, CheckinLogRepository checkinLogRepository, jakarta.persistence.EntityManager entityManager, com.cospace.app.repository.WorkspaceMaintenanceRepository workspaceMaintenanceRepository, com.cospace.app.repository.BookingCancellationRepository bookingCancellationRepository) {
+    /** Business time zone: opening hours and "today" are always Vietnam local time, whatever the server runs in. */
+    public static final java.time.ZoneId BUSINESS_ZONE = java.time.ZoneId.of("Asia/Ho_Chi_Minh");
+
+    public BookingService(BookingRepository bookingRepository, PaymentRepository paymentRepository, PricingService pricingService, WorkspaceEntityRepository workspaceEntityRepository, com.cospace.app.repository.FloorRepository floorRepository, BranchEntityRepository branchEntityRepository, UserRepository userRepository, CheckinLogRepository checkinLogRepository, jakarta.persistence.EntityManager entityManager, com.cospace.app.repository.WorkspaceMaintenanceRepository workspaceMaintenanceRepository, com.cospace.app.repository.BookingCancellationRepository bookingCancellationRepository, MembershipService membershipService, PromotionService promotionService, BookingAddonService bookingAddonService) {
         this.bookingRepository = bookingRepository;
         this.paymentRepository = paymentRepository;
         this.pricingService = pricingService;
@@ -57,6 +63,9 @@ public class BookingService {
         this.entityManager = entityManager;
         this.workspaceMaintenanceRepository = workspaceMaintenanceRepository;
         this.bookingCancellationRepository = bookingCancellationRepository;
+        this.membershipService = membershipService;
+        this.promotionService = promotionService;
+        this.bookingAddonService = bookingAddonService;
     }
 
     @Transactional
@@ -101,6 +110,11 @@ public class BookingService {
                 ? ws.getWorkspaceTypeId().toString() 
                 : req.getWorkspaceTypeId();
 
+        if (req.getUnit() == null) {
+            throw new IllegalArgumentException("unit is required");
+        }
+        validateSchedule(computedBranchId, req.getUnit(), req.getStartAt(), req.getEndAt(), OffsetDateTime.now(ZoneOffset.UTC));
+
         // Advisory Lock to prevent race condition
         String lockKeyStr = "booking:" + req.getWorkspaceId().toString();
         entityManager.createNativeQuery("SELECT pg_advisory_xact_lock(hashtext(:key))")
@@ -140,15 +154,26 @@ public class BookingService {
         if (unit == null) {
             throw new IllegalArgumentException("unit is required");
         }
+        // The unit count is derived from the booked time span, never trusted from the client: a
+        // request for 09:00-18:00 with unit=hour, unitCount=1 must still be charged 9 hours.
+        int unitCount = computeUnitCount(unit, req.getStartAt(), req.getEndAt());
         long unitPrice = pricingService.getUnitPriceVnd(computedBranchId, computedWorkspaceTypeId, unit.name());
-        long subtotal = unitPrice * (long) req.getUnitCount();
+        long subtotal = unitPrice * (long) unitCount;
+        DiscountBreakdown discounts = computeDiscounts(userId, computedBranchId, computedWorkspaceTypeId,
+                subtotal, req.getPromotionCode(), true);
+        // Add-ons ordered at checkout are priced from the catalogue and paid together with the booking.
+        List<com.cospace.app.entity.BookingServiceItem> addonLines = bookingAddonService.priceLines(computedBranchId, req.getAddons());
+        long addonAmount = BookingAddonService.total(addonLines);
         long taxAmount = 0;
         long serviceFeeAmount = 0;
-        long totalAmount = subtotal + taxAmount + serviceFeeAmount;
+        long totalAmount = Math.max(0, subtotal - discounts.totalDiscount()) + addonAmount + taxAmount + serviceFeeAmount;
 
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
 
         boolean isContract = (unit == DurationUnit.week || unit == DurationUnit.month);
+        // A booking fully covered by discounts has nothing to pay, so it is confirmed right away
+        // instead of waiting on a payment that can never be made (gateways reject 0đ orders).
+        boolean nothingToPay = totalAmount <= 0;
 
         Booking booking = Booking.builder()
                 .id(UUID.randomUUID())
@@ -157,26 +182,186 @@ public class BookingService {
                 .workspaceId(req.getWorkspaceId())
                 .workspaceTypeId(computedWorkspaceTypeId)
                 .branchId(computedBranchId)
-                .status(BookingStatus.PENDING_PAYMENT)
+                .status(nothingToPay ? BookingStatus.CONFIRMED : BookingStatus.PENDING_PAYMENT)
                 .source(source)
                 .isContract(isContract)
                 .startAt(req.getStartAt())
                 .endAt(req.getEndAt())
 
                 .unit(unit)
-                .unitCount(req.getUnitCount())
+                .unitCount(unitCount)
                 .pricePerUnit(unitPrice)
                 .subtotalAmount(subtotal)
-                .discountAmount(0)
-                .addonAmount(0)
+                .discountAmount(discounts.totalDiscount())
+                .membershipTierCode(discounts.tierCode())
+                .membershipDiscountAmount(discounts.membershipDiscount())
+                .promotionId(discounts.promotion() != null ? discounts.promotion().getId() : null)
+                .promotionCode(discounts.promotion() != null ? discounts.promotion().getCode() : null)
+                .promotionDiscountAmount(discounts.promotionDiscount())
+                .addonAmount(addonAmount)
                 .taxAmount(taxAmount)
                 .serviceFeeAmount(serviceFeeAmount)
                 .totalAmount(totalAmount)
-                .paymentDeadlineAt(now.plusMinutes(15))
+                .paymentDeadlineAt(nothingToPay ? null : now.plusMinutes(15))
                 .build();
 
         Booking savedBooking = bookingRepository.save(booking);
+        bookingAddonService.attachToNewBooking(savedBooking, userId, addonLines);
         return toDto(savedBooking);
+    }
+
+    /** Discounts applied to a booking: membership tier first, then the promotion on what remains. */
+    public record DiscountBreakdown(String tierCode, String tierName, int tierPercent, long membershipDiscount,
+                                    com.cospace.app.entity.Promotion promotion, long promotionDiscount) {
+        public long totalDiscount() {
+            return membershipDiscount + promotionDiscount;
+        }
+    }
+
+    private DiscountBreakdown computeDiscounts(UUID userId, UUID branchId, String workspaceTypeId, long subtotal,
+                                               String promotionCode, boolean lockPromotion) {
+        MembershipService.Standing standing = membershipService.refreshTier(userId);
+        long membershipDiscount = subtotal * standing.discountPercent() / 100;
+        long afterTier = subtotal - membershipDiscount;
+
+        com.cospace.app.entity.Promotion promotion = null;
+        long promotionDiscount = 0;
+        if (promotionCode != null && !promotionCode.isBlank()) {
+            PromotionService.AppliedPromotion applied = promotionService.apply(promotionCode, userId,
+                    standing.tierCode(), branchId, parseUuidOrNull(workspaceTypeId), subtotal, afterTier, lockPromotion);
+            promotion = applied.promotion();
+            promotionDiscount = applied.discountAmount();
+        }
+        return new DiscountBreakdown(
+                standing.currentTier() != null ? standing.tierCode() : null,
+                standing.currentTier() != null ? standing.currentTier().getName() : null,
+                standing.discountPercent(), membershipDiscount, promotion, promotionDiscount);
+    }
+
+    /**
+     * Number of billable units covering [start, end): a started unit is charged in full, so
+     * 2h30 by the hour is 3 hours and 25 hours by the day is 2 days. Months are calendar months.
+     */
+    public static int computeUnitCount(DurationUnit unit, OffsetDateTime start, OffsetDateTime end) {
+        if (unit == null || start == null || end == null || !end.isAfter(start)) {
+            throw new IllegalArgumentException("Khoảng thời gian đặt chỗ không hợp lệ.");
+        }
+        long seconds = java.time.Duration.between(start, end).getSeconds();
+        long units = switch (unit) {
+            case hour -> ceilDiv(seconds, 3_600);
+            case day -> ceilDiv(seconds, 86_400);
+            case week -> ceilDiv(seconds, 604_800);
+            case month -> {
+                long months = 0;
+                while (start.plusMonths(months).isBefore(end)) months++;
+                yield months;
+            }
+        };
+        if (units < 1 || units > 10_000) {
+            throw new IllegalArgumentException("Thời lượng đặt chỗ không hợp lệ.");
+        }
+        return (int) units;
+    }
+
+    private static long ceilDiv(long value, long divisor) {
+        return (value + divisor - 1) / divisor;
+    }
+
+    /**
+     * A booking must not start in the past (the current hour is still bookable, matching the hourly
+     * slots the booking screens offer) and must respect the branch's opening hours, in Vietnam time:
+     * an hourly booking lies within one opening day, a daily or longer one starts while the branch is open.
+     */
+    void validateSchedule(UUID branchId, DurationUnit unit, OffsetDateTime startAt, OffsetDateTime endAt, OffsetDateTime now) {
+        if (startAt.isBefore(now.truncatedTo(java.time.temporal.ChronoUnit.HOURS))) {
+            throw new IllegalArgumentException("Không thể đặt chỗ cho thời gian đã qua. Vui lòng chọn thời gian khác.");
+        }
+        BranchEntity branch = branchId != null ? branchEntityRepository.findById(branchId).orElse(null) : null;
+        if (branch == null) {
+            return;
+        }
+        if (branch.getStatus() != null && branch.getStatus() != BranchEntity.BranchStatus.active) {
+            throw new IllegalArgumentException("Chi nhánh hiện không nhận đặt chỗ.");
+        }
+        java.time.LocalTime open = branch.getOpenTime();
+        java.time.LocalTime close = branch.getCloseTime();
+        // No hours configured, open around the clock, or opening past midnight: nothing to enforce here.
+        if (open == null || close == null || !close.isAfter(open)) {
+            return;
+        }
+        java.time.LocalDateTime start = startAt.atZoneSameInstant(BUSINESS_ZONE).toLocalDateTime();
+        java.time.LocalDateTime end = endAt.atZoneSameInstant(BUSINESS_ZONE).toLocalDateTime();
+        String hours = String.format("Chi nhánh mở cửa từ %s đến %s.", open, close);
+
+        if (start.toLocalTime().isBefore(open) || !start.toLocalTime().isBefore(close)) {
+            throw new IllegalArgumentException(hours + " Vui lòng chọn giờ bắt đầu trong giờ mở cửa.");
+        }
+        if (unit == DurationUnit.hour
+                && (!end.toLocalDate().equals(start.toLocalDate()) || end.toLocalTime().isAfter(close))) {
+            throw new IllegalArgumentException(hours + " Đặt theo giờ phải kết thúc trước giờ đóng cửa trong cùng ngày.");
+        }
+    }
+
+    /** Branch a workspace belongs to (workspace → floor → branch), for access checks. */
+    @Transactional(readOnly = true)
+    public UUID resolveBranchIdForWorkspace(UUID workspaceId) {
+        WorkspaceEntity ws = workspaceEntityRepository.findById(workspaceId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy không gian làm việc."));
+        return floorRepository.findById(ws.getFloorId())
+                .map(com.cospace.app.entity.Floor::getBranchId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thông tin tầng của không gian làm việc."));
+    }
+
+    /** Price preview for the checkout page — same pricing and discount rules as createBooking. */
+    @Transactional
+    public com.cospace.app.dto.api.PromotionDto.QuoteResponse quote(UUID userId, com.cospace.app.dto.api.PromotionDto.QuoteRequest req) {
+        if (userId == null) {
+            throw new IllegalArgumentException("Missing user id");
+        }
+        WorkspaceEntity ws = workspaceEntityRepository.findById(req.getWorkspaceId())
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy không gian làm việc."));
+        com.cospace.app.entity.Floor floor = floorRepository.findById(ws.getFloorId())
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thông tin tầng của không gian làm việc."));
+        String workspaceTypeId = ws.getWorkspaceTypeId() != null ? ws.getWorkspaceTypeId().toString() : null;
+
+        DurationUnit unit;
+        try {
+            unit = DurationUnit.valueOf(req.getUnit().trim().toLowerCase(java.util.Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("unit không hợp lệ: " + req.getUnit());
+        }
+        int unitCount = computeUnitCount(unit, req.getStartAt(), req.getEndAt());
+        validateSchedule(floor.getBranchId(), unit, req.getStartAt(), req.getEndAt(), OffsetDateTime.now(ZoneOffset.UTC));
+        long unitPrice = pricingService.getUnitPriceVnd(floor.getBranchId(), workspaceTypeId, unit.name());
+        long subtotal = unitPrice * (long) unitCount;
+        DiscountBreakdown d = computeDiscounts(userId, floor.getBranchId(), workspaceTypeId, subtotal,
+                req.getPromotionCode(), false);
+        long addonAmount = BookingAddonService.total(bookingAddonService.priceLines(floor.getBranchId(), req.getAddons()));
+
+        return com.cospace.app.dto.api.PromotionDto.QuoteResponse.builder()
+                .pricePerUnit(unitPrice)
+                .unitCount(unitCount)
+                .subtotalAmount(subtotal)
+                .membershipTierCode(d.tierCode())
+                .membershipTierName(d.tierName())
+                .membershipDiscountPercent(d.tierPercent())
+                .membershipDiscountAmount(d.membershipDiscount())
+                .promotionCode(d.promotion() != null ? d.promotion().getCode() : null)
+                .promotionName(d.promotion() != null ? d.promotion().getName() : null)
+                .promotionDiscountAmount(d.promotionDiscount())
+                .discountAmount(d.totalDiscount())
+                .addonAmount(addonAmount)
+                .totalAmount(Math.max(0, subtotal - d.totalDiscount()) + addonAmount)
+                .build();
+    }
+
+    private static UUID parseUuidOrNull(String value) {
+        if (value == null) return null;
+        try {
+            return UUID.fromString(value);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
     }
 
     @Transactional(readOnly = true)
@@ -227,13 +412,10 @@ public class BookingService {
     @Transactional(readOnly = true)
     public List<com.cospace.app.dto.api.WorkspaceBookingStatusDto> getWorkspaceBookingStatus(UUID branchId, String dateStr) {
         OffsetDateTime todayStart;
-        if (dateStr == null || dateStr.isBlank()) {
-            todayStart = OffsetDateTime.now(ZoneOffset.UTC).withHour(0).withMinute(0).withSecond(0).withNano(0);
-        } else {
-            // parse dateStr assuming format "yyyy-MM-dd"
-            java.time.LocalDate date = java.time.LocalDate.parse(dateStr);
-            todayStart = date.atStartOfDay(ZoneOffset.UTC).toOffsetDateTime();
-        }
+        java.time.LocalDate date = (dateStr == null || dateStr.isBlank())
+                ? java.time.LocalDate.now(BUSINESS_ZONE)
+                : java.time.LocalDate.parse(dateStr); // "yyyy-MM-dd", a Vietnam calendar day
+        todayStart = date.atStartOfDay(BUSINESS_ZONE).toOffsetDateTime().withOffsetSameInstant(ZoneOffset.UTC);
         OffsetDateTime todayEnd = todayStart.plusDays(1);
 
         // Fetch all workspaces in the branch
@@ -415,6 +597,10 @@ public class BookingService {
                 .pricePerUnit(b.getPricePerUnit())
                 .subtotalAmount(b.getSubtotalAmount())
                 .discountAmount(b.getDiscountAmount())
+                .membershipTierCode(b.getMembershipTierCode())
+                .membershipDiscountAmount(b.getMembershipDiscountAmount())
+                .promotionCode(b.getPromotionCode())
+                .promotionDiscountAmount(b.getPromotionDiscountAmount())
                 .addonAmount(b.getAddonAmount())
                 .taxAmount(b.getTaxAmount())
                 .serviceFeeAmount(b.getServiceFeeAmount())
@@ -443,25 +629,6 @@ public class BookingService {
         return builder.build();
     }
 
-
-    @Transactional
-    public BookingDto cancelBooking(UUID userId, UUID bookingId) {
-        Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
-        
-        if (!booking.getUserId().equals(userId)) {
-            throw new IllegalArgumentException("Booking does not belong to user");
-        }
-        
-        if (booking.getStatus() == BookingStatus.COMPLETED || booking.getStatus() == BookingStatus.CANCELLED) {
-            throw new IllegalArgumentException("Booking cannot be cancelled in its current state");
-        }
-        
-        booking.setStatus(BookingStatus.CANCELLED);
-        booking = bookingRepository.save(booking);
-        
-        return toDto(booking);
-    }
 
     private String generateBookingCode() {
         StringBuilder sb = new StringBuilder("WH-");

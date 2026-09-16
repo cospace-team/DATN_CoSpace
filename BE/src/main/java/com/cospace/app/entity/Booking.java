@@ -80,6 +80,22 @@ public class Booking {
     @Column(name = "discount_amount", nullable = false)
     private long discountAmount;
 
+    /** Membership tier (code) whose discount was applied when the booking was created. */
+    @Column(name = "membership_tier_code", length = 32)
+    private String membershipTierCode;
+
+    @Column(name = "membership_discount_amount", nullable = false)
+    private long membershipDiscountAmount;
+
+    @Column(name = "promotion_id")
+    private UUID promotionId;
+
+    @Column(name = "promotion_code", length = 40)
+    private String promotionCode;
+
+    @Column(name = "promotion_discount_amount", nullable = false)
+    private long promotionDiscountAmount;
+
     @Column(name = "addon_amount", nullable = false)
     private long addonAmount;
 

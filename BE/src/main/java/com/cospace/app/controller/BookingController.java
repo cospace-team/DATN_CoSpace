@@ -40,6 +40,14 @@ public class BookingController {
         return bookingService.createBooking(userId, req);
     }
 
+    /** Price breakdown (membership + promotion discounts) before the booking is created. */
+    @PostMapping("/quote")
+    public com.cospace.app.dto.api.PromotionDto.QuoteResponse quote(
+            @AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody com.cospace.app.dto.api.PromotionDto.QuoteRequest req) {
+        return bookingService.quote(requireSubject(jwt), req);
+    }
+
     @GetMapping("/my")
     public List<BookingDto> myBookings(@AuthenticationPrincipal Jwt jwt) {
         UUID userId = requireSubject(jwt);
@@ -52,14 +60,6 @@ public class BookingController {
             @PathVariable("id") UUID id) {
         UUID userId = requireSubject(jwt);
         return bookingService.getMyBooking(userId, id);
-    }
-
-    @PostMapping("/{id}/cancel")
-    public BookingDto cancel(
-            @AuthenticationPrincipal Jwt jwt,
-            @PathVariable("id") UUID id) {
-        UUID userId = requireSubject(jwt);
-        return bookingService.cancelBooking(userId, id);
     }
 
     @GetMapping("/code/{code}")

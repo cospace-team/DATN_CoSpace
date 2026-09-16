@@ -25,6 +25,12 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     boolean existsByEmailAndIdNot(String email, UUID id);
 
+    java.util.List<User> findByRole(User.Role role);
+
+    /** [membership_tier code, user count] pairs for users with the given role. */
+    @org.springframework.data.jpa.repository.Query("SELECT u.membershipTier, COUNT(u) FROM User u WHERE u.role = :role GROUP BY u.membershipTier")
+    java.util.List<Object[]> countByMembershipTierForRole(@org.springframework.data.repository.query.Param("role") User.Role role);
+
     @org.springframework.data.jpa.repository.Query("SELECT u FROM User u WHERE " +
             "(:role IS NULL OR u.role = :role) AND " +
             "(:branchId IS NULL OR u.branchId = :branchId) AND " +

@@ -4,11 +4,11 @@ import com.cospace.app.entity.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.Map;
@@ -25,7 +25,15 @@ public class JwtUtil {
     public static final String TOKEN_USE_ACCESS = "access";
     public static final String TOKEN_USE_REFRESH = "refresh";
 
-    @Value("${app.jwt.secret:defaultSecretKeyWhichIsVeryLongAndSecureForLocalAuth1234!@#}")
+    /**
+     * HS384 needs at least 384 bits of key material. Enforced at startup rather than left to the
+     * first login, so a short or missing secret fails the deploy instead of the user.
+     */
+    private static final int MIN_SECRET_BYTES = 48;
+
+    // No default: a fallback baked into the source would be a publicly known signing key, letting
+    // anyone mint a valid token for any user. A missing APP_JWT_SECRET must stop the app booting.
+    @Value("${app.jwt.secret}")
     private String jwtSecret;
 
     @Value("${app.jwt.expiration:3600}")
@@ -34,8 +42,23 @@ public class JwtUtil {
     @Value("${app.jwt.refresh-expiration:2592000}")
     private int refreshExpiration;
 
+    @jakarta.annotation.PostConstruct
+    void validateSecret() {
+        int length = jwtSecret == null ? 0 : jwtSecret.getBytes(StandardCharsets.UTF_8).length;
+        if (length < MIN_SECRET_BYTES) {
+            throw new IllegalStateException(
+                    "APP_JWT_SECRET phải dài tối thiểu " + MIN_SECRET_BYTES + " byte cho HS384 (hiện tại: "
+                            + length + "). Sinh khoá mới bằng: openssl rand -base64 48");
+        }
+    }
+
+    /**
+     * Keyed to HmacSHA384 explicitly, matching the decoder in SecurityConfig. {@code
+     * Keys.hmacShaKeyFor} would instead pick the algorithm from the key's length — a 64-byte secret
+     * would silently sign HS512 and every token would then be rejected at verification.
+     */
     private SecretKey getSigningKey() {
-        return Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+        return new SecretKeySpec(jwtSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA384");
     }
 
     public String generateAccessToken(User user) {
@@ -64,7 +87,7 @@ public class JwtUtil {
                 .claim(CLAIM_TOKEN_USE, TOKEN_USE_ACCESS)
                 .issuedAt(now)
                 .expiration(expiryDate)
-                .signWith(getSigningKey())
+                .signWith(getSigningKey(), Jwts.SIG.HS384)
                 .compact();
     }
 
@@ -77,7 +100,7 @@ public class JwtUtil {
                 .claim(CLAIM_TOKEN_USE, TOKEN_USE_REFRESH)
                 .issuedAt(now)
                 .expiration(expiryDate)
-                .signWith(getSigningKey())
+                .signWith(getSigningKey(), Jwts.SIG.HS384)
                 .compact();
     }
 

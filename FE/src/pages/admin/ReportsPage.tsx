@@ -16,6 +16,7 @@ const ReportsPage: React.FC = () => {
   const [overviewData, setOverviewData] = useState<any>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
     customerSpaceApi.listBranches()
@@ -36,11 +37,17 @@ const ReportsPage: React.FC = () => {
           }
         });
         if (res.ok) {
-          const data = await res.json();
-          setOverviewData(data);
+          setOverviewData(await res.json());
+          setLoadError('');
+        } else {
+          const err = await res.json().catch(() => ({}));
+          setOverviewData(null);
+          setLoadError(err.message || `Không tải được số liệu báo cáo (${res.status}).`);
         }
       } catch (err) {
-        console.warn('Cannot fetch live report data, using fallback state:', err);
+        console.error('Cannot fetch report data', err);
+        setOverviewData(null);
+        setLoadError('Không kết nối được máy chủ để tải số liệu báo cáo.');
       } finally {
         setIsLoading(false);
       }
@@ -95,10 +102,10 @@ const ReportsPage: React.FC = () => {
   const canceledBookings = overviewData?.canceledBookings ?? 0;
 
   const statCards = [
-    { icon: FiDollarSign, label: 'Tổng doanh thu', value: formatVND(totalRevenue), delta: '+12.5%', gradient: 'from-emerald-500 to-teal-500', bgGlow: 'bg-emerald-50 dark:bg-emerald-950/300/10', color: 'text-emerald-600 dark:text-emerald-400' },
-    { icon: FiCalendar, label: 'Tổng booking', value: String(totalBookings), delta: '+8.2%', gradient: 'from-blue-500 to-indigo-500', bgGlow: 'bg-blue-50 dark:bg-blue-950/300/10', color: 'text-blue-600 dark:text-blue-400' },
-    { icon: FiCheckCircle, label: 'Hoàn thành', value: String(completedBookings), delta: '+15%', gradient: 'from-violet-500 to-purple-500', bgGlow: 'bg-violet-500/10', color: 'text-violet-600 dark:text-violet-400' },
-    { icon: FiXCircle, label: 'Đã hủy', value: String(canceledBookings), delta: '-2.1%', gradient: 'from-rose-500 to-pink-500', bgGlow: 'bg-rose-500/10', color: 'text-rose-600 dark:text-rose-400' },
+    { icon: FiDollarSign, label: 'Tổng doanh thu', value: formatVND(totalRevenue), gradient: 'from-emerald-500 to-teal-500', bgGlow: 'bg-emerald-50 dark:bg-emerald-950/300/10', color: 'text-emerald-600 dark:text-emerald-400' },
+    { icon: FiCalendar, label: 'Tổng booking', value: String(totalBookings), gradient: 'from-blue-500 to-indigo-500', bgGlow: 'bg-blue-50 dark:bg-blue-950/300/10', color: 'text-blue-600 dark:text-blue-400' },
+    { icon: FiCheckCircle, label: 'Hoàn thành', value: String(completedBookings), gradient: 'from-violet-500 to-purple-500', bgGlow: 'bg-violet-500/10', color: 'text-violet-600 dark:text-violet-400' },
+    { icon: FiXCircle, label: 'Đã hủy', value: String(canceledBookings), gradient: 'from-rose-500 to-pink-500', bgGlow: 'bg-rose-500/10', color: 'text-rose-600 dark:text-rose-400' },
   ];
 
   const byType = (overviewData?.byType && overviewData.byType.length > 0) ? overviewData.byType : [];
@@ -158,6 +165,10 @@ const ReportsPage: React.FC = () => {
         </div>
       </div>
 
+      {loadError && (
+        <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">{loadError}</div>
+      )}
+
       {/* Stat Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {isLoading && [...Array(4)].map((_, i) => (
@@ -180,9 +191,6 @@ const ReportsPage: React.FC = () => {
               <p className="mt-4 text-2xl font-extrabold tracking-tight">{s.value}</p>
               <div className="mt-1 flex items-center justify-between">
                 <p className="text-sm text-muted-foreground">{s.label}</p>
-                <span className={`inline-flex items-center gap-0.5 text-xs font-semibold ${s.color}`}>
-                  <FiArrowUpRight className="h-3 w-3" />{s.delta}
-                </span>
               </div>
             </div>
           </div>
