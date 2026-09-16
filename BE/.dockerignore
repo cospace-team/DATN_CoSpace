@@ -1,0 +1,22 @@
+# Secrets must never reach the image layers. Config comes from Render env vars.
+.env
+.env.*
+!.env.example
+
+# Build output — the image builds its own.
+target/
+*.jar
+*.war
+
+# Not needed at build time.
+.git
+.gitignore
+.idea/
+.vscode/
+*.iml
+logs/
+*.log
+.mvn/
+mvnw
+mvnw.cmd
+README.md

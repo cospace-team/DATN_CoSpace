@@ -30,7 +30,6 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -165,18 +164,6 @@ public class PaymentController {
                     .body(Map.of("orderCode", orderCode, "status", "NOT_FOUND"));
         }
         return ResponseEntity.ok(Map.of("orderCode", orderCode, "status", status.name()));
-    }
-
-    @PostMapping("/payos/simulate")
-    public ResponseEntity<Map<String, Object>> simulatePayosPayment(@AuthenticationPrincipal Jwt jwt,
-                                                                    @RequestBody Map<String, Object> body) {
-        String orderCode = Objects.toString(body.get("orderCode"), "");
-        if (orderCode.isBlank()) {
-            throw new IllegalArgumentException("orderCode is required for simulation");
-        }
-        log.info("Simulating PayOS payment confirmation for orderCode: {}", orderCode);
-        paymentService.simulatePayosPayment(requireSubject(jwt), orderCode);
-        return ResponseEntity.ok(Map.of("success", true, "message", "Đã xác nhận thanh toán PayOS thành công (Mô phỏng)"));
     }
 
     private String url(String value) {
