@@ -112,3 +112,10 @@ Sử dụng ký hiệu: `[ ]` Chưa làm | `[/]` Đang làm | `[x]` Đã xong.
   - [x] FE: Bỏ qua element kiến trúc, đảm bảo `capacity >= 1` và mã code không rỗng khi auto-create
   - [x] FE: Thiết kế Empty State đẹp mắt kèm nút CTA thiết kế khi tầng chưa có SVG
   - [x] FE: Khách hàng xem Explore không bị vỡ giao diện nếu tầng chưa có SVG
+
+## 🚀 11. Production Hardening, Architecture Layering & Performance Optimization
+- [x] **Đồng bộ mã nguồn Tổ chức (Org Sync)**: Pull `main` từ `cospace-team/DATN_CoSpace`, resolve xung đột `BookingExpiryScheduler.java` kết hợp an toàn 30s scheduler và error handling độc lập từng booking.
+- [x] **Chuẩn hóa URL Cấu hình (Single Source of Truth)**: Gom toàn bộ URL phân tán về `FE/src/config/api.ts` kết nối biến môi trường `VITE_API_BASE_URL`.
+- [x] **Tối ưu hóa hiệu năng Frontend (Bundle Chunking)**: Phân rã vendor chunks (`react`, `react-icons`, `framer-motion`, `supabase`) trong `vite.config.ts`, cắt giảm 76.4% dung lượng file js ban đầu (từ 495 kB xuống 116 kB), kích hoạt tối đa HTTP caching của Vercel.
+- [x] **Chuẩn hóa Kiến trúc Phân tầng (Layered Architecture - Level C)**: Thiết lập central barrel export tại `FE/src/api/index.ts`, thống nhất tầng truy cập dữ liệu cho toàn bộ ứng dụng.
+- [x] **Bảo đảm chất lượng Backend (100% Test Pass)**: Khắc phục mock policy priority DESC trong `CancellationServiceTest.java`, chạy pass toàn bộ 250/250 bài test nghiệp vụ Backend (`BUILD SUCCESS`).
