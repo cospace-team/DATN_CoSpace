@@ -11,6 +11,7 @@ import {
   FiMessageSquare,
   FiCreditCard,
 } from 'react-icons/fi';
+import { API_BASE_URL } from '../../config/api';
 
 interface NotificationItem {
   id: string;
@@ -20,8 +21,6 @@ interface NotificationItem {
   isRead: boolean;
   createdAt: string;
 }
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
 export const NotificationBell: React.FC = () => {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);

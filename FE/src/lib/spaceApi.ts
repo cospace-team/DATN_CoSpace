@@ -2,8 +2,7 @@
  * Space Management API service layer
  * Used by Branch Admin pages to interact with BE endpoints
  */
-
-const API = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
+import { API_BASE_URL as API } from '../config/api';
 
 const authHeaders = (): HeadersInit => ({
   "Content-Type": "application/json",

@@ -8,6 +8,7 @@ import React, {
   type ReactNode,
 } from "react";
 import { supabase } from "../lib/supabase";
+import { API_BASE_URL } from "../config/api";
 
 export type UserRole = "super_admin" | "branch_admin" | "staff" | "customer";
 
@@ -37,7 +38,6 @@ interface AuthContextValue {
   changePassword: (data: any) => Promise<void>;
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
 const ROLE_LIST: UserRole[] = ["super_admin", "branch_admin", "staff", "customer"];
 
 const AuthContext = createContext<AuthContextValue | null>(null);

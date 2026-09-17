@@ -2,8 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { FiSearch, FiCode, FiX, FiShield, FiCalendar, FiGlobe, FiAlertCircle, FiRefreshCw, FiFilter } from 'react-icons/fi';
 import { formatDateTime } from '../../utils/formatters';
 import { Skeleton } from '../../components/ui/Skeleton';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+import { API_BASE_URL } from '../../config/api';
 
 interface AuditLogItem {
   id: string;

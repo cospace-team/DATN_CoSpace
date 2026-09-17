@@ -26,12 +26,12 @@ export interface ChatBooking {
   status: string;
 }
 
+import { API_BASE_URL } from '../config/api';
+
 export interface ChatActionResult {
   reply: string;
   booking?: ChatBooking | null;
 }
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080';
 
 function authHeaders(): HeadersInit {
   const token = localStorage.getItem('workhub_access_token');

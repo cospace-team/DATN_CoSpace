@@ -5,6 +5,7 @@
  */
 
 import { supabase } from './supabase';
+import { API_BASE_URL } from '../config/api';
 
 export interface BookingCreatePayload {
   branchId: string;
@@ -87,8 +88,6 @@ export interface PayosCreatePaymentResponse {
   status: string;
   message: string;
 }
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
 async function getAuthHeader(): Promise<HeadersInit> {
   const token = localStorage.getItem("workhub_access_token");

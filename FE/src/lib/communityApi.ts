@@ -4,8 +4,7 @@
  * Posts are tagged from the same vocabulary as profile skills/interests, which is what lets the
  * backend rank the feed for the reader and recommend members to each other from what they write.
  */
-
-const API = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
+import { API_BASE_URL as API } from '../config/api';
 
 export type PostType = "sharing" | "seeking_partner" | "question" | "event";
 
