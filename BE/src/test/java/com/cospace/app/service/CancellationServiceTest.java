@@ -145,14 +145,14 @@ class CancellationServiceTest {
         assertThat(result.getProcessedAt()).isNotNull();
         assertThat(result.getReason()).isEqualTo("đổi lịch");
         assertThat(result.getAppliedRuleJson()).containsEntry("policy_name", "PENDING_PAYMENT_CANCEL");
-        verify(policyRepository, never()).findByBranchIdIsNullAndIsActiveTrueOrderByPriorityAsc();
+        verify(policyRepository, never()).findByBranchIdIsNullAndIsActiveTrueOrderByPriorityDesc();
     }
 
     @Test
     void confirmedBookingGetsRefundFromMatchingPolicy() {
         Booking booking = booking(BookingStatus.CONFIRMED, 400_000L, hoursFromNow(72));
         givenBookingIsCancellable(booking);
-        when(policyRepository.findByBranchIdIsNullAndIsActiveTrueOrderByPriorityAsc())
+        when(policyRepository.findByBranchIdIsNullAndIsActiveTrueOrderByPriorityDesc())
                 .thenReturn(List.of(policy(null, 0, 23, 0), policy(null, 24, 100_000, 100)));
 
         BookingCancellation result = cancellationService.cancelBooking(userId, booking.getId(), null);
@@ -174,7 +174,7 @@ class CancellationServiceTest {
         Booking booking = booking(BookingStatus.CONFIRMED, 400_000L, hoursFromNow(72));
         givenBookingIsCancellable(booking);
         when(refundService.refundableAmount(booking.getId())).thenReturn(250_000L); // e.g. an unpaid running tab
-        when(policyRepository.findByBranchIdIsNullAndIsActiveTrueOrderByPriorityAsc())
+        when(policyRepository.findByBranchIdIsNullAndIsActiveTrueOrderByPriorityDesc())
                 .thenReturn(List.of(policy(null, 0, 100_000, 100)));
 
         BookingCancellation result = cancellationService.cancelBooking(userId, booking.getId(), null);
@@ -219,7 +219,7 @@ class CancellationServiceTest {
         Booking booking = booking(BookingStatus.CONFIRMED, 450_000L, hoursFromNow(10)); // 400k rental + 50k add-ons paid
         booking.setAddonAmount(50_000L);
         givenBookingIsCancellable(booking);
-        when(policyRepository.findByBranchIdIsNullAndIsActiveTrueOrderByPriorityAsc())
+        when(policyRepository.findByBranchIdIsNullAndIsActiveTrueOrderByPriorityDesc())
                 .thenReturn(List.of(policy(null, 0, 100_000, 50)));
 
         BookingCancellation result = cancellationService.cancelBooking(userId, booking.getId(), null);
@@ -240,7 +240,7 @@ class CancellationServiceTest {
             booking.setTotalAmount(300_000L);
             return 30_000L;
         });
-        when(policyRepository.findByBranchIdIsNullAndIsActiveTrueOrderByPriorityAsc())
+        when(policyRepository.findByBranchIdIsNullAndIsActiveTrueOrderByPriorityDesc())
                 .thenReturn(List.of(policy(null, 0, 100_000, 100)));
 
         BookingCancellation result = cancellationService.cancelBooking(userId, booking.getId(), null);
@@ -263,14 +263,15 @@ class CancellationServiceTest {
     void branchPolicyIsPreferredOverGlobalPolicy() {
         Booking booking = booking(BookingStatus.CONFIRMED, 100_000L, hoursFromNow(10));
         givenBookingIsCancellable(booking);
-        when(policyRepository.findByBranchIdAndIsActiveTrueOrderByPriorityAsc(branchId))
+        when(policyRepository.findByBranchIdAndIsActiveTrueOrderByPriorityDesc(branchId))
                 .thenReturn(List.of(policy(branchId, 0, 100_000, 50)));
-        when(policyRepository.findByBranchIdIsNullAndIsActiveTrueOrderByPriorityAsc())
+        org.mockito.Mockito.lenient().when(policyRepository.findByBranchIdIsNullAndIsActiveTrueOrderByPriorityDesc())
                 .thenReturn(List.of(policy(null, 0, 100_000, 100)));
 
         BookingCancellation result = cancellationService.cancelBooking(userId, booking.getId(), null);
 
         assertThat(result.getRefundPercent()).isEqualTo(50);
+        verify(policyRepository, never()).findByBranchIdIsNullAndIsActiveTrueOrderByPriorityDesc();
     }
 
     @Test
@@ -279,7 +280,7 @@ class CancellationServiceTest {
         givenBookingIsCancellable(booking);
         CancellationPolicy otherRule = policy(null, 0, 100_000, 100);
         otherRule.setRuleType("days_before");
-        when(policyRepository.findByBranchIdIsNullAndIsActiveTrueOrderByPriorityAsc())
+        when(policyRepository.findByBranchIdIsNullAndIsActiveTrueOrderByPriorityDesc())
                 .thenReturn(List.of(otherRule));
 
         BookingCancellation result = cancellationService.cancelBooking(userId, booking.getId(), null);
@@ -292,7 +293,7 @@ class CancellationServiceTest {
     void noMatchingPolicyMeansNoRefund() {
         Booking booking = booking(BookingStatus.CONFIRMED, 150_000L, hoursFromNow(2));
         givenBookingIsCancellable(booking);
-        when(policyRepository.findByBranchIdIsNullAndIsActiveTrueOrderByPriorityAsc())
+        when(policyRepository.findByBranchIdIsNullAndIsActiveTrueOrderByPriorityDesc())
                 .thenReturn(List.of(policy(null, 24, 100_000, 100)));
 
         BookingCancellation result = cancellationService.cancelBooking(userId, booking.getId(), null);
@@ -306,7 +307,7 @@ class CancellationServiceTest {
     void refundPlusPenaltyAlwaysEqualsTotalAmount() {
         Booking booking = booking(BookingStatus.CONFIRMED, 333_333L, hoursFromNow(48));
         givenBookingIsCancellable(booking);
-        when(policyRepository.findByBranchIdIsNullAndIsActiveTrueOrderByPriorityAsc())
+        when(policyRepository.findByBranchIdIsNullAndIsActiveTrueOrderByPriorityDesc())
                 .thenReturn(List.of(policy(null, 0, 100_000, 50)));
 
         BookingCancellation result = cancellationService.cancelBooking(userId, booking.getId(), null);
