@@ -339,6 +339,45 @@ const InnerDecoration: React.FC<{
         </text>
       );
 
+    case 'phone_booth':
+      return (
+        <text
+          x={cx}
+          y={cy + 3}
+          fontSize={Math.min(el.width, el.height) * 0.45}
+          textAnchor="middle"
+          dominantBaseline="middle"
+        >
+          📞
+        </text>
+      );
+
+    case 'event_space':
+      return (
+        <text
+          x={cx}
+          y={cy + 3}
+          fontSize={Math.min(el.width, el.height) * 0.25}
+          textAnchor="middle"
+          dominantBaseline="middle"
+        >
+          🎤
+        </text>
+      );
+
+    case 'custom_workspace':
+      return (
+        <text
+          x={cx}
+          y={cy + 3}
+          fontSize={Math.min(el.width, el.height) * 0.35}
+          textAnchor="middle"
+          dominantBaseline="middle"
+        >
+          ✨
+        </text>
+      );
+
     default:
       return null;
   }

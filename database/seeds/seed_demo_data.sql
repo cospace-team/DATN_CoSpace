@@ -30,53 +30,92 @@ INSERT INTO price_policies (id, branch_id, workspace_type_id, duration_unit, pri
 ON CONFLICT (id) DO NOTHING;
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- 2. EXTRA SERVICES (Global defaults + Branch overrides)
+-- 2. EXTRA SERVICES (Đầy đủ cả BẬT & TẮT, Toàn hệ thống & Ghi đè chi nhánh)
 -- ─────────────────────────────────────────────────────────────────────────────
-INSERT INTO extra_services (id, branch_id, code, name, service_type, unit, price, is_active) VALUES
-  -- Global defaults
-  ('e0000001-0000-0000-0000-000000000001'::uuid, NULL, 'cafe-latte',    'Cà Phê Latte',     'drink',    'ly',    35000.00, true),
-  ('e0000001-0000-0000-0000-000000000002'::uuid, NULL, 'tra-dao',       'Trà Đào Cam Sả',   'drink',    'ly',    40000.00, true),
-  ('e0000001-0000-0000-0000-000000000003'::uuid, NULL, 'nuoc-ep',       'Nước Ép Tươi',      'drink',    'ly',    45000.00, true),
-  ('e0000001-0000-0000-0000-000000000004'::uuid, NULL, 'in-trang-den',  'In Trắng Đen',     'printing', 'trang',  1000.00, true),
-  ('e0000001-0000-0000-0000-000000000005'::uuid, NULL, 'in-mau',        'In Màu',            'printing', 'trang',  3000.00, true),
-  ('e0000001-0000-0000-0000-000000000006'::uuid, NULL, 'banh-mi',       'Bánh Mì Thịt',      'meal',     'phần',  30000.00, true),
-  ('e0000001-0000-0000-0000-000000000007'::uuid, NULL, 'com-trua',      'Cơm Trưa VP',       'meal',     'phần',  55000.00, true),
-  -- Branch 1 overrides (slightly higher in Q1 area)
-  ('e0000001-0000-0000-0000-000000000011'::uuid, 'b1000000-0000-0000-0000-000000000001'::uuid, 'cafe-latte',   'Cà Phê Latte Premium', 'drink', 'ly', 45000.00, true),
-  ('e0000001-0000-0000-0000-000000000012'::uuid, 'b1000000-0000-0000-0000-000000000001'::uuid, 'combo-sang',   'Combo Sáng (Bánh+CF)', 'meal',  'phần', 65000.00, true)
-ON CONFLICT (id) DO NOTHING;
+INSERT INTO extra_services (id, branch_id, code, name, service_type, unit, price, is_active, description) VALUES
+  -- Global Defaults (Đang BẬT)
+  ('e0000001-0000-0000-0000-000000000001'::uuid, NULL, 'cafe-latte',    'Cà Phê Latte Sữa Tươi',         'drink',    'ly',    35000.00, true, 'Latte pha máy từ hạt Arabica Cầu Đất nguyên chất'),
+  ('e0000001-0000-0000-0000-000000000002'::uuid, NULL, 'tra-dao',       'Trà Đào Cam Sả Tươi',           'drink',    'ly',    40000.00, true, 'Trà đào thanh nhiệt kèm miếng đào giòn và sả tươi'),
+  ('e0000001-0000-0000-0000-000000000003'::uuid, NULL, 'nuoc-ep',       'Nước Ép Trái Cây Tươi',          'drink',    'ly',    45000.00, true, 'Nước ép cam / dưa hấu / ổi nguyên chất 100%'),
+  ('e0000001-0000-0000-0000-000000000004'::uuid, NULL, 'in-trang-den',  'In Ấn Trắng Đen A4',             'printing', 'trang',  1000.00, true, 'In ấn laser tài liệu văn phòng giấy Double A 80gsm'),
+  ('e0000001-0000-0000-0000-000000000005'::uuid, NULL, 'in-mau',        'In Ấn Màu Laser A4',             'printing', 'trang',  3000.00, true, 'In màu sắc nét cho báo cáo, biểu đồ, profile'),
+  ('e0000001-0000-0000-0000-000000000006'::uuid, NULL, 'banh-mi',       'Bánh Mì Thịt Nguội & Pate',      'meal',     'phần',  30000.00, true, 'Bánh mì giòn nóng kèm pate, chả lụa và dưa góp'),
+  ('e0000001-0000-0000-0000-000000000007'::uuid, NULL, 'com-trua',      'Cơm Trưa Văn Phòng Healthy',     'meal',     'phần',  55000.00, true, 'Set cơm trưa cân bằng dinh dưỡng thay đổi mỗi ngày'),
+  ('e0000001-0000-0000-0000-000000000008'::uuid, NULL, 'may-chieu-4k',  'Máy Chiếu 4K & Màn Chiếu 150in', 'equipment', 'giờ',  150000.00, true, 'Máy chiếu laser 4K siêu nét hỗ trợ HDMI & Không dây'),
+  ('e0000001-0000-0000-0000-000000000009'::uuid, NULL, 'smart-board',   'Bảng Tương Tác Cảm Ứng 75in',    'equipment', 'giờ',  100000.00, true, 'Bảng viết cảm ứng đa điểm hỗ trợ lưu file & họp online'),
+
+  -- Global Defaults (Đang TẮT - Dành cho demo tính năng Bật/Tắt)
+  ('e0000001-0000-0000-0000-000000000021'::uuid, NULL, 'teabreak-vip',  'Gói Tiệc Trà Teabreak Cao Cấp',  'meal',     'phần', 120000.00, false, 'Tạm ngưng do đối tác bánh bảo trì hệ thống bếp'),
+  ('e0000001-0000-0000-0000-000000000022'::uuid, NULL, 'do-xe-oto',     'Chỗ Đỗ Xe Ô Tô Tầng Hầm B2',     'facility', 'ngày', 150000.00, false, 'Tạm ngưng phục vụ do hầm xe đang bảo dưỡng sơn sàn'),
+  ('e0000001-0000-0000-0000-000000000023'::uuid, NULL, 'livestream-kit', 'Bộ Livestream & Hội Thảo 4K',   'equipment', 'buổi', 500000.00, false, 'Tạm ngưng do đang nâng cấp firmware thiết bị'),
+
+  -- Branch 1 (Q1) Ghi đè & Riêng biệt
+  ('e0000001-0000-0000-0000-000000000011'::uuid, 'b1000000-0000-0000-0000-000000000001'::uuid, 'cafe-latte',   'Cà Phê Latte Pha Máy Premium Q1', 'drink',    'ly',    45000.00, true,  'Phiên bản Latte đặc biệt cho chi nhánh Quận 1'),
+  ('e0000001-0000-0000-0000-000000000012'::uuid, 'b1000000-0000-0000-0000-000000000001'::uuid, 'combo-sang',   'Combo Sáng Q1 (Bánh Mì + Cafe Đá)', 'meal',  'phần',  65000.00, true,  'Bữa sáng tiện lợi cho thành viên chi nhánh Q1'),
+  ('e0000001-0000-0000-0000-000000000013'::uuid, 'b1000000-0000-0000-0000-000000000001'::uuid, 'podcast-room', 'Phòng Thu Podcast Mini Q1',         'facility','giờ',  250000.00, false, 'Đang hoàn thiện cách âm, sắp ra mắt tại Q1'),
+
+  -- Branch 2 (Q3) Ghi đè & Riêng biệt
+  ('e0000001-0000-0000-0000-000000000031'::uuid, 'b2000000-0000-0000-0000-000000000002'::uuid, 'tra-dao',      'Trà Đào Hạt Chia Q3',             'drink',    'ly',    38000.00, true,  'Trà đào thơm mát giảm giá riêng cho Q3'),
+  ('e0000001-0000-0000-0000-000000000032'::uuid, 'b2000000-0000-0000-0000-000000000002'::uuid, 'may-chieu-4k', 'Máy Chiếu Hội Thảo Q3',          'equipment','giờ',  120000.00, true,  'Mức giá ưu đãi cho phòng họp tại Q3')
+ON CONFLICT (id) DO UPDATE SET
+  name = EXCLUDED.name,
+  service_type = EXCLUDED.service_type,
+  unit = EXCLUDED.unit,
+  price = EXCLUDED.price,
+  is_active = EXCLUDED.is_active,
+  description = EXCLUDED.description;
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- 3. CANCELLATION POLICIES (Global + Branch-specific)
+-- 3. CANCELLATION POLICIES (Đầy đủ 5 bậc logic, Toàn hệ thống & Ghi đè chi nhánh)
 -- ─────────────────────────────────────────────────────────────────────────────
 INSERT INTO cancellation_policies (id, name, rule_type, min_value, max_value, refund_percent, priority, branch_id, workspace_type_id, is_active, effective_from) VALUES
-  -- Global: Hủy trong 2 giờ đầu → hoàn 100%
-  ('f0000001-0000-0000-0000-000000000001'::uuid, 'Miễn phí hủy 2 giờ đầu', 'GRACE_HOURS', 0, 2, 100.00, 200, NULL, NULL, true, '2026-01-01T00:00:00Z'),
-  -- Global: Hủy trước 1+ ngày → hoàn 80%
-  ('f0000001-0000-0000-0000-000000000002'::uuid, 'Hủy trước 1 ngày - hoàn 80%', 'BEFORE_START_DAYS', 1, 999, 80.00, 150, NULL, NULL, true, '2026-01-01T00:00:00Z'),
-  -- Global: Hủy dưới 1 ngày → hoàn 30%
-  ('f0000001-0000-0000-0000-000000000003'::uuid, 'Hủy sát giờ - hoàn 30%', 'BEFORE_START_DAYS', 0, 1, 30.00, 100, NULL, NULL, true, '2026-01-01T00:00:00Z'),
-  -- Branch 1 override: Hủy trong 4 giờ đầu → hoàn 100% (ưu đãi hơn global)
-  ('f0000001-0000-0000-0000-000000000004'::uuid, 'Q1 Premium: 4 giờ miễn phí hủy', 'GRACE_HOURS', 0, 4, 100.00, 250, 'b1000000-0000-0000-0000-000000000001'::uuid, NULL, true, '2026-01-01T00:00:00Z')
-ON CONFLICT (id) DO NOTHING;
+  -- Bậc 1 (Grace Period): Trong vòng 2 giờ kể từ khi tạo đơn -> Hoàn 100%
+  ('f0000001-0000-0000-0000-000000000001'::uuid, 'Miễn phí hủy trong 2 giờ đầu (Grace Period)',   'GRACE_HOURS',        0,   2, 100.00, 300, NULL, NULL, true,  '2026-01-01T00:00:00Z'),
+  -- Bậc 2 (Hủy rất sớm): Trước 7 ngày trở lên -> Hoàn 90% (Phí xử lý 10%)
+  ('f0000001-0000-0000-0000-000000000002'::uuid, 'Hủy trước 7 ngày (Hoàn 90% - Phí 10%)',         'BEFORE_START_DAYS',  7, 999,  90.00, 250, NULL, NULL, true,  '2026-01-01T00:00:00Z'),
+  -- Bậc 3 (Hủy tiêu chuẩn): Trước 3 đến 7 ngày -> Hoàn 70% (Phí giữ chỗ 30%)
+  ('f0000001-0000-0000-0000-000000000003'::uuid, 'Hủy trước 3 - 7 ngày (Hoàn 70% - Phí 30%)',     'BEFORE_START_DAYS',  3,   7,  70.00, 200, NULL, NULL, true,  '2026-01-01T00:00:00Z'),
+  -- Bậc 4 (Hủy cận ngày): Trước 1 đến 3 ngày -> Hoàn 50% (Phí 50%)
+  ('f0000001-0000-0000-0000-000000000004'::uuid, 'Hủy trước 1 - 3 ngày (Hoàn 50% - Phí 50%)',     'BEFORE_START_DAYS',  1,   3,  50.00, 150, NULL, NULL, true,  '2026-01-01T00:00:00Z'),
+  -- Bậc 5 (Hủy gấp): Trong vòng 24 giờ trước nhận phòng -> Hoàn 0%
+  ('f0000001-0000-0000-0000-000000000005'::uuid, 'Hủy sát giờ trong 24h (Không hoàn tiền)',        'BEFORE_START_DAYS',  0,   1,   0.00, 100, NULL, NULL, true,  '2026-01-01T00:00:00Z'),
+
+  -- Chi nhánh 1 (Q1) Ghi đè ưu đãi VIP:
+  ('f0000001-0000-0000-0000-000000000006'::uuid, 'Q1 Đặc quyền: Miễn phí hủy trong 4 giờ đầu',     'GRACE_HOURS',        0,   4, 100.00, 350, 'b1000000-0000-0000-0000-000000000001'::uuid, NULL, true, '2026-01-01T00:00:00Z'),
+  ('f0000001-0000-0000-0000-000000000007'::uuid, 'Q1 Hỗ trợ sát giờ (Hoàn 20% phí)',              'BEFORE_START_DAYS',  0,   1,  20.00, 120, 'b1000000-0000-0000-0000-000000000001'::uuid, NULL, true, '2026-01-01T00:00:00Z'),
+
+  -- Chính sách TẠM NGƯNG (is_active = false) để demo Bật/Tắt chính sách:
+  ('f0000001-0000-0000-0000-000000000008'::uuid, 'Khuyến mại hè: Hủy trước 2 ngày hoàn 80% (Tắt)', 'BEFORE_START_DAYS',  2,   5,  80.00, 180, NULL, NULL, false, '2026-01-01T00:00:00Z')
+ON CONFLICT (id) DO UPDATE SET
+  name = EXCLUDED.name,
+  rule_type = EXCLUDED.rule_type,
+  min_value = EXCLUDED.min_value,
+  max_value = EXCLUDED.max_value,
+  refund_percent = EXCLUDED.refund_percent,
+  priority = EXCLUDED.priority,
+  is_active = EXCLUDED.is_active;
+
+-- Ensure password column exists on users for self-hosted auth compatibility
+ALTER TABLE users ADD COLUMN IF NOT EXISTS password VARCHAR(255);
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 4. DEMO CUSTOMER ACCOUNTS (10 customers)
--- Note: These users won't have Supabase Auth entries — they're DB-only for demo.
--- For actual login, users must be created through the auth flow.
+-- Password for all demo accounts is: Staff@123
 -- ─────────────────────────────────────────────────────────────────────────────
-INSERT INTO users (id, email, full_name, phone, role, branch_id, status, membership_tier) VALUES
-  ('d1000001-0000-0000-0000-000000000001'::uuid, 'nguyenvana@demo.cospace.vn',  'Nguyễn Văn An',     '0901000001', 'customer', NULL, 'active', 'standard'),
-  ('d1000001-0000-0000-0000-000000000002'::uuid, 'tranthib@demo.cospace.vn',    'Trần Thị Bình',     '0901000002', 'customer', NULL, 'active', 'standard'),
-  ('d1000001-0000-0000-0000-000000000003'::uuid, 'lequocc@demo.cospace.vn',     'Lê Quốc Cường',     '0901000003', 'customer', NULL, 'active', 'standard'),
-  ('d1000001-0000-0000-0000-000000000004'::uuid, 'phamthid@demo.cospace.vn',    'Phạm Thị Dung',     '0901000004', 'customer', NULL, 'active', 'standard'),
-  ('d1000001-0000-0000-0000-000000000005'::uuid, 'hoange@demo.cospace.vn',      'Hoàng Minh Em',     '0901000005', 'customer', NULL, 'active', 'standard'),
-  ('d1000001-0000-0000-0000-000000000006'::uuid, 'vuthif@demo.cospace.vn',      'Vũ Thị Phương',     '0901000006', 'customer', NULL, 'active', 'standard'),
-  ('d1000001-0000-0000-0000-000000000007'::uuid, 'dangvang@demo.cospace.vn',    'Đặng Văn Giang',    '0901000007', 'customer', NULL, 'active', 'standard'),
-  ('d1000001-0000-0000-0000-000000000008'::uuid, 'buithih@demo.cospace.vn',     'Bùi Thị Hồng',      '0901000008', 'customer', NULL, 'active', 'standard'),
-  ('d1000001-0000-0000-0000-000000000009'::uuid, 'doanvani@demo.cospace.vn',    'Đoàn Văn Khôi',     '0901000009', 'customer', NULL, 'active', 'standard'),
-  ('d1000001-0000-0000-0000-000000000010'::uuid, 'ngothik@demo.cospace.vn',     'Ngô Thị Kim Liên',  '0901000010', 'customer', NULL, 'active', 'standard')
-ON CONFLICT (id) DO NOTHING;
+INSERT INTO users (id, email, password, password_hash, full_name, phone, role, branch_id, status, membership_tier) VALUES
+  ('d1000001-0000-0000-0000-000000000001'::uuid, 'nguyenvana@demo.cospace.vn',  '$2a$10$dVOBfTMSFcVEPNA.asw9NOmIWG1E4z9ImH5POUwWRRRLX39lqF9Oq', '$2a$10$dVOBfTMSFcVEPNA.asw9NOmIWG1E4z9ImH5POUwWRRRLX39lqF9Oq', 'Nguyễn Văn An',     '0901000001', 'customer', NULL, 'active', 'standard'),
+  ('d1000001-0000-0000-0000-000000000002'::uuid, 'tranthib@demo.cospace.vn',    '$2a$10$dVOBfTMSFcVEPNA.asw9NOmIWG1E4z9ImH5POUwWRRRLX39lqF9Oq', '$2a$10$dVOBfTMSFcVEPNA.asw9NOmIWG1E4z9ImH5POUwWRRRLX39lqF9Oq', 'Trần Thị Bình',     '0901000002', 'customer', NULL, 'active', 'standard'),
+  ('d1000001-0000-0000-0000-000000000003'::uuid, 'lequocc@demo.cospace.vn',     '$2a$10$dVOBfTMSFcVEPNA.asw9NOmIWG1E4z9ImH5POUwWRRRLX39lqF9Oq', '$2a$10$dVOBfTMSFcVEPNA.asw9NOmIWG1E4z9ImH5POUwWRRRLX39lqF9Oq', 'Lê Quốc Cường',     '0901000003', 'customer', NULL, 'active', 'standard'),
+  ('d1000001-0000-0000-0000-000000000004'::uuid, 'phamthid@demo.cospace.vn',    '$2a$10$dVOBfTMSFcVEPNA.asw9NOmIWG1E4z9ImH5POUwWRRRLX39lqF9Oq', '$2a$10$dVOBfTMSFcVEPNA.asw9NOmIWG1E4z9ImH5POUwWRRRLX39lqF9Oq', 'Phạm Thị Dung',     '0901000004', 'customer', NULL, 'active', 'standard'),
+  ('d1000001-0000-0000-0000-000000000005'::uuid, 'hoange@demo.cospace.vn',      '$2a$10$dVOBfTMSFcVEPNA.asw9NOmIWG1E4z9ImH5POUwWRRRLX39lqF9Oq', '$2a$10$dVOBfTMSFcVEPNA.asw9NOmIWG1E4z9ImH5POUwWRRRLX39lqF9Oq', 'Hoàng Minh Em',     '0901000005', 'customer', NULL, 'active', 'standard'),
+  ('d1000001-0000-0000-0000-000000000006'::uuid, 'vuthif@demo.cospace.vn',      '$2a$10$dVOBfTMSFcVEPNA.asw9NOmIWG1E4z9ImH5POUwWRRRLX39lqF9Oq', '$2a$10$dVOBfTMSFcVEPNA.asw9NOmIWG1E4z9ImH5POUwWRRRLX39lqF9Oq', 'Vũ Thị Phương',     '0901000006', 'customer', NULL, 'active', 'standard'),
+  ('d1000001-0000-0000-0000-000000000007'::uuid, 'dangvang@demo.cospace.vn',    '$2a$10$dVOBfTMSFcVEPNA.asw9NOmIWG1E4z9ImH5POUwWRRRLX39lqF9Oq', '$2a$10$dVOBfTMSFcVEPNA.asw9NOmIWG1E4z9ImH5POUwWRRRLX39lqF9Oq', 'Đặng Văn Giang',    '0901000007', 'customer', NULL, 'active', 'standard'),
+  ('d1000001-0000-0000-0000-000000000008'::uuid, 'buithih@demo.cospace.vn',     '$2a$10$dVOBfTMSFcVEPNA.asw9NOmIWG1E4z9ImH5POUwWRRRLX39lqF9Oq', '$2a$10$dVOBfTMSFcVEPNA.asw9NOmIWG1E4z9ImH5POUwWRRRLX39lqF9Oq', 'Bùi Thị Hồng',      '0901000008', 'customer', NULL, 'active', 'standard'),
+  ('d1000001-0000-0000-0000-000000000009'::uuid, 'doanvani@demo.cospace.vn',    '$2a$10$dVOBfTMSFcVEPNA.asw9NOmIWG1E4z9ImH5POUwWRRRLX39lqF9Oq', '$2a$10$dVOBfTMSFcVEPNA.asw9NOmIWG1E4z9ImH5POUwWRRRLX39lqF9Oq', 'Đoàn Văn Khôi',     '0901000009', 'customer', NULL, 'active', 'standard'),
+  ('d1000001-0000-0000-0000-000000000010'::uuid, 'ngothik@demo.cospace.vn',     '$2a$10$dVOBfTMSFcVEPNA.asw9NOmIWG1E4z9ImH5POUwWRRRLX39lqF9Oq', '$2a$10$dVOBfTMSFcVEPNA.asw9NOmIWG1E4z9ImH5POUwWRRRLX39lqF9Oq', 'Ngô Thị Kim Liên',  '0901000010', 'customer', NULL, 'active', 'standard')
+ON CONFLICT (id) DO UPDATE SET
+  password = EXCLUDED.password,
+  password_hash = EXCLUDED.password_hash;
 
 -- Profiles for demo customers
 INSERT INTO profiles (user_id, bio, profession, company, contact_email, contact_public, primary_branch_id) VALUES
@@ -94,19 +133,22 @@ ON CONFLICT (user_id) DO NOTHING;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 5. DEMO STAFF & ADMIN ACCOUNTS
+-- Password for all staff & admin accounts is: Staff@123
 -- ─────────────────────────────────────────────────────────────────────────────
-INSERT INTO users (id, email, full_name, phone, role, branch_id, status) VALUES
-  -- Branch Admins
-  ('d2000001-0000-0000-0000-000000000001'::uuid, 'admin.q1@cospace.vn', 'Lê Thị Quản Lý (Q1)', '0909000001', 'branch_admin', 'b1000000-0000-0000-0000-000000000001'::uuid, 'active'),
-  ('d2000001-0000-0000-0000-000000000002'::uuid, 'admin.q3@cospace.vn', 'Trần Văn Quản Lý (Q3)', '0909000002', 'branch_admin', 'b2000000-0000-0000-0000-000000000002'::uuid, 'active'),
-  ('d2000001-0000-0000-0000-000000000003'::uuid, 'admin.td@cospace.vn', 'Phạm Quản Lý (TĐ)', '0909000003', 'branch_admin', 'b3000000-0000-0000-0000-000000000003'::uuid, 'active'),
-  -- Staff
-  ('d3000001-0000-0000-0000-000000000001'::uuid, 'staff1.q1@cospace.vn', 'Nguyễn Nhân Viên (Q1)', '0908000001', 'staff', 'b1000000-0000-0000-0000-000000000001'::uuid, 'active'),
-  ('d3000001-0000-0000-0000-000000000002'::uuid, 'staff1.q3@cospace.vn', 'Trần Nhân Viên (Q3)', '0908000002', 'staff', 'b2000000-0000-0000-0000-000000000002'::uuid, 'active'),
-  ('d3000001-0000-0000-0000-000000000003'::uuid, 'staff1.td@cospace.vn', 'Lê Nhân Viên (TĐ)', '0908000003', 'staff', 'b3000000-0000-0000-0000-000000000003'::uuid, 'active'),
-  -- Super Admin
-  ('d4000001-0000-0000-0000-000000000001'::uuid, 'superadmin@cospace.vn', 'Admin Hệ Thống', '0900000001', 'super_admin', NULL, 'active')
-ON CONFLICT (id) DO NOTHING;
+INSERT INTO users (id, email, password, password_hash, full_name, phone, role, branch_id, status) VALUES
+  -- Branch Admins (password: Staff@123)
+  ('d2000001-0000-0000-0000-000000000001'::uuid, 'admin.q1@cospace.vn', '$2a$10$dVOBfTMSFcVEPNA.asw9NOmIWG1E4z9ImH5POUwWRRRLX39lqF9Oq', '$2a$10$dVOBfTMSFcVEPNA.asw9NOmIWG1E4z9ImH5POUwWRRRLX39lqF9Oq', 'Lê Thị Quản Lý (Q1)', '0909000001', 'branch_admin', 'b1000000-0000-0000-0000-000000000001'::uuid, 'active'),
+  ('d2000001-0000-0000-0000-000000000002'::uuid, 'admin.q3@cospace.vn', '$2a$10$dVOBfTMSFcVEPNA.asw9NOmIWG1E4z9ImH5POUwWRRRLX39lqF9Oq', '$2a$10$dVOBfTMSFcVEPNA.asw9NOmIWG1E4z9ImH5POUwWRRRLX39lqF9Oq', 'Trần Văn Quản Lý (Q3)', '0909000002', 'branch_admin', 'b2000000-0000-0000-0000-000000000002'::uuid, 'active'),
+  ('d2000001-0000-0000-0000-000000000003'::uuid, 'admin.td@cospace.vn', '$2a$10$dVOBfTMSFcVEPNA.asw9NOmIWG1E4z9ImH5POUwWRRRLX39lqF9Oq', '$2a$10$dVOBfTMSFcVEPNA.asw9NOmIWG1E4z9ImH5POUwWRRRLX39lqF9Oq', 'Phạm Quản Lý (TĐ)', '0909000003', 'branch_admin', 'b3000000-0000-0000-0000-000000000003'::uuid, 'active'),
+  -- Staff (password: Staff@123)
+  ('d3000001-0000-0000-0000-000000000001'::uuid, 'staff1.q1@cospace.vn', '$2a$10$dVOBfTMSFcVEPNA.asw9NOmIWG1E4z9ImH5POUwWRRRLX39lqF9Oq', '$2a$10$dVOBfTMSFcVEPNA.asw9NOmIWG1E4z9ImH5POUwWRRRLX39lqF9Oq', 'Nguyễn Nhân Viên (Q1)', '0908000001', 'staff', 'b1000000-0000-0000-0000-000000000001'::uuid, 'active'),
+  ('d3000001-0000-0000-0000-000000000002'::uuid, 'staff1.q3@cospace.vn', '$2a$10$dVOBfTMSFcVEPNA.asw9NOmIWG1E4z9ImH5POUwWRRRLX39lqF9Oq', '$2a$10$dVOBfTMSFcVEPNA.asw9NOmIWG1E4z9ImH5POUwWRRRLX39lqF9Oq', 'Trần Nhân Viên (Q3)', '0908000002', 'staff', 'b2000000-0000-0000-0000-000000000002'::uuid, 'active'),
+  ('d3000001-0000-0000-0000-000000000003'::uuid, 'staff1.td@cospace.vn', '$2a$10$dVOBfTMSFcVEPNA.asw9NOmIWG1E4z9ImH5POUwWRRRLX39lqF9Oq', '$2a$10$dVOBfTMSFcVEPNA.asw9NOmIWG1E4z9ImH5POUwWRRRLX39lqF9Oq', 'Lê Nhân Viên (TĐ)', '0908000003', 'staff', 'b3000000-0000-0000-0000-000000000003'::uuid, 'active'),
+  -- Super Admin (password: Superadmin@123)
+  ('d4000001-0000-0000-0000-000000000001'::uuid, 'superadmin@cospace.vn', '$2a$10$QmEXTFf7BXDrI0Avr3thseP83npyh.25s7BNZp0KBx7oNKAM32Bgi', '$2a$10$QmEXTFf7BXDrI0Avr3thseP83npyh.25s7BNZp0KBx7oNKAM32Bgi', 'Admin Hệ Thống', '0900000001', 'super_admin', NULL, 'active')
+ON CONFLICT (id) DO UPDATE SET
+  password = EXCLUDED.password,
+  password_hash = EXCLUDED.password_hash;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 6. DEMO BOOKINGS (40+ bookings across 3 branches, various statuses)
@@ -463,6 +505,53 @@ INSERT INTO checkin_logs (id, booking_id, staff_user_id, checkin_at, checkout_at
   ('c1100004-0000-0000-0000-000000000002'::uuid, 'b0010004-0000-0000-0000-000000000002'::uuid, 'd3000001-0000-0000-0000-000000000001'::uuid, '2026-07-16 09:00:00+07'::timestamptz, '2026-07-16 15:00:00+07'::timestamptz),
   ('c1200004-0000-0000-0000-000000000001'::uuid, 'b0020004-0000-0000-0000-000000000001'::uuid, 'd3000001-0000-0000-0000-000000000002'::uuid, '2026-07-20 08:00:00+07'::timestamptz, '2026-07-20 18:00:00+07'::timestamptz),
   ('c1300004-0000-0000-0000-000000000001'::uuid, 'b0030004-0000-0000-0000-000000000001'::uuid, 'd3000001-0000-0000-0000-000000000003'::uuid, '2026-07-05 08:00:00+07'::timestamptz, '2026-08-05 18:00:00+07'::timestamptz)
+ON CONFLICT (id) DO NOTHING;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 11. DEMO AUDIT LOGS (realistic logs with relative NOW() timestamps)
+-- ─────────────────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    action VARCHAR(100) NOT NULL,
+    entity_name VARCHAR(100) NOT NULL,
+    entity_id UUID,
+    old_values JSONB,
+    new_values JSONB,
+    ip_address VARCHAR(45),
+    user_agent TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+INSERT INTO audit_logs (id, user_id, action, entity_name, entity_id, old_values, new_values, ip_address, user_agent, created_at) VALUES
+  ('a0000001-0000-0000-0000-000000000001'::uuid, 'd4000001-0000-0000-0000-000000000001'::uuid, 'CREATE_BRANCH', 'branches', 'b1000000-0000-0000-0000-000000000001'::uuid, NULL, '{"name": "CoSpace Nguyễn Huệ (Q1)", "code": "Q1"}'::jsonb, '127.0.0.1', 'Mozilla/5.0 Chrome/120.0', NOW() - INTERVAL '15 days'),
+  ('a0000001-0000-0000-0000-000000000002'::uuid, 'd4000001-0000-0000-0000-000000000001'::uuid, 'CREATE_BRANCH', 'branches', 'b2000000-0000-0000-0000-000000000002'::uuid, NULL, '{"name": "CoSpace Võ Văn Tần (Q3)", "code": "Q3"}'::jsonb, '127.0.0.1', 'Mozilla/5.0 Chrome/120.0', NOW() - INTERVAL '14 days'),
+  ('a0000001-0000-0000-0000-000000000003'::uuid, 'd4000001-0000-0000-0000-000000000001'::uuid, 'CREATE_BRANCH', 'branches', 'b3000000-0000-0000-0000-000000000003'::uuid, NULL, '{"name": "CoSpace Đỗ Xuân Hợp (Thủ Đức)", "code": "TD"}'::jsonb, '127.0.0.1', 'Mozilla/5.0 Chrome/120.0', NOW() - INTERVAL '13 days'),
+  ('a0000001-0000-0000-0000-000000000004'::uuid, 'd4000001-0000-0000-0000-000000000001'::uuid, 'UPDATE', 'price_policies', 'p0000001-0000-0000-0000-000000000001'::uuid, '{"price": 20000}'::jsonb, '{"price": 25000}'::jsonb, '127.0.0.1', 'Mozilla/5.0 Chrome/120.0', NOW() - INTERVAL '10 days'),
+  ('a0000001-0000-0000-0000-000000000005'::uuid, 'd4000001-0000-0000-0000-000000000001'::uuid, 'CREATE', 'extra_services', 'e0000001-0000-0000-0000-000000000001'::uuid, NULL, '{"name": "Cà Phê Phin", "price": 20000}'::jsonb, '127.0.0.1', 'Mozilla/5.0 Chrome/120.0', NOW() - INTERVAL '9 days'),
+  ('a0000001-0000-0000-0000-000000000006'::uuid, 'd2000001-0000-0000-0000-000000000001'::uuid, 'UPDATE_WORKSPACE', 'workspaces', 'c1010001-0000-0000-0000-000000000001'::uuid, '{"status": "maintenance"}'::jsonb, '{"status": "active"}'::jsonb, '14.241.120.45', 'Mozilla/5.0 Mac OS', NOW() - INTERVAL '7 days'),
+  ('a0000001-0000-0000-0000-000000000007'::uuid, 'd2000001-0000-0000-0000-000000000001'::uuid, 'TOGGLE_SERVICE', 'extra_services', 'e0000001-0000-0000-0000-000000000011'::uuid, '{"is_active": false}'::jsonb, '{"is_active": true}'::jsonb, '14.241.120.45', 'Mozilla/5.0 Mac OS', NOW() - INTERVAL '5 days'),
+  ('a0000001-0000-0000-0000-000000000008'::uuid, 'd1000001-0000-0000-0000-000000000008'::uuid, 'CREATE_BOOKING', 'bookings', 'b0010001-0000-0000-0000-000000000011'::uuid, NULL, '{"booking_code": "CS-BK-2609-0011", "amount": 530000}'::jsonb, '113.161.72.10', 'Mobile Safari', NOW() - INTERVAL '5 days' + TIME '13:45:00'),
+  ('a0000001-0000-0000-0000-000000000009'::uuid, 'd1000001-0000-0000-0000-000000000008'::uuid, 'PAYMENT', 'payments', 'ea010001-0000-0000-0000-000000000011'::uuid, NULL, '{"method": "payos", "amount": 530000, "status": "PAID"}'::jsonb, '113.161.72.10', 'Mobile Safari', NOW() - INTERVAL '5 days' + TIME '13:50:00'),
+  ('a0000001-0000-0000-0000-000000000010'::uuid, 'd3000001-0000-0000-0000-000000000001'::uuid, 'CHECKIN', 'bookings', 'b0010001-0000-0000-0000-000000000011'::uuid, '{"status": "CONFIRMED"}'::jsonb, '{"status": "CHECKED_IN"}'::jsonb, '192.168.1.50', 'Staff Terminal Q1', NOW() - INTERVAL '5 days' + TIME '14:02:00'),
+  ('a0000001-0000-0000-0000-000000000011'::uuid, 'd3000001-0000-0000-0000-000000000001'::uuid, 'CHECKOUT', 'bookings', 'b0010001-0000-0000-0000-000000000011'::uuid, '{"status": "CHECKED_IN"}'::jsonb, '{"status": "COMPLETED"}'::jsonb, '192.168.1.50', 'Staff Terminal Q1', NOW() - INTERVAL '5 days' + TIME '17:05:00'),
+  ('a0000001-0000-0000-0000-000000000012'::uuid, 'd1000001-0000-0000-0000-000000000002'::uuid, 'CREATE_BOOKING', 'bookings', 'b0010001-0000-0000-0000-000000000009'::uuid, NULL, '{"booking_code": "CS-BK-2609-0009", "amount": 255000}'::jsonb, '14.169.80.22', 'Chrome Windows', NOW() - INTERVAL '3 days' + TIME '07:30:00'),
+  ('a0000001-0000-0000-0000-000000000013'::uuid, 'd1000001-0000-0000-0000-000000000002'::uuid, 'PAYMENT', 'payments', 'ea010001-0000-0000-0000-000000000009'::uuid, NULL, '{"method": "momo", "amount": 255000, "status": "PAID"}'::jsonb, '14.169.80.22', 'Chrome Windows', NOW() - INTERVAL '3 days' + TIME '07:35:00'),
+  ('a0000001-0000-0000-0000-000000000014'::uuid, 'd3000001-0000-0000-0000-000000000001'::uuid, 'CHECKIN', 'bookings', 'b0010001-0000-0000-0000-000000000009'::uuid, '{"status": "CONFIRMED"}'::jsonb, '{"status": "CHECKED_IN"}'::jsonb, '192.168.1.50', 'Staff Terminal Q1', NOW() - INTERVAL '3 days' + TIME '08:05:00'),
+  ('a0000001-0000-0000-0000-000000000015'::uuid, 'd3000001-0000-0000-0000-000000000001'::uuid, 'CHECKOUT', 'bookings', 'b0010001-0000-0000-0000-000000000009'::uuid, '{"status": "CHECKED_IN"}'::jsonb, '{"status": "COMPLETED"}'::jsonb, '192.168.1.50', 'Staff Terminal Q1', NOW() - INTERVAL '3 days' + TIME '18:02:00'),
+  ('a0000001-0000-0000-0000-000000000016'::uuid, 'd1000001-0000-0000-0000-000000000001'::uuid, 'CREATE_BOOKING', 'bookings', 'b0010001-0000-0000-0000-000000000007'::uuid, NULL, '{"booking_code": "CS-BK-2609-0007", "amount": 240000}'::jsonb, '118.69.182.5', 'Chrome Mac', NOW() - INTERVAL '1 day' + TIME '08:15:00'),
+  ('a0000001-0000-0000-0000-000000000017'::uuid, 'd1000001-0000-0000-0000-000000000001'::uuid, 'PAYMENT', 'payments', 'ea010001-0000-0000-0000-000000000007'::uuid, NULL, '{"method": "payos", "amount": 240000, "status": "PAID"}'::jsonb, '118.69.182.5', 'Chrome Mac', NOW() - INTERVAL '1 day' + TIME '08:20:00'),
+  ('a0000001-0000-0000-0000-000000000018'::uuid, 'd3000001-0000-0000-0000-000000000001'::uuid, 'CHECKIN', 'bookings', 'b0010001-0000-0000-0000-000000000007'::uuid, '{"status": "CONFIRMED"}'::jsonb, '{"status": "CHECKED_IN"}'::jsonb, '192.168.1.50', 'Staff Terminal Q1', NOW() - INTERVAL '1 day' + TIME '08:58:00'),
+  ('a0000001-0000-0000-0000-000000000019'::uuid, 'd3000001-0000-0000-0000-000000000001'::uuid, 'CHECKOUT', 'bookings', 'b0010001-0000-0000-0000-000000000007'::uuid, '{"status": "CHECKED_IN"}'::jsonb, '{"status": "COMPLETED"}'::jsonb, '192.168.1.50', 'Staff Terminal Q1', NOW() - INTERVAL '1 day' + TIME '17:02:00'),
+  ('a0000001-0000-0000-0000-000000000020'::uuid, 'd1000001-0000-0000-0000-000000000003'::uuid, 'CREATE_BOOKING', 'bookings', 'b0010001-0000-0000-0000-000000000004'::uuid, NULL, '{"booking_code": "CS-BK-2609-0004", "amount": 235000}'::jsonb, '192.168.1.50', 'Staff Terminal Q1', (CURRENT_DATE + TIME '07:50:00') AT TIME ZONE 'Asia/Ho_Chi_Minh'),
+  ('a0000001-0000-0000-0000-000000000021'::uuid, 'd3000001-0000-0000-0000-000000000001'::uuid, 'PAYMENT', 'payments', 'ea010001-0000-0000-0000-000000000004'::uuid, NULL, '{"method": "cash", "amount": 235000, "status": "PAID"}'::jsonb, '192.168.1.50', 'Staff Terminal Q1', (CURRENT_DATE + TIME '07:55:00') AT TIME ZONE 'Asia/Ho_Chi_Minh'),
+  ('a0000001-0000-0000-0000-000000000022'::uuid, 'd3000001-0000-0000-0000-000000000001'::uuid, 'CHECKIN', 'bookings', 'b0010001-0000-0000-0000-000000000004'::uuid, '{"status": "CONFIRMED"}'::jsonb, '{"status": "CHECKED_IN"}'::jsonb, '192.168.1.50', 'Staff Terminal Q1', (CURRENT_DATE + TIME '08:02:00') AT TIME ZONE 'Asia/Ho_Chi_Minh'),
+  ('a0000001-0000-0000-0000-000000000023'::uuid, 'd1000001-0000-0000-0000-000000000007'::uuid, 'CREATE_BOOKING', 'bookings', 'b0010001-0000-0000-0000-000000000005'::uuid, NULL, '{"booking_code": "CS-BK-2609-0005", "amount": 200000}'::jsonb, '42.112.98.15', 'Chrome Android', (CURRENT_DATE + TIME '07:15:00') AT TIME ZONE 'Asia/Ho_Chi_Minh'),
+  ('a0000001-0000-0000-0000-000000000024'::uuid, 'd3000001-0000-0000-0000-000000000001'::uuid, 'CHECKIN', 'bookings', 'b0010001-0000-0000-0000-000000000005'::uuid, '{"status": "CONFIRMED"}'::jsonb, '{"status": "CHECKED_IN"}'::jsonb, '192.168.1.50', 'Staff Terminal Q1', (CURRENT_DATE + TIME '07:32:00') AT TIME ZONE 'Asia/Ho_Chi_Minh'),
+  ('a0000001-0000-0000-0000-000000000025'::uuid, 'd1000001-0000-0000-0000-000000000001'::uuid, 'CREATE_BOOKING', 'bookings', 'b0010001-0000-0000-0000-000000000001'::uuid, NULL, '{"booking_code": "CS-BK-2609-0001", "amount": 120000}'::jsonb, '118.69.182.5', 'Chrome Mac', (CURRENT_DATE + TIME '07:45:00') AT TIME ZONE 'Asia/Ho_Chi_Minh'),
+  ('a0000001-0000-0000-0000-000000000026'::uuid, 'd1000001-0000-0000-0000-000000000001'::uuid, 'PAYMENT', 'payments', 'ea010001-0000-0000-0000-000000000001'::uuid, NULL, '{"method": "payos", "amount": 120000, "status": "PAID"}'::jsonb, '118.69.182.5', 'Chrome Mac', (CURRENT_DATE + TIME '07:48:00') AT TIME ZONE 'Asia/Ho_Chi_Minh'),
+  ('a0000001-0000-0000-0000-000000000027'::uuid, 'd1000001-0000-0000-0000-000000000002'::uuid, 'CREATE_BOOKING', 'bookings', 'b0010001-0000-0000-0000-000000000002'::uuid, NULL, '{"booking_code": "CS-BK-2609-0002", "amount": 200000}'::jsonb, '14.169.80.22', 'Chrome Windows', (CURRENT_DATE + TIME '08:30:00') AT TIME ZONE 'Asia/Ho_Chi_Minh'),
+  ('a0000001-0000-0000-0000-000000000028'::uuid, 'd1000001-0000-0000-0000-000000000004'::uuid, 'CREATE_BOOKING', 'bookings', 'b0010001-0000-0000-0000-000000000003'::uuid, NULL, '{"booking_code": "CS-BK-2609-0003", "amount": 300000}'::jsonb, '27.72.100.5', 'Firefox Windows', (CURRENT_DATE + TIME '08:45:00') AT TIME ZONE 'Asia/Ho_Chi_Minh')
 ON CONFLICT (id) DO NOTHING;
 
 COMMIT;

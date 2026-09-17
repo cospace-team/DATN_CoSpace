@@ -78,7 +78,9 @@ public class BranchAdminSpaceController {
     @GetMapping("/workspace-types")
     public ResponseEntity<?> listWorkspaceTypes(@AuthenticationPrincipal Jwt jwt) {
         try {
-            requireBranchId(jwt); // just verify access
+            if (jwt == null || jwt.getSubject() == null || jwt.getSubject().isBlank()) {
+                throw new IllegalArgumentException("Người dùng chưa được xác thực.");
+            }
             List<WorkspaceTypeResponse> types = spaceService.listWorkspaceTypes();
             return ResponseEntity.ok(types);
         } catch (IllegalArgumentException | AccessDeniedException e) {
@@ -118,7 +120,7 @@ public class BranchAdminSpaceController {
             @PathVariable UUID id,
             @RequestBody UpdateFloorRequest req) {
         try {
-            UUID branchId = requireBranchId(jwt);
+            UUID branchId = resolveBranchId(jwt, true);
             FloorResponse floor = spaceService.updateFloor(branchId, id, req);
             return ResponseEntity.ok(floor);
         } catch (IllegalArgumentException | AccessDeniedException e) {
@@ -131,7 +133,7 @@ public class BranchAdminSpaceController {
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID id) {
         try {
-            UUID branchId = requireBranchId(jwt);
+            UUID branchId = resolveBranchId(jwt, true);
             spaceService.deleteFloor(branchId, id);
             return ResponseEntity.ok(Map.of("message", "Đã xóa tầng thành công."));
         } catch (IllegalArgumentException | AccessDeniedException e) {
@@ -146,7 +148,7 @@ public class BranchAdminSpaceController {
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID floorId) {
         try {
-            UUID branchId = requireBranchId(jwt);
+            UUID branchId = resolveBranchId(jwt, true);
             List<WorkspaceResponse> workspaces = spaceService.listWorkspaces(branchId, floorId);
             return ResponseEntity.ok(workspaces);
         } catch (IllegalArgumentException | AccessDeniedException e) {
@@ -159,7 +161,7 @@ public class BranchAdminSpaceController {
             @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody CreateWorkspaceRequest req) {
         try {
-            UUID branchId = requireBranchId(jwt);
+            UUID branchId = resolveBranchId(jwt, true);
             WorkspaceResponse ws = spaceService.createWorkspace(branchId, req);
             return ResponseEntity.status(HttpStatus.CREATED).body(ws);
         } catch (IllegalArgumentException | AccessDeniedException e) {
@@ -173,7 +175,7 @@ public class BranchAdminSpaceController {
             @PathVariable UUID id,
             @RequestBody UpdateWorkspaceRequest req) {
         try {
-            UUID branchId = requireBranchId(jwt);
+            UUID branchId = resolveBranchId(jwt, true);
             WorkspaceResponse ws = spaceService.updateWorkspace(branchId, id, req);
             return ResponseEntity.ok(ws);
         } catch (IllegalArgumentException | AccessDeniedException e) {
@@ -186,7 +188,7 @@ public class BranchAdminSpaceController {
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID id) {
         try {
-            UUID branchId = requireBranchId(jwt);
+            UUID branchId = resolveBranchId(jwt, true);
             spaceService.deleteWorkspace(branchId, id);
             return ResponseEntity.ok(Map.of("message", "Đã xóa workspace thành công."));
         } catch (IllegalArgumentException | AccessDeniedException e) {
@@ -472,12 +474,14 @@ public class BranchAdminSpaceController {
         );
     }
 
-    /* ═══════════════════════ Auth Helper ═══════════════════════ */
-
     /**
-     * Extract branchId from JWT subject → lookup User → verify role=admin + branchId != null
+     * Extract branchId from JWT subject → lookup User
+     * - super_admin: allows specifying target branchId via query param ?branchId= or X-Branch-Id header.
+     *                If allowOptionalForSuperAdmin is true and no param is provided, returns null so that
+     *                downstream floor-level operations can resolve the branch from the target floor directly.
+     * - branch_admin: strictly locked to user.getBranchId()
      */
-    private UUID requireBranchId(Jwt jwt) {
+    private UUID resolveBranchId(Jwt jwt, boolean allowOptionalForSuperAdmin) {
         if (jwt == null || jwt.getSubject() == null || jwt.getSubject().isBlank()) {
             throw new IllegalArgumentException("Người dùng chưa được xác thực.");
         }
@@ -486,14 +490,39 @@ public class BranchAdminSpaceController {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy người dùng."));
 
+        // Super Admin (or global admin with no branch) can manage any branch by passing branchId
+        if (user.getRole() == User.Role.super_admin || (user.getRole() == User.Role.admin && user.getBranchId() == null)) {
+            String branchParam = httpServletRequest.getParameter("branchId");
+            if (branchParam == null || branchParam.isBlank()) {
+                branchParam = httpServletRequest.getHeader("X-Branch-Id");
+            }
+            if (branchParam != null && !branchParam.isBlank()) {
+                try {
+                    return UUID.fromString(branchParam.trim());
+                } catch (IllegalArgumentException e) {
+                    throw new IllegalArgumentException("Mã chi nhánh không hợp lệ.");
+                }
+            }
+            if (allowOptionalForSuperAdmin) {
+                return null;
+            }
+            if (user.getBranchId() != null) {
+                return user.getBranchId();
+            }
+            throw new IllegalArgumentException("Vui lòng chọn chi nhánh để quản lý không gian.");
+        }
+
         boolean isAuthorized = user.getRole() == User.Role.branch_admin 
-                || user.getRole() == User.Role.admin 
-                || user.getRole() == User.Role.super_admin;
+                || user.getRole() == User.Role.admin;
         if (!isAuthorized || user.getBranchId() == null) {
             throw new AccessDeniedException("Bạn không có quyền quản lý chi nhánh.");
         }
 
         return user.getBranchId();
+    }
+
+    private UUID requireBranchId(Jwt jwt) {
+        return resolveBranchId(jwt, false);
     }
 
     private ResponseEntity<?> errorResponse(Exception e) {

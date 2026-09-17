@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { Button } from "../components/ui/button";
 import { Logo } from "../components/ui/Logo";
+import { useSEO } from "../hooks/useSEO";
 import { 
   FiMail, 
   FiLock, 
@@ -24,6 +25,11 @@ const LoginPage: React.FC = () => {
   } = useAuth();
 
   const [view, setView] = useState<"login" | "register">("login");
+
+  useSEO({
+    title: view === "login" ? "Đăng Nhập" : "Đăng Ký Tài Khoản",
+    description: "Đăng nhập tài khoản CoSpace để trải nghiệm hệ sinh thái không gian làm việc chuyên nghiệp, đặt chỗ tiện lợi.",
+  });
   const [isSubmittingGoogle, setIsSubmittingGoogle] = useState(false);
   const [isSubmittingEmail, setIsSubmittingEmail] = useState(false);
   const [isSubmittingRegister, setIsSubmittingRegister] = useState(false);

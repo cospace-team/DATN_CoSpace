@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="50%" stop-color="#1e1b4b" />
+      <stop offset="100%" stop-color="#090d16" />
+    </linearGradient>
+    <linearGradient id="primaryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#818cf8" />
+      <stop offset="100%" stop-color="#4f46e5" />
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#818cf8" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bgGrad)" />
+
+  <!-- Subtle grid pattern -->
+  <g opacity="0.08" stroke="#ffffff" stroke-width="1">
+    <line x1="100" y1="0" x2="100" y2="630" />
+    <line x1="200" y1="0" x2="200" y2="630" />
+    <line x1="300" y1="0" x2="300" y2="630" />
+    <line x1="400" y1="0" x2="400" y2="630" />
+    <line x1="500" y1="0" x2="500" y2="630" />
+    <line x1="600" y1="0" x2="600" y2="630" />
+    <line x1="700" y1="0" x2="700" y2="630" />
+    <line x1="800" y1="0" x2="800" y2="630" />
+    <line x1="900" y1="0" x2="900" y2="630" />
+    <line x1="1000" y1="0" x2="1000" y2="630" />
+    <line x1="1100" y1="0" x2="1100" y2="630" />
+    <line x1="0" y1="100" x2="1200" y2="100" />
+    <line x1="0" y1="200" x2="1200" y2="200" />
+    <line x1="0" y1="300" x2="1200" y2="300" />
+    <line x1="0" y1="400" x2="1200" y2="400" />
+    <line x1="0" y1="500" x2="1200" y2="500" />
+    <line x1="0" y1="600" x2="1200" y2="600" />
+  </g>
+
+  <!-- Glowing background blobs -->
+  <circle cx="250" cy="180" r="180" fill="#6366f1" opacity="0.15" filter="blur(60px)" />
+  <circle cx="950" cy="420" r="220" fill="#38bdf8" opacity="0.12" filter="blur(80px)" />
+
+  <!-- Logo Mark -->
+  <g transform="translate(120, 130)">
+    <rect width="84" height="84" rx="20" fill="url(#primaryGrad)" />
+    <circle cx="28" cy="28" r="7" fill="#ffffff" />
+    <circle cx="56" cy="28" r="7" fill="#ffffff" />
+    <circle cx="28" cy="56" r="7" fill="#ffffff" />
+    <circle cx="56" cy="56" r="7" fill="#ffffff" />
+    <path d="M28 28L56 56" stroke="#ffffff" stroke-width="4.5" stroke-linecap="round" />
+    <path d="M56 28L28 56" stroke="#ffffff" stroke-width="4.5" stroke-linecap="round" />
+    <circle cx="42" cy="42" r="4" fill="#ffffff" />
+
+    <!-- Brand Name -->
+    <text x="110" y="58" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Inter, sans-serif" font-size="52" font-weight="800" fill="#ffffff" letter-spacing="-1.5">
+      Co<tspan fill="url(#accentGrad)">Space</tspan>
+    </text>
+  </g>
+
+  <!-- Headline -->
+  <text x="120" y="300" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Inter, sans-serif" font-size="56" font-weight="800" fill="#f8fafc" letter-spacing="-1">
+    Nền Tảng Quản Lý Co-Working Space
+  </text>
+  <text x="120" y="370" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Inter, sans-serif" font-size="56" font-weight="800" fill="url(#accentGrad)" letter-spacing="-1">
+    &amp; Mạng Lưới Kết Nối Đối Tác Thông Minh
+  </text>
+
+  <!-- Subtitle / Value proposition -->
+  <text x="120" y="445" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Inter, sans-serif" font-size="24" font-weight="400" fill="#94a3b8">
+    Đặt chỗ linh hoạt theo giờ, ngày, tháng • Check-in QR thông minh • Thanh toán MoMo, VietQR, PayOS
+  </text>
+
+  <!-- Feature badges at bottom -->
+  <g transform="translate(120, 510)">
+    <!-- Badge 1 -->
+    <rect width="260" height="48" rx="24" fill="#1e293b" stroke="#334155" stroke-width="1.5" />
+    <text x="130" y="30" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="16" font-weight="600" fill="#e2e8f0" text-anchor="middle">⚡ Đặt Chỗ &amp; Giữ Chỗ Tức Thì</text>
+    
+    <!-- Badge 2 -->
+    <g transform="translate(280, 0)">
+      <rect width="240" height="48" rx="24" fill="#1e293b" stroke="#334155" stroke-width="1.5" />
+      <text x="120" y="30" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="16" font-weight="600" fill="#e2e8f0" text-anchor="middle">🎯 Bản Đồ Ghế SVG Trực Quan</text>
+    </g>
+
+    <!-- Badge 3 -->
+    <g transform="translate(540, 0)">
+      <rect width="250" height="48" rx="24" fill="#1e293b" stroke="#334155" stroke-width="1.5" />
+      <text x="125" y="30" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="16" font-weight="600" fill="#e2e8f0" text-anchor="middle">🤝 Kết Nối Đối Tác &amp; Cộng Đồng</text>
+    </g>
+  </g>
+</svg>

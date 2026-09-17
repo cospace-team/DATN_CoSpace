@@ -9,6 +9,7 @@ spring:
     import:
       - optional:file:.env[.properties]
       - optional:file:BE/.env[.properties]
+      - optional:file:../.env[.properties]
   application:
     name: cospace-api
   devtools:
@@ -20,9 +21,9 @@ spring:
     serialization:
       write-dates-as-timestamps: false
   datasource:
-    url: ${SUPABASE_DB_URL}
-    username: ${SUPABASE_DB_USERNAME}
-    password: ${SUPABASE_DB_PASSWORD}
+    url: ${SUPABASE_DB_URL:jdbc:postgresql://aws-1-ap-south-1.pooler.supabase.com:6543/postgres?sslmode=require&prepareThreshold=0}
+    username: ${SUPABASE_DB_USERNAME:postgres.ozaiknomajljfqiepels}
+    password: ${SUPABASE_DB_PASSWORD:9UynfPDpyI1xXC2W}
     driver-class-name: org.postgresql.Driver
     hikari:
       data-source-properties:

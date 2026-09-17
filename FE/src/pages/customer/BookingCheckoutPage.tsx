@@ -9,8 +9,20 @@ import { Button } from '../../components/ui/button';
 import { useAuth } from '../../context/AuthContext';
 import { bookingApi } from '../../lib/bookingApi';
 import { useToast } from '../../components/Toast';
-import { resolveBranchId } from '../../data/branchAliases';
+import { customerSpaceApi, type ExtraServiceResponse } from '../../lib/spaceApi';
 import { describePromotion, promotionApi, type BookingQuoteDto, type PromotionDto } from '../../api/loyaltyApi';
+import { resolveBranchId } from '../../data/branchAliases';
+
+const getServiceIcon = (type?: string, name?: string) => {
+  const n = (name || '').toLowerCase();
+  const t = (type || '').toLowerCase();
+  if (t === 'drink' || n.includes('cà phê') || n.includes('trà') || n.includes('nước')) return '☕';
+  if (t === 'printing' || n.includes('in') || n.includes('scan')) return '🖨️';
+  if (t === 'meal' || n.includes('bánh') || n.includes('cơm') || n.includes('ăn')) return '🥪';
+  if (n.includes('màn hình') || n.includes('máy chiếu')) return '🖥️';
+  if (n.includes('bút') || n.includes('bảng')) return '📝';
+  return '✨';
+};
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -33,6 +45,7 @@ const BookingCheckoutPage: React.FC = () => {
   // Add-ons picked on the explore screen (real catalogue ids); the server prices them again.
   const addons: { serviceId: string; quantity: number; name: string; price: number; unit: string }[] = state?.addons || [];
   const addonRequest = addons.map(a => ({ serviceId: a.serviceId, quantity: a.quantity }));
+  const services: Record<string, number> = state?.services || {};
   const basePrice = state?.price?.price || 0;
   const subtotal = state?.subtotal || 0;
   const addonTotal = state?.addonTotal || 0;
@@ -48,6 +61,17 @@ const BookingCheckoutPage: React.FC = () => {
   endAtDate.setHours(isMultiDay ? startHour : endHour, 0, 0, 0);
   const unitMs = bookingDurationUnit === 'week' ? 7 * 86_400_000 : bookingDurationUnit === 'day' ? 86_400_000 : 3_600_000;
   const estimatedUnitCount = Math.max(1, Math.ceil((endAtDate.getTime() - startAtDate.getTime()) / unitMs));
+
+  const [serviceDetails, setServiceDetails] = useState<ExtraServiceResponse[]>(state?.serviceDetails || []);
+
+  useEffect(() => {
+    if (serviceDetails.length === 0 && Object.keys(services).length > 0 && workspace) {
+      const branchId = resolveBranchId(workspace.branch_id || workspace.branchId);
+      customerSpaceApi.listExtraServices(branchId).then(data => {
+        if (data) setServiceDetails(data);
+      }).catch(err => console.error("Failed to load extra services in checkout", err));
+    }
+  }, [workspace, services, serviceDetails.length]);
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeBooking, setActiveBooking] = useState<any | null>(null);
@@ -387,17 +411,25 @@ const BookingCheckoutPage: React.FC = () => {
                 Dịch vụ bổ sung
               </h3>
               <div className="space-y-4">
-                {addons.map(addon => (
-                  <div key={addon.serviceId} className="flex items-center justify-between p-4 rounded-3xl border border-border bg-muted/50">
-                    <div>
-                      <p className="font-semibold text-lg text-foreground">{addon.name}</p>
-                      <p className="text-xs font-medium text-foreground/70">{formatVND(addon.price)} / {addon.unit} × {addon.quantity}</p>
+                {addons.map(addon => {
+                  const serviceIcon = getServiceIcon(addon.unit, addon.name);
+                  return (
+                    <div key={addon.serviceId} className="flex items-center justify-between p-4 rounded-3xl border border-border bg-muted/50 hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center gap-4">
+                        <div className="h-12 w-12 rounded-3xl bg-card border border-border text-foreground flex items-center justify-center text-xl shadow-sm">
+                          {serviceIcon}
+                        </div>
+                        <div>
+                          <p className="font-semibold text-lg text-foreground">{addon.name}</p>
+                          <p className="text-xs font-medium text-foreground/70">{formatVND(addon.price)} / {addon.unit} × {addon.quantity}</p>
+                        </div>
+                      </div>
+                      <span className="text-lg font-mono font-semibold px-4 py-2 rounded-3xl bg-slate-900 text-white border border-border shadow-sm">
+                        + {formatVND(addon.price * addon.quantity)}
+                      </span>
                     </div>
-                    <span className="text-lg font-mono font-semibold px-4 py-2 rounded-3xl bg-slate-900 text-white border border-border shadow-sm">
-                      + {formatVND(addon.price * addon.quantity)}
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
               <p className="text-xs text-muted-foreground">Dịch vụ đặt kèm được thanh toán cùng đơn. Dịch vụ gọi thêm tại quầy sẽ thanh toán trước khi check-out.</p>
             </section>

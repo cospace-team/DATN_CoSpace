@@ -116,14 +116,19 @@ const EditRoleModal: React.FC<RoleModalProps> = ({ user, branches, onClose, onSa
             </label>
             <select
               value={selectedRole}
-              onChange={e => setSelectedRole(e.target.value as any)}
+              onChange={e => {
+                const r = e.target.value as any;
+                setSelectedRole(r);
+                if (r === 'super_admin' || r === 'customer') {
+                  setSelectedBranch('');
+                }
+              }}
               className="input-field w-full text-sm"
             >
               <option value="customer">Khách hàng (Customer)</option>
               <option value="staff">Nhân viên chi nhánh (Staff)</option>
               <option value="branch_admin">Quản lý chi nhánh (Branch Admin)</option>
-              <option value="admin">Quản trị viên hệ thống (Admin)</option>
-              <option value="super_admin">Super Admin</option>
+              <option value="super_admin">Quản trị viên tổng (Super Admin)</option>
             </select>
           </div>
 

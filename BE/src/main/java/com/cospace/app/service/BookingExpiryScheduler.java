@@ -26,10 +26,9 @@ public class BookingExpiryScheduler {
 
     /**
      * Runs every 30 seconds to check for and expire bookings that have passed their payment deadline.
-     * This is a critical business process to release workspaces that were held but not paid for.
+     * Each booking is expired safely so one failure never blocks the rest.
      */
     @Scheduled(fixedRate = 30000) // Run every 30 seconds
-    @Transactional
     public void expirePendingBookings() {
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         log.info("Running BookingExpiryScheduler at {}", now);
@@ -46,8 +45,17 @@ public class BookingExpiryScheduler {
 
         log.warn("Found {} bookings to expire.", expiredBookings.size());
 
+        int expired = 0;
         for (Booking booking : expiredBookings) {
-            expire(booking);
+            try {
+                expire(booking);
+                expired++;
+            } catch (RuntimeException e) {
+                log.error("Failed to expire booking {}: {}", booking.getId(), e.getMessage(), e);
+            }
+        }
+        if (expired > 0) {
+            log.info("Successfully expired {} bookings.", expired);
         }
     }
 
@@ -57,11 +65,15 @@ public class BookingExpiryScheduler {
      */
     @Transactional
     public void expire(Booking booking) {
+        if (booking == null || booking.getStatus() != BookingStatus.PENDING_PAYMENT) {
+            return; // already handled by concurrent process
+        }
+
         log.info("Expiring booking with ID: {} and code: {}", booking.getId(), booking.getBookingCode());
         BookingStateMachine.transition(booking, BookingStatus.EXPIRED);
-        bookingRepository.save(booking);
         // Add-ons ordered with an unpaid booking will never be served.
         bookingAddonService.voidUnpaid(booking, null);
+        bookingRepository.save(booking);
 
         // Also expire any initiated or pending payment associated with this booking
         paymentRepository.findTopByBookingIdAndStatusInOrderByCreatedAtDesc(

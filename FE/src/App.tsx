@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect, useMemo, Suspense } from "react";
 import {
   BrowserRouter,
   Routes,
@@ -17,6 +17,7 @@ import { Logo } from "./components/ui/Logo";
 import { NotificationBell } from "./components/notifications/NotificationBell";
 import { ChatWidget } from "./components/chatbot/ChatWidget";
 import { SuspenseLoader } from "./components/SuspenseLoader";
+import { useSEO } from "./hooks/useSEO";
 import {
   FiMapPin,
   FiCalendar,
@@ -49,6 +50,7 @@ import {
 const LoginPage = React.lazy(() => import("./pages/LoginPage"));
 const LandingPage = React.lazy(() => import("./pages/LandingPage"));
 const LocationsPage = React.lazy(() => import("./pages/LocationPage"));
+const NotFoundPage = React.lazy(() => import("./pages/NotFoundPage"));
 const ExplorePage = React.lazy(() => import("./pages/customer/ExplorePage"));
 const BookingCheckoutPage = React.lazy(() => import("./pages/customer/BookingCheckoutPage"));
 const VietQrCheckoutPage = React.lazy(() => import("./pages/customer/VietQrCheckoutPage"));
@@ -61,6 +63,7 @@ const MaintenancePage = React.lazy(() => import("./pages/staff/MaintenancePage")
 const WalkinBookingPage = React.lazy(() => import("./pages/staff/WalkinBookingPage"));
 const AdminDashboardPage = React.lazy(() => import("./pages/admin/AdminDashboardPage"));
 const BranchManagementPage = React.lazy(() => import("./pages/admin/BranchManagementPage"));
+const AdminWorkspacePage = React.lazy(() => import("./pages/admin/AdminWorkspacePage"));
 const PricingPage = React.lazy(() => import("./pages/admin/PricingPage"));
 const UserManagementPage = React.lazy(() => import("./pages/admin/UserManagementPage"));
 const CancellationPoliciesPage = React.lazy(() => import("./pages/admin/CancellationPoliciesPage"));
@@ -114,6 +117,7 @@ const branchAdminNav: NavItem[] = [
 const adminNav: NavItem[] = [
   { to: "/admin/dashboard", label: "Tổng quan", icon: <FiActivity className="h-4 w-4" /> },
   { to: "/admin/branches", label: "Chi nhánh", icon: <FiMapPin className="h-4 w-4" /> },
+  { to: "/admin/workspaces", label: "Không gian", icon: <FiGrid className="h-4 w-4" /> },
   { to: "/admin/pricing", label: "Bảng giá", icon: <FiTag className="h-4 w-4" /> },
   { to: "/admin/users", label: "Người dùng", icon: <FiUsers className="h-4 w-4" /> },
   { to: "/admin/cancellation", label: "Chính sách hủy", icon: <FiShield className="h-4 w-4" /> },
@@ -158,6 +162,24 @@ const AppShell: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
 
+  const navItems: NavItem[] = useMemo(() => {
+    if (!user) return customerNav;
+    return user.role === "branch_admin" ? branchAdminNav
+      : user.role === "super_admin" ? adminNav
+      : user.role === "staff" ? staffNav
+      : customerNav;
+  }, [user]);
+
+  // Find current nav label for breadcrumb and document title
+  const currentNavItem = useMemo(
+    () => navItems.find((item: NavItem) => location.pathname.startsWith(item.to)),
+    [navItems, location.pathname]
+  );
+  const pageTitle = currentNavItem?.label || "CoSpace";
+
+  // Always call useSEO at the top-level before ANY early returns
+  useSEO({ title: pageTitle });
+
   useEffect(() => {
     setSidebarOpen(false);
   }, [location.pathname]);
@@ -196,25 +218,36 @@ const AppShell: React.FC = () => {
         </Suspense>
       );
     }
-    return <Navigate to="/login" replace />;
+
+    // Protected areas require login with redirect back
+    const isKnownProtectedRoute =
+      location.pathname.startsWith("/customer") ||
+      location.pathname.startsWith("/staff") ||
+      location.pathname.startsWith("/admin") ||
+      location.pathname.startsWith("/branch-admin");
+
+    if (isKnownProtectedRoute) {
+      return <Navigate to={`/login?redirect=${encodeURIComponent(location.pathname + location.search)}`} replace />;
+    }
+
+    // Unknown public URLs show 404
+    return (
+      <Suspense fallback={<SuspenseLoader fullScreen label="Đang tải trang..." />}>
+        <NotFoundPage />
+      </Suspense>
+    );
   }
 
-  const isBranchAdmin = (user.role === "admin" || (user.role as string) === "branch_admin") && !!user.branchId;
-  const isSuperAdmin  = (user.role as string) === "super_admin" || (user.role === "admin" && !user.branchId);
-
-  const navItems =
-    isBranchAdmin ? branchAdminNav
-    : isSuperAdmin  ? adminNav
-    : user.role === "staff" ? staffNav
-    : customerNav;
   const roleLabel: Record<UserRole, string> = {
     customer: "Khách hàng",
     staff: "Nhân viên",
-    admin: isBranchAdmin ? `Quản lý chi nhánh` : "Quản trị viên",
+    branch_admin: "Quản lý chi nhánh",
+    super_admin: "Quản trị viên tổng",
   };
+
   const defaultRoute =
-    isBranchAdmin ? "/branch-admin/dashboard"
-    : isSuperAdmin  ? "/admin/dashboard"
+    user.role === "branch_admin" ? "/branch-admin/dashboard"
+    : user.role === "super_admin" ? "/admin/dashboard"
     : user.role === "staff" ? "/staff/dashboard"
     : "/customer/explore";
 
@@ -229,10 +262,6 @@ const AppShell: React.FC = () => {
     }
     return <Navigate to={defaultRoute} replace />;
   }
-
-  // Find current nav label for breadcrumb
-  const currentNavItem = navItems.find((item) => location.pathname.startsWith(item.to));
-  const pageTitle = currentNavItem?.label || "Dashboard";
 
   const backendPillClass =
     backendStatus === "ok"
@@ -451,14 +480,14 @@ const AppShell: React.FC = () => {
                 )}
 
                 {/* Super Admin */}
-                {isSuperAdmin && (
+                {user.role === 'super_admin' && (
                   <>
                     <Route path="/admin/dashboard"   element={<AdminDashboardPage />} />
                     <Route path="/admin/branches"    element={<BranchManagementPage />} />
+                    <Route path="/admin/workspaces"  element={<AdminWorkspacePage />} />
                     <Route path="/admin/pricing"     element={<PricingPage />} />
                     <Route path="/admin/users"       element={<UserManagementPage />} />
                     <Route path="/admin/cancellation" element={<CancellationPoliciesPage />} />
-
                     <Route path="/admin/services"    element={<ExtraServicesPage />} />
                     <Route path="/admin/amenities"   element={<AmenitiesPage />} />
                     <Route path="/admin/promotions"  element={<PromotionsPage />} />
@@ -470,7 +499,7 @@ const AppShell: React.FC = () => {
                 )}
 
                 {/* Branch Admin */}
-                {isBranchAdmin && (
+                {user.role === 'branch_admin' && (
                   <>
                     <Route path="/branch-admin/dashboard"   element={<BADashboardPage />} />
                     <Route path="/branch-admin/workspaces"  element={<BAWorkspacePage />} />
@@ -483,8 +512,8 @@ const AppShell: React.FC = () => {
                   </>
                 )}
 
-                {/* Default redirect */}
-                <Route path="*" element={<Navigate to={defaultRoute} replace />} />
+                {/* 404 Not Found */}
+                <Route path="*" element={<NotFoundPage />} />
               </Routes>
             </Suspense>
           </ErrorBoundary>

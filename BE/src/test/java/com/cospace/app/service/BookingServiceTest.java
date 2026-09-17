@@ -113,6 +113,12 @@ class BookingServiceTest {
         return req;
     }
 
+    @org.junit.jupiter.api.BeforeEach
+    void setUp() {
+        org.mockito.Mockito.lenient().when(entityManager.createNativeQuery(org.mockito.ArgumentMatchers.anyString())).thenReturn(advisoryLockQuery);
+        org.mockito.Mockito.lenient().when(advisoryLockQuery.setParameter(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(advisoryLockQuery);
+    }
+
     private void givenWorkspaceExists() {
         when(workspaceEntityRepository.findById(workspaceId)).thenReturn(Optional.of(WorkspaceEntity.builder()
                 .id(workspaceId)
@@ -232,7 +238,8 @@ class BookingServiceTest {
             assertThatThrownBy(() -> bookingService.createBooking(userId, request(DurationUnit.hour, 2)))
                     .isInstanceOf(IllegalArgumentException.class);
 
-            verify(entityManager).createNativeQuery(eq("SELECT pg_advisory_xact_lock(hashtext(:key))"));
+            org.mockito.Mockito.verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(eq("SELECT pg_advisory_xact_lock(hashtext(:key))"));
+            verify(advisoryLockQuery).setParameter("key", "rate_limit:" + userId);
             verify(advisoryLockQuery).setParameter("key", "booking:" + workspaceId);
         }
     }

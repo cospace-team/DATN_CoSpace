@@ -120,6 +120,12 @@ async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
   }
 
   if (!res.ok) {
+    if (data.fields && typeof data.fields === 'object') {
+      const fieldDetails = Object.entries(data.fields)
+        .map(([field, msg]) => `${field}: ${msg}`)
+        .join(', ');
+      throw new Error(`Dữ liệu không hợp lệ: ${fieldDetails}`);
+    }
     throw new Error(data.message || data.error || `Lỗi server (${res.status})`);
   }
   return data as T;
@@ -128,50 +134,66 @@ async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
 /* ─── Floor APIs ─── */
 
 export const floorApi = {
-  list: () =>
-    apiFetch<FloorResponse[]>(`${API}/api/branch-admin/floors`),
+  list: (branchId?: string) =>
+    apiFetch<FloorResponse[]>(
+      branchId ? `${API}/api/branch-admin/floors?branchId=${branchId}` : `${API}/api/branch-admin/floors`
+    ),
 
-  create: (req: CreateFloorRequest) =>
-    apiFetch<FloorResponse>(`${API}/api/branch-admin/floors`, {
-      method: "POST",
-      body: JSON.stringify(req),
-    }),
+  create: (req: CreateFloorRequest, branchId?: string) =>
+    apiFetch<FloorResponse>(
+      branchId ? `${API}/api/branch-admin/floors?branchId=${branchId}` : `${API}/api/branch-admin/floors`,
+      {
+        method: "POST",
+        body: JSON.stringify(req),
+      }
+    ),
 
-  update: (id: string, req: UpdateFloorRequest) =>
-    apiFetch<FloorResponse>(`${API}/api/branch-admin/floors/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(req),
-    }),
+  update: (id: string, req: UpdateFloorRequest, branchId?: string) =>
+    apiFetch<FloorResponse>(
+      branchId ? `${API}/api/branch-admin/floors/${id}?branchId=${branchId}` : `${API}/api/branch-admin/floors/${id}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(req),
+      }
+    ),
 
-  delete: (id: string) =>
-    apiFetch<{ message: string }>(`${API}/api/branch-admin/floors/${id}`, {
-      method: "DELETE",
-    }),
+  delete: (id: string, branchId?: string) =>
+    apiFetch<{ message: string }>(
+      branchId ? `${API}/api/branch-admin/floors/${id}?branchId=${branchId}` : `${API}/api/branch-admin/floors/${id}`,
+      {
+        method: "DELETE",
+      }
+    ),
 };
 
 /* ─── Workspace APIs ─── */
 
 export const workspaceApi = {
-  listByFloor: (floorId: string) =>
+  listByFloor: (floorId: string, branchId?: string) =>
     apiFetch<WorkspaceResponse[]>(
-      `${API}/api/branch-admin/floors/${floorId}/workspaces`
+      branchId
+        ? `${API}/api/branch-admin/floors/${floorId}/workspaces?branchId=${branchId}`
+        : `${API}/api/branch-admin/floors/${floorId}/workspaces`
     ),
 
-  create: (req: CreateWorkspaceRequest) =>
-    apiFetch<WorkspaceResponse>(`${API}/api/branch-admin/workspaces`, {
-      method: "POST",
-      body: JSON.stringify(req),
-    }),
-
-  update: (id: string, req: UpdateWorkspaceRequest) =>
+  create: (req: CreateWorkspaceRequest, branchId?: string) =>
     apiFetch<WorkspaceResponse>(
-      `${API}/api/branch-admin/workspaces/${id}`,
+      branchId ? `${API}/api/branch-admin/workspaces?branchId=${branchId}` : `${API}/api/branch-admin/workspaces`,
+      {
+        method: "POST",
+        body: JSON.stringify(req),
+      }
+    ),
+
+  update: (id: string, req: UpdateWorkspaceRequest, branchId?: string) =>
+    apiFetch<WorkspaceResponse>(
+      branchId ? `${API}/api/branch-admin/workspaces/${id}?branchId=${branchId}` : `${API}/api/branch-admin/workspaces/${id}`,
       { method: "PUT", body: JSON.stringify(req) }
     ),
 
-  delete: (id: string) =>
+  delete: (id: string, branchId?: string) =>
     apiFetch<{ message: string }>(
-      `${API}/api/branch-admin/workspaces/${id}`,
+      branchId ? `${API}/api/branch-admin/workspaces/${id}?branchId=${branchId}` : `${API}/api/branch-admin/workspaces/${id}`,
       { method: "DELETE" }
     ),
 };
@@ -199,9 +221,9 @@ export const floorLayoutApi = {
 /* ─── Workspace Type APIs ─── */
 
 export const workspaceTypeApi = {
-  list: () =>
+  list: (branchId?: string) =>
     apiFetch<WorkspaceTypeResponse[]>(
-      `${API}/api/branch-admin/workspace-types`
+      branchId ? `${API}/api/branch-admin/workspace-types?branchId=${branchId}` : `${API}/api/branch-admin/workspace-types`
     ),
 };
 
@@ -330,6 +352,18 @@ export interface PublicWorkspaceAvailability {
   busySlots: Array<{ startAt: string; endAt: string; reason: "booking" | "maintenance" }>;
 }
 
+export interface ExtraServiceResponse {
+  id: string;
+  code?: string;
+  name: string;
+  description?: string;
+  serviceType?: string;
+  unit: string;
+  price: number;
+  isActive: boolean;
+  branchId?: string;
+}
+
 /* ─── Customer Space APIs ─── */
 export const customerSpaceApi = {
   listBranches: () =>
@@ -356,5 +390,10 @@ export const customerSpaceApi = {
   getBookingStatus: (branchId: string, from: Date, to: Date) =>
     apiFetch<PublicWorkspaceAvailability[]>(
       `${API}/api/customer/spaces/branches/${branchId}/booking-status?from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(to.toISOString())}`
+    ),
+
+  listExtraServices: (branchId?: string) =>
+    apiFetch<ExtraServiceResponse[]>(
+      branchId ? `${API}/api/extra-services?branchId=${branchId}` : `${API}/api/extra-services`
     ),
 };

@@ -47,8 +47,8 @@ const ExtraServicesPage: React.FC = () => {
     setIsLoading(true);
     setApiError('');
     try {
-      // No branchId → only global (system-wide) service definitions, which every branch inherits.
-      const data = await staffApi.getExtraServices();
+      // includeInactive = true → fetches both active and inactive services so admin can toggle them
+      const data = await staffApi.getExtraServices(undefined, true);
       setServices(data.filter(s => !s.branchId));
     } catch (e: any) {
       setApiError(e.message || 'Không thể tải danh sách dịch vụ.');

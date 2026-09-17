@@ -351,7 +351,7 @@ public class PartnerMatchingService {
 
             String candLinkedin = null;
             String candGithub = null;
-            if (candProfile != null && candProfile.getContactLink() != null) {
+            if (candProfile != null && contactPublic && candProfile.getContactLink() != null) {
                 String rawLink = candProfile.getContactLink().trim();
                 if (rawLink.startsWith("{")) {
                     try {

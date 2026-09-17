@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { Button } from "./ui/button";
-import { FiMenu, FiX } from "react-icons/fi";
+import { FiMenu, FiX, FiLogOut } from "react-icons/fi";
 import { Logo } from "./ui/Logo";
 
 const navLinks = [
@@ -12,7 +12,7 @@ const navLinks = [
 ];
 
 const PublicNavbar: React.FC = () => {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [scrolled, setScrolled] = useState(false);
@@ -31,8 +31,10 @@ const PublicNavbar: React.FC = () => {
   const handleDashboard = () => {
     if (isAuthenticated && user) {
       const route =
-        user.role === "admin"
-          ? user.branchId ? "/branch-admin/dashboard" : "/admin/dashboard"
+        user.role === "super_admin"
+          ? "/admin/dashboard"
+          : user.role === "branch_admin"
+          ? "/branch-admin/dashboard"
           : user.role === "staff"
           ? "/staff/dashboard"
           : "/customer/explore";
@@ -105,6 +107,16 @@ const PublicNavbar: React.FC = () => {
               >
                 Vào Dashboard
               </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => void logout()}
+                className="rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 gap-1.5 px-3 py-2 text-sm"
+                title="Đăng xuất"
+              >
+                <FiLogOut className="h-4 w-4" />
+                <span>Đăng xuất</span>
+              </Button>
             </>
           ) : (
             <>
@@ -158,9 +170,19 @@ const PublicNavbar: React.FC = () => {
                 <p className="text-sm text-muted-foreground px-4">
                   Xin chào, <span className="font-semibold text-foreground">{user.fullName}</span>
                 </p>
-                <Button onClick={handleDashboard} className="w-full rounded-full py-5 font-medium">
-                  Vào Dashboard
-                </Button>
+                <div className="flex gap-2">
+                  <Button onClick={handleDashboard} className="flex-1 rounded-full py-5 font-medium">
+                    Vào Dashboard
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => void logout()}
+                    className="rounded-full py-5 px-4 text-destructive border-destructive/30 hover:bg-destructive/10"
+                    title="Đăng xuất"
+                  >
+                    <FiLogOut className="h-5 w-5" />
+                  </Button>
+                </div>
               </>
             ) : (
               <div className="flex gap-3">

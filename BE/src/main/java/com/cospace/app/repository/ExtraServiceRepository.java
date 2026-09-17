@@ -15,4 +15,8 @@ public interface ExtraServiceRepository extends JpaRepository<ExtraServiceEntity
     List<ExtraServiceEntity> findByBranchIdIsNullAndIsActiveTrue();
 
     List<ExtraServiceEntity> findByBranchIdOrBranchIdIsNullAndIsActiveTrue(UUID branchId);
+
+    List<ExtraServiceEntity> findByBranchId(UUID branchId);
+
+    List<ExtraServiceEntity> findByBranchIdIsNull();
 }

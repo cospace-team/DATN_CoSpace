@@ -181,7 +181,7 @@ public class StaffMaintenanceService {
         WorkspaceMaintenanceEntity maintenance = maintenanceRepository.findById(maintenanceId)
                 .orElseThrow(() -> new IllegalArgumentException("Maintenance not found"));
         
-        java.time.ZonedDateTime now = java.time.ZonedDateTime.now();
+        java.time.ZonedDateTime now = java.time.ZonedDateTime.now(java.time.ZoneOffset.UTC);
         if (now.isBefore(maintenance.getEndAt())) {
             maintenance.setEndAt(now);
         }
@@ -195,7 +195,7 @@ public class StaffMaintenanceService {
         WorkspaceMaintenanceEntity maintenance = maintenanceRepository.findById(maintenanceId)
                 .orElseThrow(() -> new IllegalArgumentException("Maintenance not found"));
                 
-        java.time.ZonedDateTime now = java.time.ZonedDateTime.now();
+        java.time.ZonedDateTime now = java.time.ZonedDateTime.now(java.time.ZoneOffset.UTC);
         if (now.isBefore(maintenance.getEndAt())) {
             maintenance.setEndAt(now);
         }

@@ -60,4 +60,55 @@ Sử dụng ký hiệu: `[ ]` Chưa làm | `[/]` Đang làm | `[x]` Đã xong.
 - [x] **Theme & Huy hiệu Member**: Tối ưu độ tương phản WCAG AAA cho Bronze Member trên Light theme (không còn bị chìm/mờ) và dịu mắt trên Dark theme; Bỏ huy hiệu "Đã xác thực" thừa thãi.
 - [x] **Đồng bộ Tài liệu (Docs)**: Cập nhật `docs/api-contracts/matching.md` và `docs/SYSTEM_SPEC.md` phản ánh đúng 100% các endpoints và schema DTO thực tế.
 - [x] **Hệ thống thông báo (`NotificationBell.tsx`)**: Sửa class CSS `shadow-2xs`, tối ưu responsive layout cho mobile, phân loại icon/màu sắc đẹp mắt theo 7 loại sự kiện (Đặt chỗ, Nhắc nhở trước 1h, Hoàn tiền hủy đơn, Gợi ý đối tác, Bài viết cộng đồng, Hủy đơn, Giao dịch).
+## 👑 8. Admin Console APIs, In-Memory Caching & Polish
+- [x] **Quản trị toàn hệ thống (`AdminController.java`)**: CRUD chi nhánh (`/api/admin/branches`), loại chỗ ngồi (`/api/admin/workspace-types`), bảng giá toàn hệ thống (`/api/admin/price-policies`).
+- [x] **Đấu nối dữ liệu thật cho FE Admin**: Thay thế hoàn toàn mock state tại `BranchManagementPage.tsx`, `PricingPage.tsx`, `ExtraServicesPage.tsx`, `CancellationPoliciesPage.tsx`.
+- [x] **Phân trang người dùng**: Hỗ trợ phân trang Server-side `GET /api/users?page=&size=` và tích hợp UI pagination controls tại `UserManagementPage.tsx`.
+- [x] **In-Memory Caching (Caffeine)**: Tích hợp Spring Cache với Caffeine cho các dữ liệu cấu hình tĩnh và báo cáo (`branches`, `workspace_types`, `price_policies`, `reports_overview`, `extra_services`, `cancellation_policies`), tự động `@CacheEvict` khi mutate.
+- [x] **Khắc phục lỗi pgjdbc Parameter Type**: Bổ sung `preferQueryMode: simple` vào cấu hình datasource HikariCP trong `application.yml`.
 
+## 🏛️ 9. System Polish, Role Unification & Multi-Branch Architecture
+- [x] **Chuẩn hóa 4 Vai trò (Role Unification)**:
+  - [x] Đồng bộ type `UserRole = 'super_admin' | 'branch_admin' | 'staff' | 'customer'` tại `AuthContext.tsx`, xóa bỏ `normalizeRole()` bóp méo vai trò
+  - [x] Chuẩn hóa routing trực diện tại `App.tsx`, `LandingPage.tsx`, `PublicNavbar.tsx`, bỏ logic đoán mò `isBranchAdmin`
+  - [x] Chuẩn hóa `UserManagementPage.tsx` modal: dropdown đúng 4 roles, tự động ràng buộc `branch_id` chuẩn theo DB constraint
+  - [x] Chuẩn hóa authority Spring Security (`SupabaseJwtAuthenticationConverter`, `SecurityConfig`, `BranchAccessGuard`)
+- [x] **Cấu hình Không gian cho Super Admin**:
+  - [x] Backend: Cho phép `super_admin` truyền `?branchId=...` vào `BranchAdminSpaceController` để thao tác không gian mọi chi nhánh
+  - [x] Frontend: Thêm menu `/admin/workspaces` vào `adminNav` và xây dựng trang cấu hình không gian có Branch Selector
+- [x] **Trung Tâm Quản Lý Bảng Giá & Biểu Phí Toàn Diện (Unified Pricing Hub)**:
+  - [x] Tab 1: Ma trận giá không gian (Loại không gian × Giờ/Ngày/Tuần/Tháng, cảnh báo thiếu giá, preset 4 mốc)
+  - [x] Tab 2: Biểu giá dịch vụ gia tăng (Bật/Tắt trực tiếp, kế thừa vs ghi đè, an toàn snapshot)
+  - [x] Tab 3: Biểu phí phạt hủy (5 bậc thời gian logic, % hoàn / % phạt, thứ tự ưu tiên)
+- [x] **Sửa Lỗi Logic & Seed Data Chính sách Hủy (Cancellation Policy)**:
+  - [x] Sửa `CancellationService.java`: Hỗ trợ `GRACE_HOURS` (tính từ `createdAt`) và `BEFORE_START_DAYS` (tính từ `startAt`)
+  - [x] Sắp xếp thứ tự ưu tiên đúng `OrderByPriorityDesc`, phân cấp chi nhánh trước, fallback global
+  - [x] Xây dựng bộ seed data 5 bậc thời gian chuẩn (0-2h grace = 100%, >7d = 90%, 3-7d = 70%, 1-3d = 50%, <24h = 0%, Q1 override, policy tạm ngưng)
+- [x] **Quản Lý Dịch Vụ Thêm & Dữ Liệu Demo Sống Động (Extra Services)**:
+  - [x] Seed data đa dạng: Vừa có BẬT (phục vụ gọi món/đặt chỗ) vừa có TẮT (demo công tắc bật/tắt)
+  - [x] Xác thực logic an toàn: `booking_services` snapshot `unit_price` và `subtotal`, đổi giá/sửa tên không ảnh hưởng đơn cũ
+  - [x] Chặn xóa cứng khi đã có đơn hàng (`existsByServiceId` + `ON DELETE RESTRICT`), hướng dẫn deactive
+- [x] **Đóng Lỗ Hổng & Khả Năng Mở Rộng Sơ Đồ SVG (Workspace Types & Floor Plan)**:
+  - [x] Prompt/gợi ý tạo bảng giá ban đầu khi thêm mới Workspace Type (chặn nguy cơ đặt chỗ 0đ)
+  - [x] Bổ sung phần tử SVG `phone_booth`, `event_space`, `custom_workspace` vào `ELEMENT_CATALOG` và `LINKABLE_TYPES`
+  - [x] Xác nhận an toàn: Khách hàng chỉ có thể đặt các workspace cụ thể đã được gán trên mặt bằng và có giá, không có rủi ro đặt 0đ cho loại mới chưa triển khai
+
+## 🛠️ 10. Operational Bugfixes & Robustness
+- [x] **Vấn đề 1: Phân quyền Super Admin Cấu hình Không gian**:
+  - [x] BE: Cho phép `super_admin` thao tác trên `floor` mà không bị chặn lệch `branch_id`
+  - [x] FE: Truyền `activeBranchId` đủ ở các API update/create trong `BAWorkspacePage.tsx`
+  - [x] FE: Reset `selectedFloorId = ''`, `floors = []` ngay khi đổi `selectedBranchId`
+- [x] **Vấn đề 2: Chi nhánh Tạm dừng & Lỗi Trùng `floor_no` (Tầng 1)**:
+  - [x] BE: Chặn tạo/sửa tầng khi chi nhánh có `status == 'inactive'`
+  - [x] BE: Xử lý bắt lỗi trùng tầng thân thiện thay vì văng SQL constraint thô
+  - [x] FE: Disable nút Lưu khi đang submit, tính số tầng gợi ý `max(floorNo) + 1`
+  - [x] FE: Hiển thị Banner cảnh báo màu vàng khi chi nhánh đang `inactive`
+- [x] **Vấn đề 3: Extra Services Fix Switch Bật/Tắt, Avatar/Logo & Phân loại Động**:
+  - [x] BE: Thêm `@JsonProperty("isActive")` vào `ExtraServiceEntity.java` để Jackson map chuẩn
+  - [x] BE: Mở rộng `service_type` VARCHAR(50), hỗ trợ cả `isActive` và `active` khi update
+  - [x] FE: Normalize `isActive: Boolean(s.isActive ?? s.active)` trong `staffApi.ts`
+  - [x] FE: Hỗ trợ chọn/nhập phân loại dịch vụ mở rộng linh hoạt kèm fallback icon `✨`
+- [x] **Vấn đề 4: Lỗi `validation_failed` Sơ đồ SVG & Empty State Tầng**:
+  - [x] FE: Bỏ qua element kiến trúc, đảm bảo `capacity >= 1` và mã code không rỗng khi auto-create
+  - [x] FE: Thiết kế Empty State đẹp mắt kèm nút CTA thiết kế khi tầng chưa có SVG
+  - [x] FE: Khách hàng xem Explore không bị vỡ giao diện nếu tầng chưa có SVG

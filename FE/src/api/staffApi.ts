@@ -111,6 +111,7 @@ export interface ExtraServiceDto {
   price: number;
   isActive: boolean;
   branchId?: string;
+  description?: string;
 }
 
 export interface CancellationPolicyDto {
@@ -438,13 +439,16 @@ export const staffApi = {
 
   /* ── Extra Services ── */
 
-  getExtraServices: async (branchId?: string): Promise<ExtraServiceDto[]> => {
-    const url = branchId
-      ? `${API_BASE_URL}/api/extra-services?branchId=${branchId}`
-      : `${API_BASE_URL}/api/extra-services`;
+  getExtraServices: async (branchId?: string, includeInactive = false): Promise<ExtraServiceDto[]> => {
+    const basePath = includeInactive ? `${API_BASE_URL}/api/extra-services/all` : `${API_BASE_URL}/api/extra-services`;
+    const url = branchId ? `${basePath}?branchId=${branchId}` : basePath;
     const res = await fetch(url, { headers: getAuthHeaders() });
     if (!res.ok) throw new Error('Failed to fetch extra services');
-    return res.json();
+    const rawList: any[] = await res.json();
+    return (rawList || []).map((s: any) => ({
+      ...s,
+      isActive: Boolean(s.isActive ?? s.active ?? false)
+    }));
   },
 
   createExtraService: async (payload: Partial<ExtraServiceDto>): Promise<ExtraServiceDto> => {
@@ -457,7 +461,11 @@ export const staffApi = {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.message || 'Failed to create service');
     }
-    return res.json();
+    const raw: any = await res.json();
+    return {
+      ...raw,
+      isActive: Boolean(raw.isActive ?? raw.active ?? false)
+    };
   },
 
   updateExtraService: async (id: string, payload: Partial<ExtraServiceDto>): Promise<ExtraServiceDto> => {
@@ -470,7 +478,11 @@ export const staffApi = {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.message || 'Failed to update service');
     }
-    return res.json();
+    const raw: any = await res.json();
+    return {
+      ...raw,
+      isActive: Boolean(raw.isActive ?? raw.active ?? false)
+    };
   },
 
   deleteExtraService: async (id: string): Promise<void> => {

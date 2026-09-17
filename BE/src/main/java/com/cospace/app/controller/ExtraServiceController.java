@@ -35,6 +35,13 @@ public class ExtraServiceController {
         return ResponseEntity.ok(extraServiceService.getAvailableServices(branchId));
     }
 
+    @GetMapping("/extra-services/all")
+    @PreAuthorize("hasAnyRole('BRANCH_ADMIN', 'SUPER_ADMIN', 'ADMIN', 'branch_admin', 'admin')")
+    public ResponseEntity<List<ExtraServiceEntity>> getAllServices(
+            @RequestParam(name = "branchId", required = false) UUID branchId) {
+        return ResponseEntity.ok(extraServiceService.getAllServices(branchId));
+    }
+
     @PostMapping("/extra-services")
     @PreAuthorize("hasAnyRole('BRANCH_ADMIN', 'SUPER_ADMIN', 'ADMIN', 'branch_admin', 'admin')")
     public ResponseEntity<ExtraServiceEntity> createService(

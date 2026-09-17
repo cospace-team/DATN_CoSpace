@@ -36,6 +36,7 @@ import {
   type BranchResponse,
   type BranchPriceResponse,
   type PublicWorkspaceAvailability,
+  type ExtraServiceResponse,
 } from "../../lib/spaceApi";
 import { useToast } from "../../components/Toast";
 import FloorPlanViewer from "../../components/floor-plan/FloorPlanViewer";
@@ -44,29 +45,16 @@ import { resolveBranchId } from "../../data/branchAliases";
 import { addonApi, type ExtraServiceDto } from "../../api/addonApi";
 import { Skeleton } from "../../components/ui/Skeleton";
 
+import {
+  BookingPanel,
+  type DurationUnitMode,
+  type ExploreWorkspace,
+  type PriceUnit,
+  type UnitPrice,
+} from "./explore/BookingPanel";
+
 /* ── Types ── */
 type ViewMode = "map" | "day" | "grid" | "list";
-
-/** Workspace as shown on the explore screens, built from the API response. */
-interface ExploreWorkspace {
-  id: string;
-  workspace_type_id: string;
-  workspaceTypeName: string;
-  code: string;
-  name: string;
-  capacity: number;
-  svg_element_id: string;
-  status: string;
-  floor_id: string;
-  branch_id: string;
-}
-
-type PriceUnit = "hour" | "day" | "week" | "month";
-
-interface UnitPrice {
-  price: number;
-  duration_unit: PriceUnit;
-}
 
 const DEFAULT_OPEN_HOUR = 6;
 const DEFAULT_CLOSE_HOUR = 23;
@@ -84,372 +72,6 @@ const branchHourRange = (branch?: Pick<BranchResponse, "openTime" | "closeTime">
     return { openHour: DEFAULT_OPEN_HOUR, closeHour: DEFAULT_CLOSE_HOUR };
   }
   return { openHour: Math.ceil(open / 60), closeHour: Math.floor(close / 60) };
-};
-
-/* ── Booking Panel (shared between desktop sidebar and mobile bottom sheet) ── */
-type DurationUnitMode = 'hour' | 'day' | 'week';
-
-const UNIT_LABELS: Record<DurationUnitMode, string> = {
-  hour: 'Giờ',
-  day: 'Ngày',
-  week: 'Tuần',
-};
-
-/** Returns midnight (local) of a Date */
-const toMidnight = (d: Date): Date => {
-  const r = new Date(d);
-  r.setHours(0, 0, 0, 0);
-  return r;
-};
-
-/** Count calendar days between two midnight-dates (inclusive start, exclusive end) */
-const daysDiff = (from: Date, to: Date): number =>
-  Math.max(1, Math.round((to.getTime() - from.getTime()) / 86_400_000));
-
-const BookingPanel: React.FC<{
-  ws: ExploreWorkspace;
-  wsType: any;
-  wsAvail: string | null;
-  selectedWs: string;
-  selectedHour: number;
-  initialEndHour: number;
-  selectedDate: Date;
-  getPrice: (unit: DurationUnitMode) => UnitPrice | undefined;
-  addonServices: ExtraServiceDto[];
-  openHour: number;
-  closeHour: number;
-  onClose: () => void;
-  onChangeStartHour: (hour: number) => void;
-  checkAvailability?: (startHour: number, endHour: number, endDate: Date, unit: string) => string;
-  onBookNow: (
-    endHour: number,
-    services: Record<string, number>,
-    subtotal: number,
-    addonTotal: number,
-    endDate: Date,
-    durationUnit: DurationUnitMode,
-  ) => void;
-}> = ({
-  ws,
-  wsType,
-  wsAvail,
-  selectedWs,
-  selectedHour,
-  initialEndHour,
-  selectedDate,
-  getPrice,
-  addonServices,
-  openHour,
-  closeHour,
-  onClose,
-  onChangeStartHour,
-  checkAvailability,
-  onBookNow,
-}) => {
-
-  const [endHour, setEndHour] = useState(initialEndHour);
-  const [services, setServices] = useState<Record<string, number>>({});
-  const [durationUnit, setDurationUnit] = useState<DurationUnitMode>('hour');
-  const [endDate, setEndDate] = useState<Date>(toMidnight(selectedDate));
-  const price = getPrice(durationUnit);
-
-  useEffect(() => {
-    let validEndHour = initialEndHour;
-    if (validEndHour <= selectedHour) {
-      validEndHour = selectedHour + 1;
-    }
-    validEndHour = Math.min(validEndHour, closeHour);
-    setEndHour(validEndHour);
-    setServices({});
-    setDurationUnit('hour');
-    setEndDate(toMidnight(selectedDate));
-  }, [selectedHour, initialEndHour, selectedWs, selectedDate]);
-
-  const handleServiceChange = (id: string, isChecked: boolean) => {
-    setServices((prev) => {
-      const next = { ...prev };
-      if (isChecked) next[id] = 1;
-      else delete next[id];
-      return next;
-    });
-  };
-
-  // Calculate unitCount based on selected durationUnit
-  const unitCount = useMemo(() => {
-    if (durationUnit === 'hour') return Math.max(1, endHour - selectedHour);
-    if (durationUnit === 'day') return daysDiff(toMidnight(selectedDate), endDate);
-    // week
-    return Math.max(1, Math.ceil(daysDiff(toMidnight(selectedDate), endDate) / 7));
-  }, [durationUnit, endHour, selectedHour, selectedDate, endDate]);
-
-  const subtotal = unitCount * (price?.price || 0);
-  const addonTotal = Object.keys(services).reduce((sum, id) => {
-    const s = addonServices.find((x) => x.id === id);
-    return sum + (s?.price || 0) * (services[id] || 1);
-  }, 0);
-  const total = subtotal + addonTotal;
-
-  // Min end-date for date pickers (= start date + 1 day for day, + 7 days for week)
-  const minEndDate = useMemo(() => {
-    const d = toMidnight(selectedDate);
-    d.setDate(d.getDate() + (durationUnit === 'week' ? 7 : 1));
-    return d;
-  }, [selectedDate, durationUnit]);
-
-  // Ensure endDate stays valid when switching unit or startDate changes
-  useEffect(() => {
-    if (durationUnit !== 'hour' && endDate < minEndDate) {
-      setEndDate(new Date(minEndDate));
-    }
-  }, [durationUnit, minEndDate, endDate]);
-
-  const toInputDate = (d: Date) => d.toISOString().slice(0, 10);
-
-  const currentAvail = checkAvailability 
-    ? checkAvailability(selectedHour, endHour, endDate, durationUnit) 
-    : wsAvail;
-
-  return (
-    <div className="p-5">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="font-medium text-lg">{ws.name}</h3>
-        <button
-          onClick={onClose}
-          className="btn btn-ghost btn-sm"
-          style={{ padding: "4px" }}
-          aria-label="Đóng chi tiết"
-        >
-          <FiX className="h-4 w-4" />
-        </button>
-      </div>
-
-      {/* Status badge */}
-      <span
-        className={`badge ${currentAvail === "available" ? "badge-success" : currentAvail?.startsWith("booked") ? "badge-danger" : "badge-neutral"}`}
-      >
-        {currentAvail === "available"
-          ? <><span className="inline-block h-2 w-2 rounded-full bg-emerald-50 dark:bg-emerald-950/30 dark:bg-emerald-950/300 mr-1" /> Trống</>
-          : currentAvail?.startsWith("booked")
-            ? <><span className="inline-block h-2 w-2 rounded-full bg-red-50 dark:bg-red-950/30 dark:bg-red-950/300 mr-1" /> Đã đặt {currentAvail.split('|').length === 3 ? `(${currentAvail.split('|')[1]}h-${currentAvail.split('|')[2]}h)` : ''}</>
-            : <><span className="inline-block h-2 w-2 rounded-full bg-slate-400 mr-1" /> Bảo trì</>}
-      </span>
-
-      {/* Info */}
-      <div className="mt-5 space-y-3">
-        <div className="rounded-2xl bg-[var(--bg-surface-hover)] p-3">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <p className="text-xs text-[var(--text-tertiary)]">Loại</p>
-              <p className="text-sm font-semibold">{wsType?.name}</p>
-            </div>
-            <div>
-              <p className="text-xs text-[var(--text-tertiary)]">Sức chứa</p>
-              <p className="text-sm font-semibold">{ws.capacity} chỗ</p>
-            </div>
-            <div>
-              <p className="text-xs text-[var(--text-tertiary)]">Mã</p>
-              <p className="text-sm font-mono">{ws.code}</p>
-            </div>
-          </div>
-        </div>
-
-        <WorkspaceAmenities workspaceTypeId={ws.workspace_type_id} workspaceTypeCode={wsType?.code} />
-
-        {/* Price */}
-        {price && (
-          <div className="rounded-2xl bg-[var(--brand-primary-light)] border border-[var(--brand-primary)] border-opacity-20 p-4">
-            <p className="text-xs text-[var(--text-secondary)]">Giá</p>
-            <p className="text-2xl font-medium text-[var(--brand-primary)]">
-              {formatVND(price.price)}
-            </p>
-            <p className="text-xs text-[var(--text-secondary)]">
-              /{durationUnitLabel[price.duration_unit]?.toLowerCase()}
-            </p>
-          </div>
-        )}
-
-        {!price && (
-          <p className="rounded-2xl bg-[var(--state-danger-bg)] border border-[var(--state-danger-border)] p-3 text-xs text-[var(--state-danger)]">
-            Chi nhánh chưa có giá cho loại thời gian này. Vui lòng chọn loại thời gian khác.
-          </p>
-        )}
-
-        {/* Duration unit toggle */}
-        <div className="rounded-2xl bg-[var(--bg-surface-hover)] p-3">
-          <p className="text-xs text-[var(--text-tertiary)] mb-2">Loại thời gian đặt</p>
-          <div className="flex gap-1 bg-[var(--border-subtle)] rounded-xl p-0.5">
-            {(['hour', 'day', 'week'] as DurationUnitMode[]).map((u) => (
-              <button
-                key={u}
-                onClick={() => setDurationUnit(u)}
-                className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all ${
-                  durationUnit === u
-                    ? 'bg-card text-foreground shadow-sm'
-                    : 'text-[var(--text-tertiary)] hover:text-foreground'
-                }`}
-              >
-                {UNIT_LABELS[u]}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Time selection */}
-        <div className="rounded-2xl bg-[var(--bg-surface-hover)] p-3">
-          <p className="text-xs text-[var(--text-tertiary)] mb-2">Thời gian</p>
-
-          {durationUnit === 'hour' ? (
-            /* ── Hour mode: same-day start/end hour ── */
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label
-                  htmlFor={`start-time-${selectedWs}`}
-                  className="text-xs text-[var(--text-secondary)]"
-                >
-                  Bắt đầu
-                </label>
-                <select
-                  id={`start-time-${selectedWs}`}
-                  value={selectedHour}
-                  onChange={(e) => onChangeStartHour(Number(e.target.value))}
-                  className="input-field mt-1 text-sm bg-transparent border-b border-border focus:outline-none w-full"
-                >
-                  {Array.from({ length: Math.max(0, closeHour - openHour) }, (_, i) => i + openHour).map((h) => (
-                    <option key={h} value={h}>
-                      {String(h).padStart(2, '0')}:00
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label
-                  htmlFor={`end-time-${selectedWs}`}
-                  className="text-xs text-[var(--text-secondary)]"
-                >
-                  Kết thúc
-                </label>
-                <select
-                  id={`end-time-${selectedWs}`}
-                  value={endHour}
-                  onChange={(e) => setEndHour(Number(e.target.value))}
-                  className="input-field mt-1 text-sm bg-transparent border-b border-border focus:outline-none w-full"
-                >
-                  {Array.from(
-                    { length: Math.max(0, closeHour - selectedHour) },
-                    (_, i) => selectedHour + i + 1,
-                  ).map((h) => (
-                    <option key={h} value={h}>
-                      {String(h).padStart(2, '0')}:00
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          ) : (
-            /* ── Day / Week mode: date-range picker ── */
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="text-xs text-[var(--text-secondary)]">Ngày bắt đầu</label>
-                <input
-                  type="date"
-                  value={toInputDate(toMidnight(selectedDate))}
-                  className="input-field mt-1 text-sm w-full"
-                  readOnly
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor={`end-date-${selectedWs}`}
-                  className="text-xs text-[var(--text-secondary)]"
-                >
-                  Ngày kết thúc
-                </label>
-                <input
-                  id={`end-date-${selectedWs}`}
-                  type="date"
-                  value={toInputDate(endDate)}
-                  min={toInputDate(minEndDate)}
-                  onChange={(e) => {
-                    const d = new Date(e.target.value + 'T00:00:00');
-                    if (!isNaN(d.getTime())) setEndDate(d);
-                  }}
-                  className="input-field mt-1 text-sm w-full"
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Summary line */}
-          <p className="mt-2 text-xs text-[var(--text-tertiary)]">
-            {durationUnit === 'hour'
-              ? `${Math.max(1, endHour - selectedHour)} giờ`
-              : durationUnit === 'day'
-              ? `${unitCount} ngày`
-              : `${unitCount} tuần (≈ ${unitCount * 7} ngày)`}
-          </p>
-        </div>
-
-        {/* Add-on services */}
-        <div className="rounded-2xl bg-[var(--bg-surface-hover)] p-3">
-          <p className="text-xs text-[var(--text-tertiary)] mb-2">
-            Dịch vụ thêm
-          </p>
-          <div className="space-y-2">
-            {addonServices.length === 0 && (
-              <p className="text-xs text-[var(--text-tertiary)]">Chi nhánh chưa có dịch vụ thêm.</p>
-            )}
-            {addonServices.map((s) => (
-              <label
-                key={s.id}
-                htmlFor={`addon-${s.id}-${selectedWs}`}
-                className="flex items-center gap-3 text-sm cursor-pointer"
-              >
-                <input
-                  id={`addon-${s.id}-${selectedWs}`}
-                  type="checkbox"
-                  checked={!!services[s.id]}
-                  onChange={(e) => handleServiceChange(s.id, e.target.checked)}
-                  className="rounded accent-[var(--brand-primary)]"
-                />
-                <span className="flex items-center gap-1.5">{s.name}</span>
-                <span className="ml-auto text-xs text-[var(--text-tertiary)]">
-                  +{formatVND(s.price)}/{s.unit}
-                </span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        {/* Total Price summary */}
-        <div className="flex justify-between items-center pt-2 border-t border-[var(--border-subtle)]">
-          <span className="text-sm font-semibold">Tổng cộng</span>
-          <span className="text-lg font-medium text-[var(--brand-primary)]">
-            {formatVND(total)}
-          </span>
-        </div>
-      </div>
-
-      {/* Book button */}
-      {currentAvail === "available" && price && (
-        <button
-          className="btn btn-primary w-full mt-5"
-          onClick={() => onBookNow(endHour, services, subtotal, addonTotal, endDate, durationUnit)}
-        >
-          <FiCheck className="h-4 w-4" /> Đặt chỗ ngay
-        </button>
-      )}
-      {currentAvail?.startsWith("booked") && (
-        <div className="mt-5 rounded-2xl bg-[var(--state-danger-bg)] border border-[var(--state-danger-border)] p-3 text-center">
-          <p className="text-sm font-semibold text-[var(--state-danger)]">
-            Đã được đặt {currentAvail.split('|').length === 3 ? `từ ${currentAvail.split('|')[1]}h đến ${currentAvail.split('|')[2]}h` : ''}
-          </p>
-          <p className="text-xs text-[var(--text-secondary)] mt-1">
-            Thử chọn khung giờ hoặc ngày khác
-          </p>
-        </div>
-      )}
-    </div>
-  );
 };
 
 /* ── Main Explore Page ── */
@@ -511,7 +133,23 @@ const ExplorePage: React.FC = () => {
     return saved ? Number(saved) : null;
   });
   
-  // Persist states to sessionStorage
+  const [availableServices, setAvailableServices] = useState<ExtraServiceResponse[]>([]);
+
+  // Load available extra services when branch changes
+  useEffect(() => {
+    const loadServices = async () => {
+      try {
+        const resolvedBranchId = resolveBranchId(selectedBranch);
+        const data = await customerSpaceApi.listExtraServices(resolvedBranchId);
+        setAvailableServices(data || []);
+      } catch (err) {
+        console.error("Failed to load extra services:", err);
+      }
+    };
+    loadServices();
+  }, [selectedBranch]);
+
+  // Persist selectedBranch to sessionStorage
   useEffect(() => {
     sessionStorage.setItem("selectedBranch", selectedBranch);
   }, [selectedBranch]);
@@ -880,13 +518,15 @@ const ExplorePage: React.FC = () => {
       return;
     }
     const branchObj = apiBranches.find((b) => b.id === resolveBranchId(selectedBranch));
-    const branchName = branchObj ? branchObj.name : "CoSpace";
+    const branchName = branchObj ? branchObj.name : "CoSpace Chi nhánh";
+    const allAddonsList = (addonServices && addonServices.length > 0) ? addonServices : availableServices;
     const addons = Object.entries(services)
       .map(([serviceId, quantity]) => {
-        const s = addonServices.find((x) => x.id === serviceId);
-        return s ? { serviceId, quantity, name: s.name, price: s.price, unit: s.unit } : null;
+        const s = allAddonsList.find((x: any) => x.id === serviceId);
+        return s ? { serviceId, quantity, name: s.name, price: s.price, unit: s.unit || 'lượt' } : null;
       })
       .filter((a): a is NonNullable<typeof a> => a !== null);
+    const selectedServiceDetails = allAddonsList.filter((s: any) => !!services[s.id]);
 
     navigate("/customer/checkout", {
       state: {
@@ -898,6 +538,8 @@ const ExplorePage: React.FC = () => {
         endHour: endHour,
         endDate: endDate,
         durationUnit: durationUnit,
+        services: services,
+        serviceDetails: selectedServiceDetails,
         addons,
         subtotal: subtotal,
         addonTotal: addonTotal,
@@ -1106,14 +748,22 @@ const ExplorePage: React.FC = () => {
                       }}
                     />
                   ) : (
-                    <div className="flex flex-col items-center justify-center p-12 text-center bg-card border border-border rounded-2xl max-w-md shadow-sm">
-                      <FiMap className="h-12 w-12 text-foreground mb-4" />
-                      <p className="text-base font-medium text-foreground tracking-tight">
-                        Tầng này chưa được thiết lập sơ đồ.
+                    <div className="flex flex-col items-center justify-center p-10 text-center bg-card border border-border rounded-3xl max-w-md shadow-sm animate-fade-in">
+                      <div className="h-14 w-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mb-3">
+                        <FiMap className="h-7 w-7" />
+                      </div>
+                      <p className="text-base font-semibold text-foreground tracking-tight">
+                        Khu vực tầng này đang cập nhật sơ đồ
                       </p>
-                      <p className="text-sm text-foreground opacity-70 mt-2 font-semibold">
-                        Vui lòng quay lại sau hoặc liên hệ quản trị viên.
+                      <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+                        Sơ đồ mặt bằng chi tiết của tầng đang được hoàn thiện. Quý khách vui lòng chọn tầng khác hoặc chuyển sang chế độ danh sách để xem chỗ ngồi khả dụng.
                       </p>
+                      <button
+                        onClick={() => setViewMode("list")}
+                        className="btn btn-outline btn-sm mt-4 text-xs font-medium"
+                      >
+                        Chuyển sang xem dạng danh sách
+                      </button>
                     </div>
                   )}
                 </div>
@@ -1415,6 +1065,7 @@ const ExplorePage: React.FC = () => {
                 onClose={() => setSelectedWs(null)}
                 onChangeStartHour={(h) => setSelectedHour(h)}
                 checkAvailability={(stH, endH, endD, unit) => getWsAvailability(selectedWs, selectedDate, stH, endD, unit === 'hour' ? endH : undefined)}
+                availableServices={availableServices}
                 onBookNow={handleBookNow}
               />
             </div>
@@ -1442,6 +1093,7 @@ const ExplorePage: React.FC = () => {
                   onClose={() => setSelectedWs(null)}
                   onChangeStartHour={(h) => setSelectedHour(h)}
                   checkAvailability={(stH, endH, endD, unit) => getWsAvailability(selectedWs, selectedDate, stH, endD, unit === 'hour' ? endH : undefined)}
+                  availableServices={availableServices}
                   onBookNow={handleBookNow}
                 />
               </div>

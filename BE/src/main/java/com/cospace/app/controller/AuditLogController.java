@@ -30,11 +30,12 @@ public class AuditLogController {
     private final UserRepository userRepository;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('super_admin', 'admin')")
+    @PreAuthorize("hasAnyRole('super_admin', 'admin', 'branch_admin')")
     public ResponseEntity<?> getAuditLogs(
             @RequestParam(value = "userId", required = false) UUID userId,
             @RequestParam(value = "entityName", required = false) String entityName,
             @RequestParam(value = "action", required = false) String action,
+            @RequestParam(value = "branchId", required = false) UUID branchId,
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "20") int size) {
         Page<AuditLogEntity> logs = auditLogService.searchAuditLogs(userId, entityName, action, page, size);
@@ -47,8 +48,12 @@ public class AuditLogController {
             row.put("id", l.getId());
             row.put("userId", l.getUserId());
             User actor = l.getUserId() != null ? actors.get(l.getUserId()) : null;
-            row.put("userName", actor != null ? actor.getFullName() : null);
-            row.put("userRole", actor != null && actor.getRole() != null ? actor.getRole().name() : null);
+            String name = actor != null ? actor.getFullName() : "Hệ thống";
+            String role = actor != null && actor.getRole() != null ? actor.getRole().name() : "system";
+            row.put("userName", name);
+            row.put("actorName", name);
+            row.put("userRole", role);
+            row.put("actorRole", role);
             row.put("action", l.getAction());
             row.put("entityName", l.getEntityName());
             row.put("entityId", l.getEntityId());
