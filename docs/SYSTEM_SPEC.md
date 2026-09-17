@@ -1,8 +1,8 @@
 # Hệ Thống Quản Lý Co-Working Space — Đặc Tả Hệ Thống
 
-**Ngày cập nhật**: 18/05/2026  
-**Giai đoạn**: MVP  
-**Stack**: Spring Boot Backend + React/TypeScript Frontend + PostgreSQL
+**Ngày cập nhật**: 17/09/2026  
+**Giai đoạn**: Hoàn thiện Đồ án Tốt nghiệp (HK252 - 2025/2026)  
+**Stack**: Spring Boot 3 (Java 17/21) + React 18 / TypeScript / Vite + PostgreSQL (Supabase) + Docker + Vercel + Render
 
 ---
 
@@ -10,34 +10,33 @@
 
 ### 1.1 Mô Tả
 
-Hệ thống hỗ trợ ban quản lý và khách hàng trong việc quản lý và sử dụng hiệu quả các dịch vụ của văn phòng chia sẻ (co-working space). Bao gồm quản lý thông tin không gian làm việc, phòng họp, chỗ ngồi, gói dịch vụ, khách hàng và các hợp đồng thuê.
+Hệ thống hỗ trợ ban quản lý và khách hàng trong việc quản lý và vận hành hiệu quả chuỗi văn phòng chia sẻ (co-working space) đa chi nhánh. Hệ thống bao gồm quản lý cấu trúc không gian theo phân cấp (Chi nhánh → Tầng → Loại không gian → Chỗ ngồi cụ thể), sơ đồ mặt bằng SVG tương tác trực quan, định giá linh hoạt theo nhiều đơn vị thời gian (giờ/ngày/tuần/tháng), dịch vụ bổ sung và các hợp đồng thuê dài hạn.
 
-Hệ thống cung cấp chức năng đặt chỗ và đăng ký sử dụng dịch vụ theo giờ/ngày/tuần/tháng, theo dõi tình trạng sử dụng không gian, quản lý lịch sử đặt chỗ và thanh toán. Hệ thống hỗ trợ thống kê và báo cáo tình hình khai thác không gian, doanh thu và mức độ sử dụng dịch vụ.
+Hệ thống cung cấp quy trình đặt chỗ thời gian thực, tự động phòng chống xung đột đặt chỗ đồng thời bằng cơ chế khóa hai tầng (PostgreSQL GiST Exclusion Constraints & Advisory Lock), tích hợp đa cổng thanh toán (VietQR/PayOS, MoMo Sandbox, Tiền mặt tại quầy) với cơ chế giải phóng phòng tự động (Payment Timeout 15 phút, chu kỳ quét 30 giây) và quy trình check-in/check-out bằng mã đặt chỗ kèm khoảng dung sai 30 phút.
 
-Ngoài ra, hệ thống hỗ trợ kết nối và tìm kiếm đối tác (partner) giữa các thành viên trong không gian làm việc chung. Người dùng có thể khai báo thông tin cá nhân, lĩnh vực chuyên môn, kỹ năng, nhu cầu hợp tác và từ khóa quan tâm. Dựa trên các thông tin này, hệ thống gợi ý các thành viên phù hợp.
+Ngoài ra, hệ sinh thái CoSpace tích hợp mạng lưới kết nối đối tác thông minh (Partner Matching) dựa trên thuật toán đối sánh độ tương đồng Jaccard giữa kỹ năng và sở thích chuyên môn của thành viên, kết hợp bảng tin cộng đồng (Community Feed), chương trình tích điểm khách hàng thân thiết (Loyalty Points & Membership Tiers) và Trợ lý ảo AI (Google Gemini) hỗ trợ tra cứu thông tin và tự động đặt phòng qua hội thoại.
 
-Hệ thống cung cấp cổng thông tin trên nền tảng web (responsive, tương thích mobile), cho phép người dùng đặt chỗ, quản lý lịch sử sử dụng dịch vụ, tìm kiếm đối tác phù hợp và tương tác với cộng đồng.
+### 1.2 Phạm Vi Tính Năng Hoàn Thiện
 
-### 1.2 Phạm Vi MVP
-
-| Trạng thái | Chức năng |
-|------------|-----------|
-| ✅ | Quản lý không gian (branch → floor → workspace) |
-| ✅ | Đặt chỗ chống trùng lịch + bảo trì |
-| ✅ | Thanh toán (MoMo + tiền mặt) |
-| ✅ | Hủy tự động theo chính sách + hoàn tiền nội bộ |
-| ✅ | Check-in / Check-out bằng booking code |
-| ✅ | Giá cơ bản (global default + branch override) |
-| ✅ | Dịch vụ bổ sung (global + branch override) |
-| ✅ | Gợi ý đối tác (matching partner) |
-| ✅ | Đăng ký/Đăng nhập (Email+Password & Google SSO) |
-| ✅ | 4 vai trò phân quyền |
-| ✅ | Lịch sử hành động (audit logs) |
-| ✅ | Hợp đồng thuê dài hạn (tuần/tháng) |
-| ✅ | Thống kê & báo cáo cơ bản (dashboard + biểu đồ + filter + CSV export) |
-| ❌ | Chat/messaging (V2+) |
-| ❌ | Lịch sử giá/chính sách (V2+) |
-| ❌ | PDF export báo cáo (V2+) |
+| Trạng thái | Chức năng | Ghi chú kỹ thuật |
+|------------|-----------|------------------|
+| ✅ | Quản lý không gian đa chi nhánh (`branches` → `floors` → `workspaces`) | Hỗ trợ Super Admin điều phối toàn hệ thống, Branch Admin quản lý chi nhánh |
+| ✅ | Sơ đồ mặt bằng SVG tương tác & Trình biên tập tầng | Render trực quan trạng thái chỗ ngồi, thư viện element catalog mở rộng |
+| ✅ | Đặt chỗ chống trùng lịch & Bảo trì | Khóa Advisory Lock `pg_advisory_xact_lock` + Exclusion Constraint |
+| ✅ | Đa cổng thanh toán trực tuyến & Tiền mặt | Tích hợp PayOS (VietQR động), MoMo Sandbox, Tiền mặt tại quầy |
+| ✅ | Hủy tự động theo chính sách & Hoàn tiền nội bộ | Đa bậc thời gian (`GRACE_HOURS`, `BEFORE_START_DAYS`), ưu tiên `priority DESC` |
+| ✅ | Check-in / Check-out tại quầy | Mã booking code, QR Scanner, cơ chế Tolerance Window 30 phút |
+| ✅ | Trung tâm quản lý bảng giá (Unified Pricing Hub) | Ma trận giá không gian (Giờ/Ngày/Tuần/Tháng), Dịch vụ gia tăng, Biểu phí hủy |
+| ✅ | Dịch vụ bổ sung (Extra Services) & Running Tab | Snapshot đơn giá an toàn, gọi thêm món khi đang ngồi làm việc |
+| ✅ | Mạng lưới đối tác (Partner Matching Engine) | Thuật toán Jaccard Similarity trên bộ tag kỹ năng/sở thích + bonus cùng chi nhánh |
+| ✅ | Bảng tin cộng đồng (Community Feed) | Chia sẻ kiến thức, tìm kiếm đối tác, trao đổi kinh nghiệm |
+| ✅ | Hạng thành viên & Tích điểm (Loyalty Program) | 4 hạng (Bronze, Silver, Gold, Platinum), tự động chiết khấu khi đặt phòng |
+| ✅ | Trợ lý ảo thông minh AI Chatbot | Google Gemini 3.5/3.7 Flash hỗ trợ hỏi đáp và đặt chỗ qua giao tiếp tự nhiên |
+| ✅ | Xác thực & Phân quyền 4 Roles | Email/Mật khẩu + Google SSO, bảo mật kép HS384 App JWT & Supabase Auth |
+| ✅ | Nhật ký kiểm toán hệ thống (Audit Logs) | Theo dõi toàn bộ thao tác nhạy cảm (thêm/sửa/xóa bảng giá, không gian, bảo trì) |
+| ✅ | Báo cáo & Phân tích doanh thu | Dashboard biểu đồ, tỷ lệ lấp đầy, bộ lọc thời gian & Export dữ liệu CSV UTF-8 |
+| ✅ | In-Memory Caching (Spring Cache + Caffeine) | Tối ưu hóa truy vấn dữ liệu cấu hình tĩnh, tự động `@CacheEvict` khi cập nhật |
+| ✅ | Triển khai Đám mây (Cloud Production) | Vercel (Frontend SPA, Chunk splitting) + Render (Docker Java 21) + Supabase |
 
 ---
 
@@ -532,28 +531,28 @@ Customer cập nhật profile → chọn skills/interests từ danh sách tags c
 2. **Branch consistency**: booking.branch_id = workspace.floor.branch_id
 3. **Maintenance block**: Booking không overlap maintenance (status ∈ {scheduled, active})
 4. **Payment timeout**: pending_payment auto-expire sau 15 phút
-5. **Hủy tự động**: Tính refund% theo policy, confirmed ngay, thông báo khách
+5. **Hủy tự động & Thứ tự ưu tiên chính sách**: Engine tìm kiếm policy phù hợp theo nguyên tắc nghiêm ngặt: (1) Tìm chính sách riêng của chi nhánh (`branch_id = booking.branch_id`) trước, nếu không có mới tìm chính sách toàn cục (`branch_id IS NULL`); (2) Sắp xếp theo độ ưu tiên giảm dần `priority DESC`; (3) Khớp theo hai loại luật: `GRACE_HOURS` (số giờ kể từ khi tạo đơn `createdAt`) và `BEFORE_START_DAYS` / `BEFORE_START_HOURS` (số ngày/giờ trước thời điểm bắt đầu `startAt`). Nếu không khớp policy nào → mặc định hoàn tiền 0%. Bất biến: `refund_amount + penalty_amount = booking.total_amount`.
 6. **Idempotency**: payment_events.idempotency_key unique (webhook chống lặp)
 7. **Staff scope**: Staff chỉ thao tác chi nhánh của mình
 8. **Branch Admin scope**: Branch Admin chỉ quản lý chi nhánh được gán
-9. **Một check-in mở**: Mỗi booking tối đa 1 checkin_logs với checkout_at = null
+9. **Một check-in mở & Tolerance Window 30 phút**: Mỗi booking tối đa 1 bản ghi `checkin_logs` với `checkout_at = null`. Nhân viên quầy chỉ được phép thực hiện check-in trong khoảng thời gian dung sai hợp lệ: từ **30 phút trước `startAt`** cho đến **30 phút sau `endAt`**. Ngoài khoảng này hệ thống chặn lại để bảo đảm an ninh ca trực.
 10. **Giá hiện tại**: Không lịch sử/effective_dates ở MVP
 11. **Pricing fallback**: Branch-specific → Global default
 12. **Tiền tệ**: VND
-13. **Phương thức thanh toán**: Customer chỉ được dùng MoMo. Chỉ Staff/Admin mới được tạo đơn bằng Tiền mặt tại quầy.
+13. **Đa cổng thanh toán**: Hỗ trợ PayOS (VietQR động chuẩn Napas 24/7 quét qua mọi app ngân hàng), MoMo Sandbox, và Tiền mặt tại quầy (do nhân viên xác nhận).
 14. **1 booking = 1 workspace**: Nếu cần nhiều workspace → tạo nhiều booking riêng biệt.
 15. **Pricing đơn giản**: `subtotal = price × unit_count`. Giá bậc thang → V2+ (thêm bảng `price_tiers`).
 16. **Workspace type lock**: KHÔNG cho đổi workspace type khi còn booking active (pending_payment/confirmed/checked_in). Phải được thực thi ở App Layer khi gọi API `PUT /workspaces/{id}` bằng cách kiểm tra bảng `bookings`.
 17. **Tags predefined**: Admin quản lý danh sách tags. User chỉ chọn, không tự tạo.
 18. **Matching scope**: Toàn hệ thống, cùng `primary_branch_id` = bonus score (+0.15).
-19. **Membership tier**: V2+ — không implement business rules ở MVP, tất cả user = `standard`. (Placeholder cho việc mở rộng).
+19. **Hạng thành viên & Điểm tích lũy (Loyalty Program)**: 4 hạng thành viên (`Bronze`, `Silver`, `Gold`, `Platinum`). Điểm tích lũy được cộng tự động khi đơn đặt phòng chuyển sang `PAID` (10.000 VNĐ = 1 điểm). Tự động chiết khấu trực tiếp trên tiền thuê không gian khi thành viên hạng cao thực hiện đặt chỗ.
 20. **Notification**: In-app notification qua bảng `notifications`. Email → V2+.
 21. **Timezone**: API trả UTC. FE convert theo `branch.timezone`.
 22. **SVG Storage**: Upload qua Supabase Storage. Khi cập nhật bản đồ (tăng `map_version`), CHỈ cho phép thêm mới hoặc giữ nguyên SVG ID cũ. Nếu một không gian vật lý bị xóa, phải đánh dấu `workspace.status = 'inactive'` thay vì xóa cứng để tránh mồ côi dữ liệu lịch sử.
 23. **Cancel rule snapshot**: `applied_rule_json` format: `{ "rule_type", "refund_percent", "policy_name", "min_value", "max_value" }`.
 24. **Kiểm tra Overlap (Trùng lịch)**: App Layer và DB Script không nên dùng hàm `OVERLAPS` vì dễ dính biên, phải dùng logic rõ ràng: `(new.start_at < existing.end_at AND new.end_at > existing.start_at)`.
 25. **Identity Auth Sync**: Bất kỳ thay đổi Auth nào (như đổi email) phải thực hiện qua API của CoSpace Backend. BE sẽ đồng thời gọi Admin API của Supabase và update DB nội bộ để đảm bảo đồng bộ.
-26. **Late Webhook (Ghost Payment)**: Khách lỡ chuyển tiền muộn, hoặc khách bấm Hủy đúng lúc webhook đang bay về. Nếu Webhook MoMo trả Success nhưng booking đã `expired` hoặc `canceled`, hệ thống sẽ cập nhật `payments.status = 'paid'`, giữ nguyên `bookings.status` (`expired`/`canceled`), và TỰ ĐỘNG tạo một bản ghi Refund (đưa vào `booking_cancellations` với `refund_status = pending`) để hoàn tiền lại cho khách. **Race condition prevention**: Cả webhook handler và timer/cancel handler PHẢI `SELECT ... FROM bookings WHERE id = ? FOR UPDATE` trước khi đọc/sửa status.
+26. **Late Webhook (Ghost Payment)**: Khách lỡ chuyển tiền muộn, hoặc khách bấm Hủy đúng lúc webhook đang bay về. Nếu Webhook PayOS/MoMo trả Success nhưng booking đã `expired` hoặc `canceled`, hệ thống sẽ cập nhật `payments.status = 'paid'`, giữ nguyên `bookings.status` (`expired`/`canceled`), và TỰ ĐỘNG tạo một bản ghi Refund (đưa vào `booking_cancellations` với `refund_status = pending`) để hoàn tiền lại cho khách. **Race condition prevention**: Cả webhook handler và timer/cancel handler PHẢI `SELECT ... FROM bookings WHERE id = ? FOR UPDATE` trước khi đọc/sửa status.
 27. **Giờ Hoạt Động (Operating Hours)**: Bảng `branches` có `open_time` và `close_time`. Hệ thống kiểm tra giờ mở cửa khi đặt chỗ. Nếu `NULL`, mặc định là 24/7.
 28. **Bỏ Cọc (No-Show)**: Nếu khách đã thanh toán (`confirmed`) nhưng không đến check-in và qua giờ `end_at`, hệ thống tự động coi như `completed`. Khách mất phí, nhân viên không cần xử lý đóng ca thủ công.
 29. **Sức Chứa (Capacity)**: Cột `capacity` mang tính chất tham khảo. Nếu khách đi quá số người, nhân viên linh động tạo thêm phiếu Add-on để thu phụ phí. Không block cứng ở DB.
@@ -575,6 +574,10 @@ Customer cập nhật profile → chọn skills/interests từ danh sách tags c
 42. **Branch ID Computed**: `bookings.branch_id` được compute từ `workspace → floor → branch` ở app layer, KHÔNG cho client truyền trực tiếp. Đảm bảo branch consistency.
 43. **Maintenance Overlap Check & Race Condition**: App layer kiểm tra overlap trước khi tạo lịch bảo trì (`workspace_maintenance`). BẮT BUỘC API tạo bảo trì phải dùng chung cơ chế Advisory Lock (`pg_advisory_xact_lock(hashtext('booking:' || workspace_id))`) y hệt như API tạo Booking. Nếu không, luồng tạo Booking và luồng tạo Bảo trì sẽ lọt qua check overlap của nhau khi gọi đồng thời (Race Condition).
 44. **Pessimistic Lock Ordering (Chống Deadlock)**: Vì DB có Trigger tự động cộng/trừ tiền từ `booking_services` lên `bookings`, App Layer BẮT BUỘC tuân thủ chuẩn Lock Ordering: Bất kỳ transaction nào thao tác (INSERT/UPDATE/DELETE) trên bảng con (`booking_services`, `checkin_logs`, `payments`) đều phải gọi `SELECT * FROM bookings WHERE id = ? FOR UPDATE` ĐẦU TIÊN để lấy khóa của Booking cha. Tránh Deadlock chéo.
+45. **Bộ Nhớ Đệm In-Memory (Spring Cache + Caffeine)**: Các tài nguyên đọc thường xuyên và ít biến động (`branches`, `workspace_types`, `price_policies`, `extra_services`, `cancellation_policies`, `reports_overview`) được lưu đệm bộ nhớ In-Memory với Caffeine Cache. Khi có thao tác thay đổi dữ liệu, hệ thống tự động gọi `@CacheEvict` để xóa bỏ dữ liệu cũ.
+46. **Trợ Lý Ảo Thông Minh (Gemini AI Chatbot Assistant)**: Tích hợp Google Gemini Flash API cho phép khách hàng tra cứu thông tin dịch vụ, giải đáp chính sách và thực hiện đặt chỗ trực tiếp qua giao diện đàm thoại.
+47. **Bảo Mật Xác Thực Kép & Single Source API URL**: Xác thực qua hai cơ chế: Supabase Auth (OAuth2 JWT) và App Local JWT (HS384 với `APP_JWT_SECRET` tối thiểu 48 bytes). Toàn bộ Frontend sử dụng duy nhất một nguồn cấu hình URL từ `config/api.ts` kết nối qua `VITE_API_BASE_URL`.
+48. **Bảo Vệ Môi Trường Production (PayOS Production Guard)**: Khi chạy ở profile `prod`, hệ thống kích hoạt `PayosProductionGuard` để từ chối khởi động nếu PayOS còn ở chế độ demo-mode hoặc sử dụng credential mặc định, đồng thời vô hiệu hóa hoàn toàn endpoint `/simulate` nhằm ngăn ngừa gian lận tài chính.
 
 ---
 
