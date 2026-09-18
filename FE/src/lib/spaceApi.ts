@@ -74,6 +74,22 @@ export interface UpdateWorkspaceRequest {
 
 /* ─── Generic fetch helper ─── */
 
+// Render's free tier spins the backend down after inactivity; the first
+// request after a cold start can take 30-50s to come back. A short timeout
+// with one retry keeps the UI responsive without waiting on the browser's
+// default (multi-minute) connection timeout.
+const FETCH_TIMEOUT_MS = 20_000;
+
+async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
   const token = localStorage.getItem("workhub_access_token");
   const headers: Record<string, string> = {
@@ -83,10 +99,18 @@ async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const res = await fetch(url, {
+  const mergedOptions: RequestInit = {
     ...options,
     headers: { ...headers, ...(options?.headers as Record<string, string> || {}) },
-  });
+  };
+
+  let res: Response;
+  try {
+    res = await fetchWithTimeout(url, mergedOptions, FETCH_TIMEOUT_MS);
+  } catch {
+    // Retry once: absorbs a Render cold start or a transient network blip.
+    res = await fetchWithTimeout(url, mergedOptions, FETCH_TIMEOUT_MS);
+  }
 
   // Handle empty responses
   const text = await res.text();
