@@ -1,0 +1,86 @@
+\chapter{Kiến thức nền tảng và công nghệ sử dụng}
+\label{ch:nentang}
+
+\ghichu{Chương này chỉ trình bày những kiến thức thực sự được dùng trong hệ thống, và mỗi phần phải kết lại bằng câu trả lời cho câu hỏi: kiến thức này được dùng ở đâu trong đề tài. Tránh sao chép tài liệu giới thiệu công nghệ. Dung lượng đề xuất 14--18 trang.}
+
+\section{Cơ sở lý thuyết}
+\label{sec:coso_lythuyet}
+
+\subsection{Kiến trúc ứng dụng web nhiều tầng}
+\ghichu{Trình bày mô hình client--server ba tầng và kiến trúc phân tầng trong ứng dụng phía máy chủ (controller, service, repository). Giải thích vì sao tách tầng giúp kiểm thử và bảo trì.}
+\hinhcho{0.8}{Mô hình kiến trúc phân tầng của ứng dụng web}{fig:kientruc_phantang}
+
+\subsection{Kiến trúc REST và giao thức HTTP}
+\ghichu{Các ràng buộc của REST, ánh xạ phương thức HTTP sang thao tác nghiệp vụ, quy ước mã trạng thái và định dạng lỗi thống nhất mà hệ thống áp dụng.}
+\nguon{docs/api-contracts/}
+
+\subsection{Xác thực và phân quyền}
+\ghichu{Trình bày OAuth2, cấu trúc JSON Web Token, cơ chế ký và kiểm tra chữ ký, mô hình kiểm soát truy cập theo vai trò. Nêu rõ mô hình xác thực kép mà hệ thống sử dụng và lý do lựa chọn.}
+\nguon{docs/api-contracts/auth.md, docs/SYSTEM\_SPEC.md muc 3.1}
+
+\subsection{Giao dịch và điều khiển tương tranh trong cơ sở dữ liệu quan hệ}
+\ghichu{Đây là phần lý thuyết quan trọng nhất của đề tài. Trình bày: tính chất ACID; các mức cô lập giao dịch; hiện tượng tranh chấp khi hai giao dịch cùng ghi; khóa bi quan; khóa tư vấn ở mức giao dịch; ràng buộc loại trừ theo khoảng thời gian; thứ tự lấy khóa để tránh khóa chết. Mỗi khái niệm gắn với một tình huống cụ thể trong hệ thống đặt chỗ.}
+\nguon{docs/SYSTEM\_SPEC.md muc 7, quy tac 1, 24, 43, 44}
+\hinhcho{0.8}{Tình huống tương tranh khi hai người dùng cùng đặt một không gian}{fig:race_condition}
+
+\subsection{Tính bất biến khi xử lý lặp trong tích hợp thanh toán}
+\ghichu{Giải thích vì sao cổng thanh toán gọi lại webhook nhiều lần, hệ quả nếu xử lý lặp, và cách dùng khóa chống lặp để bảo đảm một sự kiện chỉ được ghi nhận một lần.}
+\nguon{docs/api-contracts/payments.md, docs/SYSTEM\_SPEC.md muc 3.4}
+
+\subsection{Bộ nhớ đệm trong ứng dụng}
+\ghichu{Trình bày nguyên lý bộ nhớ đệm trong tiến trình, chiến lược vô hiệu hóa khi dữ liệu thay đổi, và các loại dữ liệu phù hợp để đệm trong hệ thống này.}
+
+\subsection{Độ đo tương đồng Jaccard}
+\ghichu{Định nghĩa công thức, ví dụ tính tay trên hai tập kỹ năng, ưu điểm và hạn chế, lý do phù hợp cho bài toán gợi ý đối tác ở quy mô hiện tại. Trình bày cả công thức tính điểm tổng hợp có trọng số mà hệ thống sử dụng.}
+\begin{equation}
+J(A,B) = \frac{|A \cap B|}{|A \cup B|}
+\label{eq:jaccard}
+\end{equation}
+\nguon{docs/api-contracts/matching.md, docs/SYSTEM\_SPEC.md muc 3.8}
+
+\subsection{Mô hình ngôn ngữ lớn và khả năng gọi hàm}
+\ghichu{Giới thiệu mô hình ngôn ngữ lớn ở mức đủ dùng, tập trung vào cơ chế gọi hàm cho phép mô hình sinh ra lời gọi tới API nghiệp vụ, và các rủi ro cần kiểm soát khi cho mô hình thao tác trên dữ liệu thật.}
+
+\section{Công nghệ phía giao diện người dùng}
+\label{sec:cn_frontend}
+\ghichu{Với mỗi công nghệ, viết theo khuôn thống nhất: giới thiệu, đặc điểm kỹ thuật đáng chú ý, vai trò trong đề tài. Mỗi mục khoảng nửa đến một trang, kèm logo hoặc sơ đồ minh họa nếu cần.}
+\nguon{FE/package.json, FE/vite.config.ts}
+
+\subsection{Thư viện React và mô hình thành phần}
+\subsection{Ngôn ngữ TypeScript}
+\subsection{Công cụ xây dựng Vite}
+\subsection{Tailwind CSS và hệ thống thiết kế giao diện}
+\subsection{Kết xuất và tương tác với đồ họa vector SVG}
+
+\section{Công nghệ phía máy chủ}
+\label{sec:cn_backend}
+\ghichu{Trình bày nền tảng Spring Boot và các thành phần thực sự dùng: Spring Web, Spring Security với vai trò máy chủ tài nguyên OAuth2, Spring Data JPA, Spring Cache, bộ lập lịch tác vụ định kỳ, cơ chế quản lý giao dịch khai báo.}
+\nguon{BE/pom.xml, BE/src/main/java/com/cospace/}
+
+\subsection{Nền tảng Spring Boot}
+\subsection{Spring Security và bảo mật tầng ứng dụng}
+\subsection{Spring Data JPA và ánh xạ đối tượng sang quan hệ}
+\subsection{Bộ nhớ đệm Caffeine và tác vụ định kỳ}
+
+\section{Cơ sở dữ liệu và nền tảng dữ liệu}
+\label{sec:cn_database}
+
+\subsection{Hệ quản trị cơ sở dữ liệu PostgreSQL}
+\ghichu{Nêu các đặc tính được khai thác trực tiếp: kiểu liệt kê, kiểu thời gian có múi giờ, chỉ mục, ràng buộc kiểm tra, khóa tư vấn, trigger.}
+
+\subsection{Nền tảng Supabase}
+\ghichu{Vai trò của Supabase trong hệ thống: dịch vụ xác thực, lưu trữ tệp sơ đồ mặt bằng, và cơ sở dữ liệu được quản lý. Nêu rõ ranh giới giữa phần Supabase đảm nhiệm và phần máy chủ ứng dụng tự xử lý.}
+
+\section{Các dịch vụ tích hợp bên thứ ba}
+\label{sec:cn_tichhop}
+\ghichu{Với mỗi dịch vụ: mục đích tích hợp, luồng dữ liệu, chế độ thử nghiệm được dùng trong đề tài. Gồm cổng thanh toán quét mã theo chuẩn ngân hàng, ví điện tử, và dịch vụ mô hình ngôn ngữ.}
+\nguon{docs/api-contracts/payments.md}
+
+\section{Công cụ phát triển và triển khai}
+\label{sec:cn_devops}
+\ghichu{Trình bày công cụ quản lý mã nguồn, đóng gói bằng Docker, nền tảng triển khai giao diện và máy chủ, quy trình tích hợp liên tục. Chi tiết cấu hình triển khai để ở Chương \ref{ch:trienkhai}.}
+
+\section{Tổng hợp lựa chọn công nghệ}
+\label{sec:tonghop_congnghe}
+\ghichu{Lập bảng đối chiếu: hạng mục, công nghệ được chọn, phương án thay thế đã cân nhắc, lý do lựa chọn. Bảng này thể hiện năng lực ra quyết định kỹ thuật và thường là nơi hội đồng đặt câu hỏi.}
+\bangcho{Bảng đối chiếu lựa chọn công nghệ và lý do}{tab:lua_chon_congnghe}

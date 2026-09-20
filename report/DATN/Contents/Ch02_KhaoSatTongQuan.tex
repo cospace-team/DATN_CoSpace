@@ -1,0 +1,62 @@
+\chapter{Khảo sát và phân tích tổng quan}
+\label{ch:khaosat}
+
+\ghichu{Chương này chứng minh đề tài có chỗ đứng: trình bày nền tảng khái niệm, khảo sát các hệ thống đang vận hành, chỉ ra khoảng trống mà chúng chưa giải quyết, và từ đó đề xuất hệ thống cần xây dựng. Dung lượng đề xuất 10--14 trang.}
+
+\section{Các khái niệm liên quan}
+\label{sec:khainiem}
+
+\subsection{Văn phòng chia sẻ (Co-working Space)}
+\ghichu{Định nghĩa mô hình, lịch sử hình thành, các loại hình không gian phổ biến: chỗ ngồi linh hoạt (hot desk), chỗ ngồi cố định (dedicated desk), phòng làm việc riêng (private office), phòng họp (meeting room).}
+\nguon{report/Contents/PhanTichTongQuan.tex (bản Đồ án chuyên ngành)}
+
+\subsection{Đặc điểm vận hành của mô hình}
+\ghichu{Phân tích các đặc trưng ảnh hưởng trực tiếp tới thiết kế hệ thống: tài nguyên hữu hạn theo thời gian, giá theo nhiều đơn vị thời gian, dịch vụ gia tăng đi kèm, tính cộng đồng.}
+
+\subsection{So sánh với văn phòng truyền thống}
+\bangcho{So sánh văn phòng chia sẻ và văn phòng truyền thống theo các tiêu chí vận hành}{tab:sosanh_vanphong}
+
+\subsection{Các khái niệm kỹ thuật cốt lõi của bài toán}
+\ghichu{Giới thiệu ngắn các khái niệm sẽ dùng xuyên suốt: đặt chỗ theo khoảng thời gian, xung đột lịch (overlap), chính sách hủy theo bậc thời gian, đối soát thanh toán, nhật ký kiểm toán.}
+
+\section{Khảo sát các hệ thống hiện có}
+\label{sec:khaosat_hethong}
+
+\subsection{Nhóm chuỗi văn phòng chia sẻ trong nước}
+\ghichu{Khảo sát ít nhất ba hệ thống đang vận hành thực tế (ví dụ Regus, CirCO, WorkFlow Space). Với mỗi hệ thống trình bày theo cùng một khuôn: giới thiệu, quy trình đặt chỗ từ góc nhìn khách hàng, điểm mạnh, hạn chế. Kèm ảnh chụp màn hình có chú thích nguồn và ngày truy cập.}
+\nguon{report/Images/Chuong2/ (ảnh chụp đã có sẵn: regus, circo, workflow)}
+\hinhcho{0.85}{Giao diện đặt chỗ của một hệ thống văn phòng chia sẻ trong nước}{fig:khaosat_trongnuoc}
+
+\subsection{Nhóm nền tảng phần mềm quản lý chuyên dụng quốc tế}
+\ghichu{Khảo sát các nền tảng phần mềm dạng dịch vụ chuyên cho văn phòng chia sẻ. Nhấn mạnh mức độ đầy đủ tính năng nhưng chi phí thuê bao cao, khó tùy biến theo quy trình và phương thức thanh toán nội địa Việt Nam.}
+
+\subsection{Nhóm giải pháp thủ công đang được sử dụng phổ biến}
+\ghichu{Mô tả cách vận hành bằng bảng tính, tin nhắn và sổ giấy còn phổ biến ở các đơn vị quy mô nhỏ; chỉ ra rủi ro sai sót và mất dữ liệu.}
+
+\section{So sánh và đánh giá các hệ thống khảo sát}
+\label{sec:sosanh}
+\ghichu{Lập bảng so sánh theo bộ tiêu chí thống nhất: sơ đồ mặt bằng trực quan, đặt chỗ theo thời gian thực, chống trùng lịch, phương thức thanh toán nội địa, chính sách hủy tự động, quản lý đa chi nhánh, báo cáo, tính năng cộng đồng, chi phí. Sau bảng cần có đoạn nhận xét diễn giải, không để bảng đứng một mình.}
+\bangcho{So sánh các hệ thống khảo sát theo bộ tiêu chí vận hành và kỹ thuật}{tab:sosanh_hethong}
+
+\section{Phân tích khoảng trống và cơ hội}
+\label{sec:gap}
+\ghichu{Từ bảng so sánh, rút ra các khoảng trống cụ thể: thiếu bản đồ chỗ ngồi tương tác, thiếu phương thức thanh toán quét mã nội địa, chính sách hủy không minh bạch với khách, thiếu công cụ kết nối thành viên, chi phí sở hữu cao. Mỗi khoảng trống gắn với một đề xuất tính năng tương ứng.}
+\bangcho{Ánh xạ khoảng trống khảo sát sang tính năng đề xuất của hệ thống}{tab:gap_tinhnang}
+
+\section{Đề xuất hệ thống CoSpace}
+\label{sec:dexuat}
+
+\subsection{Ý tưởng và định vị giải pháp}
+\ghichu{Mô tả ngắn gọn hệ thống đề xuất và điểm khác biệt so với các hệ thống đã khảo sát.}
+
+\subsection{Nhóm người dùng mục tiêu}
+\ghichu{Mô tả bốn vai trò cùng nhu cầu chính của từng vai trò, làm cầu nối sang phần phân tích yêu cầu ở Chương \ref{ch:yeucau}.}
+
+\subsection{Các nhóm chức năng chính}
+\ghichu{Liệt kê theo nhóm module, mỗi nhóm một đến hai dòng. Đây là bản đồ tổng thể để người đọc định vị trước khi vào chi tiết.}
+\nguon{docs/SYSTEM\_SPEC.md muc 1.2 va muc 3}
+
+\section{Các bài toán kỹ thuật trọng tâm}
+\label{sec:baitoan_kythuat}
+\ghichu{Nêu các bài toán khó mà đề tài phải giải, mỗi bài toán trình bày theo khuôn: phát biểu bài toán, khó khăn, hướng giải quyết dự kiến, và chương trình bày lời giải chi tiết. Danh sách đề xuất: (1) trực quan hóa và tương tác với sơ đồ mặt bằng; (2) chống xung đột khi nhiều người đặt cùng một chỗ; (3) tích hợp nhiều cổng thanh toán và xử lý webhook đến muộn; (4) tự động hóa chính sách hủy và hoàn tiền; (5) gợi ý đối tác dựa trên hồ sơ năng lực; (6) trợ lý ảo có khả năng thực hiện thao tác đặt chỗ.}
+\nguon{docs/SYSTEM\_SPEC.md muc 7 (48 quy tac nghiep vu), report/LOGIC\_AUDIT.md}

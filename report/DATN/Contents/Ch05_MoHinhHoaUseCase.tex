@@ -1,0 +1,91 @@
+\chapter{Mô hình hóa và đặc tả use-case}
+\label{ch:usecase}
+
+\ghichu{Chương này là phần dài nhất của báo cáo phân tích. Mỗi phân hệ gồm: sơ đồ use-case, bảng danh sách use-case, và đặc tả chi tiết cho các use-case quan trọng. Các use-case đơn giản (xem danh sách, xem chi tiết) có thể gom vào một bảng tóm tắt thay vì đặc tả đầy đủ. Dung lượng đề xuất 25--35 trang.}
+
+\section{Quy ước đặc tả use-case}
+\label{sec:quyuoc_uc}
+\ghichu{Nêu khuôn đặc tả áp dụng thống nhất cho toàn chương: mã use-case, tên, tác nhân, mô tả, điều kiện kích hoạt, tiền điều kiện, hậu điều kiện, luồng sự kiện chính, các luồng thay thế, luồng ngoại lệ, quy tắc nghiệp vụ liên quan. Đưa một bảng mẫu ngay tại đây để người đọc nắm cấu trúc trước khi đọc hàng chục bảng phía sau.}
+\nguon{report/Contents/DacTaUseCase.tex (ban Do an chuyen nganh), docs/use\_cases/}
+\bangcho{Khuôn mẫu đặc tả chi tiết một use-case}{tab:uc_template}
+
+\section{Phân hệ khách hàng}
+\label{sec:uc_customer}
+\hinhcho{0.85}{Sơ đồ use-case phân hệ khách hàng}{fig:uc_customer}
+\ghichu{Đặc tả các use-case sau, mỗi use-case một bảng: đăng ký tài khoản; đăng nhập; cập nhật hồ sơ cá nhân và hồ sơ năng lực; tra cứu chi nhánh và sơ đồ mặt bằng; tìm kiếm và đặt chỗ; thanh toán đơn đặt chỗ; chọn dịch vụ bổ sung; xem lịch sử đặt chỗ; gửi yêu cầu hủy; xem gợi ý đối tác; tương tác bảng tin cộng đồng; tra cứu điểm tích lũy; đặt chỗ qua trợ lý ảo.}
+
+\subsection{Danh sách use-case của phân hệ}
+\subsection{Đặc tả use-case Đăng ký tài khoản}
+\subsection{Đặc tả use-case Đăng nhập}
+\subsection{Đặc tả use-case Tìm kiếm và đặt chỗ}
+\subsection{Đặc tả use-case Thanh toán đơn đặt chỗ}
+\subsection{Đặc tả use-case Hủy đặt chỗ và nhận hoàn tiền}
+\subsection{Đặc tả use-case Xem gợi ý kết nối đối tác}
+\subsection{Đặc tả use-case Đặt chỗ thông qua trợ lý ảo}
+
+\section{Phân hệ nhân viên}
+\label{sec:uc_staff}
+\hinhcho{0.85}{Sơ đồ use-case phân hệ nhân viên}{fig:uc_staff}
+
+\subsection{Danh sách use-case của phân hệ}
+\subsection{Đặc tả use-case Tạo đơn đặt chỗ tại quầy}
+\subsection{Đặc tả use-case Xác nhận thanh toán tiền mặt}
+\subsection{Đặc tả use-case Check-in và check-out cho khách}
+\subsection{Đặc tả use-case Ghi nhận dịch vụ gọi thêm}
+\subsection{Đặc tả use-case Quản lý lịch bảo trì không gian}
+
+\section{Phân hệ quản lý chi nhánh}
+\label{sec:uc_branchadmin}
+\hinhcho{0.85}{Sơ đồ use-case phân hệ quản lý chi nhánh}{fig:uc_branchadmin}
+
+\subsection{Danh sách use-case của phân hệ}
+\subsection{Đặc tả use-case Cấu hình không gian và sơ đồ mặt bằng}
+\subsection{Đặc tả use-case Thiết lập bảng giá và biểu phí hủy}
+\subsection{Đặc tả use-case Quản lý tài khoản nhân viên}
+\subsection{Đặc tả use-case Xem báo cáo và xuất dữ liệu}
+
+\section{Phân hệ quản trị hệ thống}
+\label{sec:uc_admin}
+\hinhcho{0.85}{Sơ đồ use-case phân hệ quản trị hệ thống}{fig:uc_admin}
+
+\subsection{Danh sách use-case của phân hệ}
+\subsection{Đặc tả use-case Quản lý chi nhánh và danh mục dùng chung}
+\subsection{Đặc tả use-case Quản lý người dùng và phân quyền}
+\subsection{Đặc tả use-case Thiết lập chính sách mặc định toàn hệ thống}
+\subsection{Đặc tả use-case Tra cứu nhật ký kiểm toán}
+
+\section{Mô hình hóa quy trình nghiệp vụ}
+\label{sec:activity}
+\ghichu{Vẽ sơ đồ hoạt động cho các quy trình có nhiều nhánh rẽ và nhiều tác nhân tham gia. Mỗi sơ đồ kèm một đoạn diễn giải các nhánh quan trọng, đặc biệt là nhánh lỗi.}
+
+\subsection{Quy trình đặt chỗ và thanh toán trực tuyến}
+\hinhcho{0.8}{Sơ đồ hoạt động quy trình đặt chỗ và thanh toán trực tuyến}{fig:act_booking}
+
+\subsection{Quy trình đặt chỗ tại quầy và thanh toán tiền mặt}
+\hinhcho{0.8}{Sơ đồ hoạt động quy trình đặt chỗ tại quầy}{fig:act_counter}
+
+\subsection{Quy trình check-in và check-out}
+\hinhcho{0.8}{Sơ đồ hoạt động quy trình check-in và check-out}{fig:act_checkin}
+
+\subsection{Quy trình hủy đặt chỗ và hoàn tiền tự động}
+\hinhcho{0.8}{Sơ đồ hoạt động quy trình hủy và hoàn tiền}{fig:act_cancel}
+
+\subsection{Quy trình bảo trì không gian và xử lý đơn bị ảnh hưởng}
+\hinhcho{0.8}{Sơ đồ hoạt động quy trình bảo trì không gian}{fig:act_maintenance}
+
+\section{Mô hình hóa tương tác giữa các thành phần}
+\label{sec:sequence}
+\ghichu{Vẽ sơ đồ tuần tự cho các luồng kỹ thuật cần thể hiện thứ tự thời gian và ranh giới giao dịch: luồng xin khóa tư vấn rồi kiểm tra chồng lấn khi tạo đơn; luồng nhận webhook từ cổng thanh toán và cập nhật trạng thái; luồng tác vụ định kỳ quét đơn quá hạn thanh toán; luồng trợ lý ảo gọi hàm nghiệp vụ.}
+
+\subsection{Luồng tạo đơn đặt chỗ có khóa chống tương tranh}
+\hinhcho{0.8}{Sơ đồ tuần tự luồng tạo đơn đặt chỗ}{fig:seq_booking}
+
+\subsection{Luồng xử lý thông báo kết quả thanh toán}
+\hinhcho{0.8}{Sơ đồ tuần tự luồng xử lý webhook thanh toán}{fig:seq_webhook}
+
+\section{Mô hình trạng thái}
+\label{sec:statechart}
+\ghichu{Vẽ sơ đồ trạng thái cho đơn đặt chỗ và cho giao dịch thanh toán, kèm bảng liệt kê điều kiện chuyển trạng thái và tác nhân gây ra chuyển trạng thái. Đây là căn cứ để kiểm thử máy trạng thái ở Chương \ref{ch:kiemthu}.}
+\nguon{docs/SYSTEM\_SPEC.md muc 3.3 va 3.4}
+\hinhcho{0.8}{Sơ đồ trạng thái của đơn đặt chỗ}{fig:state_booking}
+\hinhcho{0.8}{Sơ đồ trạng thái của giao dịch thanh toán}{fig:state_payment}

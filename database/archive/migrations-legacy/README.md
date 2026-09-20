@@ -1,6 +1,9 @@
 # Migrations cũ (đã ngừng sử dụng)
 
-Các file trong thư mục này **không còn được chạy** và chỉ giữ lại để tra cứu lịch sử.
+Các file trong thư mục này **không còn được chạy** và chỉ giữ lại để tra cứu lịch sử. Từ 20/09/2026,
+`schema.sql` (trước đây nằm ở `BE/src/main/resources/`) cũng được chuyển vào đây: nội dung của nó đã
+nằm trọn trong `V1__baseline.sql`, nên để lại trên classpath chỉ khiến `spring.sql.init.mode: always`
+chạy lại toàn bộ DDL mỗi lần khởi động ở môi trường dev.
 
 Từ 20/09/2026, schema do Flyway quản lý (quyết định Q15 trong [report/LOGIC_AUDIT.md](../../../report/LOGIC_AUDIT.md)):
 

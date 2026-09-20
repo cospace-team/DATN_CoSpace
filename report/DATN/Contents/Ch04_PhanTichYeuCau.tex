@@ -1,0 +1,49 @@
+\chapter{Phân tích yêu cầu hệ thống}
+\label{ch:yeucau}
+
+\ghichu{Chương này chuyển nhu cầu thực tế thành tập yêu cầu có thể kiểm chứng. Mọi chức năng nêu ở đây phải được đặc tả ở Chương \ref{ch:usecase}, thiết kế ở Chương \ref{ch:thietke} và kiểm thử ở Chương \ref{ch:kiemthu}. Dung lượng đề xuất 10--14 trang.}
+
+\section{Xác định tác nhân của hệ thống}
+\label{sec:tacnhan}
+\ghichu{Mô tả bốn tác nhân cùng phạm vi dữ liệu mà mỗi tác nhân được phép truy cập. Nhấn mạnh ràng buộc: quản trị hệ thống và khách hàng không thuộc chi nhánh nào, còn quản lý chi nhánh và nhân viên bắt buộc gắn với một chi nhánh cụ thể.}
+\nguon{docs/SYSTEM\_SPEC.md muc 2}
+\bangcho{Danh sách tác nhân và phạm vi tác động}{tab:tacnhan}
+
+\section{Yêu cầu chức năng}
+\label{sec:yeucau_chucnang}
+\ghichu{Đánh mã cho từng yêu cầu theo dạng FR-xx để tiện truy vết sang đặc tả use-case và ca kiểm thử. Mỗi yêu cầu viết một câu, nêu rõ tác nhân và kết quả mong đợi.}
+\nguon{docs/SYSTEM\_SPEC.md muc 2 va muc 3, docs/use\_cases/}
+
+\subsection{Nhóm chức năng dành cho khách hàng}
+\ghichu{Gồm: đăng ký và đăng nhập (email hoặc tài khoản Google); quản lý hồ sơ cá nhân và hồ sơ năng lực; tra cứu chi nhánh và xem sơ đồ mặt bằng; tìm kiếm không gian theo loại, thời gian, sức chứa; đặt chỗ ngắn hạn và thuê dài hạn; thanh toán trực tuyến; chọn dịch vụ bổ sung; xem lịch sử đặt chỗ và giao dịch; gửi yêu cầu hủy và xem kết quả hoàn tiền; xem gợi ý đối tác; tham gia bảng tin cộng đồng; tra cứu điểm tích lũy và hạng thành viên; tương tác với trợ lý ảo.}
+
+\subsection{Nhóm chức năng dành cho nhân viên}
+\ghichu{Gồm: tạo đơn đặt chỗ tại quầy cho khách; xác nhận thu tiền mặt; check-in và check-out bằng mã đặt chỗ; ghi nhận dịch vụ gọi thêm trong lúc khách đang sử dụng; tạo và theo dõi lịch bảo trì; theo dõi bảng điều khiển vận hành trong ngày.}
+
+\subsection{Nhóm chức năng dành cho quản lý chi nhánh}
+\ghichu{Gồm: cấu hình thông tin chi nhánh, tầng và không gian; thiết kế sơ đồ mặt bằng; thiết lập bảng giá và giá dịch vụ riêng cho chi nhánh; thiết lập biểu phí hủy; quản lý tài khoản nhân viên; xem báo cáo doanh thu, tỷ lệ lấp đầy và xuất dữ liệu.}
+
+\subsection{Nhóm chức năng dành cho quản trị hệ thống}
+\ghichu{Gồm: quản lý danh mục dùng chung toàn hệ thống; quản lý toàn bộ tài khoản và phân quyền; thiết lập chính sách mặc định; xem báo cáo hợp nhất và so sánh giữa các chi nhánh; tra cứu nhật ký kiểm toán.}
+
+\section{Yêu cầu phi chức năng}
+\label{sec:yeucau_phichucnang}
+\ghichu{Đánh mã NFR-xx và nêu tiêu chí đo được cho từng yêu cầu, tránh phát biểu chung chung. Các nhóm cần có: tính đúng đắn dữ liệu (không tồn tại hai đơn đặt chỗ chồng lấn trên cùng một không gian); hiệu năng (thời gian phản hồi API và thời gian tải trang mục tiêu); bảo mật (mã hóa đường truyền, xác thực token, cô lập dữ liệu giữa các chi nhánh, chống gian lận thanh toán); tính sẵn sàng; khả năng mở rộng; tính dùng được và khả năng truy cập; khả năng bảo trì và kiểm thử; khả năng truy vết qua nhật ký kiểm toán.}
+\bangcho{Danh sách yêu cầu phi chức năng và tiêu chí nghiệm thu}{tab:nfr}
+
+\section{Quy tắc nghiệp vụ và ràng buộc hệ thống}
+\label{sec:quytac}
+\ghichu{Đây là phần tạo nên chiều sâu của báo cáo. Hệ thống có gần năm mươi quy tắc nghiệp vụ đã được đặc tả; nên nhóm lại thành các cụm và trình bày mỗi cụm một bảng: quy tắc về đặt chỗ và chống trùng lịch; quy tắc về thanh toán và đối soát; quy tắc về hủy và hoàn tiền; quy tắc về check-in và check-out; quy tắc về giá và dịch vụ bổ sung; quy tắc về phân quyền và cô lập chi nhánh; quy tắc về dữ liệu và vòng đời bản ghi. Mỗi quy tắc ghi rõ mã, phát biểu, và lý do tồn tại.}
+\nguon{docs/SYSTEM\_SPEC.md muc 7 (48 quy tac) va muc 8 (quyet dinh thiet ke)}
+\bangcho{Nhóm quy tắc nghiệp vụ về đặt chỗ và chống xung đột}{tab:rule_booking}
+\bangcho{Nhóm quy tắc nghiệp vụ về thanh toán, hủy và hoàn tiền}{tab:rule_payment}
+
+\section{Sơ đồ use-case tổng quát}
+\label{sec:usecase_tongquat}
+\ghichu{Vẽ một sơ đồ tổng quát cho toàn hệ thống thể hiện bốn tác nhân và các nhóm chức năng chính, sau đó tách thành các sơ đồ chi tiết theo từng phân hệ ở Chương \ref{ch:usecase}.}
+\hinhcho{0.9}{Sơ đồ use-case tổng quát của hệ thống}{fig:uc_tongquat}
+
+\section{Ma trận phân quyền chức năng}
+\label{sec:ma_tran_phan_quyen}
+\ghichu{Lập ma trận chức năng theo vai trò, đánh dấu quyền xem, tạo, sửa, xóa. Ma trận này là căn cứ để kiểm thử phân quyền ở Chương \ref{ch:kiemthu} và để cấu hình bảo mật ở Chương \ref{ch:thietke}.}
+\bangcho{Ma trận phân quyền chức năng theo vai trò}{tab:matran_phanquyen}
