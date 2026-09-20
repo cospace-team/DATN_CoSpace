@@ -57,7 +57,11 @@ DA/
 ## 🚀 Hướng Dẫn Chạy Cục Bộ (Local Setup)
 
 ### 1. Database
-- Dự án sử dụng Supabase. Chạy script tạo bảng tại `database/migrations/20240101000000_core_schema.sql` trên Supabase SQL Editor.
+- Dự án sử dụng Supabase (PostgreSQL). **Không cần chạy script tay**: khi khởi động, backend dùng Flyway để áp dụng các migration trong `BE/src/main/resources/db/migration/`.
+  - Database trống (máy mới, CI): Flyway chạy `V1__baseline.sql` để tạo toàn bộ schema, rồi tới các file `V2`, `V3`...
+  - Database đã có dữ liệu: Flyway đánh dấu `V1` là đã áp dụng (`baseline-on-migrate`) và chỉ chạy các migration mới hơn.
+- Mọi thay đổi schema về sau: thêm file `V<n>__<mô tả>.sql` mới, không sửa file đã có.
+- Các script cũ trong `database/archive/migrations-legacy/` chỉ còn giá trị tham khảo — xem README trong thư mục đó.
 
 ### 2. Frontend
 ```bash

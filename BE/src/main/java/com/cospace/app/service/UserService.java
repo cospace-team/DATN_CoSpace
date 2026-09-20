@@ -24,6 +24,13 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class UserService {
 
+    /**
+     * Placeholder domain for the account a staff member creates for a walk-in guest. Those guests
+     * never signed up for anything beyond the booking at the counter, so features like partner
+     * matching must leave them out.
+     */
+    public static final String WALKIN_EMAIL_DOMAIN = "@walkin.local";
+
     private final UserRepository userRepository;
     private final ProfileRepository profileRepository;
     private final com.cospace.app.repository.BranchEntityRepository branchEntityRepository;
@@ -121,7 +128,7 @@ public class UserService {
     @CacheEvict(value = CacheConfig.ADMIN_USERS, allEntries = true)
     public UserProfileDto createWalkinUser(com.cospace.app.dto.api.WalkinUserCreateRequest req) {
         User user = User.builder()
-                .email("walkin_" + UUID.randomUUID().toString().substring(0, 8) + "@walkin.local")
+                .email("walkin_" + UUID.randomUUID().toString().substring(0, 8) + WALKIN_EMAIL_DOMAIN)
                 .fullName(req.getFullName())
                 .phone(req.getPhone())
                 .role(User.Role.customer)

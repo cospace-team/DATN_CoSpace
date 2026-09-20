@@ -55,8 +55,15 @@ public class StaffMaintenanceService {
         if (request.getWorkspaceId() == null) {
             throw new IllegalArgumentException("workspaceId is required");
         }
-        if (request.getStartAt() == null || request.getEndAt() == null || request.getStartAt().isAfter(request.getEndAt())) {
-            throw new IllegalArgumentException("Invalid startAt and endAt");
+        if (request.getStartAt() == null || request.getEndAt() == null
+                || !request.getEndAt().isAfter(request.getStartAt())) {
+            throw new IllegalArgumentException("Thời gian bảo trì không hợp lệ: giờ kết thúc phải sau giờ bắt đầu.");
+        }
+        // A window in the past would be read as "the seat is unusable from now on" further down and
+        // would cut short bookings that had already run their course untouched.
+        if (request.getStartAt().toInstant().isBefore(java.time.Instant.now().minusSeconds(60))) {
+            throw new IllegalArgumentException(
+                    "Không thể tạo lịch bảo trì cho thời gian đã qua. Vui lòng chọn thời điểm từ hiện tại trở đi.");
         }
 
         // 1. Acquire Advisory Lock for this workspace (same mechanism as booking creation to prevent race condition)
@@ -90,11 +97,18 @@ public class StaffMaintenanceService {
         for (Booking candidate : overlappingBookings) {
             // Lock and re-read: a payment or check-in may have changed the booking meanwhile.
             Booking b = bookingRepository.findByIdWithLock(candidate.getId()).orElse(candidate);
-            if (b.getStatus() == BookingStatus.PENDING_PAYMENT || b.getStatus() == BookingStatus.CONFIRMED) {
+
+            // A booking is only cancelled when the maintenance window swallows it whole. Anything
+            // else — a two-hour repair inside a monthly contract, say — keeps its seat and is
+            // refunded for the overlapping time alone, instead of losing the entire contract.
+            boolean coversWholeBooking = !startOffset.isAfter(b.getStartAt()) && !endOffset.isBefore(b.getEndAt());
+            if (!coversWholeBooking) {
+                refundOverlappingTime(b, startOffset, endOffset, request.getReason());
+            } else if (b.getStatus() == BookingStatus.CHECKED_IN) {
+                endBookingInUse(b, startOffset, endOffset, nowUtc, request.getReason());
+            } else {
                 // Not used yet: cancel with a full refund of whatever was paid, and tell the customer.
                 cancellationService.cancelForMaintenance(b, request.getReason());
-            } else if (b.getStatus() == BookingStatus.CHECKED_IN) {
-                handleBookingInUse(b, startOffset, nowUtc, request.getReason());
             }
         }
 
@@ -104,7 +118,11 @@ public class StaffMaintenanceService {
         maintenance.setStartAt(request.getStartAt());
         maintenance.setEndAt(request.getEndAt());
         maintenance.setReason(request.getReason());
-        maintenance.setStatus(MaintenanceStatus.active); // Activate immediately for staff use case as per UI
+        // A window that has not started yet is scheduled, not active: marking it active would make
+        // the floor plan show a seat as under repair days before anyone touches it.
+        maintenance.setStatus(!request.getStartAt().toInstant().isAfter(java.time.Instant.now())
+                ? MaintenanceStatus.active
+                : MaintenanceStatus.scheduled);
         maintenance.setCreatedBy(staffId);
         
         maintenanceRepository.save(maintenance);
@@ -113,33 +131,49 @@ public class StaffMaintenanceService {
     }
 
     /**
-     * A customer is sitting in the workspace. If maintenance starts now they are checked out on the
-     * spot; if it starts later they keep the seat until then. Either way the lost time is refunded.
+     * A guest is sitting in a workspace that maintenance takes over for the rest of their booking:
+     * they are checked out on the spot and refunded the time they lose.
      */
-    private void handleBookingInUse(Booking b, OffsetDateTime maintenanceStart, OffsetDateTime now, String reason) {
-        OffsetDateTime cutAt = maintenanceStart.isAfter(now) ? maintenanceStart : now;
-        long refunded = cancellationService.refundUnusedTimeForMaintenance(b, cutAt, reason);
+    private void endBookingInUse(Booking b, OffsetDateTime maintenanceStart, OffsetDateTime maintenanceEnd,
+                                 OffsetDateTime now, String reason) {
+        long refunded = cancellationService.refundTimeLostToMaintenance(b, maintenanceStart, maintenanceEnd, reason);
 
-        if (cutAt.isBefore(b.getEndAt())) {
-            b.setEndAt(cutAt);
+        if (now.isAfter(b.getStartAt()) && now.isBefore(b.getEndAt())) {
+            b.setEndAt(now);
         }
-        boolean checkoutNow = !maintenanceStart.isAfter(now);
-        if (checkoutNow) {
-            BookingStateMachine.transition(b, BookingStatus.COMPLETED);
-            // Close active checkin log to prevent orphaned seated guest records
-            checkinLogRepository.findActiveCheckinByBookingId(b.getId()).ifPresent(cl -> {
-                cl.setCheckoutAt(now);
-                cl.setNote((cl.getNote() != null ? cl.getNote() + " | " : "") + "Tự động check-out do bảo trì đột xuất");
-                checkinLogRepository.save(cl);
-            });
-        }
+        BookingStateMachine.transition(b, BookingStatus.COMPLETED);
+        // Close active checkin log to prevent orphaned seated guest records
+        checkinLogRepository.findActiveCheckinByBookingId(b.getId()).ifPresent(cl -> {
+            cl.setCheckoutAt(now);
+            cl.setNote((cl.getNote() != null ? cl.getNote() + " | " : "") + "Tự động check-out do bảo trì đột xuất");
+            checkinLogRepository.save(cl);
+        });
         bookingRepository.save(b);
 
         notificationService.createNotification(b.getUserId(),
-                checkoutNow ? "Kết thúc sớm do bảo trì" : "Thời gian sử dụng được rút ngắn do bảo trì",
-                String.format("Đơn %s %s vì không gian cần bảo trì.%s", b.getBookingCode(),
-                        checkoutNow ? "đã được check-out sớm" : "sẽ kết thúc sớm lúc " + cutAt.atZoneSameInstant(java.time.ZoneId.of("Asia/Ho_Chi_Minh")).toLocalTime(),
+                "Kết thúc sớm do bảo trì",
+                String.format("Đơn %s đã được check-out sớm vì không gian cần bảo trì.%s", b.getBookingCode(),
                         refunded > 0 ? " Phần thời gian không sử dụng (" + RefundService.vnd(refunded) + ") sẽ được hoàn lại." : ""),
+                "BOOKING", b.getId(), "BOOKING");
+    }
+
+    /**
+     * Maintenance clips part of a booking: the booking stands, and the customer is refunded for the
+     * overlapping time. Nothing is refunded when nothing was paid yet — the notice still goes out so
+     * the customer knows the seat is unavailable for that stretch.
+     */
+    private void refundOverlappingTime(Booking b, OffsetDateTime maintenanceStart, OffsetDateTime maintenanceEnd,
+                                       String reason) {
+        long refunded = cancellationService.refundTimeLostToMaintenance(b, maintenanceStart, maintenanceEnd, reason);
+
+        java.time.ZoneId vn = java.time.ZoneId.of("Asia/Ho_Chi_Minh");
+        notificationService.createNotification(b.getUserId(),
+                "Không gian tạm bảo trì trong một phần thời gian đặt chỗ",
+                String.format("Đơn %s bị ảnh hưởng bởi lịch bảo trì từ %s đến %s.%s Vui lòng liên hệ quầy lễ tân để được hỗ trợ.",
+                        b.getBookingCode(),
+                        maintenanceStart.atZoneSameInstant(vn).toLocalDateTime(),
+                        maintenanceEnd.atZoneSameInstant(vn).toLocalDateTime(),
+                        refunded > 0 ? " Phần thời gian này (" + RefundService.vnd(refunded) + ") sẽ được hoàn lại." : ""),
                 "BOOKING", b.getId(), "BOOKING");
     }
 
@@ -181,10 +215,9 @@ public class StaffMaintenanceService {
         WorkspaceMaintenanceEntity maintenance = maintenanceRepository.findById(maintenanceId)
                 .orElseThrow(() -> new IllegalArgumentException("Maintenance not found"));
         
-        java.time.ZonedDateTime now = java.time.ZonedDateTime.now(java.time.ZoneOffset.UTC);
-        if (now.isBefore(maintenance.getEndAt())) {
-            maintenance.setEndAt(now);
-        }
+        // Closing a window that is under way ends it now; one that has not started keeps its dates,
+        // because an end before the start breaks check_maintenance_time and used to fail with a 500.
+        truncateIfRunning(maintenance);
         maintenance.setStatus(MaintenanceStatus.done);
         maintenanceRepository.save(maintenance);
         return mapToDto(maintenance, 0);
@@ -195,13 +228,18 @@ public class StaffMaintenanceService {
         WorkspaceMaintenanceEntity maintenance = maintenanceRepository.findById(maintenanceId)
                 .orElseThrow(() -> new IllegalArgumentException("Maintenance not found"));
                 
-        java.time.ZonedDateTime now = java.time.ZonedDateTime.now(java.time.ZoneOffset.UTC);
-        if (now.isBefore(maintenance.getEndAt())) {
-            maintenance.setEndAt(now);
-        }
+        truncateIfRunning(maintenance);
         // Instead of hard delete, we can set to canceled to unlock workspace if it was a mistake.
         maintenance.setStatus(MaintenanceStatus.canceled);
         maintenanceRepository.save(maintenance);
+    }
+
+    /** Ends a window that has already started at this moment; leaves a future one untouched. */
+    private static void truncateIfRunning(WorkspaceMaintenanceEntity maintenance) {
+        java.time.ZonedDateTime now = java.time.ZonedDateTime.now(java.time.ZoneOffset.UTC);
+        if (now.isAfter(maintenance.getStartAt()) && now.isBefore(maintenance.getEndAt())) {
+            maintenance.setEndAt(now);
+        }
     }
 
     private MaintenanceResponseDto mapToDto(WorkspaceMaintenanceEntity entity, int impactedCount) {

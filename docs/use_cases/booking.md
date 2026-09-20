@@ -55,7 +55,7 @@
 7-8. Như Main Flow
 9. Hệ thống tạo:
    - Booking (status = pending_payment, source = counter)
-   - payment_deadline_at = NULL (thanh toán tiền mặt không timeout)
+   - payment_deadline_at = now() + 15 phút, giống đơn online: nhân viên thu tiền ngay tại quầy nên không cần hạn riêng, và đơn bị bỏ quên vẫn được dọn tự động
 10. Staff chuyển sang luồng thanh toán tiền mặt (UC-PAY-02)
 ```
 
@@ -117,7 +117,7 @@ Giống UC-BOOK-01, ngoại trừ:
 | # | Rule | Chi tiết |
 |---|------|---------|
 | R7 | Auto is_contract | Khi `duration_unit` ∈ {week, month} → `is_contract = true` |
-| R8 | Giới hạn duration | week: max 52 tuần. month: max 12 tháng (MVP) |
+| R8 | Giới hạn duration | hour: max 24 giờ. day: max 30 ngày. week: max 52 tuần. month: max 12 tháng. Được kiểm tra ở `BookingService.computeUnitCount` |
 
 ---
 

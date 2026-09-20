@@ -432,6 +432,17 @@ const ExplorePage: React.FC = () => {
     [mappedWorkspaces, selectedDate, selectedHour, branchAvailability],
   );
 
+  // Stable adapter for the memoized FloorPlanViewer — an inline arrow would re-render the whole
+  // floor plan on every ExplorePage state change (form inputs, booking panel, etc.).
+  const getFloorAvailability = useCallback(
+    (wsId: string) => {
+      const avail = getWsAvailability(wsId);
+      if (avail?.startsWith('booked')) return 'booked';
+      return avail as "maintenance" | "available" | "unassigned";
+    },
+    [getWsAvailability],
+  );
+
   const selectedWsData = selectedWs
     ? mappedWorkspaces.find((w) => w.id === selectedWs)
     : null;
@@ -740,12 +751,8 @@ const ExplorePage: React.FC = () => {
                     <FloorPlanViewer
                       layout={parsedLayout}
                       selectedWsId={selectedWs}
-                      onSelectWorkspace={(wsId) => setSelectedWs(wsId)}
-                      getAvailability={(wsId) => {
-                        const avail = getWsAvailability(wsId);
-                        if (avail?.startsWith('booked')) return 'booked';
-                        return avail as "maintenance" | "available" | "unassigned";
-                      }}
+                      onSelectWorkspace={setSelectedWs}
+                      getAvailability={getFloorAvailability}
                     />
                   ) : (
                     <div className="flex flex-col items-center justify-center p-10 text-center bg-card border border-border rounded-3xl max-w-md shadow-sm animate-fade-in">

@@ -23,6 +23,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -207,7 +208,7 @@ class CancellationServiceTest {
         Booking booking = booking(BookingStatus.CHECKED_IN, 400_000L, start); // 2h booking, started 1h ago
         when(refundService.refundableAmount(booking.getId())).thenReturn(400_000L);
 
-        long refunded = cancellationService.refundUnusedTimeForMaintenance(booking, start.plusMinutes(90), null);
+        long refunded = cancellationService.refundTimeLostToMaintenance(booking, start.plusMinutes(90), booking.getEndAt(), null);
 
         assertThat(refunded).isEqualTo(100_000L); // last 30 of 120 minutes
         verify(refundService).requestRefund(eq(booking), eq(null), eq(100_000L),
@@ -256,7 +257,11 @@ class CancellationServiceTest {
         booking.setAddonAmount(60_000L);
         when(refundService.refundableAmount(booking.getId())).thenReturn(460_000L);
 
-        assertThat(cancellationService.refundUnusedTimeForMaintenance(booking, start.plusMinutes(60), null)).isEqualTo(200_000L);
+        // Maintenance starts now, so the refunded window is the hour left of a two-hour booking:
+        // half the 400k rental, none of the 60k of add-ons already served. The exact figure moves by
+        // milliseconds because the service reads the clock itself.
+        assertThat(cancellationService.refundTimeLostToMaintenance(booking, start.plusMinutes(60), booking.getEndAt(), null))
+                .isBetween(199_900L, 200_000L);
     }
 
     @Test
@@ -287,6 +292,122 @@ class CancellationServiceTest {
 
         assertThat(result.getRefundPercent()).isZero();
         assertThat(result.getAppliedRuleJson()).containsEntry("policy_name", "DEFAULT_NO_REFUND");
+    }
+
+    @Test
+    void bookingThatHasAlreadyStartedCannotBeCancelled() {
+        // A paid booking whose time has come is a no-show, not a refund: before this rule a grace
+        // period measured from the order time still refunded 100% hours into the booking.
+        Booking started = booking(BookingStatus.CONFIRMED, 100_000L, hoursFromNow(-1));
+        started.setCreatedAt(OffsetDateTime.now(ZoneOffset.UTC).minusMinutes(30));
+        when(bookingRepository.findByIdWithLock(started.getId())).thenReturn(Optional.of(started));
+        when(cancellationRepository.findByBookingId(started.getId())).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> cancellationService.cancelBooking(userId, started.getId(), null))
+                .isInstanceOf(IllegalStateException.class);
+
+        assertThat(started.getStatus()).isEqualTo(BookingStatus.CONFIRMED);
+        verify(bookingRepository, never()).save(any());
+        verify(refundService, never()).requestRefund(any(), any(), anyLong(), any(), any());
+    }
+
+    @Test
+    void unpaidHoldCanStillBeCancelledAfterItsStartTime() {
+        Booking started = booking(BookingStatus.PENDING_PAYMENT, 100_000L, hoursFromNow(-1));
+        givenBookingIsCancellable(started);
+
+        BookingCancellation result = cancellationService.cancelBooking(userId, started.getId(), null);
+
+        assertThat(started.getStatus()).isEqualTo(BookingStatus.CANCELLED);
+        assertThat(result.getRefundAmount()).isZero();
+    }
+
+    @Test
+    void staffCanCancelForACustomerAfterTheBookingHasStarted() {
+        // The counter's way out of the cases rule Q1 closed for the customer.
+        Booking started = booking(BookingStatus.CONFIRMED, 200_000L, hoursFromNow(-1));
+        givenBookingIsCancellable(started);
+        when(policyRepository.findByBranchIdIsNullAndIsActiveTrueOrderByPriorityDesc())
+                .thenReturn(List.of(policy(null, 0, 24, 50)));
+        UUID staffId = UUID.randomUUID();
+
+        BookingCancellation result = cancellationService.cancelByStaff(staffId, started.getId(), "Khách báo ốm", false);
+
+        assertThat(started.getStatus()).isEqualTo(BookingStatus.CANCELLED);
+        assertThat(result.getRefundPercent()).isEqualTo(50);
+        assertThat(result.getReason()).isEqualTo("Khách báo ốm");
+        // The record stays attached to the customer, with the staff member noted in the snapshot.
+        assertThat(result.getUserId()).isEqualTo(userId);
+        assertThat(result.getAppliedRuleJson()).containsEntry("cancelled_by_staff_id", staffId.toString());
+    }
+
+    @Test
+    void staffCancellationRequiresAReason() {
+        Booking booking = booking(BookingStatus.CONFIRMED, 200_000L, hoursFromNow(10));
+
+        assertThatThrownBy(() -> cancellationService.cancelByStaff(UUID.randomUUID(), booking.getId(), "  ", false))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        verify(bookingRepository, never()).save(any());
+    }
+
+    @Test
+    void waivingThePenaltyReturnsEverythingTheCustomerPaid() {
+        Booking booking = booking(BookingStatus.CONFIRMED, 300_000L, hoursFromNow(1));
+        givenBookingIsCancellable(booking);
+
+        BookingCancellation result = cancellationService.cancelByStaff(
+                UUID.randomUUID(), booking.getId(), "Phòng hỏng máy lạnh, lỗi của chi nhánh", true);
+
+        assertThat(result.getRefundPercent()).isEqualTo(100);
+        assertThat(result.getRefundAmount()).isEqualTo(300_000L);
+        assertThat(result.getPenaltyAmount()).isZero();
+        assertThat(result.getAppliedRuleJson()).containsEntry("policy_name", "STAFF_WAIVED_PENALTY");
+        // No policy lookup is needed when the branch takes the blame.
+        verify(policyRepository, never()).findByBranchIdIsNullAndIsActiveTrueOrderByPriorityDesc();
+    }
+
+    @Test
+    void staffStillCannotCancelABookingInUse() {
+        Booking inUse = booking(BookingStatus.CHECKED_IN, 200_000L, hoursFromNow(-1));
+        when(bookingRepository.findByIdWithLock(inUse.getId())).thenReturn(Optional.of(inUse));
+
+        assertThatThrownBy(() -> cancellationService.cancelByStaff(UUID.randomUUID(), inUse.getId(), "Khách đổi ý", false))
+                .isInstanceOf(IllegalStateException.class);
+
+        assertThat(inUse.getStatus()).isEqualTo(BookingStatus.CHECKED_IN);
+    }
+
+    @Test
+    void policyWindowIsHalfOpenAndMeasuredInMinutes() {
+        // "Hủy trước 24 giờ" must cover 24:00 exactly and stop covering 23:59.
+        Booking justInside = booking(BookingStatus.CONFIRMED, 100_000L, hoursFromNow(24).plusMinutes(1));
+        givenBookingIsCancellable(justInside);
+        when(policyRepository.findByBranchIdIsNullAndIsActiveTrueOrderByPriorityDesc())
+                .thenReturn(List.of(policy(null, 24, 999, 80)));
+
+        assertThat(cancellationService.cancelBooking(userId, justInside.getId(), null).getRefundPercent())
+                .isEqualTo(80);
+
+        Booking justOutside = booking(BookingStatus.CONFIRMED, 100_000L, hoursFromNow(23).plusMinutes(59));
+        givenBookingIsCancellable(justOutside);
+
+        assertThat(cancellationService.cancelBooking(userId, justOutside.getId(), null).getRefundPercent())
+                .isZero();
+    }
+
+    @Test
+    void graceWindowEndsExactlyOnTheHourNotFiftyNineMinutesLater() {
+        Booking booking = booking(BookingStatus.CONFIRMED, 200_000L, hoursFromNow(48));
+        booking.setCreatedAt(OffsetDateTime.now(ZoneOffset.UTC).minusHours(2).minusMinutes(30));
+        givenBookingIsCancellable(booking);
+        when(policyRepository.findByBranchIdIsNullAndIsActiveTrueOrderByPriorityDesc())
+                .thenReturn(List.of(CancellationPolicy.builder()
+                        .id(UUID.randomUUID()).name("grace-2h").ruleType("GRACE_HOURS")
+                        .minValue(0).maxValue(2).refundPercent(BigDecimal.valueOf(100)).build()));
+
+        // 2 hours 30 minutes after ordering: outside a two-hour grace period.
+        assertThat(cancellationService.cancelBooking(userId, booking.getId(), null).getRefundPercent()).isZero();
     }
 
     @Test

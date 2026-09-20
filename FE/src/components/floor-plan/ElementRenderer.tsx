@@ -10,10 +10,11 @@ interface Props {
   element: LayoutElement;
   isSelected: boolean;
   isHovered: boolean;
-  onClick?: (e: React.MouseEvent) => void;
-  onMouseDown?: (e: React.MouseEvent) => void;
-  onMouseEnter: () => void;
-  onMouseLeave: () => void;
+  // Callbacks receive the element / id so parents can pass one stable function for every element
+  // instead of a fresh per-element arrow, which would defeat React.memo on each render.
+  onClick?: (e: React.MouseEvent, el: LayoutElement) => void;
+  onMouseDown?: (e: React.MouseEvent, el: LayoutElement) => void;
+  onHoverChange?: (id: string | null) => void;
   cursor?: string;
 }
 
@@ -389,8 +390,7 @@ const ElementRenderer: React.FC<Props> = ({
   isHovered,
   onClick,
   onMouseDown,
-  onMouseEnter,
-  onMouseLeave,
+  onHoverChange,
   cursor,
 }) => {
   if (!el.visible) return null;
@@ -417,14 +417,14 @@ const ElementRenderer: React.FC<Props> = ({
       }`}
       onClick={(e) => {
         e.stopPropagation();
-        if (onClick) onClick(e);
+        if (onClick) onClick(e, el);
       }}
       onMouseDown={(e) => {
         e.stopPropagation();
-        if (onMouseDown) onMouseDown(e);
+        if (onMouseDown) onMouseDown(e, el);
       }}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
+      onMouseEnter={onHoverChange && (() => onHoverChange(el.id))}
+      onMouseLeave={onHoverChange && (() => onHoverChange(null))}
       style={{
         cursor: cursor || (el.locked ? 'not-allowed' : 'move'),
         opacity: el.opacity,

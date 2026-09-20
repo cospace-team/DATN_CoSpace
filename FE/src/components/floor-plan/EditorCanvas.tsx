@@ -36,6 +36,9 @@ const EditorCanvas: React.FC<Props> = ({ editor }) => {
   const [cursorCoords, setCursorCoords] = useState<{ x: number; y: number } | null>(null);
 
   const { layout, selectedIds, hoveredId, zoom, panOffset, showGrid, snapToGrid } = editor;
+  // `editor` is a new object every render; these actions are stable, so depend on them directly
+  // to keep the memoized ElementRenderer children from re-rendering on every mouse move.
+  const { selectElement, setHoveredId } = editor;
   const { width: canvasW, height: canvasH, gridSize } = layout.canvas;
 
   /* ─── Out-of-bounds detection ─── */
@@ -100,7 +103,7 @@ const EditorCanvas: React.FC<Props> = ({ editor }) => {
       e.stopPropagation();
 
       // Select on click
-      editor.selectElement(el.id, e.shiftKey);
+      selectElement(el.id, e.shiftKey);
 
       const { x: mx, y: my } = toSVGCoords(e.clientX, e.clientY);
       setDrag({
@@ -114,7 +117,7 @@ const EditorCanvas: React.FC<Props> = ({ editor }) => {
         startH: el.height,
       });
     },
-    [editor, toSVGCoords]
+    [selectElement, toSVGCoords]
   );
 
   /* ─── Resize handle mouse down ─── */
@@ -373,9 +376,8 @@ const EditorCanvas: React.FC<Props> = ({ editor }) => {
             element={el}
             isSelected={selectedIds.includes(el.id)}
             isHovered={hoveredId === el.id}
-            onMouseDown={(e) => handleElementMouseDown(e, el)}
-            onMouseEnter={() => editor.setHoveredId(el.id)}
-            onMouseLeave={() => editor.setHoveredId(null)}
+            onMouseDown={handleElementMouseDown}
+            onHoverChange={setHoveredId}
           />
         ))}
 

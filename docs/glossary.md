@@ -31,10 +31,10 @@
 |-----------|-----------|-------------|
 | Thanh toán trực tuyến | Online Payment | Thanh toán qua PayOS (VietQR động liên ngân hàng) hoặc ví MoMo. |
 | Thanh toán tiền mặt | Cash Payment | Thanh toán tại quầy, do Nhân viên quầy hoặc Admin xác nhận. |
-| Chính sách hủy | Cancellation Policy | Quy tắc tính % hoàn tiền dựa trên thời điểm hủy (GRACE_HOURS, BEFORE_START_DAYS) theo thứ tự `priority DESC`. |
-| Hoàn tiền nội bộ | Internal Refund | Ghi nhận khoản tiền hoàn vào hệ thống khi hủy đơn hoặc thanh toán muộn (Late Webhook). |
+| Chính sách hủy | Cancellation Policy | Quy tắc tính % hoàn tiền dựa trên thời điểm hủy (GRACE_HOURS, BEFORE_START_DAYS, BEFORE_START_HOURS): ưu tiên policy chi nhánh rồi tới toàn cục, trong mỗi nhóm sắp theo `priority DESC`. Khoảng thời gian tính theo phút, dạng nửa khoảng `[min, max)`. Không hủy được sau giờ bắt đầu. |
+| Hoàn tiền nội bộ | Internal Refund | Khoản tiền hoàn được ghi vào hàng chờ `refunds` ở trạng thái `pending` khi hủy đơn, bảo trì hoặc thanh toán muộn (Late Webhook); nhân viên hoặc quản lý chi nhánh xác nhận đã trả tiền thì mới chuyển `processed`. |
 | Idempotency | Idempotency | Cơ chế bảo đảm tính duy nhất của giao dịch, ngăn chặn webhook callback lặp bằng `idempotency_key`. |
-| Dung sai Check-in | Check-in Tolerance Window | Khoảng thời gian cho phép khách check-in (30 phút trước giờ bắt đầu đến 30 phút sau giờ kết thúc). |
+| Dung sai Check-in | Check-in Tolerance Window | Khoảng thời gian cho phép khách check-in: từ 30 phút trước giờ bắt đầu cho đến đúng giờ kết thúc. |
 | Hóa đơn mở | Running Tab | Cơ chế cho phép khách đang ngồi làm việc gọi thêm món/dịch vụ phụ và thanh toán lũy kế vào đơn hiện tại. |
 
 ## Dịch vụ bổ sung & Giá cả
@@ -53,9 +53,9 @@
 |-----------|-----------|-------------|
 | Thẻ kỹ năng/sở thích | Tag | Nhãn phân loại chuyên môn: skill, interest, industry. Dùng để đối sánh đối tác. |
 | Điểm tương đồng Jaccard | Jaccard Similarity Score | Tỷ số giao trên hợp giữa tập thẻ của hai hồ sơ, làm trọng số cốt lõi cho thuật toán Matching. |
-| Điểm tương thích | Match Score | Điểm số tổng hợp: (Jaccard × 0.85) + (Bonus cùng chi nhánh × 0.15). Ngưỡng ≥ 50% được xếp vào nhóm "Phù hợp nhất". |
+| Điểm tương thích | Match Score | Điểm tổng hợp từ kỹ năng (0.5), sở thích (0.2) và chủ đề bài viết cộng đồng (0.2), chuẩn hóa theo các tín hiệu cả hai bên cùng có, cộng 0.15 nếu cùng chi nhánh (xem SYSTEM_SPEC §3.8). Ngưỡng ≥ 50% được xếp vào nhóm "Phù hợp nhất". |
 | Bảng tin cộng đồng | Community Feed | Không gian chia sẻ kiến thức, kinh nghiệm và tìm kiếm đối tác hợp tác. |
-| Hạng thành viên | Membership Tier | 4 hạng (Bronze, Silver, Gold, Platinum) đem lại quyền lợi chiết khấu dựa trên điểm tích lũy. |
+| Hạng thành viên | Membership Tier | 4 hạng (Bronze, Silver, Gold, Platinum) đem lại quyền lợi chiết khấu, xét theo tổng chi tiêu và số đơn đã sử dụng xong, trừ các khoản đã hoàn. |
 | Trợ lý ảo AI | AI Chatbot Assistant | Trợ lý thông minh tích hợp Google Gemini Flash hỗ trợ giải đáp chính sách và tạo đơn đặt phòng qua đối thoại. |
 
 ## Vai trò & Phân quyền

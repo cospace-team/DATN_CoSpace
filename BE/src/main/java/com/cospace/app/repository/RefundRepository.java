@@ -22,4 +22,14 @@ public interface RefundRepository extends JpaRepository<Refund, UUID> {
 
     @Query("SELECT COALESCE(SUM(r.amount), 0L) FROM Refund r WHERE r.bookingId = :bookingId AND r.status IN :statuses")
     long sumAmountByBookingAndStatuses(@Param("bookingId") UUID bookingId, @Param("statuses") Collection<String> statuses);
+
+    /** Total already refunded to one customer, used when deriving their membership tier. */
+    @Query("SELECT COALESCE(SUM(r.amount), 0) FROM Refund r WHERE r.userId = :userId AND r.status = :status")
+    long sumAmountByUserAndStatus(@Param("userId") UUID userId, @Param("status") String status);
+
+    /** [bookingId, refunded amount] for several bookings at once, for reporting. */
+    @Query("SELECT r.bookingId, COALESCE(SUM(r.amount), 0) FROM Refund r "
+            + "WHERE r.bookingId IN :bookingIds AND r.status = :status GROUP BY r.bookingId")
+    List<Object[]> sumAmountByBookingsAndStatus(@Param("bookingIds") Collection<UUID> bookingIds,
+                                                @Param("status") String status);
 }

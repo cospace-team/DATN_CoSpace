@@ -2,10 +2,7 @@ package com.cospace.app.service;
 
 import com.cospace.app.entity.Booking;
 import com.cospace.app.entity.BookingStatus;
-import com.cospace.app.entity.Payment;
-import com.cospace.app.entity.PaymentStatus;
 import com.cospace.app.repository.BookingRepository;
-import com.cospace.app.repository.PaymentRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -13,14 +10,13 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -29,9 +25,7 @@ class BookingExpirySchedulerTest {
     @Mock
     private BookingRepository bookingRepository;
     @Mock
-    private PaymentRepository paymentRepository;
-    @Mock
-    private BookingAddonService bookingAddonService;
+    private BookingExpiryService bookingExpiryService;
 
     @InjectMocks
     private BookingExpiryScheduler scheduler;
@@ -43,29 +37,40 @@ class BookingExpirySchedulerTest {
 
         scheduler.expirePendingBookings();
 
-        verify(paymentRepository, never()).save(any());
+        verifyNoInteractions(bookingExpiryService);
     }
 
     @Test
-    void expiresOverdueBookingsAndTheirPendingPayments() {
-        Booking withPayment = Booking.builder().id(UUID.randomUUID()).status(BookingStatus.PENDING_PAYMENT).build();
-        Booking withoutPayment = Booking.builder().id(UUID.randomUUID()).status(BookingStatus.PENDING_PAYMENT).build();
-        Payment pending = Payment.builder().id(UUID.randomUUID()).bookingId(withPayment.getId())
-                .status(PaymentStatus.PENDING).build();
-
+    void handsEveryOverdueBookingToTheLockedExpiryService() {
+        Booking first = overdue();
+        Booking second = overdue();
         when(bookingRepository.findAllByStatusAndPaymentDeadlineAtBefore(eq(BookingStatus.PENDING_PAYMENT), any()))
-                .thenReturn(List.of(withPayment, withoutPayment));
-        when(paymentRepository.findTopByBookingIdAndStatusInOrderByCreatedAtDesc(
-                eq(withPayment.getId()), eq(List.of(PaymentStatus.INITIATED, PaymentStatus.PENDING))))
-                .thenReturn(Optional.of(pending));
-        when(paymentRepository.findTopByBookingIdAndStatusInOrderByCreatedAtDesc(eq(withoutPayment.getId()), any()))
-                .thenReturn(Optional.empty());
+                .thenReturn(List.of(first, second));
 
         scheduler.expirePendingBookings();
 
-        assertThat(withPayment.getStatus()).isEqualTo(BookingStatus.EXPIRED);
-        assertThat(withoutPayment.getStatus()).isEqualTo(BookingStatus.EXPIRED);
-        assertThat(pending.getStatus()).isEqualTo(PaymentStatus.EXPIRED);
-        verify(paymentRepository).save(pending);
+        // Only ids are handed over: the service re-reads each booking under a row lock, so the
+        // scheduler's own (unlocked) copy can never be written back over a confirmed booking.
+        verify(bookingExpiryService).expire(eq(first.getId()), any());
+        verify(bookingExpiryService).expire(eq(second.getId()), any());
+        verify(bookingRepository, never()).save(any());
+    }
+
+    @Test
+    void oneFailingBookingDoesNotStopTheRest() {
+        Booking failing = overdue();
+        Booking healthy = overdue();
+        when(bookingRepository.findAllByStatusAndPaymentDeadlineAtBefore(eq(BookingStatus.PENDING_PAYMENT), any()))
+                .thenReturn(List.of(failing, healthy));
+        when(bookingExpiryService.expire(eq(failing.getId()), any()))
+                .thenThrow(new IllegalStateException("row locked"));
+
+        scheduler.expirePendingBookings();
+
+        verify(bookingExpiryService).expire(eq(healthy.getId()), any());
+    }
+
+    private static Booking overdue() {
+        return Booking.builder().id(UUID.randomUUID()).status(BookingStatus.PENDING_PAYMENT).build();
     }
 }

@@ -23,7 +23,11 @@ spring:
   datasource:
     url: ${SUPABASE_DB_URL:jdbc:postgresql://aws-1-ap-south-1.pooler.supabase.com:6543/postgres?sslmode=require&prepareThreshold=0}
     username: ${SUPABASE_DB_USERNAME:postgres.ozaiknomajljfqiepels}
-    password: ${SUPABASE_DB_PASSWORD:9UynfPDpyI1xXC2W}
+    # No fallback on purpose: a default here put the live database password into a
+    # repository anyone can read, so a missing SUPABASE_DB_PASSWORD must stop startup
+    # rather than let the app connect on a secret that is public. Local runs read it
+    # from BE/.env (git-ignored), deployments from the platform environment settings.
+    password: ${SUPABASE_DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
       data-source-properties:
@@ -46,8 +50,18 @@ spring:
     properties:
       hibernate:
         format_sql: true
+  flyway:
+    # Schema is owned by db/migration: V1 is the baseline the app expects, every later file is an
+    # ordered change. Databases that already exist (Supabase production) are stamped at the
+    # baseline instead of having V1 replayed over live data, so only V2 onwards actually runs.
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 1
+    baseline-description: "Existing CoSpace schema"
   sql:
     init:
+      # Dev convenience only: seeds demo rows from data.sql after Flyway has built the schema.
+      # Production turns this off entirely (see application-prod.yml).
       mode: always
       encoding: UTF-8
       continue-on-error: true

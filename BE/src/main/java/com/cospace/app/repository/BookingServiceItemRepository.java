@@ -19,6 +19,12 @@ public interface BookingServiceItemRepository extends JpaRepository<BookingServi
     @Query("SELECT COALESCE(SUM(i.subtotal), 0L) FROM BookingServiceItem i WHERE i.bookingId = :bookingId AND i.status = :status")
     long sumSubtotalByBookingIdAndStatus(@Param("bookingId") UUID bookingId, @Param("status") String status);
 
+    /** [bookingId, amount] for several bookings at once, for reporting. */
+    @Query("SELECT i.bookingId, COALESCE(SUM(i.subtotal), 0) FROM BookingServiceItem i "
+            + "WHERE i.bookingId IN :bookingIds AND i.status = :status GROUP BY i.bookingId")
+    java.util.List<Object[]> sumSubtotalByBookingsAndStatus(@Param("bookingIds") java.util.Collection<UUID> bookingIds,
+                                                            @Param("status") String status);
+
     void deleteByBookingId(UUID bookingId);
 
     boolean existsByServiceId(UUID serviceId);

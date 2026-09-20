@@ -11,6 +11,7 @@ import {
 } from '../../lib/spaceApi';
 import type { FloorLayout } from '../../types/floorPlan';
 import { createDefaultLayout } from '../../data/elementCatalog';
+import { useStableCallback } from '../../hooks/useStableCallback';
 import { FloorModal } from './workspaces/FloorModal';
 import { WorkspaceModal } from './workspaces/WorkspaceModal';
 import { AssignWorkspaceModal } from './workspaces/AssignWorkspaceModal';
@@ -590,6 +591,20 @@ const BAWorkspacePage: React.FC<BAWorkspacePageProps> = ({ isSuperAdminView = fa
     }
   };
 
+  // FloorPlanViewer is memoized; stable props keep it (and every map element) from re-rendering
+  // on each keystroke in the floor/workspace forms, whose state lives on this page.
+  const onFloorPlanElementClick = useStableCallback(handleFloorPlanElementClick);
+  const getFloorAvailability = useCallback(
+    (wsId: string) => {
+      const ws = workspaces.find((w) => w.id === wsId);
+      if (!ws) return 'unassigned';
+      if (ws.status === 'maintenance') return 'maintenance';
+      if (ws.status === 'inactive') return 'booked';
+      return 'available';
+    },
+    [workspaces]
+  );
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -802,14 +817,8 @@ const BAWorkspacePage: React.FC<BAWorkspacePageProps> = ({ isSuperAdminView = fa
                 selectedWsId={selectedWsId}
                 onSelectWorkspace={setSelectedWsId}
                 isAdmin={true}
-                onElementClick={handleFloorPlanElementClick}
-                getAvailability={(wsId) => {
-                  const ws = workspaces.find((w) => w.id === wsId);
-                  if (!ws) return 'unassigned';
-                  if (ws.status === 'maintenance') return 'maintenance';
-                  if (ws.status === 'inactive') return 'booked';
-                  return 'available';
-                }}
+                onElementClick={onFloorPlanElementClick}
+                getAvailability={getFloorAvailability}
               />
             ) : (
               <div className="flex flex-col items-center justify-center h-full gap-4 text-muted-foreground p-6 text-center border border-dashed border-border/80 rounded-2xl bg-muted/10">

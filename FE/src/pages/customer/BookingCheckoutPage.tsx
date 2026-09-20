@@ -75,7 +75,10 @@ const BookingCheckoutPage: React.FC = () => {
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeBooking, setActiveBooking] = useState<any | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<'payos' | 'momo' | 'cash'>('payos');
+  // Cash is a counter-only method (SYSTEM_SPEC §4.3): staff collect it and confirm the booking.
+  // Offering it here created a booking on a 15-minute hold that expired long before the guest
+  // arrived to pay, so the seat was given away under them.
+  const [paymentMethod, setPaymentMethod] = useState<'payos' | 'momo'>('payos');
   const [holdExpired, setHoldExpired] = useState(false);
 
   // Before a booking is created there's no real hold yet, so this is only an advisory display —
@@ -250,19 +253,6 @@ const BookingCheckoutPage: React.FC = () => {
       }
 
       // 2. Handle Payment Flow
-      if (paymentMethod === 'cash') {
-        showToast(`Đặt chỗ thành công! Vui lòng thanh toán tiền mặt tại quầy (Mã: ${bookingRes.bookingCode})`, 'success');
-        navigate('/customer/history', { 
-          state: { 
-            message: `Đặt chỗ thành công! Mã đơn của bạn là ${bookingRes.bookingCode}. Vui lòng thanh toán tại quầy khi nhận chỗ.`,
-            newBookingCode: bookingRes.bookingCode,
-            branchName: state.branchName || "CoSpace Chi nhánh",
-          } 
-        });
-        setIsProcessing(false);
-        return;
-      }
-
       if (paymentMethod === 'payos') {
         showToast('Đang kết nối cổng thanh toán VietQR (PayOS)...', 'info');
         const payosRes = await bookingApi.createPayosPayment(bookingRes.id, bookingRes.totalAmount);
@@ -556,31 +546,6 @@ const BookingCheckoutPage: React.FC = () => {
                 </div>
               </label>
 
-              <label className={`flex items-center justify-between p-4 rounded-3xl border-4 cursor-pointer transition-all ${
-                paymentMethod === 'cash' ? 'border-emerald-500 bg-muted/5 shadow-sm' : 'border-border hover:-translate-y-1 hover:shadow-sm'
-              }`}>
-                <div className="flex items-center gap-4">
-                  <input 
-                    type="radio" 
-                    name="payment" 
-                    value="cash" 
-                    checked={paymentMethod === 'cash'} 
-                    onChange={() => setPaymentMethod('cash')} 
-                    className="w-5 h-5 accent-emerald-500" 
-                  />
-                  <div className="h-12 w-12 rounded-3xl bg-emerald-500 flex items-center justify-center shadow-sm">
-                    <span className="text-white font-semibold text-[10px] tracking-tight">CASH</span>
-                  </div>
-                  <div>
-                    <span className="font-semibold text-lg block text-foreground">Tiền mặt tại quầy</span>
-                    <span className="text-xs font-medium text-foreground/70">Thanh toán trực tiếp khi đến nơi</span>
-                  </div>
-                </div>
-                <div className={`h-8 w-8 rounded-full border flex items-center justify-center ${paymentMethod === 'cash' ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-border/50 text-transparent'}`}>
-                  <FiCheckCircle className="h-5 w-5 font-semibold" />
-                </div>
-              </label>
-              
               <div className="p-4 rounded-3xl bg-muted/50 border border-border text-sm font-medium text-foreground flex items-start gap-3 shadow-inner">
                 <FiLock className="h-6 w-6 shrink-0 text-foreground mt-0.5" />
                 <span className="leading-relaxed">

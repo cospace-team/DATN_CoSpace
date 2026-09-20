@@ -26,12 +26,53 @@ public class StaffBookingController {
 
     private final com.cospace.app.service.UserService userService;
     private final com.cospace.app.security.BranchAccessGuard branchAccessGuard;
+    private final com.cospace.app.service.CancellationService cancellationService;
+    private final com.cospace.app.service.BookingAddonService bookingAddonService;
+    private final com.cospace.app.service.AuditLogService auditLogService;
+    private final jakarta.servlet.http.HttpServletRequest httpServletRequest;
 
     public StaffBookingController(BookingService bookingService, com.cospace.app.service.UserService userService,
-                                  com.cospace.app.security.BranchAccessGuard branchAccessGuard) {
+                                  com.cospace.app.security.BranchAccessGuard branchAccessGuard,
+                                  com.cospace.app.service.CancellationService cancellationService,
+                                  com.cospace.app.service.BookingAddonService bookingAddonService,
+                                  com.cospace.app.service.AuditLogService auditLogService,
+                                  jakarta.servlet.http.HttpServletRequest httpServletRequest) {
         this.bookingService = bookingService;
         this.userService = userService;
         this.branchAccessGuard = branchAccessGuard;
+        this.cancellationService = cancellationService;
+        this.bookingAddonService = bookingAddonService;
+        this.auditLogService = auditLogService;
+        this.httpServletRequest = httpServletRequest;
+    }
+
+    /**
+     * Cancels a booking on the customer's behalf. Since a customer cannot cancel once their booking
+     * has started, this is the counter's way of handling the cases that reach it in person — and the
+     * only way to waive the penalty when the fault is the branch's. Every call is audited.
+     */
+    @PostMapping("/{bookingId}/cancel")
+    @PreAuthorize("hasAnyRole('staff', 'branch_admin')")
+    public com.cospace.app.entity.BookingCancellation cancelForCustomer(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID bookingId,
+            @Valid @RequestBody com.cospace.app.dto.api.StaffCancelRequest req) {
+        UUID staffId = requireSubject(jwt);
+        com.cospace.app.entity.Booking booking = bookingAddonService.requireBooking(bookingId);
+        branchAccessGuard.requireAccessToBranch(jwt, booking.getBranchId());
+
+        com.cospace.app.entity.BookingCancellation cancellation =
+                cancellationService.cancelByStaff(staffId, bookingId, req.getReason(), req.isWaivePenalty());
+
+        java.util.Map<String, Object> values = new java.util.HashMap<>();
+        values.put("bookingCode", booking.getBookingCode());
+        values.put("reason", cancellation.getReason());
+        values.put("waivePenalty", req.isWaivePenalty());
+        values.put("refundPercent", cancellation.getRefundPercent());
+        values.put("refundAmount", cancellation.getRefundAmount());
+        auditLogService.log(httpServletRequest, staffId, "CANCEL_FOR_CUSTOMER", "bookings", bookingId, null, values);
+
+        return cancellation;
     }
 
     @PostMapping("/walkin")

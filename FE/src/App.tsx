@@ -130,6 +130,79 @@ const adminNav: NavItem[] = [
   { to: "/admin/reports", label: "Báo cáo", icon: <FiBarChart2 className="h-4 w-4" /> },
 ];
 
+const roleLabel: Record<UserRole, string> = {
+  customer: "Khách hàng",
+  staff: "Nhân viên",
+  branch_admin: "Quản lý chi nhánh",
+  super_admin: "Quản trị viên tổng",
+};
+
+// ── Role routes ──
+// Memoized on `role` so AppShell-local state (sidebar, collapse, theme toggle) doesn't re-render
+// the active page. <Routes> still re-renders on navigation because it subscribes to the location.
+const AppRoutes = React.memo<{ role: UserRole }>(({ role }) => (
+  <Routes>
+    {/* Customer */}
+    {role === 'customer' && (
+      <>
+        <Route path="/customer/explore" element={<ExplorePage />} />
+        <Route path="/customer/checkout" element={<BookingCheckoutPage />} />
+        <Route path="/customer/payment/vietqr" element={<VietQrCheckoutPage />} />
+        <Route path="/customer/history" element={<BookingHistoryPage />} />
+        <Route path="/customer/community" element={<CommunityPage />} />
+        <Route path="/customer/profile" element={<ProfilePage />} />
+      </>
+    )}
+
+    {/* Staff */}
+    {role === 'staff' && (
+      <>
+        <Route path="/staff/dashboard" element={<OperationsDashboardPage />} />
+        <Route path="/staff/checkin" element={<CheckInPage />} />
+        <Route path="/staff/maintenance" element={<MaintenancePage />} />
+        <Route path="/staff/booking/new" element={<WalkinBookingPage />} />
+      </>
+    )}
+
+    {/* Super Admin */}
+    {role === 'super_admin' && (
+      <>
+        <Route path="/admin/dashboard"   element={<AdminDashboardPage />} />
+        <Route path="/admin/branches"    element={<BranchManagementPage />} />
+        <Route path="/admin/workspaces"  element={<AdminWorkspacePage />} />
+        <Route path="/admin/pricing"     element={<PricingPage />} />
+        <Route path="/admin/users"       element={<UserManagementPage />} />
+        <Route path="/admin/cancellation" element={<CancellationPoliciesPage />} />
+        <Route path="/admin/services"    element={<ExtraServicesPage />} />
+        <Route path="/admin/amenities"   element={<AmenitiesPage />} />
+        <Route path="/admin/promotions"  element={<PromotionsPage />} />
+        <Route path="/admin/membership"  element={<MembershipTiersPage />} />
+        <Route path="/admin/refunds"     element={<RefundsPage scope="admin" />} />
+        <Route path="/admin/audit"       element={<AuditLogPage />} />
+        <Route path="/admin/reports"     element={<ReportsPage />} />
+      </>
+    )}
+
+    {/* Branch Admin */}
+    {role === 'branch_admin' && (
+      <>
+        <Route path="/branch-admin/dashboard"   element={<BADashboardPage />} />
+        <Route path="/branch-admin/workspaces"  element={<BAWorkspacePage />} />
+        <Route path="/branch-admin/pricing"     element={<BAPricingPage />} />
+        <Route path="/branch-admin/policies"    element={<BAPoliciesPage />} />
+        <Route path="/branch-admin/staff"       element={<BAStaffPage />} />
+        <Route path="/branch-admin/maintenance" element={<BAMaintenancePage />} />
+        <Route path="/branch-admin/services"    element={<BAServicesPage />} />
+        <Route path="/branch-admin/refunds"     element={<RefundsPage scope="branch" />} />
+      </>
+    )}
+
+    {/* 404 Not Found */}
+    <Route path="*" element={<NotFoundPage />} />
+  </Routes>
+));
+AppRoutes.displayName = "AppRoutes";
+
 // ── Mobile Bottom Nav ──
 const MobileBottomNav: React.FC<{ items: NavItem[] }> = ({ items }) => {
   const location = useLocation();
@@ -237,13 +310,6 @@ const AppShell: React.FC = () => {
       </Suspense>
     );
   }
-
-  const roleLabel: Record<UserRole, string> = {
-    customer: "Khách hàng",
-    staff: "Nhân viên",
-    branch_admin: "Quản lý chi nhánh",
-    super_admin: "Quản trị viên tổng",
-  };
 
   const defaultRoute =
     user.role === "branch_admin" ? "/branch-admin/dashboard"
@@ -456,65 +522,7 @@ const AppShell: React.FC = () => {
         >
           <ErrorBoundary>
             <Suspense fallback={<SuspenseLoader label="Đang tải trang..." />}>
-              <Routes>
-                {/* Customer */}
-                {user.role === 'customer' && (
-                  <>
-                    <Route path="/customer/explore" element={<ExplorePage />} />
-                    <Route path="/customer/checkout" element={<BookingCheckoutPage />} />
-                    <Route path="/customer/payment/vietqr" element={<VietQrCheckoutPage />} />
-                    <Route path="/customer/history" element={<BookingHistoryPage />} />
-                    <Route path="/customer/community" element={<CommunityPage />} />
-                    <Route path="/customer/profile" element={<ProfilePage />} />
-                  </>
-                )}
-
-                {/* Staff */}
-                {user.role === 'staff' && (
-                  <>
-                    <Route path="/staff/dashboard" element={<OperationsDashboardPage />} />
-                    <Route path="/staff/checkin" element={<CheckInPage />} />
-                    <Route path="/staff/maintenance" element={<MaintenancePage />} />
-                    <Route path="/staff/booking/new" element={<WalkinBookingPage />} />
-                  </>
-                )}
-
-                {/* Super Admin */}
-                {user.role === 'super_admin' && (
-                  <>
-                    <Route path="/admin/dashboard"   element={<AdminDashboardPage />} />
-                    <Route path="/admin/branches"    element={<BranchManagementPage />} />
-                    <Route path="/admin/workspaces"  element={<AdminWorkspacePage />} />
-                    <Route path="/admin/pricing"     element={<PricingPage />} />
-                    <Route path="/admin/users"       element={<UserManagementPage />} />
-                    <Route path="/admin/cancellation" element={<CancellationPoliciesPage />} />
-                    <Route path="/admin/services"    element={<ExtraServicesPage />} />
-                    <Route path="/admin/amenities"   element={<AmenitiesPage />} />
-                    <Route path="/admin/promotions"  element={<PromotionsPage />} />
-                    <Route path="/admin/membership"  element={<MembershipTiersPage />} />
-                    <Route path="/admin/refunds"     element={<RefundsPage scope="admin" />} />
-                    <Route path="/admin/audit"       element={<AuditLogPage />} />
-                    <Route path="/admin/reports"     element={<ReportsPage />} />
-                  </>
-                )}
-
-                {/* Branch Admin */}
-                {user.role === 'branch_admin' && (
-                  <>
-                    <Route path="/branch-admin/dashboard"   element={<BADashboardPage />} />
-                    <Route path="/branch-admin/workspaces"  element={<BAWorkspacePage />} />
-                    <Route path="/branch-admin/pricing"     element={<BAPricingPage />} />
-                    <Route path="/branch-admin/policies"    element={<BAPoliciesPage />} />
-                    <Route path="/branch-admin/staff"       element={<BAStaffPage />} />
-                    <Route path="/branch-admin/maintenance" element={<BAMaintenancePage />} />
-                    <Route path="/branch-admin/services"    element={<BAServicesPage />} />
-                    <Route path="/branch-admin/refunds"     element={<RefundsPage scope="branch" />} />
-                  </>
-                )}
-
-                {/* 404 Not Found */}
-                <Route path="*" element={<NotFoundPage />} />
-              </Routes>
+              <AppRoutes role={user.role} />
             </Suspense>
           </ErrorBoundary>
         </main>

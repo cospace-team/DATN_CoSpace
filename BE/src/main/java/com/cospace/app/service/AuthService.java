@@ -110,7 +110,16 @@ public class AuthService {
         if (user == null) {
             User existingUser = userRepository.findByEmail(email).orElse(null);
             if (existingUser != null) {
-                userRepository.updateUserId(existingUser.getId(), supabaseId);
+                requireLinkable(jwt, existingUser, email);
+                try {
+                    userRepository.updateUserId(existingUser.getId(), supabaseId);
+                } catch (org.springframework.dao.DataIntegrityViolationException e) {
+                    // Re-keying only works while every foreign key to users(id) cascades the update
+                    // (see database/migrations/20260920000000_users_fk_on_update_cascade.sql). Until
+                    // that has been applied, say so instead of surfacing a raw 500.
+                    throw new IllegalArgumentException(
+                            "Không liên kết được tài khoản này với đăng nhập Google. Vui lòng đăng nhập bằng email và mật khẩu.");
+                }
                 user = userRepository.findById(supabaseId).orElse(null);
             }
         }
@@ -132,6 +141,53 @@ public class AuthService {
         }
 
         return userRepository.save(user);
+    }
+
+    /**
+     * Guards the one place where an existing account is handed over to a new identity. Matching on
+     * the email address alone would mean anyone able to obtain a Supabase token for someone else's
+     * address — a self-served email/password signup, for instance — could take that account over.
+     * Two conditions are required instead: the token must come from a provider that verified the
+     * address itself, and staff or admin accounts are never linked automatically.
+     */
+    private void requireLinkable(org.springframework.security.oauth2.jwt.Jwt jwt, User existing, String email) {
+        if (existing.getRole() != User.Role.customer) {
+            throw new IllegalArgumentException(
+                    "Tài khoản nhân viên/quản trị không thể tự liên kết với đăng nhập Google. Vui lòng liên hệ quản trị viên.");
+        }
+        if (!isFederatedIdentity(jwt)) {
+            throw new IllegalArgumentException("Email " + email
+                    + " đã được đăng ký. Vui lòng đăng nhập bằng email và mật khẩu.");
+        }
+    }
+
+    /**
+     * True when Supabase itself recorded the token's identity as coming from a federated provider.
+     * Only {@code app_metadata} is trusted here: a user can rewrite their own {@code user_metadata}
+     * — including {@code email_verified} — through {@code supabase.auth.updateUser}, so that claim
+     * proves nothing, while {@code app_metadata.provider} can only be written by Supabase.
+     */
+    private static boolean isFederatedIdentity(org.springframework.security.oauth2.jwt.Jwt jwt) {
+        java.util.Map<String, Object> appMetadata = jwt.getClaimAsMap("app_metadata");
+        if (appMetadata == null) {
+            return false;
+        }
+        if (isGoogle(appMetadata.get("provider"))) {
+            return true;
+        }
+        Object providers = appMetadata.get("providers");
+        if (providers instanceof Iterable<?> list) {
+            for (Object provider : list) {
+                if (isGoogle(provider)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static boolean isGoogle(Object provider) {
+        return provider != null && "google".equalsIgnoreCase(provider.toString().trim());
     }
 
     private AuthResponse createAuthResponse(User user, String message) {

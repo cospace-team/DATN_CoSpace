@@ -89,8 +89,11 @@ class LoyaltyRulesTest {
         private final BookingRepository bookingRepository = mock(BookingRepository.class);
         private final UserRepository userRepository = mock(UserRepository.class);
         private final MembershipTierCatalog catalog = mock(MembershipTierCatalog.class);
+        private final com.cospace.app.repository.RefundRepository refundRepository =
+                mock(com.cospace.app.repository.RefundRepository.class);
         private final MembershipService service = new MembershipService(
-                mock(MembershipTierRepository.class), catalog, bookingRepository, userRepository, mock(PromotionRepository.class));
+                mock(MembershipTierRepository.class), catalog, bookingRepository, userRepository,
+                mock(PromotionRepository.class), refundRepository);
         private final UUID userId = UUID.randomUUID();
 
         private final List<TierResponse> tiers = List.of(
@@ -116,14 +119,33 @@ class LoyaltyRulesTest {
         }
 
         @Test
-        void onlyPaidStatusesCountTowardSpend() {
+        void onlyBookingsActuallyUsedCountTowardSpend() {
             givenSpend(0, 0);
 
             service.evaluate(userId);
 
             verify(bookingRepository).sumSpendByUser(userId, MembershipService.PAID_STATUSES);
+            // A booking that is merely paid for must not lift a tier: it can still be cancelled.
             assertThat(MembershipService.PAID_STATUSES)
-                    .doesNotContain(BookingStatus.PENDING_PAYMENT, BookingStatus.CANCELLED, BookingStatus.EXPIRED);
+                    .containsExactlyInAnyOrder(BookingStatus.COMPLETED, BookingStatus.NO_SHOW)
+                    .doesNotContain(BookingStatus.PENDING_PAYMENT, BookingStatus.CONFIRMED,
+                            BookingStatus.CANCELLED, BookingStatus.EXPIRED);
+        }
+
+        @Test
+        void refundedMoneyDoesNotCountTowardSpend() {
+            // Two bookings only, so the booking-count threshold for silver is not met either way
+            // and the tier turns purely on how much was spent.
+            givenSpend(2, 3_000_000);
+            when(refundRepository.sumAmountByUserAndStatus(userId, com.cospace.app.entity.Refund.STATUS_PROCESSED))
+                    .thenReturn(1_500_000L);
+
+            MembershipService.Standing s = service.evaluate(userId);
+
+            // 3,000,000 spent minus 1,500,000 given back leaves the customer below the silver
+            // threshold of 2,000,000 that the gross figure would have cleared.
+            assertThat(s.totalSpent()).isEqualTo(1_500_000L);
+            assertThat(s.tierCode()).isEqualTo("bronze");
         }
 
         @Test

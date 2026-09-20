@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react';
 import { FiCheckCircle, FiAlertCircle, FiInfo, FiAlertTriangle, FiX } from 'react-icons/fi';
 
 type ToastType = 'success' | 'error' | 'info' | 'warning';
@@ -48,8 +48,12 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     addToast(type, message);
   }, [addToast]);
 
+  // Stable value: showing/hiding a toast re-renders this provider, and a fresh object here
+  // would re-render every useToast() consumer (i.e. the current page) three times per toast.
+  const value = useMemo(() => ({ addToast, showToast }), [addToast, showToast]);
+
   return (
-    <ToastContext.Provider value={{ addToast, showToast }}>
+    <ToastContext.Provider value={value}>
       {children}
       <div className="toast-container" role="status" aria-live="polite">
         {toasts.map(t => (

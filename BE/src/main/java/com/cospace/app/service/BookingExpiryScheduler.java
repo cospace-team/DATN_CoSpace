@@ -2,86 +2,55 @@ package com.cospace.app.service;
 
 import com.cospace.app.entity.Booking;
 import com.cospace.app.entity.BookingStatus;
-import com.cospace.app.entity.PaymentStatus;
 import com.cospace.app.repository.BookingRepository;
-import com.cospace.app.repository.PaymentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 
+/**
+ * Finds unpaid bookings past their payment deadline and hands each one to
+ * {@link BookingExpiryService}, which expires it in its own locked transaction. The work is split
+ * across two beans on purpose: a {@code @Transactional} method called from the same class runs
+ * without a transaction at all, which is how a scheduler run could previously overwrite a booking
+ * a webhook had just confirmed.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class BookingExpiryScheduler {
 
     private final BookingRepository bookingRepository;
-    private final PaymentRepository paymentRepository;
-    private final BookingAddonService bookingAddonService;
+    private final BookingExpiryService bookingExpiryService;
 
-    /**
-     * Runs every 30 seconds to check for and expire bookings that have passed their payment deadline.
-     * Each booking is expired safely so one failure never blocks the rest.
-     */
-    @Scheduled(fixedRate = 30000) // Run every 30 seconds
+    /** Runs every 30 seconds; each booking is expired safely so one failure never blocks the rest. */
+    @Scheduled(fixedRate = 30000)
     public void expirePendingBookings() {
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-        log.info("Running BookingExpiryScheduler at {}", now);
+        log.debug("Running BookingExpiryScheduler at {}", now);
 
-        List<Booking> expiredBookings = bookingRepository.findAllByStatusAndPaymentDeadlineAtBefore(
-                BookingStatus.PENDING_PAYMENT,
-                now
-        );
-
-        if (expiredBookings.isEmpty()) {
-            log.info("No pending bookings to expire.");
+        List<Booking> overdue = bookingRepository.findAllByStatusAndPaymentDeadlineAtBefore(
+                BookingStatus.PENDING_PAYMENT, now);
+        if (overdue.isEmpty()) {
             return;
         }
 
-        log.warn("Found {} bookings to expire.", expiredBookings.size());
-
         int expired = 0;
-        for (Booking booking : expiredBookings) {
+        for (Booking booking : overdue) {
             try {
-                expire(booking);
-                expired++;
+                if (bookingExpiryService.expire(booking.getId(), now)) {
+                    expired++;
+                }
             } catch (RuntimeException e) {
                 log.error("Failed to expire booking {}: {}", booking.getId(), e.getMessage(), e);
             }
         }
         if (expired > 0) {
-            log.info("Successfully expired {} bookings.", expired);
+            log.info("Expired {} of {} overdue bookings.", expired, overdue.size());
         }
-    }
-
-    /**
-     * Releases one unpaid booking whose 15-minute hold has run out. Callers that need the slot back
-     * right away (e.g. someone booking the same time) use this instead of waiting for the next run.
-     */
-    @Transactional
-    public void expire(Booking booking) {
-        if (booking == null || booking.getStatus() != BookingStatus.PENDING_PAYMENT) {
-            return; // already handled by concurrent process
-        }
-
-        log.info("Expiring booking with ID: {} and code: {}", booking.getId(), booking.getBookingCode());
-        BookingStateMachine.transition(booking, BookingStatus.EXPIRED);
-        // Add-ons ordered with an unpaid booking will never be served.
-        bookingAddonService.voidUnpaid(booking, null);
-        bookingRepository.save(booking);
-
-        // Also expire any initiated or pending payment associated with this booking
-        paymentRepository.findTopByBookingIdAndStatusInOrderByCreatedAtDesc(
-                booking.getId(), List.of(PaymentStatus.INITIATED, PaymentStatus.PENDING)
-        ).ifPresent(payment -> {
-            log.info("Expiring pending payment ID: {} for booking: {}", payment.getId(), booking.getId());
-            payment.setStatus(PaymentStatus.EXPIRED);
-            paymentRepository.save(payment);
-        });
     }
 }
