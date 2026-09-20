@@ -24,6 +24,11 @@
         {
           "key": "Permissions-Policy",
           "value": "geolocation=(), microphone=(), payment=(), camera=(self)"
+        },
+        { "key": "Cross-Origin-Opener-Policy", "value": "same-origin" },
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://datn-cospace.onrender.com https://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; frame-src 'none'; upgrade-insecure-requests; require-trusted-types-for 'script'; trusted-types default dompurify"
         }
       ]
     }

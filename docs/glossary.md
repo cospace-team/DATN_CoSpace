@@ -29,42 +29,42 @@
 
 | Thuật ngữ | Tiếng Anh | Định nghĩa |
 |-----------|-----------|-------------|
-| Thanh toán trực tuyến | MoMo Payment | Thanh toán qua ví điện tử MoMo (Customer tự thanh toán). |
-| Thanh toán tiền mặt | Cash Payment | Thanh toán tại quầy, CHỈ Staff/Admin mới được tạo đơn. |
-| Chính sách hủy | Cancellation Policy | Quy tắc tính % hoàn tiền dựa trên thời điểm hủy (GRACE_HOURS, BEFORE_START_DAYS). |
-| Hoàn tiền nội bộ | Internal Refund | MVP chỉ ghi nhận số tiền hoàn, không payout thực tế ra MoMo. |
-| Idempotency | Idempotency | Cơ chế chống webhook callback lặp từ MoMo bằng `idempotency_key`. |
+| Thanh toán trực tuyến | Online Payment | Thanh toán qua PayOS (VietQR động liên ngân hàng) hoặc ví MoMo. |
+| Thanh toán tiền mặt | Cash Payment | Thanh toán tại quầy, do Nhân viên quầy hoặc Admin xác nhận. |
+| Chính sách hủy | Cancellation Policy | Quy tắc tính % hoàn tiền dựa trên thời điểm hủy (GRACE_HOURS, BEFORE_START_DAYS) theo thứ tự `priority DESC`. |
+| Hoàn tiền nội bộ | Internal Refund | Ghi nhận khoản tiền hoàn vào hệ thống khi hủy đơn hoặc thanh toán muộn (Late Webhook). |
+| Idempotency | Idempotency | Cơ chế bảo đảm tính duy nhất của giao dịch, ngăn chặn webhook callback lặp bằng `idempotency_key`. |
+| Dung sai Check-in | Check-in Tolerance Window | Khoảng thời gian cho phép khách check-in (30 phút trước giờ bắt đầu đến 30 phút sau giờ kết thúc). |
+| Hóa đơn mở | Running Tab | Cơ chế cho phép khách đang ngồi làm việc gọi thêm món/dịch vụ phụ và thanh toán lũy kế vào đơn hiện tại. |
 
-## Dịch vụ bổ sung
-
-| Thuật ngữ | Tiếng Anh | Định nghĩa |
-|-----------|-----------|-------------|
-| Dịch vụ bổ sung | Extra/Add-on Service | Dịch vụ phụ thêm vào booking: đồ uống, in ấn, bữa ăn... |
-| Giá snapshot | Price Snapshot | Lưu giá tại thời điểm đặt vào `unit_price` (booking_services), không bị ảnh hưởng khi giá thay đổi sau đó. |
-
-## Giá cả
+## Dịch vụ bổ sung & Giá cả
 
 | Thuật ngữ | Tiếng Anh | Định nghĩa |
 |-----------|-----------|-------------|
-| Bảng giá global | Global Price Policy | Giá mặc định áp dụng toàn hệ thống (branch_id = NULL). |
-| Bảng giá chi nhánh | Branch Price Override | Giá riêng cho chi nhánh, ưu tiên cao hơn global. |
-| Fallback | Pricing Fallback | Nếu không có giá riêng chi nhánh → dùng giá global. |
+| Dịch vụ bổ sung | Extra/Add-on Service | Dịch vụ phụ trợ (nước uống, in ấn, thiết bị, phòng streaming). |
+| Giá snapshot | Price Snapshot | Đơn giá được chốt cố định tại thời điểm mua (`unit_price`), độc lập với các lần tăng/giảm giá sau này. |
+| Ma trận giá không gian | Workspace Price Matrix | Cấu hình giá thuê theo 4 đơn vị thời gian (Giờ/Ngày/Tuần/Tháng) cho từng loại không gian. |
+| Trung tâm quản lý bảng giá | Unified Pricing Hub | Giao diện điều phối 3 phân hệ biểu phí: Giá không gian, Phí dịch vụ gia tăng, và Biểu phí phạt hủy. |
+| Ghi đè chi nhánh | Branch Price Override | Bảng giá riêng của chi nhánh, có độ ưu tiên cao hơn bảng giá mặc định toàn hệ thống (Global). |
 
-## Kết nối đối tác
+## Kết nối đối tác & Cộng đồng & Trợ lý ảo
 
 | Thuật ngữ | Tiếng Anh | Định nghĩa |
 |-----------|-----------|-------------|
-| Thẻ kỹ năng/sở thích | Tag | Nhãn phân loại: skill, interest, industry. Dùng để matching. |
-| Điểm tương thích | Match Score | Điểm số tính bằng batch job: (skill_overlap × 0.6) + (interest_overlap × 0.25) + (same_branch_bonus × 0.15) |
-| Gợi ý đối tác | Suggested Partner | Danh sách user có match score cao, contact chỉ hiện khi `contact_public = true`. |
+| Thẻ kỹ năng/sở thích | Tag | Nhãn phân loại chuyên môn: skill, interest, industry. Dùng để đối sánh đối tác. |
+| Điểm tương đồng Jaccard | Jaccard Similarity Score | Tỷ số giao trên hợp giữa tập thẻ của hai hồ sơ, làm trọng số cốt lõi cho thuật toán Matching. |
+| Điểm tương thích | Match Score | Điểm số tổng hợp: (Jaccard × 0.85) + (Bonus cùng chi nhánh × 0.15). Ngưỡng ≥ 50% được xếp vào nhóm "Phù hợp nhất". |
+| Bảng tin cộng đồng | Community Feed | Không gian chia sẻ kiến thức, kinh nghiệm và tìm kiếm đối tác hợp tác. |
+| Hạng thành viên | Membership Tier | 4 hạng (Bronze, Silver, Gold, Platinum) đem lại quyền lợi chiết khấu dựa trên điểm tích lũy. |
+| Trợ lý ảo AI | AI Chatbot Assistant | Trợ lý thông minh tích hợp Google Gemini Flash hỗ trợ giải đáp chính sách và tạo đơn đặt phòng qua đối thoại. |
 
 ## Vai trò & Phân quyền
 
 | Thuật ngữ | Tiếng Anh | Phạm vi | branch_id |
 |-----------|-----------|---------|-----------|
-| Quản trị hệ thống | Super Admin | Toàn bộ | NULL |
-| Quản lý chi nhánh | Branch Admin | Chi nhánh được gán | NOT NULL |
-| Nhân viên | Staff | Chi nhánh được gán | NOT NULL |
-| Khách hàng | Customer | Sử dụng dịch vụ | NULL |
+| Quản trị hệ thống | Super Admin | Toàn bộ hệ thống, điều phối chi nhánh, bảng giá toàn cục và nhật ký kiểm toán | NULL |
+| Quản lý chi nhánh | Branch Admin | Quản lý mặt bằng, bảng giá chi nhánh, dịch vụ gia tăng và nhân viên thuộc chi nhánh | NOT NULL |
+| Nhân viên quầy | Staff | Tiếp nhận khách, check-in/out, đặt phòng tại quầy, quản lý sự cố bảo trì tại chi nhánh | NOT NULL |
+| Khách hàng | Customer | Đặt chỗ, thanh toán trực tuyến, quản lý lịch sử, tham gia cộng đồng và mạng lưới đối tác | NULL |
 
 ---

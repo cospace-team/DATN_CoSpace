@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { LazyMotion, domAnimation, m } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
 import { useSEO } from "../hooks/useSEO";
 import { Button } from "../components/ui/button";
@@ -63,7 +63,8 @@ const NotFoundPage: React.FC = () => {
       </header>
 
       {/* Main card */}
-      <motion.div
+      <LazyMotion features={domAnimation} strict>
+      <m.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
@@ -156,7 +157,8 @@ const NotFoundPage: React.FC = () => {
             </Link>
           </div>
         </div>
-      </motion.div>
+      </m.div>
+      </LazyMotion>
 
       {/* Footer copyright */}
       <footer className="absolute bottom-6 text-center text-xs text-muted-foreground/60">
