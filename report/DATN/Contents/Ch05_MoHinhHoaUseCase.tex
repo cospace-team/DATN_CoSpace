@@ -11,7 +11,12 @@
 
 \section{Phân hệ khách hàng}
 \label{sec:uc_customer}
-\hinhcho{0.85}{Sơ đồ use-case phân hệ khách hàng}{fig:uc_customer}
+\begin{figure}[H]
+  \centering
+  \includegraphics[height=0.82\textheight,keepaspectratio]{Images/Chuong5/uc-khachhang.png}
+  \caption{Sơ đồ use-case phân hệ khách hàng}
+  \label{fig:uc_customer}
+\end{figure}
 \ghichu{Đặc tả các use-case sau, mỗi use-case một bảng: đăng ký tài khoản; đăng nhập; cập nhật hồ sơ cá nhân và hồ sơ năng lực; tra cứu chi nhánh và sơ đồ mặt bằng; tìm kiếm và đặt chỗ; thanh toán đơn đặt chỗ; chọn dịch vụ bổ sung; xem lịch sử đặt chỗ; gửi yêu cầu hủy; xem gợi ý đối tác; tương tác bảng tin cộng đồng; tra cứu điểm tích lũy; đặt chỗ qua trợ lý ảo.}
 
 \subsection{Danh sách use-case của phân hệ}
@@ -25,7 +30,12 @@
 
 \section{Phân hệ nhân viên}
 \label{sec:uc_staff}
-\hinhcho{0.85}{Sơ đồ use-case phân hệ nhân viên}{fig:uc_staff}
+\begin{figure}[H]
+  \centering
+  \includegraphics[height=0.80\textheight,keepaspectratio]{Images/Chuong5/uc-nhanvien.png}
+  \caption{Sơ đồ use-case phân hệ nhân viên vận hành}
+  \label{fig:uc_staff}
+\end{figure}
 
 \subsection{Danh sách use-case của phân hệ}
 \subsection{Đặc tả use-case Tạo đơn đặt chỗ tại quầy}
@@ -36,7 +46,12 @@
 
 \section{Phân hệ quản lý chi nhánh}
 \label{sec:uc_branchadmin}
-\hinhcho{0.85}{Sơ đồ use-case phân hệ quản lý chi nhánh}{fig:uc_branchadmin}
+\begin{figure}[H]
+  \centering
+  \includegraphics[height=0.80\textheight,keepaspectratio]{Images/Chuong5/uc-quanlychinhanh.png}
+  \caption{Sơ đồ use-case phân hệ quản lý chi nhánh}
+  \label{fig:uc_branchadmin}
+\end{figure}
 
 \subsection{Danh sách use-case của phân hệ}
 \subsection{Đặc tả use-case Cấu hình không gian và sơ đồ mặt bằng}
@@ -46,7 +61,12 @@
 
 \section{Phân hệ quản trị hệ thống}
 \label{sec:uc_admin}
-\hinhcho{0.85}{Sơ đồ use-case phân hệ quản trị hệ thống}{fig:uc_admin}
+\begin{figure}[H]
+  \centering
+  \includegraphics[height=0.80\textheight,keepaspectratio]{Images/Chuong5/uc-quantrihethong.png}
+  \caption{Sơ đồ use-case phân hệ quản trị hệ thống}
+  \label{fig:uc_admin}
+\end{figure}
 
 \subsection{Danh sách use-case của phân hệ}
 \subsection{Đặc tả use-case Quản lý chi nhánh và danh mục dùng chung}
@@ -75,13 +95,50 @@
 
 \section{Mô hình hóa tương tác giữa các thành phần}
 \label{sec:sequence}
-\ghichu{Vẽ sơ đồ tuần tự cho các luồng kỹ thuật cần thể hiện thứ tự thời gian và ranh giới giao dịch: luồng xin khóa tư vấn rồi kiểm tra chồng lấn khi tạo đơn; luồng nhận webhook từ cổng thanh toán và cập nhật trạng thái; luồng tác vụ định kỳ quét đơn quá hạn thanh toán; luồng trợ lý ảo gọi hàm nghiệp vụ.}
+\ghichu{Mỗi sơ đồ tuần tự dưới đây thể hiện một luồng kỹ thuật cần trình bày thứ tự thời gian và ranh giới giao dịch. Các sơ đồ dùng đúng tên lớp và phương thức trong mã nguồn Backend, các thông điệp được đánh số để khi viết lời giải thích có thể trích dẫn ``bước 5'', ``bước 12''. Với mỗi sơ đồ, viết một đoạn dẫn nhập (luồng này phục vụ use-case nào), một đoạn diễn giải các bước chính theo số thứ tự, và một đoạn nêu các nhánh lỗi hoặc điểm bảo đảm tính đúng đắn.}
+\nguon{report/DATN/Images/Chuong6/cospace-sequence.drawio (14 trang, mở bằng draw.io để chỉnh sửa)}
 
-\subsection{Luồng tạo đơn đặt chỗ có khóa chống tương tranh}
-\hinhcho{0.8}{Sơ đồ tuần tự luồng tạo đơn đặt chỗ}{fig:seq_booking}
+\subsection{Xác thực và phân quyền}
+\label{ssec:seq_xacthuc}
+\ghichu{Nêu rõ mô hình xác thực kép: đăng nhập bằng email và mật khẩu do Backend tự phát token (access token 1 giờ, refresh token 30 ngày, ký HS384), đăng nhập bằng Google do Supabase phát token. Ở mỗi yêu cầu API, bộ giải mã phân biệt hai loại token theo issuer, từ chối refresh token dùng làm bearer, rồi bộ chuyển đổi đọc lại vai trò, chi nhánh và trạng thái tài khoản từ CSDL nên một tài khoản bị khóa mất hiệu lực ngay lập tức. Với đăng nhập Google, nhấn mạnh chốt an toàn khi liên kết tài khoản: chỉ tự liên kết vào tài khoản khách hàng đã có cùng email khi token do chính Google cấp (chỉ tin \texttt{app\_metadata}, không tin \texttt{user\_metadata} vì người dùng tự sửa được), còn tài khoản nhân viên và quản trị không bao giờ được liên kết tự động. Lưu ý: cần viết theo đúng mã nguồn, mật khẩu được mã hóa BCrypt và lưu trong bảng \texttt{users}, khác với mô tả cũ trong tài liệu đặc tả.}
+\hinhuml{sd-01-dangnhap}{Sơ đồ tuần tự đăng nhập bằng email hoặc Google và làm mới phiên}{fig:sd_dangnhap}
+\hinhuml{sd-02-xacthuc-api}{Sơ đồ tuần tự xác thực và phân quyền mỗi yêu cầu API}{fig:sd_xacthuc_api}
 
-\subsection{Luồng xử lý thông báo kết quả thanh toán}
-\hinhcho{0.8}{Sơ đồ tuần tự luồng xử lý webhook thanh toán}{fig:seq_webhook}
+\subsection{Đặt chỗ và khóa chống tương tranh}
+\label{ssec:seq_datcho}
+\ghichu{Đây là luồng quan trọng nhất của hệ thống. Diễn giải hai khóa tư vấn \texttt{pg\_advisory\_xact\_lock}: khóa theo người dùng để giới hạn tối đa 3 đơn chờ thanh toán mà không bị vượt qua khi gửi yêu cầu đồng thời, và khóa theo không gian để hai người không thể cùng đặt một chỗ. Giải thích vì sao cần khóa tư vấn (chưa có dòng nào để khóa khi chỗ còn trống), việc giải phóng ngay đơn giữ chỗ quá hạn thay vì chờ tác vụ định kỳ, kiểm tra trùng lịch bảo trì, và nguyên tắc số lượng đơn vị được tính từ khoảng thời gian chứ không tin dữ liệu từ máy khách.}
+\hinhuml{sd-03-datcho-kiemtra}{Sơ đồ tuần tự tạo đơn đặt chỗ (1/2): kiểm tra giới hạn và khóa chống trùng lịch}{fig:sd_datcho_1}
+\hinhuml{sd-04-datcho-luu}{Sơ đồ tuần tự tạo đơn đặt chỗ (2/2): tính giá và lưu đơn}{fig:sd_datcho_2}
+
+\subsection{Thanh toán và xử lý kết quả thanh toán}
+\label{ssec:seq_thanhtoan}
+\ghichu{Trình bày ba phương thức thanh toán (PayOS VietQR, MoMo, tiền mặt tại quầy chỉ dành cho nhân viên và quản lý chi nhánh) và cơ chế chống tạo trùng giao dịch. Với webhook, giải thích: kiểm tra chữ ký trước khi xử lý, bỏ qua giao dịch đã \texttt{PAID} để chống gọi lặp, khóa dòng đơn bằng \texttt{SELECT FOR UPDATE} để tuần tự hóa với tác vụ hết hạn và hủy đơn, và xử lý thanh toán về muộn hoặc trả trùng bằng cách tạo yêu cầu hoàn tiền thay vì bỏ mất tiền. Lưu ý: mã nguồn chống lặp bằng trạng thái của giao dịch chứ không dùng khóa \texttt{idempotency\_key} của bảng \texttt{payment\_events} như tài liệu đặc tả mô tả.}
+\hinhuml{sd-05-thanhtoan}{Sơ đồ tuần tự khởi tạo thanh toán}{fig:sd_thanhtoan}
+\hinhuml{sd-06-webhook}{Sơ đồ tuần tự xử lý webhook thanh toán PayOS}{fig:sd_webhook}
+
+\subsection{Hủy đặt chỗ và hoàn tiền}
+\label{ssec:seq_huy}
+\ghichu{Giải thích cách chọn chính sách hủy: ưu tiên chính sách của chi nhánh rồi mới đến chính sách toàn cục, sắp theo độ ưu tiên giảm dần, so khớp theo phút trên khoảng nửa mở, không khớp thì hoàn 0 phần trăm. Nêu bất biến \texttt{refund + penalty = total}, quy tắc khách không thể hủy trực tuyến khi đơn đã đến giờ bắt đầu, và quy trình hoàn tiền do nhân viên hoặc quản lý chi nhánh duyệt (hệ thống chỉ ghi nhận, không tự chi trả).}
+\hinhuml{sd-07-huy}{Sơ đồ tuần tự hủy đặt chỗ và tính hoàn tiền}{fig:sd_huy}
+\hinhuml{sd-08-duyet-hoantien}{Sơ đồ tuần tự duyệt hoặc từ chối yêu cầu hoàn tiền}{fig:sd_duyet_hoantien}
+
+\subsection{Check-in, check-out và các tác vụ tự động}
+\label{ssec:seq_vandanh}
+\ghichu{Trình bày các điều kiện check-in (đúng chi nhánh, đúng trạng thái, chưa có lượt check-in mở, không sớm hơn 30 phút so với giờ bắt đầu, không quá giờ kết thúc), cách xử lý gói nhiều ngày (mỗi ngày vẫn check-in và check-out, sau check-out đơn quay về \texttt{CONFIRMED}), và điều kiện chặn check-out khi còn nợ dịch vụ gọi thêm. Hai tác vụ định kỳ: giải phóng chỗ giữ quá 15 phút (quét mỗi 30 giây) và đóng đơn đã hết giờ (quét mỗi 5 phút), trong đó đơn không từng check-in chuyển sang \texttt{NO\_SHOW} và giữ nguyên tiền đã thanh toán.}
+\hinhuml{sd-09-checkin-checkout}{Sơ đồ tuần tự check-in và check-out}{fig:sd_checkin}
+\hinhuml{sd-10-hethan-giucho}{Sơ đồ tuần tự tự động giải phóng chỗ giữ quá 15 phút}{fig:sd_hethan}
+\hinhuml{sd-11-dong-don}{Sơ đồ tuần tự tự động đóng đơn hết giờ: check-out quá hạn và không đến}{fig:sd_dongdon}
+
+\subsection{Bảo trì không gian và xử lý đơn bị ảnh hưởng}
+\label{ssec:seq_baotri}
+\ghichu{Nhấn mạnh việc tạo lịch bảo trì dùng chung khóa tư vấn với tạo đơn đặt chỗ nên hai luồng không thể lọt qua nhau. Phân biệt ba trường hợp: bảo trì chỉ chạm một phần thời gian thì đơn giữ chỗ và được hoàn phần thời gian bị mất, bảo trì phủ hết đơn đang sử dụng thì check-out sớm và hoàn phần chưa dùng, bảo trì phủ hết đơn chưa sử dụng thì hủy và hoàn toàn bộ.}
+\hinhuml{sd-12-baotri}{Sơ đồ tuần tự tạo lịch bảo trì và xử lý đơn bị ảnh hưởng}{fig:sd_baotri}
+
+\subsection{Trợ lý ảo có bước xác nhận trước khi thực hiện}
+\label{ssec:seq_chatbot}
+\ghichu{Trợ lý ảo dùng cơ chế gọi hàm của mô hình ngôn ngữ. Điểm thiết kế cần nhấn mạnh: các công cụ chỉ đọc (liệt kê chi nhánh, tìm chỗ trống, xem chính sách) được thực thi ngay, còn các công cụ có ghi dữ liệu (đề xuất tạo đơn, hủy đơn, thêm dịch vụ) chỉ tạo bản tóm tắt chờ khách hàng bấm xác nhận, và khi xác nhận đi qua đúng các dịch vụ nghiệp vụ như thao tác thông thường nên vẫn chịu cùng khóa và kiểm tra. Nêu thêm giới hạn 6 vòng gọi công cụ, kênh SSE báo tiến trình và cơ chế chuyển sang mô hình dự phòng.}
+\hinhuml{sd-13-chatbot-hoithoai}{Sơ đồ tuần tự trợ lý ảo: hội thoại và gọi công cụ}{fig:sd_chatbot_1}
+\hinhuml{sd-14-chatbot-xacnhan}{Sơ đồ tuần tự trợ lý ảo: xác nhận và thực hiện hành động}{fig:sd_chatbot_2}
 
 \section{Mô hình trạng thái}
 \label{sec:statechart}

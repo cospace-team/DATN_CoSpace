@@ -180,3 +180,23 @@
     \label{#2}
   \end{table}%
 }
+
+% \hinhuml{tên-file-không-đuôi}{chú thích}{nhãn} : chèn sơ đồ UML (PNG trong Images/Chuong6) theo chiều dọc
+\newcommand{\hinhuml}[3]{%
+  \begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth,height=0.86\textheight,keepaspectratio]{Images/Chuong6/#1.png}
+    \caption{#2}
+    \label{#3}
+  \end{figure}%
+}
+
+% \hinhumlngang{...}{...}{...} : như trên nhưng xoay trang ngang, dùng cho sơ đồ rộng (chiều ngang lớn hơn nhiều chiều cao)
+\newcommand{\hinhumlngang}[3]{%
+  \begin{sidewaysfigure}
+    \centering
+    \includegraphics[width=0.95\textheight,height=0.70\textwidth,keepaspectratio]{Images/Chuong6/#1.png}
+    \caption{#2}
+    \label{#3}
+  \end{sidewaysfigure}%
+}

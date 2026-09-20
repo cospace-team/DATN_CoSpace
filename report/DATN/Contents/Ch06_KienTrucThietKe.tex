@@ -1,0 +1,76 @@
+\chapter{Kiến trúc và thiết kế hệ thống}
+\label{ch:thietke}
+
+\ghichu{Chương này trả lời câu hỏi hệ thống được tổ chức như thế nào để đáp ứng các yêu cầu ở Chương \ref{ch:yeucau}. Mỗi quyết định thiết kế cần nêu lý do gắn với một yêu cầu phi chức năng cụ thể (tính đúng đắn khi tương tranh, bảo mật, hiệu năng, khả năng bảo trì). Dung lượng đề xuất 20--28 trang.}
+
+\section{Kiến trúc tổng thể}
+\label{sec:kientruc}
+\ghichu{Trình bày mô hình khách--chủ ba tầng: ứng dụng React chạy trên trình duyệt (tầng trình bày), máy chủ Spring Boot (tầng ứng dụng), PostgreSQL do Supabase quản lý (tầng dữ liệu), cùng các dịch vụ bên thứ ba (Supabase Auth và Storage, PayOS, MoMo, Google Gemini). Giải thích luồng giao tiếp giữa các tầng, điểm nào dùng HTTPS, điểm nào dùng webhook và điểm nào dùng luồng SSE.}
+\nguon{docs/SYSTEM\_SPEC.md, report/Contents/KienTrucHeThong.tex (bản Đồ án chuyên ngành)}
+\hinhcho{0.9}{Kiến trúc tổng thể của hệ thống CoSpace}{fig:kientruc_tongthe}
+
+\subsection{Kiến trúc phân tầng phía máy chủ}
+\label{ssec:phantang_be}
+\ghichu{Mô tả cách tổ chức mã theo gói chức năng và ba lớp controller, service, repository. Nêu quy ước: controller chỉ nhận yêu cầu và kiểm tra quyền, mọi quy tắc nghiệp vụ và ranh giới giao dịch nằm ở service, repository chỉ truy cập dữ liệu. Nhấn mạnh \texttt{BookingStateMachine} là cổng duy nhất để đổi trạng thái đơn đặt chỗ nên các chuyển trạng thái sai (thanh toán cho đơn đã hết hạn, hủy đơn đang sử dụng) bị chặn ở một nơi.}
+\nguon{BE/src/main/java/com/cospace/app/}
+
+\subsection{Kiến trúc phía giao diện người dùng}
+\label{ssec:phantang_fe}
+\ghichu{Mô tả cấu trúc thư mục theo tính năng, tầng truy cập API tập trung, quản lý xác thực và vai trò, định tuyến theo bốn vai trò, chia nhỏ gói mã theo nhà cung cấp để giảm dung lượng tải ban đầu, và cấu hình địa chỉ API tại một nguồn duy nhất.}
+\nguon{FE/src/, FE/vite.config.ts}
+
+\subsection{Triển khai và môi trường vận hành}
+\label{ssec:trienkhai_tong}
+\ghichu{Tóm tắt mô hình triển khai: giao diện trên Vercel, máy chủ đóng gói Docker chạy trên Render, cơ sở dữ liệu và xác thực trên Supabase. Chi tiết cấu hình, biến môi trường và quy trình phát hành để ở Chương \ref{ch:trienkhai}.}
+
+\section{Thiết kế lớp}
+\label{sec:thietke_lop}
+\ghichu{Quy ước đọc các sơ đồ lớp trong mục này, cần nêu ngay đầu mục để người đọc không hiểu nhầm. Các entity dùng khóa ngoại kiểu \texttt{UUID} thuần, không khai báo \texttt{@ManyToOne}, nên thuộc tính khóa ngoại được đánh dấu \guillemotleft FK\guillemotright{} và quan hệ được vẽ thành đường liên kết có bội số; các quan hệ này được ràng buộc thật ở cơ sở dữ liệu bằng hơn 60 khóa ngoại kèm quy tắc \texttt{ON DELETE}. Hình thoi đặc là quan hệ hợp thành (con không tồn tại nếu thiếu cha), mũi tên đứt nét là quan hệ phụ thuộc, hộp đứt nét in nghiêng là lớp đã xuất hiện ở sơ đồ khác, giá trị của kiểu liệt kê nhỏ được ghi ngay trong dấu ngoặc nhọn. Các trường thời điểm tạo và cập nhật (\texttt{createdAt}, \texttt{updatedAt}) được lược bớt ở mọi lớp; một số thuộc tính ít quan trọng khác cũng được lược bớt và có ghi chú ngay trên hộp lớp. Nêu lý do chọn khóa ngoại UUID: tránh tải liên kết lười và truy vấn thừa, giữ các lớp thực thể đơn giản, và để các quy tắc khóa được kiểm soát rõ ràng ở tầng dịch vụ.}
+\nguon{BE/src/main/java/com/cospace/app/entity/, BE/src/main/resources/db/migration/V1\_\_baseline.sql}
+
+\subsection{Mô hình miền dữ liệu}
+\label{ssec:lop_mien}
+\ghichu{Với mỗi sơ đồ, viết một đoạn nêu vai trò của các lớp và các quan hệ đáng chú ý. Sơ đồ đầu tiên phản ánh cấu trúc phân cấp chi nhánh, tầng, không gian; chỗ đặc biệt là bảng liên kết \texttt{WorkspaceTypeAmenity} thể hiện tiện ích được gán ở mức loại không gian và mọi không gian cùng loại tự thừa hưởng.}
+\hinhuml{cd-01-khonggian}{Sơ đồ lớp miền dữ liệu: không gian làm việc}{fig:cd_khonggian}
+
+\ghichu{Nhấn mạnh mô hình ``toàn cục và ghi đè theo chi nhánh'': trường \texttt{branchId} rỗng nghĩa là áp dụng toàn hệ thống, có giá trị thì chỉ áp dụng cho chi nhánh đó và được ưu tiên trước. Mô hình này dùng chung cho bảng giá, dịch vụ bổ sung và chính sách hủy.}
+\hinhuml{cd-02-gia-chinhsach}{Sơ đồ lớp miền dữ liệu: bảng giá, dịch vụ bổ sung và chính sách hủy}{fig:cd_gia}
+
+\ghichu{Đây là sơ đồ trung tâm của hệ thống. Giải thích các khoản tiền của đơn (tạm tính, giảm giá, dịch vụ thêm, tổng) và ràng buộc tổng tiền, dòng dịch vụ lưu đơn giá tại thời điểm gọi để đổi giá sau này không ảnh hưởng đơn cũ, bản ghi hủy lưu quy tắc đã áp dụng dưới dạng JSON, và lượt check-in cho phép nhiều lần trên cùng một đơn để phục vụ gói nhiều ngày. Kèm bảng mô tả các giá trị của \texttt{BookingStatus} nếu cần.}
+\hinhuml{cd-03-datcho}{Sơ đồ lớp miền dữ liệu: đặt chỗ, check-in và hủy}{fig:cd_datcho}
+
+\ghichu{Giải thích một đơn có thể có nhiều giao dịch thanh toán, bảng sự kiện thanh toán, yêu cầu hoàn tiền tách khỏi bản ghi hủy để nhân viên duyệt, cùng khuyến mãi và hạng thành viên. Lưu ý: bảng \texttt{payment\_events} và lớp \texttt{PaymentEvent} có trong mô hình nhưng mã nguồn hiện chưa ghi vào bảng này, hãy nêu đúng hiện trạng khi viết.}
+\hinhuml{cd-04-thanhtoan}{Sơ đồ lớp miền dữ liệu: thanh toán, hoàn tiền, khuyến mãi và hạng thành viên}{fig:cd_thanhtoan}
+
+\ghichu{Trình bày cách lưu hồ sơ năng lực (kỹ năng có mức độ, sở thích có độ ưu tiên) và bảng điểm tương đồng giữa hai thành viên kèm lý do dưới dạng JSON. Thuật toán tính điểm sẽ được trình bày ở phần hiện thực.}
+\hinhuml{cd-05-goiydoitac}{Sơ đồ lớp miền dữ liệu: hồ sơ năng lực và gợi ý đối tác}{fig:cd_goiy}
+
+\ghichu{Mô tả bảng tin cộng đồng với các thẻ gắn vào bài viết (nguồn gắn thẻ có thể do AI), thông báo trong ứng dụng có tham chiếu tới đối tượng liên quan, và nhật ký kiểm toán lưu giá trị cũ và mới của mỗi thao tác nhạy cảm.}
+\hinhuml{cd-06-congdong}{Sơ đồ lớp miền dữ liệu: bảng tin cộng đồng, thông báo và nhật ký kiểm toán}{fig:cd_congdong}
+
+\subsection{Tầng nghiệp vụ}
+\label{ssec:lop_dichvu}
+\ghichu{Mỗi sơ đồ chỉ vẽ quan hệ phụ thuộc giữa các dịch vụ và các phương thức công khai chính; các dịch vụ còn phụ thuộc thêm vào tầng repository nhưng không vẽ để tránh rối. Sơ đồ này là căn cứ để giải thích ranh giới trách nhiệm: dịch vụ đặt chỗ lo giá và khóa, dịch vụ thanh toán lo giao tiếp cổng thanh toán, dịch vụ hoàn tiền là nơi duy nhất tạo yêu cầu hoàn tiền.}
+\hinhumlngang{cd-07-svc-datcho}{Sơ đồ lớp tầng nghiệp vụ: đặt chỗ, tính giá và ưu đãi}{fig:cd_svc_datcho}
+\hinhuml{cd-08-svc-vongdoi}{Sơ đồ lớp tầng nghiệp vụ: vòng đời tự động, check-in và bảo trì}{fig:cd_svc_vongdoi}
+\hinhumlngang{cd-09-svc-thanhtoan}{Sơ đồ lớp tầng nghiệp vụ: thanh toán, hủy và hoàn tiền}{fig:cd_svc_thanhtoan}
+\hinhuml{cd-10-svc-xacthuc}{Sơ đồ lớp tầng nghiệp vụ: xác thực và phân quyền}{fig:cd_svc_xacthuc}
+\hinhuml{cd-11-svc-trolyao}{Sơ đồ lớp tầng nghiệp vụ: trợ lý ảo, gợi ý đối tác và nhật ký kiểm toán}{fig:cd_svc_trolyao}
+
+\section{Thiết kế cơ sở dữ liệu}
+\label{sec:thietke_csdl}
+\ghichu{Đưa sơ đồ quan hệ thực thể (ERD) đã cập nhật theo lược đồ đang chạy, kèm bảng thống kê số bảng theo module. Nêu quyết định: cơ sở dữ liệu đang chạy là nguồn sự thật của lược đồ, được quản lý bằng Flyway (\texttt{V1\_\_baseline.sql} là lược đồ hiện tại, các tệp sau là thay đổi có thứ tự, cơ sở dữ liệu cũ được đánh dấu ở mốc nền thay vì chạy lại); các ràng buộc kiểm tra dữ liệu lịch sử được thêm ở dạng \texttt{NOT VALID} để migration không chặn việc khởi động. Liệt kê các ràng buộc quan trọng: kiểm tra thời gian, kiểm tra tổng tiền, ràng buộc vai trò và chi nhánh, chỉ mục cho truy vấn chồng lấn.}
+\nguon{BE/src/main/resources/db/migration/, docs/Database\_dbdiagram\_script.dbml, report/Contents/CoSoDuLieu.tex}
+\hinhcho{0.95}{Sơ đồ quan hệ thực thể của hệ thống CoSpace}{fig:erd}
+\bangcho{Thống kê các bảng theo module}{tab:bang_theo_module}
+
+\section{Thiết kế giao diện lập trình ứng dụng}
+\label{sec:thietke_api}
+\ghichu{Trình bày quy ước REST của hệ thống: nhóm đường dẫn theo tài nguyên, phương thức HTTP, định dạng lỗi thống nhất, phân trang phía máy chủ, tiêu đề \texttt{Idempotency-Key} cho các yêu cầu tạo thanh toán, luồng SSE cho trợ lý ảo, và các điểm nhận webhook. Lập bảng các nhóm điểm cuối (xác thực, đặt chỗ, thanh toán, check-in, hoàn tiền, trợ lý ảo, quản trị, báo cáo) kèm vai trò được phép gọi.}
+\nguon{docs/api-contracts/, BE/src/main/java/com/cospace/app/controller/}
+\bangcho{Các nhóm điểm cuối API và vai trò được phép truy cập}{tab:api_nhom}
+
+\section{Thiết kế bảo mật}
+\label{sec:thietke_baomat}
+\ghichu{Tổng hợp các lớp bảo vệ: xác thực kép (Supabase JWT và JWT nội bộ ký HS384 với khóa tối thiểu 48 byte), bộ chuyển đổi đọc lại quyền và trạng thái tài khoản ở mỗi yêu cầu, kiểm soát truy cập theo vai trò bằng \texttt{PreAuthorize}, cô lập dữ liệu chi nhánh bằng \texttt{BranchAccessGuard}, kiểm tra chữ ký webhook, cơ chế chống tạo trùng và chống gửi yêu cầu dồn dập, và chốt chặn không cho khởi động môi trường thật khi cổng thanh toán còn ở chế độ thử nghiệm. Mỗi lớp nên nêu mối đe dọa mà nó ngăn chặn.}
+\nguon{BE/src/main/java/com/cospace/app/config/, BE/src/main/java/com/cospace/app/security/}
