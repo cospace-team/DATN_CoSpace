@@ -17,7 +17,9 @@ const SUGGESTIONS = [
   "Chính sách hủy thế nào?",
 ];
 
-export const ChatWidget: React.FC = () => {
+// Memoized: it takes no props, so it only needs to re-render on its own state/context changes,
+// not every time the AppShell header re-renders (sidebar/theme toggles, navigation).
+export const ChatWidget = React.memo(function ChatWidget() {
   const { showToast } = useToast();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -280,4 +282,4 @@ export const ChatWidget: React.FC = () => {
       </form>
     </div>
   );
-};
+});

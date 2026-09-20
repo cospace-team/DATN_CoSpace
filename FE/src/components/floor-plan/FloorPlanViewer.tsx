@@ -3,7 +3,7 @@
  * Renders elements from a FloorLayout JSON with availability status colors.
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { FiPlus, FiMinus, FiMaximize2 } from 'react-icons/fi';
 import type { FloorLayout, LayoutElement } from '../../types/floorPlan';
 import ElementRenderer from './ElementRenderer';
@@ -89,7 +89,7 @@ const FloorPlanViewer: React.FC<Props> = ({
   );
 
   /** Override element colors based on availability status or admin assignment state */
-  const getElementWithStatus = (el: LayoutElement): LayoutElement => {
+  const getElementWithStatus = useCallback((el: LayoutElement): LayoutElement => {
     // Check if it is a linkable type
     const catalogItem = ELEMENT_CATALOG.find((c) => c.type === el.type);
     const canLink = catalogItem?.canLinkWorkspace ?? false;
@@ -165,7 +165,37 @@ const FloorPlanViewer: React.FC<Props> = ({
     }
 
     return { ...el, fillColor, strokeColor };
-  };
+  }, [isAdmin, selectedWsId, getAvailability]);
+
+  // Styled copies depend only on the layout and selection/availability — not on pan, zoom or
+  // hover — so memoizing them keeps each element's identity stable and lets the memoized
+  // ElementRenderer skip re-rendering on every mouse move while panning.
+  const renderedElements = useMemo(
+    () =>
+      layout.elements
+        .filter((el) => el.visible)
+        .map((el) => {
+          const catalogItem = ELEMENT_CATALOG.find((c) => c.type === el.type);
+          const canLink = catalogItem?.canLinkWorkspace ?? false;
+          return {
+            styledEl: getElementWithStatus(el),
+            isSelected: Boolean(selectedWsId) && Boolean(el.workspaceId) && selectedWsId === el.workspaceId,
+            cursor: isAdmin
+              ? (canLink ? 'pointer' : 'default')
+              : (el.workspaceId ? 'pointer' : 'default'),
+          };
+        }),
+    [layout.elements, getElementWithStatus, selectedWsId, isAdmin]
+  );
+
+  // ElementRenderer hands back the styled copy; callers expect the original layout element.
+  const handleRendererClick = useCallback(
+    (_e: React.MouseEvent, styled: LayoutElement) => {
+      const el = layout.elements.find((e) => e.id === styled.id);
+      if (el) handleElementClick(el);
+    },
+    [layout.elements, handleElementClick]
+  );
 
   // Stats
   const wsElements = layout.elements.filter((e) => e.workspaceId);
@@ -319,32 +349,17 @@ const FloorPlanViewer: React.FC<Props> = ({
             rx={4}
           />
 
-          {layout.elements
-            .filter((el) => el.visible)
-            .map((el) => {
-              const styledEl = getElementWithStatus(el);
-              const catalogItem = ELEMENT_CATALOG.find((c) => c.type === el.type);
-              const canLink = catalogItem?.canLinkWorkspace ?? false;
-              const cursor = isAdmin 
-                ? (canLink ? 'pointer' : 'default') 
-                : (el.workspaceId ? 'pointer' : 'default');
-
-              return (
-                <ElementRenderer
-                  key={el.id}
-                  element={styledEl}
-                  isSelected={Boolean(selectedWsId) && Boolean(el.workspaceId) && selectedWsId === el.workspaceId}
-                  isHovered={hoveredId === el.id}
-                  cursor={cursor}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleElementClick(el);
-                  }}
-                  onMouseEnter={() => setHoveredId(el.id)}
-                  onMouseLeave={() => setHoveredId(null)}
-                />
-              );
-            })}
+          {renderedElements.map(({ styledEl, isSelected, cursor }) => (
+            <ElementRenderer
+              key={styledEl.id}
+              element={styledEl}
+              isSelected={isSelected}
+              isHovered={hoveredId === styledEl.id}
+              cursor={cursor}
+              onClick={handleRendererClick}
+              onHoverChange={setHoveredId}
+            />
+          ))}
         </svg>
       </div>
     </div>

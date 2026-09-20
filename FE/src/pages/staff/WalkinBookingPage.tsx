@@ -11,7 +11,8 @@ import { staffApi, WorkspaceBookingStatusDto } from '../../api/staffApi';
 import { formatVND, formatDateTimeLocal } from '../../utils/formatters';
 import type { FloorResponse } from '../../lib/spaceApi';
 import FloorPlanViewer from '../../components/floor-plan/FloorPlanViewer';
-import type { FloorLayout } from '../../types/floorPlan';
+import type { FloorLayout, LayoutElement } from '../../types/floorPlan';
+import { useStableCallback } from '../../hooks/useStableCallback';
 import { Spinner } from '../../components/ui/Spinner';
 import { Skeleton } from '../../components/ui/Skeleton';
 
@@ -206,6 +207,13 @@ const WalkinBookingPage: React.FC = () => {
 
     setSelectedWorkspaceId(wsId);
   };
+
+  // Stable handlers for the memoized FloorPlanViewer, so typing in the customer form doesn't
+  // re-render the whole map.
+  const onMapSelectWorkspace = useStableCallback(handleSelectWorkspace);
+  const onMapElementClick = useStableCallback((el: LayoutElement) =>
+    handleSelectWorkspace(el.workspaceId || null)
+  );
 
   const handleConfirm = async () => {
     if ((!selectedUser && !newUserName) || !selectedWorkspaceId) {
@@ -516,8 +524,8 @@ const WalkinBookingPage: React.FC = () => {
                     <FloorPlanViewer
                       layout={currentLayout}
                       selectedWsId={selectedWorkspaceId}
-                      onSelectWorkspace={handleSelectWorkspace}
-                      onElementClick={(el) => handleSelectWorkspace(el.workspaceId || null)}
+                      onSelectWorkspace={onMapSelectWorkspace}
+                      onElementClick={onMapElementClick}
                       getAvailability={getAvailability}
                       isAdmin={false}
                     />

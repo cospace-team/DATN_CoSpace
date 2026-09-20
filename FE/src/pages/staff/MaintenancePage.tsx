@@ -4,7 +4,8 @@ import { formatDateTime } from '../../utils/formatters';
 import { staffApi, WorkspaceMaintenanceStatusDto } from '../../api/staffApi';
 import type { FloorResponse } from '../../lib/spaceApi';
 import FloorPlanViewer from '../../components/floor-plan/FloorPlanViewer';
-import type { FloorLayout } from '../../types/floorPlan';
+import type { FloorLayout, LayoutElement } from '../../types/floorPlan';
+import { useStableCallback } from '../../hooks/useStableCallback';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../components/Toast';
 
@@ -84,6 +85,13 @@ const MaintenancePage: React.FC = () => {
       handleOpenLockModal(ws);
     }
   };
+
+  // Stable handlers for the memoized FloorPlanViewer, so typing in the lock-reason form doesn't
+  // re-render the whole map.
+  const onMapSelectWorkspace = useStableCallback(handleSelectWorkspaceFromMap);
+  const onMapElementClick = useStableCallback((el: LayoutElement) =>
+    handleSelectWorkspaceFromMap(el.workspaceId || null)
+  );
 
   const handleOpenLockModal = (ws: WorkspaceMaintenanceStatusDto) => {
     setSelectedWs(ws);
@@ -203,8 +211,8 @@ const MaintenancePage: React.FC = () => {
               <FloorPlanViewer
                 layout={currentLayout}
                 selectedWsId={null}
-                onSelectWorkspace={handleSelectWorkspaceFromMap}
-                onElementClick={(el) => handleSelectWorkspaceFromMap(el.workspaceId || null)}
+                onSelectWorkspace={onMapSelectWorkspace}
+                onElementClick={onMapElementClick}
                 getAvailability={getAvailability}
                 isAdmin={true}
               />

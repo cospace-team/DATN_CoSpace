@@ -181,15 +181,19 @@ export function useFloorPlanEditor(initialLayout?: FloorLayout | null) {
     (id: string, x: number, y: number) => {
       setLayout((prev) => {
         const { width: cw, height: ch } = prev.canvas;
+        let changed = false;
         const elements = prev.elements.map((el) => {
           if (el.id !== id || el.locked) return el;
           // Clamp so element stays fully inside canvas bounds
           const clampedX = Math.min(Math.max(snap(x), 0), cw - el.width);
           const clampedY = Math.min(Math.max(snap(y), 0), ch - el.height);
+          if (clampedX === el.x && clampedY === el.y) return el;
+          changed = true;
           return { ...el, x: clampedX, y: clampedY };
         });
-        // Don't push to history on every mouse move — only on mouse up
-        return { ...prev, elements };
+        // With snap-to-grid most mouse moves land on the same cell; returning `prev` lets React
+        // skip the re-render entirely. Don't push to history on every mouse move — only on mouse up.
+        return changed ? { ...prev, elements } : prev;
       });
       setIsDirty(true);
     },
@@ -213,6 +217,7 @@ export function useFloorPlanEditor(initialLayout?: FloorLayout | null) {
     ) => {
       setLayout((prev) => {
         const { width: cw, height: ch } = prev.canvas;
+        let changed = false;
         const elements = prev.elements.map((el) => {
           if (el.id !== id || el.locked) return el;
           const snappedW = Math.max(20, snap(width));
@@ -223,6 +228,15 @@ export function useFloorPlanEditor(initialLayout?: FloorLayout | null) {
           // Ensure the element doesn't overflow the canvas on the far edge
           const finalW = Math.min(snappedW, cw - clampedX);
           const finalH = Math.min(snappedH, ch - clampedY);
+          if (
+            clampedX === el.x &&
+            clampedY === el.y &&
+            finalW === el.width &&
+            finalH === el.height
+          ) {
+            return el;
+          }
+          changed = true;
           return {
             ...el,
             x: clampedX,
@@ -231,7 +245,8 @@ export function useFloorPlanEditor(initialLayout?: FloorLayout | null) {
             height: finalH,
           };
         });
-        return { ...prev, elements };
+        // Same as moveElement: no-op resize steps keep `prev` so React bails out of the render.
+        return changed ? { ...prev, elements } : prev;
       });
       setIsDirty(true);
     },

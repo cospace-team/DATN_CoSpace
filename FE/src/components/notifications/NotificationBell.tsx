@@ -22,7 +22,9 @@ interface NotificationItem {
   createdAt: string;
 }
 
-export const NotificationBell: React.FC = () => {
+// Memoized: it takes no props, so it only needs to re-render on its own state/context changes,
+// not every time the AppShell header re-renders (sidebar/theme toggles, navigation).
+export const NotificationBell = React.memo(function NotificationBell() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [isOpen, setIsOpen] = useState<boolean>(false);
@@ -266,4 +268,4 @@ export const NotificationBell: React.FC = () => {
       )}
     </div>
   );
-};
+});

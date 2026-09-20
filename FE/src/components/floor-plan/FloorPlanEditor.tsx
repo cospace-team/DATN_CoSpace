@@ -253,9 +253,6 @@ const FloorPlanPreview: React.FC<{
             element={el}
             isSelected={false}
             isHovered={false}
-            onMouseDown={() => {}}
-            onMouseEnter={() => {}}
-            onMouseLeave={() => {}}
           />
         ))}
     </svg>
