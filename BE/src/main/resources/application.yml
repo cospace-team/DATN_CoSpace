@@ -46,8 +46,18 @@ spring:
     properties:
       hibernate:
         format_sql: true
+  flyway:
+    # Schema is owned by db/migration: V1 is the baseline the app expects, every later file is an
+    # ordered change. Databases that already exist (Supabase production) are stamped at the
+    # baseline instead of having V1 replayed over live data, so only V2 onwards actually runs.
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 1
+    baseline-description: "Existing CoSpace schema"
   sql:
     init:
+      # Dev convenience only: seeds demo rows from data.sql after Flyway has built the schema.
+      # Production turns this off entirely (see application-prod.yml).
       mode: always
       encoding: UTF-8
       continue-on-error: true

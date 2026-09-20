@@ -4,10 +4,11 @@
 spring:
   sql:
     init:
-      # The base profile runs schema.sql + data.sql on every boot with continue-on-error, which
-      # against a live database means 395 lines of DDL replayed on each restart with any failure
-      # swallowed. Production never self-initialises: schema changes go through
-      # database/migrations/ as a reviewed, ordered step.
+      # The base profile replays schema.sql + data.sql on every boot with continue-on-error, which
+      # against a live database means hundreds of lines of DDL re-run on each restart with any
+      # failure swallowed — and data.sql seeds demo rows that have no business in production.
+      # Schema here is owned by Flyway (BE/src/main/resources/db/migration) instead: an existing
+      # database is stamped at the V1 baseline and only newer migrations are applied.
       mode: never
   jpa:
     show-sql: false
