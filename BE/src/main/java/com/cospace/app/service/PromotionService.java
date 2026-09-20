@@ -33,9 +33,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class PromotionService {
 
-    /** Bookings in these statuses no longer hold a redemption of their promotion. */
-    public static final List<BookingStatus> RELEASED_STATUSES = List.of(BookingStatus.EXPIRED, BookingStatus.CANCELLED);
-
     private final PromotionRepository promotionRepository;
     private final BookingRepository bookingRepository;
     private final BranchEntityRepository branchRepository;
@@ -54,7 +51,7 @@ public class PromotionService {
     public List<PromotionResponse> listAll() {
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         return promotionRepository.findAllByOrderByCreatedAtDesc().stream()
-                .map(p -> toResponse(p, bookingRepository.countPromotionUsage(p.getId(), RELEASED_STATUSES), now))
+                .map(p -> toResponse(p, bookingRepository.countPromotionUsage(p.getId()), now))
                 .toList();
     }
 
@@ -80,7 +77,7 @@ public class PromotionService {
         promotion.setCode(code);
         applyRequest(promotion, req);
         promotion = promotionRepository.save(promotion);
-        return toResponse(promotion, bookingRepository.countPromotionUsage(id, RELEASED_STATUSES),
+        return toResponse(promotion, bookingRepository.countPromotionUsage(id),
                 OffsetDateTime.now(ZoneOffset.UTC));
     }
 
@@ -111,9 +108,9 @@ public class PromotionService {
                 .filter(p -> p.getWorkspaceTypeId() == null || workspaceTypeId == null || p.getWorkspaceTypeId().equals(workspaceTypeId))
                 .filter(p -> tierAllows(p, userTierCode))
                 .filter(p -> p.getUsageLimit() == null
-                        || bookingRepository.countPromotionUsage(p.getId(), RELEASED_STATUSES) < p.getUsageLimit())
+                        || bookingRepository.countPromotionUsage(p.getId()) < p.getUsageLimit())
                 .filter(p -> p.getPerUserLimit() == null
-                        || bookingRepository.countPromotionUsageByUser(p.getId(), userId, RELEASED_STATUSES) < p.getPerUserLimit())
+                        || bookingRepository.countPromotionUsageByUser(p.getId(), userId) < p.getPerUserLimit())
                 .map(p -> {
                     PromotionResponse r = toResponse(p, null, now);
                     r.setUsageLimit(null); // not the customer's business
@@ -167,11 +164,11 @@ public class PromotionService {
             throw new IllegalArgumentException("Mã khuyến mãi chỉ dành cho thành viên hạng " + tierName + " trở lên.");
         }
         if (p.getUsageLimit() != null
-                && bookingRepository.countPromotionUsage(p.getId(), RELEASED_STATUSES) >= p.getUsageLimit()) {
+                && bookingRepository.countPromotionUsage(p.getId()) >= p.getUsageLimit()) {
             throw new IllegalArgumentException("Mã khuyến mãi đã hết lượt sử dụng.");
         }
         if (p.getPerUserLimit() != null
-                && bookingRepository.countPromotionUsageByUser(p.getId(), userId, RELEASED_STATUSES) >= p.getPerUserLimit()) {
+                && bookingRepository.countPromotionUsageByUser(p.getId(), userId) >= p.getPerUserLimit()) {
             throw new IllegalArgumentException("Bạn đã dùng hết số lượt cho mã khuyến mãi này.");
         }
 

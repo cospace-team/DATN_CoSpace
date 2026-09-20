@@ -5,13 +5,10 @@ import com.cospace.app.dto.api.ReportOverviewDto;
 import com.cospace.app.entity.Booking;
 import com.cospace.app.entity.BookingStatus;
 import com.cospace.app.entity.BranchEntity;
-import com.cospace.app.entity.Payment;
-import com.cospace.app.entity.PaymentStatus;
 import com.cospace.app.entity.User;
 import com.cospace.app.entity.WorkspaceType;
 import com.cospace.app.repository.BookingRepository;
 import com.cospace.app.repository.BranchEntityRepository;
-import com.cospace.app.repository.PaymentRepository;
 import com.cospace.app.repository.UserRepository;
 import com.cospace.app.repository.WorkspaceTypeRepository;
 import lombok.RequiredArgsConstructor;
@@ -52,12 +49,18 @@ public class ReportService {
     // booking made just after local midnight can land in the wrong day/month.
     private static final ZoneId VN_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
 
+    /**
+     * Revenue is recognised for bookings the customer actually used up: finished ones and no-shows,
+     * which forfeit their fee. A CONFIRMED booking is money taken for a seat not yet provided, and a
+     * cancelled one is not revenue at all — the penalty kept on it is tracked as a cancellation, not
+     * here.
+     */
     private static final Set<BookingStatus> REVENUE_STATUSES = Set.of(
-            BookingStatus.COMPLETED, BookingStatus.CHECKED_IN, BookingStatus.CHECKED_OUT, BookingStatus.CONFIRMED,
-            BookingStatus.NO_SHOW);
+            BookingStatus.COMPLETED, BookingStatus.NO_SHOW);
 
     private final BookingRepository bookingRepository;
-    private final PaymentRepository paymentRepository;
+    private final com.cospace.app.repository.BookingServiceItemRepository bookingServiceItemRepository;
+    private final com.cospace.app.repository.RefundRepository refundRepository;
     private final BranchEntityRepository branchRepository;
     private final WorkspaceTypeRepository workspaceTypeRepository;
     private final UserRepository userRepository;
@@ -89,22 +92,14 @@ public class ReportService {
                 })
                 .toList();
                 
-        // Filter payments: scoped to this branch's bookings
-        Set<UUID> branchBookingIds = branchBookings.stream().map(Booking::getId).collect(Collectors.toSet());
-        List<Payment> allPayments = paymentRepository.findAll();
-        List<Payment> branchPayments = allPayments.stream()
-                .filter(p -> branchBookingIds.contains(p.getBookingId()))
-                .filter(p -> p.getStatus() == PaymentStatus.PAID)
-                .toList();
+        // What each of this branch's bookings earned, computed once and reused by every figure below.
+        Map<UUID, Long> recognisedRevenue = recognisedRevenueByBooking(branchBookings);
 
         int totalBookings = filtered.size();
         int completedBookings = (int) filtered.stream().filter(b -> b.getStatus() == BookingStatus.COMPLETED).count();
         int canceledBookings = (int) filtered.stream().filter(b -> b.getStatus() == BookingStatus.CANCELLED).count();
 
-        // Revenue from paid payments or completed/checked_in bookings, applied via the same
-        // computeRevenue() helper as the monthly and by-type breakdowns below so all three
-        // numbers are derived from the exact same rule and can never disagree with each other.
-        long totalRevenue = computeRevenue(filtered, branchPayments, start, end);
+        long totalRevenue = computeRevenue(filtered, recognisedRevenue);
 
         // Resolve local date boundaries in VN time zone to avoid UTC offset day/year shifting
         LocalDate localFrom = (dateFrom != null) ? dateFrom : (start != null ? start.atZoneSameInstant(VN_ZONE).toLocalDate() : null);
@@ -145,10 +140,7 @@ public class ReportService {
                             return t != null && !t.isBefore(slotStart) && !t.isAfter(slotEnd);
                         })
                         .toList();
-                List<Payment> slotPayments = branchPayments.stream()
-                        .filter(p -> p.getCreatedAt() != null && !p.getCreatedAt().isBefore(slotStart) && !p.getCreatedAt().isAfter(slotEnd))
-                        .toList();
-                monthlyRevenue.add(computeRevenue(slotBookings, slotPayments, slotStart, slotEnd));
+                monthlyRevenue.add(computeRevenue(slotBookings, recognisedRevenue));
                 monthlyBookings.add((int) slotBookings.stream().filter(b -> REVENUE_STATUSES.contains(b.getStatus())).count());
             }
         } else if ("day".equals(effectiveGroupBy)) {
@@ -166,10 +158,7 @@ public class ReportService {
                             return t != null && !t.isBefore(dayStart) && !t.isAfter(dayEnd);
                         })
                         .toList();
-                List<Payment> dayPayments = branchPayments.stream()
-                        .filter(p -> p.getCreatedAt() != null && !p.getCreatedAt().isBefore(dayStart) && !p.getCreatedAt().isAfter(dayEnd))
-                        .toList();
-                monthlyRevenue.add(computeRevenue(dayBookings, dayPayments, dayStart, dayEnd));
+                monthlyRevenue.add(computeRevenue(dayBookings, recognisedRevenue));
                 monthlyBookings.add((int) dayBookings.stream().filter(b -> REVENUE_STATUSES.contains(b.getStatus())).count());
                 cur = cur.plusDays(1);
             }
@@ -203,10 +192,7 @@ public class ReportService {
                                 return t != null && !t.isBefore(wStartDt) && !t.isAfter(wEndDt);
                             })
                             .toList();
-                    List<Payment> weekPayments = branchPayments.stream()
-                            .filter(p -> p.getCreatedAt() != null && !p.getCreatedAt().isBefore(wStartDt) && !p.getCreatedAt().isAfter(wEndDt))
-                            .toList();
-                    monthlyRevenue.add(computeRevenue(weekBookings, weekPayments, wStartDt, wEndDt));
+                    monthlyRevenue.add(computeRevenue(weekBookings, recognisedRevenue));
                     monthlyBookings.add((int) weekBookings.stream().filter(b -> REVENUE_STATUSES.contains(b.getStatus())).count());
                 }
             } else {
@@ -233,10 +219,7 @@ public class ReportService {
                                 return t != null && !t.isBefore(wStartDt) && !t.isAfter(wEndDt);
                             })
                             .toList();
-                    List<Payment> weekPayments = branchPayments.stream()
-                            .filter(p -> p.getCreatedAt() != null && !p.getCreatedAt().isBefore(wStartDt) && !p.getCreatedAt().isAfter(wEndDt))
-                            .toList();
-                    monthlyRevenue.add(computeRevenue(weekBookings, weekPayments, wStartDt, wEndDt));
+                    monthlyRevenue.add(computeRevenue(weekBookings, recognisedRevenue));
                     monthlyBookings.add((int) weekBookings.stream().filter(b -> REVENUE_STATUSES.contains(b.getStatus())).count());
 
                     curWeekStart = curWeekEnd.plusDays(1);
@@ -264,10 +247,7 @@ public class ReportService {
                             return t != null && !t.isBefore(qStartDt) && !t.isAfter(qEndDt);
                         })
                         .toList();
-                List<Payment> qPayments = branchPayments.stream()
-                        .filter(p -> p.getCreatedAt() != null && !p.getCreatedAt().isBefore(qStartDt) && !p.getCreatedAt().isAfter(qEndDt))
-                        .toList();
-                monthlyRevenue.add(computeRevenue(qBookings, qPayments, qStartDt, qEndDt));
+                monthlyRevenue.add(computeRevenue(qBookings, recognisedRevenue));
                 monthlyBookings.add((int) qBookings.stream().filter(b -> REVENUE_STATUSES.contains(b.getStatus())).count());
             }
         } else {
@@ -306,10 +286,7 @@ public class ReportService {
                             return t != null && toVnYearMonth(t).equals(currentYm);
                         })
                         .toList();
-                List<Payment> monthPayments = branchPayments.stream()
-                        .filter(p -> p.getCreatedAt() != null && toVnYearMonth(p.getCreatedAt()).equals(currentYm))
-                        .toList();
-                monthlyRevenue.add(computeRevenue(monthBookings, monthPayments, ymStart, ymEnd));
+                monthlyRevenue.add(computeRevenue(monthBookings, recognisedRevenue));
                 monthlyBookings.add((int) monthBookings.stream().filter(b -> REVENUE_STATUSES.contains(b.getStatus())).count());
                 ym = ym.plusMonths(1);
             }
@@ -346,10 +323,7 @@ public class ReportService {
             String typeName = entry.getKey();
             int count = entry.getValue().size();
             Set<UUID> typeBookingIds = entry.getValue().stream().map(Booking::getId).collect(Collectors.toSet());
-            List<Payment> typePayments = branchPayments.stream()
-                    .filter(p -> typeBookingIds.contains(p.getBookingId()))
-                    .toList();
-            long rev = computeRevenue(entry.getValue(), typePayments, start, end);
+            long rev = computeRevenue(entry.getValue(), recognisedRevenue);
             String color = colors[colorIdx % colors.length];
             colorIdx++;
 
@@ -363,14 +337,13 @@ public class ReportService {
         List<ReportOverviewDto.BranchComparisonDto> branchComparison = new ArrayList<>();
         if (branchId == null) {
             for (BranchEntity branch : branches) {
-                List<Booking> bBookings = allBookings.stream()
+                // Same window and same revenue rule as the headline figure: comparing all-time
+                // revenue against a filtered total made the two disagree on the same screen.
+                List<Booking> bBookings = filtered.stream()
                         .filter(b -> branch.getId().equals(b.getBranchId()))
                         .toList();
                 int bCount = bBookings.size();
-                long bRev = bBookings.stream()
-                        .filter(b -> b.getStatus() == BookingStatus.COMPLETED || b.getStatus() == BookingStatus.CHECKED_IN)
-                        .mapToLong(Booking::getTotalAmount)
-                        .sum();
+                long bRev = computeRevenue(bBookings, recognisedRevenueByBooking(bBookings));
                 int compCount = (int) bBookings.stream().filter(b -> b.getStatus() == BookingStatus.COMPLETED).count();
                 int rate = bCount > 0 ? (int) Math.round(((double) compCount / bCount) * 100) : 0;
 
@@ -400,32 +373,61 @@ public class ReportService {
                 .build();
     }
 
+    /** Revenue is recognised when the booking ends, which is when the service has been delivered. */
     private OffsetDateTime getBookingEffectiveTime(Booking b) {
-        return b.getStartAt() != null ? b.getStartAt() : b.getCreatedAt();
+        return b.getEndAt() != null ? b.getEndAt() : b.getCreatedAt();
     }
 
     /**
-     * Sums revenue for a given scope of bookings, using paid payments as a fallback ONLY when
-     * that same scope has no booking-derived revenue at all (e.g. legacy rows where
-     * {@code total_amount} was never populated). The fallback is always evaluated over the exact
-     * same {@code bookings} scope's payments — never the whole branch's — and always within the
-     * same {@code rangeStart}/{@code rangeEnd} window, so this can be called identically for the
-     * headline total, each monthly bucket, and each workspace-type slice without the three ever
-     * disagreeing with each other or double-counting revenue across sources.
+     * Sums the revenue recognised for a scope of bookings. Every figure on the report — the headline
+     * total, each time bucket, each workspace type and the branch comparison — goes through here
+     * over the same pre-computed amounts, so they can never disagree with one another.
      */
-    private long computeRevenue(List<Booking> bookings, List<Payment> payments, OffsetDateTime rangeStart, OffsetDateTime rangeEnd) {
-        long bookingRevenue = bookings.stream()
+    private long computeRevenue(List<Booking> bookings, Map<UUID, Long> recognisedRevenue) {
+        return bookings.stream()
+                .mapToLong(b -> recognisedRevenue.getOrDefault(b.getId(), 0L))
+                .sum();
+    }
+
+    /**
+     * What each booking actually earned: its total, less add-ons the guest never paid for (a tab
+     * left open at check-out is a debt, not revenue) and less anything already refunded.
+     */
+    private Map<UUID, Long> recognisedRevenueByBooking(List<Booking> bookings) {
+        List<UUID> ids = bookings.stream()
                 .filter(b -> REVENUE_STATUSES.contains(b.getStatus()))
-                .mapToLong(Booking::getTotalAmount)
-                .sum();
-        if (bookingRevenue != 0) {
-            return bookingRevenue;
+                .map(Booking::getId)
+                .toList();
+        if (ids.isEmpty()) {
+            return Map.of();
         }
-        return payments.stream()
-                .filter(p -> rangeStart == null || (p.getCreatedAt() != null && !p.getCreatedAt().isBefore(rangeStart)))
-                .filter(p -> rangeEnd == null || (p.getCreatedAt() != null && !p.getCreatedAt().isAfter(rangeEnd)))
-                .mapToLong(Payment::getAmount)
-                .sum();
+        Map<UUID, Long> unpaidAddons = toAmountByBooking(bookingServiceItemRepository.sumSubtotalByBookingsAndStatus(
+                ids, com.cospace.app.entity.BookingServiceItem.STATUS_UNPAID));
+        Map<UUID, Long> refunded = toAmountByBooking(refundRepository.sumAmountByBookingsAndStatus(
+                ids, com.cospace.app.entity.Refund.STATUS_PROCESSED));
+
+        Map<UUID, Long> recognised = new HashMap<>();
+        for (UUID id : ids) {
+            recognised.put(id, 0L);
+        }
+        for (Booking b : bookings) {
+            if (!recognised.containsKey(b.getId())) {
+                continue;
+            }
+            long amount = b.getTotalAmount()
+                    - unpaidAddons.getOrDefault(b.getId(), 0L)
+                    - refunded.getOrDefault(b.getId(), 0L);
+            recognised.put(b.getId(), Math.max(0, amount));
+        }
+        return recognised;
+    }
+
+    private static Map<UUID, Long> toAmountByBooking(List<Object[]> rows) {
+        Map<UUID, Long> result = new HashMap<>();
+        for (Object[] row : rows) {
+            result.put((UUID) row[0], row[1] == null ? 0L : ((Number) row[1]).longValue());
+        }
+        return result;
     }
 
     private OffsetDateTime vnStartOfDay(LocalDate date) {

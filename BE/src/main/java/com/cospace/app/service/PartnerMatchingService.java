@@ -202,8 +202,14 @@ public class PartnerMatchingService {
         Map<UUID, Tag> tagMap = tagRepository.findAll().stream()
                 .collect(Collectors.toMap(Tag::getId, Function.identity(), (a, b) -> a));
 
+        // Only fellow customers are suggested as partners. Staff and admins work here, they did not
+        // sign up for networking, and a same-branch bonus alone was enough to surface every
+        // colleague of the viewer's branch by name. Walk-in guests never signed up at all.
         List<User> allCandidates = userRepository.findAll().stream()
-                .filter(u -> !u.getId().equals(currentUserId) && u.getStatus() == User.Status.active)
+                .filter(u -> !u.getId().equals(currentUserId)
+                        && u.getStatus() == User.Status.active
+                        && u.getRole() == User.Role.customer
+                        && (u.getEmail() == null || !u.getEmail().endsWith(UserService.WALKIN_EMAIL_DOMAIN)))
                 .toList();
 
         if (allCandidates.isEmpty()) {
@@ -303,7 +309,9 @@ public class PartnerMatchingService {
                 continue;
             }
 
-            int scorePercent = Math.max(10, (int) Math.round(totalScore * 100));
+            // The score is reported as it is: a floor of 10% made unrelated members look like a
+            // partial match, which is exactly what this screen is supposed to tell apart.
+            int scorePercent = (int) Math.round(totalScore * 100);
 
             // Extract common tags
             List<String> commonTags = new ArrayList<>();

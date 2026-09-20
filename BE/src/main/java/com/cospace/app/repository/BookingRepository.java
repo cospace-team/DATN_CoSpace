@@ -44,15 +44,25 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
                                           @org.springframework.data.repository.query.Param("endAt") OffsetDateTime endAt, 
                                           @org.springframework.data.repository.query.Param("statuses") List<BookingStatus> statuses);
 
-    /** Bookings still holding a promotion redemption (expired/cancelled ones release it). */
-    @org.springframework.data.jpa.repository.Query("SELECT COUNT(b) FROM Booking b WHERE b.promotionId = :promotionId AND b.status NOT IN :releasedStatuses")
-    long countPromotionUsage(@org.springframework.data.repository.query.Param("promotionId") UUID promotionId,
-                             @org.springframework.data.repository.query.Param("releasedStatuses") Collection<BookingStatus> releasedStatuses);
+    /**
+     * Bookings still holding a promotion redemption. A booking that expired unpaid gives its
+     * redemption back, and so does a cancelled booking nobody ever paid for — but a cancelled
+     * booking that WAS paid keeps it, otherwise a single-use code could be reused for ever by
+     * booking and cancelling.
+     */
+    String PROMOTION_STILL_REDEEMED = "b.promotionId = :promotionId "
+            + "AND b.status <> com.cospace.app.entity.BookingStatus.EXPIRED "
+            + "AND (b.status <> com.cospace.app.entity.BookingStatus.CANCELLED OR EXISTS ("
+            + "  SELECT 1 FROM Payment p WHERE p.bookingId = b.id "
+            + "  AND p.status = com.cospace.app.entity.PaymentStatus.PAID))";
 
-    @org.springframework.data.jpa.repository.Query("SELECT COUNT(b) FROM Booking b WHERE b.promotionId = :promotionId AND b.userId = :userId AND b.status NOT IN :releasedStatuses")
+    @org.springframework.data.jpa.repository.Query("SELECT COUNT(b) FROM Booking b WHERE " + PROMOTION_STILL_REDEEMED)
+    long countPromotionUsage(@org.springframework.data.repository.query.Param("promotionId") UUID promotionId);
+
+    @org.springframework.data.jpa.repository.Query("SELECT COUNT(b) FROM Booking b WHERE " + PROMOTION_STILL_REDEEMED
+            + " AND b.userId = :userId")
     long countPromotionUsageByUser(@org.springframework.data.repository.query.Param("promotionId") UUID promotionId,
-                                   @org.springframework.data.repository.query.Param("userId") UUID userId,
-                                   @org.springframework.data.repository.query.Param("releasedStatuses") Collection<BookingStatus> releasedStatuses);
+                                   @org.springframework.data.repository.query.Param("userId") UUID userId);
 
     long countByPromotionId(UUID promotionId);
 

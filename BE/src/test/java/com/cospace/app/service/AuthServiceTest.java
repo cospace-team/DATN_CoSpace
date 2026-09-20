@@ -19,6 +19,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -271,6 +272,83 @@ class AuthServiceTest {
             User user = authService.syncGoogleUser(jwt(id.toString(), "nguyenvana@gmail.com", null));
 
             assertThat(user.getFullName()).isEqualTo("nguyenvana");
+        }
+
+        private Jwt googleJwt(String subject, String email) {
+            return Jwt.withTokenValue("token").header("alg", "ES256").subject(subject)
+                    .claim("email", email)
+                    .claim("app_metadata", Map.of("provider", "google", "providers", List.of("google")))
+                    .build();
+        }
+
+        private Jwt emailSignupJwt(String subject, String email) {
+            return Jwt.withTokenValue("token").header("alg", "ES256").subject(subject)
+                    .claim("email", email)
+                    // A self-served signup can rewrite its own user_metadata, so a forged
+                    // email_verified there must not be enough to claim someone else's account.
+                    .claim("user_metadata", Map.of("email_verified", true))
+                    .claim("app_metadata", Map.of("provider", "email", "providers", List.of("email")))
+                    .build();
+        }
+
+        @Test
+        void linksAnExistingCustomerAccountToAGoogleIdentity() {
+            UUID supabaseId = UUID.randomUUID();
+            UUID localId = UUID.randomUUID();
+            User existing = User.builder().id(localId).email("khach@gmail.com").fullName("Khách")
+                    .role(User.Role.customer).build();
+            when(userRepository.findById(supabaseId)).thenReturn(Optional.empty(), Optional.of(existing));
+            when(userRepository.findByEmail("khach@gmail.com")).thenReturn(Optional.of(existing));
+            when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            User user = authService.syncGoogleUser(googleJwt(supabaseId.toString(), "khach@gmail.com"));
+
+            verify(userRepository).updateUserId(localId, supabaseId);
+            assertThat(user.getRole()).isEqualTo(User.Role.customer);
+        }
+
+        @Test
+        void refusesToClaimAnExistingAccountFromASelfServedEmailSignup() {
+            UUID supabaseId = UUID.randomUUID();
+            User existing = User.builder().id(UUID.randomUUID()).email("khach@gmail.com")
+                    .role(User.Role.customer).build();
+            when(userRepository.findById(supabaseId)).thenReturn(Optional.empty());
+            when(userRepository.findByEmail("khach@gmail.com")).thenReturn(Optional.of(existing));
+
+            assertThatThrownBy(() -> authService.syncGoogleUser(emailSignupJwt(supabaseId.toString(), "khach@gmail.com")))
+                    .isInstanceOf(IllegalArgumentException.class);
+
+            verify(userRepository, never()).updateUserId(any(), any());
+        }
+
+        @Test
+        void refusesToLinkAStaffAccountEvenFromGoogle() {
+            UUID supabaseId = UUID.randomUUID();
+            User staff = User.builder().id(UUID.randomUUID()).email("staff@cospace.vn")
+                    .role(User.Role.staff).branchId(UUID.randomUUID()).build();
+            when(userRepository.findById(supabaseId)).thenReturn(Optional.empty());
+            when(userRepository.findByEmail("staff@cospace.vn")).thenReturn(Optional.of(staff));
+
+            assertThatThrownBy(() -> authService.syncGoogleUser(googleJwt(supabaseId.toString(), "staff@cospace.vn")))
+                    .isInstanceOf(IllegalArgumentException.class);
+
+            verify(userRepository, never()).updateUserId(any(), any());
+        }
+
+        @Test
+        void explainsItselfWhenTheAccountCannotBeRekeyed() {
+            UUID supabaseId = UUID.randomUUID();
+            User existing = User.builder().id(UUID.randomUUID()).email("khach@gmail.com")
+                    .role(User.Role.customer).build();
+            when(userRepository.findById(supabaseId)).thenReturn(Optional.empty());
+            when(userRepository.findByEmail("khach@gmail.com")).thenReturn(Optional.of(existing));
+            // The ON UPDATE CASCADE migration has not been applied to this database yet.
+            org.mockito.Mockito.doThrow(new org.springframework.dao.DataIntegrityViolationException("fk"))
+                    .when(userRepository).updateUserId(any(), any());
+
+            assertThatThrownBy(() -> authService.syncGoogleUser(googleJwt(supabaseId.toString(), "khach@gmail.com")))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("email và mật khẩu");
         }
 
         @Test

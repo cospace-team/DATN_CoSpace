@@ -32,10 +32,13 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class MembershipService {
 
-    /** Booking statuses that count toward spend: paid, whether or not already used. */
+    /**
+     * Booking statuses that count toward spend: the ones the customer actually used up, on the same
+     * basis as recognised revenue. Counting a booking that was merely paid for let someone book a
+     * large contract, reach a tier, order at the discounted price and then cancel the contract.
+     */
     public static final List<BookingStatus> PAID_STATUSES = List.of(
-            BookingStatus.CONFIRMED, BookingStatus.CHECKED_IN, BookingStatus.CHECKED_OUT, BookingStatus.COMPLETED,
-            BookingStatus.NO_SHOW);
+            BookingStatus.COMPLETED, BookingStatus.NO_SHOW);
 
     /** Stored when no active tier applies (e.g. every tier was deactivated). */
     public static final String NO_TIER_CODE = "standard";
@@ -45,6 +48,7 @@ public class MembershipService {
     private final BookingRepository bookingRepository;
     private final UserRepository userRepository;
     private final PromotionRepository promotionRepository;
+    private final com.cospace.app.repository.RefundRepository refundRepository;
 
     /** A customer's evaluated standing; {@code currentTier} is null only if no active tier exists. */
     public record Standing(TierResponse currentTier, TierResponse nextTier, long totalSpent, long bookingCount) {
@@ -150,6 +154,10 @@ public class MembershipService {
             bookingCount = row[0] != null ? ((Number) row[0]).longValue() : 0;
             totalSpent = row[1] != null ? ((Number) row[1]).longValue() : 0;
         }
+
+        // Money given back was never really spent with us.
+        long refunded = refundRepository.sumAmountByUserAndStatus(userId, com.cospace.app.entity.Refund.STATUS_PROCESSED);
+        totalSpent = Math.max(0, totalSpent - refunded);
 
         List<TierResponse> tiers = tierCatalog.activeTiers();
         int currentIndex = -1;
