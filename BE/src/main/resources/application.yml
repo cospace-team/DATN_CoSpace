@@ -23,7 +23,11 @@ spring:
   datasource:
     url: ${SUPABASE_DB_URL:jdbc:postgresql://aws-1-ap-south-1.pooler.supabase.com:6543/postgres?sslmode=require&prepareThreshold=0}
     username: ${SUPABASE_DB_USERNAME:postgres.ozaiknomajljfqiepels}
-    password: ${SUPABASE_DB_PASSWORD:9UynfPDpyI1xXC2W}
+    # No fallback on purpose: a default here put the live database password into a
+    # repository anyone can read, so a missing SUPABASE_DB_PASSWORD must stop startup
+    # rather than let the app connect on a secret that is public. Local runs read it
+    # from BE/.env (git-ignored), deployments from the platform environment settings.
+    password: ${SUPABASE_DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
       data-source-properties:
