@@ -63,7 +63,185 @@ Toàn bộ hệ thống Back-end của CoSpace được bảo vệ bởi bộ ki
 \end{tabular}
 \end{table}
 
-Thời gian thực thi trung bình của toàn bộ 236 ca kiểm thử là \textbf{14.8 giây}, cho phép tích hợp trực tiếp vào quy trình CI/CD trên GitHub Actions mà không gây chậm trễ tiến độ phát hành.
+\subsubsection{Đặc tả ca kiểm thử Phân hệ Bảo mật và Phân quyền (Security \& Auth)}
+
+\begin{table}[H]
+\centering
+\caption{Danh sách các ca kiểm thử tiêu biểu của Phân hệ Bảo mật và Phân quyền}
+\label{tab:tc-security}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{|p{2.2cm}|p{3.5cm}|p{3.5cm}|p{4.2cm}|p{1.2cm}|}
+\hline
+\textbf{Mã ca test} & \textbf{Tên kiểm thử} & \textbf{Dữ liệu đầu vào (Input)} & \textbf{Kết quả mong đợi (Expected)} & \textbf{Kết quả} \\
+\hline
+TC-SEC-01 & Xác thực Bearer Token hợp lệ & Header chứa Supabase JWT hợp lệ & Nạp UserPrincipal vào SecurityContext, HTTP 200 & PASS \\
+\hline
+TC-SEC-02 & Từ chối Token đã hết hạn & JWT có \texttt{exp} trong quá khứ & Bị chặn bởi JwtFilter, trả về HTTP 401 Unauthorized & PASS \\
+\hline
+TC-SEC-03 & Chặn tài khoản bị vô hiệu hóa & JWT hợp lệ nhưng \texttt{status='suspended'} & Trả về HTTP 403 Forbidden kèm thông báo tài khoản bị khóa & PASS \\
+\hline
+TC-SEC-04 & Phân quyền Customer truy cập Admin API & User có Role \texttt{CUSTOMER} gọi \texttt{/api/admin/branches} & Bị chặn bởi \texttt{@PreAuthorize}, HTTP 403 Forbidden & PASS \\
+\hline
+TC-SEC-05 & Staff truy cập đúng chi nhánh & Staff chi nhánh A gọi cập nhật không gian chi nhánh A & Được phép thực thi (\texttt{hasBranchScope = true}), HTTP 200 & PASS \\
+\hline
+TC-SEC-06 & Chặn Staff thao tác chéo chi nhánh & Staff chi nhánh A gọi cập nhật không gian chi nhánh B & Ném ngoại lệ \texttt{AccessDeniedException}, HTTP 403 & PASS \\
+\hline
+TC-SEC-07 & Thẩm định cấu trúc JWT HS384 nội bộ & Token ký bằng Secret đối xứng 48-byte & Bóc tách chính xác userId, role, branchId & PASS \\
+\hline
+TC-SEC-08 & Kiểm tra chính sách CORS Whitelist & Origin từ domain lạ không nằm trong danh sách trắng & Preflight Request OPTIONS bị từ chối truy cập & PASS \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Đặc tả ca kiểm thử Phân hệ Đặt chỗ và Vòng đời trạng thái (Booking \& Lifecycle)}
+
+\begin{table}[H]
+\centering
+\caption{Danh sách các ca kiểm thử tiêu biểu của Phân hệ Đặt chỗ}
+\label{tab:tc-booking}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{|p{2.2cm}|p{3.5cm}|p{3.5cm}|p{4.2cm}|p{1.2cm}|}
+\hline
+\textbf{Mã ca test} & \textbf{Tên kiểm thử} & \textbf{Dữ liệu đầu vào (Input)} & \textbf{Kết quả mong đợi (Expected)} & \textbf{Kết quả} \\
+\hline
+TC-BOOK-01 & Tạo đặt chỗ hợp lệ đơn giản & Workspace khả dụng, thời lượng 4 giờ & Tạo đơn mới trạng thái \texttt{PENDING\_PAYMENT}, deadline 15p & PASS \\
+\hline
+TC-BOOK-02 & Áp dụng Rule \#33 giới hạn 3 đơn chờ & User đã có 3 đơn \texttt{PENDING\_PAYMENT} cố tạo đơn thứ 4 & Bị chặn bởi Advisory Lock, ném \texttt{IllegalStateException} & PASS \\
+\hline
+TC-BOOK-03 & Khóa tương tranh đồng thời trên Workspace & 2 luồng đồng thời xin đặt cùng 1 khung giờ & 1 luồng thành công (201), 1 luồng bị từ chối (409 Conflict) & PASS \\
+\hline
+TC-BOOK-04 & Tự động suy diễn Branch ID (Rule \#42) & Client gửi request không có branchId & Server tính toán chính xác từ \texttt{Workspace} $\rightarrow$ \texttt{Floor} $\rightarrow$ \texttt{Branch} & PASS \\
+\hline
+TC-BOOK-05 & Chặn đặt chỗ ngoài giờ mở cửa & Chi nhánh mở 08:00--22:00, đặt từ 23:00 & Bị từ chối với thông báo ngoài giờ vận hành & PASS \\
+\hline
+TC-BOOK-06 & Chặn đặt chỗ trùng lịch bảo trì & Workspace có lịch \texttt{MAINTENANCE} trùng khung giờ & Bị từ chối tạo đơn, bảo vệ tài nguyên đang sửa chữa & PASS \\
+\hline
+TC-BOOK-07 & Thêm dịch vụ tiện ích bổ sung & Booking hợp lệ + 2 ly cà phê espresso & Cập nhật snapshot giá dịch vụ và cộng dồn \texttt{addon\_amount} & PASS \\
+\hline
+TC-BOOK-08 & Hủy đơn quá hạn bởi Scheduler & Đơn \texttt{PENDING} vượt quá 15 phút & Chuyển sang \texttt{CANCELLED}, giải phóng ghế trên sơ đồ SVG & PASS \\
+\hline
+TC-BOOK-09 & Tự động chuyển đơn thành No-Show & Đơn \texttt{CONFIRMED} quá giờ \texttt{endAt} nhưng không check-in & Scheduler chuyển sang trạng thái \texttt{NO\_SHOW}, không hoàn tiền & PASS \\
+\hline
+TC-BOOK-10 & Gia hạn thời gian sử dụng (Extending) & Khách yêu cầu ngồi thêm 2 giờ kế tiếp & Kiểm tra không xung đột, cập nhật \texttt{endAt} và tạo Payment phụ & PASS \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Đặc tả ca kiểm thử Phân hệ Thanh toán VietQR và Webhook (Payment \& PayOS)}
+
+\begin{table}[H]
+\centering
+\caption{Danh sách các ca kiểm thử tiêu biểu của Phân hệ Thanh toán VietQR}
+\label{tab:tc-payment}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{|p{2.2cm}|p{3.5cm}|p{3.5cm}|p{4.2cm}|p{1.2cm}|}
+\hline
+\textbf{Mã ca test} & \textbf{Tên kiểm thử} & \textbf{Dữ liệu đầu vào (Input)} & \textbf{Kết quả mong đợi (Expected)} & \textbf{Kết quả} \\
+\hline
+TC-PAY-01 & Tạo liên kết thanh toán PayOS & OrderCode hợp lệ, số tiền 200,000 VNĐ & Trả về chuỗi mã VietQR động và đường dẫn thanh toán & PASS \\
+\hline
+TC-PAY-02 & Thẩm định chữ ký HMAC-SHA256 chuẩn & Webhook payload kèm chữ ký khớp với checksum key & Xác thực thành công (\texttt{verify = true}), tiếp tục xử lý & PASS \\
+\hline
+TC-PAY-03 & Chặn Webhook có chữ ký giả mạo & Webhook payload bị thay đổi số tiền hoặc signature sai & Từ chối xử lý, ghi log cảnh báo an ninh & PASS \\
+\hline
+TC-PAY-04 & Xử lý Webhook Idempotent (Chống lặp) & Gửi lại Webhook thành công lần thứ 2 cho cùng 1 giao dịch & Bỏ qua cập nhật trùng, trả về HTTP 200 OK ngay lập tức & PASS \\
+\hline
+TC-PAY-05 & Xử lý tiền vào trễ (Late Webhook Ghost) & Webhook báo thành công nhưng booking đã bị Scheduler hủy & Ghi nhận Payment paid, tự động tạo bản ghi hoàn tiền (Credit) & PASS \\
+\hline
+TC-PAY-06 & Xác nhận thanh toán tiền mặt tại quầy & Staff quầy nhận tiền mặt và bấm xác nhận & Cập nhật Payment \texttt{COMPLETED}, Booking \texttt{CONFIRMED} & PASS \\
+\hline
+TC-PAY-07 & Kích hoạt PayosProductionGuard & Chạy profile \texttt{prod} với cấu hình PayOS demo & Ngăn chặn khởi động máy chủ, bảo vệ an toàn tài chính & PASS \\
+\hline
+TC-PAY-08 & Bảo toàn bất biến tài chính Invariant & Đơn có chiết khấu và dịch vụ phát sinh & Đảm bảo \texttt{total = subtotal - discount + addon} tuyệt đối & PASS \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Đặc tả ca kiểm thử Phân hệ Chính sách giá, Hủy phạt và Hoàn tiền (Pricing \& Refund)}
+
+\begin{table}[H]
+\centering
+\caption{Danh sách các ca kiểm thử tiêu biểu của Phân hệ Chính sách giá và Hoàn tiền}
+\label{tab:tc-pricing}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{|p{2.2cm}|p{3.5cm}|p{3.5cm}|p{4.2cm}|p{1.2cm}|}
+\hline
+\textbf{Mã ca test} & \textbf{Tên kiểm thử} & \textbf{Dữ liệu đầu vào (Input)} & \textbf{Kết quả mong đợi (Expected)} & \textbf{Kết quả} \\
+\hline
+TC-PRI-01 & Tính giá thuê theo giờ phân tầng & Hot Desk, 4 giờ, bảng giá 30,000 đ/h & Tính ra subtotal = 120,000 VNĐ & PASS \\
+\hline
+TC-PRI-02 & Áp dụng chính sách giá riêng chi nhánh & Chi nhánh B có bảng giá ghi đè giá toàn cục & Ưu tiên lấy giá chi nhánh B thay vì giá mặc định & PASS \\
+\hline
+TC-PRI-03 & Hủy trước giờ bắt đầu $> 24$ giờ & Đơn đặt lúc 14:00 ngày mai, hủy trước 28h & Áp dụng chính sách hoàn 100\% tiền đã trả, phạt 0\% & PASS \\
+\hline
+TC-PRI-04 & Hủy trong khoảng $2 - 24$ giờ & Đơn hủy trước giờ bắt đầu 5 giờ & Áp dụng chính sách hoàn 50\% tiền đã trả, phạt 50\% & PASS \\
+\hline
+TC-PRI-05 & Hủy sát giờ $< 2$ giờ & Đơn hủy trước giờ bắt đầu 45 phút & Áp dụng chính sách hoàn 0\% (mất toàn bộ tiền cọc) & PASS \\
+\hline
+TC-PRI-06 & Không tìm thấy Policy hủy phù hợp & Khung giờ không khớp bất kỳ luật nào & Áp dụng Rule mặc định hoàn tiền 0\%, ghi log & PASS \\
+\hline
+TC-PRI-07 & Bảo lưu giá khi bảng giá cập nhật & Admin đổi giá phòng sau khi khách đã đặt & Giá trong đơn đặt chỗ cũ không bị thay đổi (Bảo toàn) & PASS \\
+\hline
+TC-PRI-08 & Staff hủy đơn do lỗi kỹ thuật chi nhánh & Phòng bị hỏng điều hòa đột xuất & Nhân viên chọn lý do chi nhánh, hoàn 100\% cho khách & PASS \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Đặc tả ca kiểm thử Phân hệ Lễ tân, Check-in và Khách hàng thân thiết (Check-in \& Loyalty)}
+
+\begin{table}[H]
+\centering
+\caption{Danh sách các ca kiểm thử tiêu biểu của Phân hệ Lễ tân và Check-in}
+\label{tab:tc-staff}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{|p{2.2cm}|p{3.5cm}|p{3.5cm}|p{4.2cm}|p{1.2cm}|}
+\hline
+\textbf{Mã ca test} & \textbf{Tên kiểm thử} & \textbf{Dữ liệu đầu vào (Input)} & \textbf{Kết quả mong đợi (Expected)} & \textbf{Kết quả} \\
+\hline
+TC-STF-01 & Check-in hợp lệ trong cửa sổ dung sai & Đến trước giờ bắt đầu 20 phút (trong $\pm 30$p) & Check-in thành công, trạng thái \texttt{CHECKED\_IN} & PASS \\
+\hline
+TC-STF-02 & Chặn Check-in quá sớm & Đến trước giờ bắt đầu 45 phút ($> 30$ phút) & Bị từ chối check-in kèm thông báo khung giờ cho phép & PASS \\
+\hline
+TC-STF-03 & Chặn Check-in quá muộn sau giờ kết thúc & Đến quầy sau khi ca làm việc đã kết thúc & Bị từ chối vì đơn đã bị đánh dấu \texttt{NO\_SHOW} & PASS \\
+\hline
+TC-STF-04 & Giới hạn duy nhất 1 check-in mở & Thử tạo 2 bản ghi check-in mở cho 1 booking & Ràng buộc \texttt{uq\_checkin\_open} chặn đứng lỗi trùng lặp & PASS \\
+\hline
+TC-STF-05 & Mở Running Tab gọi món tại chỗ & Khách đang ngồi gọi thêm 2 nước ngọt & Thêm dòng vào \texttt{booking\_services}, cập nhật tổng hóa đơn & PASS \\
+\hline
+TC-STF-06 & Check-out và thanh toán hóa đơn phát sinh & Khách trả phòng, còn nợ 50,000 đ tiền nước & Thu tiền mặt, đóng Running Tab, chuyển sang \texttt{COMPLETED} & PASS \\
+\hline
+TC-STF-07 & Khách thuê dài hạn Check-in hàng ngày & Hợp đồng thuê tháng (\texttt{is\_contract=true}) & Cho phép check-in/out nhiều lượt trên cùng 1 hợp đồng & PASS \\
+\hline
+TC-STF-08 & Tính toán thăng hạng thành viên Loyalty & User hoàn tất 10 đơn hoàn thành & Tự động nâng hạng Gold, áp dụng chiết khấu 10\% cho đơn kế tiếp & PASS \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Đặc tả ca kiểm thử Phân hệ Gợi ý Đối tác và Trợ lý ảo AI (Matching \& AI Assistant)}
+
+\begin{table}[H]
+\centering
+\caption{Danh sách các ca kiểm thử tiêu biểu của Phân hệ Trí tuệ Nhân tạo}
+\label{tab:tc-ai}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{|p{2.2cm}|p{3.5cm}|p{3.5cm}|p{4.2cm}|p{1.2cm}|}
+\hline
+\textbf{Mã ca test} & \textbf{Tên kiểm thử} & \textbf{Dữ liệu đầu vào (Input)} & \textbf{Kết quả mong đợi (Expected)} & \textbf{Kết quả} \\
+\hline
+TC-AI-01 & Tính toán chỉ số Jaccard kỹ năng chuẩn & 2 user có chung 3/5 kỹ năng & Điểm Jaccard đạt chính xác $3/5 = 0.60$ & PASS \\
+\hline
+TC-AI-02 & Cộng điểm cùng cơ sở chi nhánh (Rule \#18) & 2 user làm việc tại cùng cơ sở Quận 1 & Điểm tổng hợp được cộng thêm $+0.15$ điểm thưởng & PASS \\
+\hline
+TC-AI-03 & Chặn tự gợi ý kết nối chính mình & So khớp hồ sơ của chính người dùng hiện tại & Ràng buộc \texttt{check\_no\_self\_match} loại trừ bản thân & PASS \\
+\hline
+TC-AI-04 & Sinh câu lý do gặp gỡ bằng Gemini AI & Danh sách top ứng viên có điểm số $> 0.30$ & Mô hình sinh câu tóm tắt tương đồng tự nhiên bằng Tiếng Việt & PASS \\
+\hline
+TC-AI-05 & Cơ chế chuyển đổi mô hình dự phòng AI & Mô hình \texttt{gemini-3.5-flash} bị quá tải (429) & Tự động chuyển tiếp sang \texttt{gemini-3.7-flash} thành công & PASS \\
+\hline
+TC-AI-06 & Trả lời đàm thoại tư vấn chính sách phòng & Khách hỏi: "Tôi có được mang thú cưng vào không?" & Trợ lý ảo trích xuất đúng nội quy CoSpace và phản hồi thân thiện & PASS \\
+\hline
+\end{tabular}
+\end{table}
 
 \subsection{Kiểm thử Tích hợp Cấp Cơ sở dữ liệu (SQL Test Workflows)}
 

@@ -220,3 +220,92 @@ Toàn bộ thông tin nhạy cảm (thông tin đăng nhập cơ sở dữ liệ
 \end{table}
 
 Ngoài ra, hệ thống áp dụng chính sách bảo vệ nguồn gốc chéo nghiêm ngặt (\textbf{CORS Configuration}) tại lớp \texttt{SecurityConfig} của Spring Boot. Máy chủ chỉ chấp nhận các yêu cầu HTTP mang tiêu đề \texttt{Origin} xuất phát từ tên miền chính thức của ứng dụng trên Vercel, ngăn chặn hoàn toàn các cuộc tấn công CSRF hoặc đánh cắp dữ liệu từ các trang web giả mạo của bên thứ ba.
+
+\subsection{Chiến lược Quản lý Di trú Lược đồ Cơ sở Dữ liệu}
+
+Trong môi trường điện toán đám mây liên tục cập nhật, việc thay đổi cấu trúc bảng cơ sở dữ liệu mà không làm gián đoạn hệ thống đòi hỏi một chiến lược di trú có kiểm soát nghiêm ngặt:
+
+\begin{itemize}
+    \item \textbf{Nguyên tắc Bất biến và Idempotency:} Toàn bộ các tập lệnh DDL được lưu trữ trong thư mục \texttt{database/migrations/} với tiền tố dấu thời gian (\texttt{YYYYMMDDHHMMSS\_<description>.sql}). Mỗi câu lệnh đều sử dụng mệnh đề phòng vệ như \texttt{CREATE TABLE IF NOT EXISTS}, \texttt{ALTER TABLE ... ADD COLUMN IF NOT EXISTS} nhằm đảm bảo tập lệnh có thể thực thi lặp lại nhiều lần mà không gây lỗi.
+    \item \textbf{Chiến lược Thay đổi Tương thích Ngược (Backward-Compatible Schema Changes):} Khi cập nhật tính năng mới (ví dụ bổ sung cột chính sách hủy \texttt{refund\_percent}), hệ thống áp dụng quy trình 2 pha:
+    \begin{enumerate}
+        \item \textit{Pha 1 (Mở rộng -- Expand):} Thêm cột mới với giá trị mặc định (\texttt{DEFAULT}) vào cơ sở dữ liệu trên Supabase; mã nguồn Back-end cũ vẫn tiếp tục đọc ghi bình thường.
+        \item \textit{Pha 2 (Kích hoạt -- Contract):} Triển khai phiên bản Back-end mới sử dụng cột vừa bổ sung. Sau khi toàn bộ các phiên bản cũ đã ngừng hẳn, mới tiến hành dọn dẹp các trường dữ liệu không còn sử dụng.
+    \end{enumerate}
+    \item \textbf{Cơ chế Cách ly Khóa Ngoại:} Không thực hiện xóa cứng (\textit{hard delete}) các thực thể có quan hệ ràng buộc (như xóa tầng hoặc chi nhánh), thay vào đó cập nhật cờ trạng thái \texttt{status = 'inactive'} nhằm bảo toàn tính toàn vẹn của dữ liệu lịch sử đối soát hóa đơn.
+\end{itemize}
+
+\subsection{Giám sát Vận hành và Quản lý Kết nối Cơ sở Dữ liệu}
+
+\subsubsection{Cơ chế Kiểm tra Sức khỏe Hệ thống (Spring Boot Actuator)}
+
+Để nền tảng Render Cloud có thể tự động giám sát và phục hồi máy chủ khi xảy ra sự cố nghẽn luồng hoặc tràn bộ nhớ, hệ thống kích hoạt module \textbf{Spring Boot Actuator}:
+\begin{itemize}
+    \item \textbf{Liveness Probe (\texttt{/actuator/health/liveness}):} Phản hồi trạng thái hoạt động thực tế của tiến trình JVM. Nếu ứng dụng rơi vào trạng thái bế tắc (deadlock), Render tự động gửi tín hiệu \texttt{SIGTERM} và khởi động lại container mới trong vòng 15 giây.
+    \item \textbf{Readiness Probe (\texttt{/actuator/health/readiness}):} Kiểm tra tính sẵn sàng tiếp nhận lưu lượng mạng, bao gồm việc xác thực kết nối sống tới cơ sở dữ liệu PostgreSQL và kiểm tra tính hợp lệ của khóa API PayOS.
+\end{itemize}
+
+\subsubsection{Tối ưu hóa Bể chứa Kết nối (HikariCP Connection Pool)}
+
+Do hạ tầng cơ sở dữ liệu trên đám mây (Supabase Cloud) giới hạn số lượng kết nối đồng thời trên mỗi máy chủ để bảo vệ tài nguyên, nhóm đã tinh chỉnh các tham số của thư viện \textbf{HikariCP} trong tệp \texttt{application-prod.yml}:
+
+\begin{table}[H]
+\centering
+\caption{Cấu hình tối ưu hóa bể kết nối HikariCP trên môi trường Production}
+\label{tab:hikaricp-config}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|p{4.5cm}|p{3cm}|p{7cm}|}
+\hline
+\textbf{Tham số cấu hình} & \textbf{Giá trị thiết lập} & \textbf{Ý nghĩa kỹ thuật và Rationale} \\
+\hline
+\texttt{maximum-pool-size} & 10 & Giới hạn tối đa 10 kết nối đồng thời từ 1 instance máy chủ, ngăn chặn hiện tượng cạn kiệt kết nối trên PostgreSQL. \\
+\hline
+\texttt{minimum-idle} & 2 & Duy trì tối thiểu 2 kết nối rảnh rỗi trong bộ nhớ, sẵn sàng xử lý yêu cầu ngay lập tức mà không mất chi phí bắt tay TLS ban đầu. \\
+\hline
+\texttt{idle-timeout} & 30,000 ms & Tự động đóng các kết nối rảnh rỗi vượt quá 30 giây để hoàn trả tài nguyên cho máy chủ DB. \\
+\hline
+\texttt{connection-timeout} & 20,000 ms & Thời gian chờ tối đa để lấy được kết nối trước khi ném ngoại lệ \texttt{SQLException}, tránh treo luồng HTTP của người dùng. \\
+\hline
+\texttt{max-lifetime} & 1,800,000 ms (30p) & Tuổi thọ tối đa của 1 kết nối vật lý, ngăn chặn lỗi đứt kết nối ngầm do tường lửa mạng trung gian tự ý đóng phiên. \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Ma trận Đối chiếu Cấu hình Đa Môi trường}
+
+Để quản lý rủi ro và ngăn ngừa hiện tượng sai lệch cấu hình (\textit{Configuration Drift}) giữa môi trường máy cục bộ của lập trình viên và máy chủ khách hàng sử dụng thực tế, toàn bộ thông số được chuẩn hóa thành ma trận cấu hình:
+
+\begin{table}[H]
+\centering
+\caption{Ma trận đối chiếu cấu hình hệ thống qua các môi trường}
+\label{tab:environment-matrix}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|p{3.5cm}|p{3.5cm}|p{3.5cm}|p{4cm}|}
+\hline
+\textbf{Hạng mục cấu hình} & \textbf{Môi trường Local Dev} & \textbf{Môi trường CI / Test} & \textbf{Môi trường Cloud Production} \\
+\hline
+Địa chỉ Backend API & \texttt{http://localhost:8080} & In-Memory Mock Server & \texttt{https://cospace-api.onrender.com} \\
+\hline
+Địa chỉ Frontend Client & \texttt{http://localhost:5173} & Headless Runner & \texttt{https://cospace-team.vercel.app} \\
+\hline
+Cơ sở dữ liệu & PostgreSQL 15 Docker Local & H2 In-Memory Database & Managed PostgreSQL 15 (Supabase ap-southeast-1) \\
+\hline
+Chế độ cổng PayOS & Demo / Simulation Mode & Mock PayOS Responses & VietQR Production (Bảo vệ bởi PayosProductionGuard) \\
+\hline
+Mô hình Gemini AI & gemini-3.5-flash & Mock AI Responses & gemini-3.5-flash (Dự phòng gemini-3.7-flash) \\
+\hline
+Bộ nhớ đệm (Cache) & ConcurrentMap đơn giản & No-Op Cache & Caffeine Cache (TTL 10 phút, tự động @CacheEvict) \\
+\hline
+Cấp độ ghi nhật ký & \texttt{DEBUG} (Toàn bộ chi tiết) & \texttt{WARN} (Chỉ cảnh báo) & \texttt{INFO} (Có lọc bỏ thông tin bảo mật nhạy cảm) \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Chiến lược Sao lưu Dữ liệu và Phục hồi sau Thảm họa (Disaster Recovery)}
+
+An toàn dữ liệu tài chính của khách hàng là ưu tiên hàng đầu. Hệ thống thiết lập chính sách bảo vệ dữ liệu đa tầng:
+\begin{itemize}
+    \item \textbf{Sao lưu Tự động Hàng ngày (Automated Daily Backups):} Nền tảng Supabase tự động thực hiện snapshot toàn bộ cơ sở dữ liệu vào lúc 02:00 sáng mỗi ngày (khung giờ có lưu lượng truy cập thấp nhất). Các bản sao lưu được lưu trữ trên hạ tầng lưu trữ đối tượng độc lập có độ bền 99.999999999\% (11 số 9).
+    \item \textbf{Khôi phục Theo Điểm Thời Gian (Point-in-Time Recovery -- PITR):} Ghi nhận toàn bộ nhật ký ghi trước (\textit{Write-Ahead Logging -- WAL}), cho phép quản trị viên khôi phục trạng thái cơ sở dữ liệu về bất kỳ giây nào trong quá khứ nếu xảy ra sự cố thao tác nhầm hoặc tấn công dữ liệu.
+    \item \textbf{Kế hoạch Dự phòng Dịch vụ Bên thứ ba (3rd-Party Failover Plan):} Khi cổng PayOS gặp sự cố bảo trì mạng Napas, hệ thống tự động hướng dẫn khách hàng chuyển sang thanh toán tiền mặt tại quầy hoặc ví điện tử phụ trợ; khi Google Gemini chạm ngưỡng giới hạn tần suất gọi API (Rate Limit), hệ thống tự động chuyển sang mô hình fallback \texttt{gemini-3.7-flash} hoặc trả về câu thoại mẫu có sẵn mà không làm sập luồng tương tác của khách hàng.
+\end{itemize}

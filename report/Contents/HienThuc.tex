@@ -63,72 +63,35 @@ cospace-root/
     └── migrations/                      # Tập lệnh khởi tạo DDL và seed data
 \end{lstlisting}
 
-\subsection{Hiện thực các phân hệ Back-end then chốt}
+\subsection{Hiện thực các phân hệ Back-end then chốt (Service Specifications)}
 
-\subsubsection{Hiện thực Bộ lọc bảo mật và Xác thực phân quyền đa tầng}
+Tầng dịch vụ (Service Layer) đóng vai trò xương sống, chứa đựng toàn bộ các quy tắc nghiệp vụ phức tạp của CoSpace. Nhằm đáp ứng tiêu chuẩn thiết kế hướng dịch vụ hiện đại, mỗi lớp nghiệp vụ được đặc tả chi tiết về trách nhiệm, các lớp phụ thuộc, phương thức thực thi và giải thuật tương ứng:
 
-Tầng bảo mật được hiện thực dựa trên \texttt{Spring Security 6} kết hợp \texttt{Supabase Authentication}. Mọi yêu cầu truy cập tài nguyên được bảo vệ đều phải đi qua bộ lọc \texttt{SupabaseJwtFilter}. Đoạn mã dưới đây minh họa quá trình bóc tách mã thông báo (Bearer token), thẩm định chữ ký và nạp vai trò người dùng vào ngữ cảnh bảo mật của Spring:
+\subsubsection{Hiện thực Dịch vụ Quản lý Đặt chỗ (BookingService)}
 
-\begin{lstlisting}[language=Java, caption={Hiện thực bộ lọc xác thực SupabaseJwtFilter}]
-@Component
-@Slf4j
-public class SupabaseJwtFilter extends OncePerRequestFilter {
-
-    private final JwtTokenValidator jwtTokenValidator;
-    private final UserRepository userRepository;
-
-    public SupabaseJwtFilter(JwtTokenValidator jwtTokenValidator, UserRepository userRepository) {
-        this.jwtTokenValidator = jwtTokenValidator;
-        this.userRepository = userRepository;
-    }
-
-    @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain) throws ServletException, IOException {
-        String authHeader = request.getHeader("Authorization");
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        String token = authHeader.substring(7);
-        try {
-            Claims claims = jwtTokenValidator.validateAndGetClaims(token);
-            String email = claims.get("email", String.class);
-
-            // Truy vấn thông tin người dùng nội bộ để lấy phân quyền thực tế
-            Optional<User> userOpt = userRepository.findByEmail(email);
-            if (userOpt.isPresent()) {
-                User user = userOpt.get();
-                if (user.getStatus() != UserStatus.ACTIVE) {
-                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "Tài khoản của bạn đã bị khóa.");
-                    return;
-                }
-
-                List<SimpleGrantedAuthority> authorities = List.of(
-                    new SimpleGrantedAuthority("ROLE_" + user.getRole().name())
-                );
-                UserPrincipal principal = new UserPrincipal(user.getId(), user.getEmail(), user.getRole(), user.getBranchId());
-                UsernamePasswordAuthenticationToken authentication =
-                    new UsernamePasswordAuthenticationToken(principal, null, authorities);
-                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authentication);
-            }
-        } catch (JwtException e) {
-            log.warn("Mã thông báo JWT không hợp lệ hoặc đã hết hạn: {}", e.getMessage());
-        }
-
-        filterChain.doFilter(request, response);
-    }
-}
-\end{lstlisting}
-
-Nhờ kiến trúc này, máy chủ Spring Boot không lưu giữ trạng thái phiên (Stateless Session), cho phép hệ thống dễ dàng mở rộng theo chiều ngang (Horizontally Scalable) mà không gặp hiện tượng trôi phiên đăng nhập giữa các instance.
-
-\subsubsection{Hiện thực Module Đặt chỗ và Kiểm soát tương tranh hai tầng}
-
-Để xử lý bài toán chống đụng lịch (Overlapping Double Booking) và áp dụng quy tắc nghiệp vụ giới hạn tần suất (Rate Limiting Rule \#33), \texttt{BookingService} hiện thực hóa cơ chế khóa phân tán mức giao dịch \texttt{pg\_advisory\_xact\_lock}:
+\begin{itemize}
+    \item \textbf{Trách nhiệm chính:}
+    \begin{itemize}
+        \item Khởi tạo đơn đặt chỗ mới, tự động tính toán hạn chót thanh toán (15 phút).
+        \item Thực thi cơ chế kiểm soát tương tranh hai tầng: Khóa mức ứng dụng (\texttt{pg\_advisory\_xact\_lock}) kết hợp kiểm tra trùng lặp lịch trình (Overlap Detection).
+        \item Thực thi quy tắc giới hạn tần suất (Rule \#33: Tối đa 3 đơn chờ thanh toán cho mỗi người dùng).
+        \item Tự động suy diễn chi nhánh quản lý phía máy chủ từ quan hệ \texttt{Workspace} $\rightarrow$ \texttt{Floor} $\rightarrow$ \texttt{Branch} (Rule \#42).
+        \item Hỗ trợ thủ tục gia hạn thời gian sử dụng (Duration Extension) và hủy đơn thay khách có kiểm toán (Staff Cancellation).
+    \end{itemize}
+    \item \textbf{Các thuộc tính và Phụ thuộc:}
+    \begin{itemize}
+        \item \texttt{entityManager: EntityManager} -- Khởi tạo các câu truy vấn khóa tương tranh bản địa (\texttt{Native Query}).
+        \item \texttt{bookingRepository: BookingRepository} -- Truy vấn và cập nhật thực thể \texttt{Booking}.
+        \item \texttt{workspaceRepository: WorkspaceEntityRepository} -- Tra cứu thông tin vật lý của không gian làm việc.
+        \item \texttt{floorRepository: FloorRepository} -- Tra cứu thông tin tầng và chi nhánh tương ứng.
+    \end{itemize}
+    \item \textbf{Các phương thức tiêu biểu:}
+    \begin{itemize}
+        \item \texttt{createBooking(UUID userId, BookingCreateRequest req): BookingResponse} -- Tiếp nhận yêu cầu đặt chỗ, thẩm định khung giờ, thực thi khóa Advisory Lock trên đối tượng không gian, tạo đơn trạng thái \texttt{PENDING\_PAYMENT}.
+        \item \texttt{findOverlappingBookings(UUID wsId, OffsetDateTime start, OffsetDateTime end, List<BookingStatus> statuses): List<Booking>} -- Truy vấn các đơn đặt chỗ đang hoạt động có khoảng thời gian giao cắt với khoảng thời gian yêu cầu mới.
+        \item \texttt{extendBooking(UUID bookingId, BookingExtendRequest req): BookingResponse} -- Kiểm tra tính khả dụng của khoảng thời gian kéo dài, cập nhật \texttt{endAt} và bổ sung hóa đơn chênh lệch.
+    \end{itemize}
+\end{itemize}
 
 \begin{lstlisting}[language=Java, caption={Đoạn mã xử lý khóa tương tranh và đặt chỗ trong BookingService}]
 @Service
@@ -196,11 +159,29 @@ public class BookingService {
 }
 \end{lstlisting}
 
-Hàm \texttt{pg\_advisory\_xact\_lock} có đặc tính sống trong phạm vi giao dịch hiện tại (\texttt{@Transactional}). Ngay khi phương thức kết thúc (dù thành công hay ngoại lệ được ném ra), khóa sẽ tự động được giải phóng bởi PostgreSQL, đảm bảo tuyệt đối không xảy ra tình trạng bế tắc (deadlock) hoặc rò rỉ tài nguyên hệ thống.
+\subsubsection{Hiện thực Dịch vụ Thanh toán và Xử lý Webhook (PaymentService \& PayosService)}
 
-\subsubsection{Hiện thực Module Thanh toán tự động VietQR Napas 24/7 và Webhook Idempotency}
-
-Để phục vụ khách hàng thanh toán nhanh chóng không cần nhập thủ công số tài khoản, hệ thống tích hợp giải pháp VietQR thông qua \texttt{PayosService}. Mỗi yêu cầu thanh toán được cấp phát một mã đơn hàng duy nhất (\texttt{orderCode}). Phía máy chủ tiếp nhận Webhook với cơ chế thẩm định chữ ký số HMAC-SHA256:
+\begin{itemize}
+    \item \textbf{Trách nhiệm chính:}
+    \begin{itemize}
+        \item Khởi tạo phiên giao dịch thanh toán trực tuyến qua cổng PayOS (chuẩn VietQR Napas 24/7).
+        \item Thẩm định chữ ký số HMAC-SHA256 của Webhook callback từ cổng thanh toán.
+        \item Xử lý tính bất biến (Idempotency Check) chống ghi đè hoặc cộng trùng lặp giao dịch.
+        \item Xử lý các tình huống biên tiền vào trễ (Late Webhook Ghost Payment) khi đơn đã bị hủy trước đó.
+    \end{itemize}
+    \item \textbf{Các thuộc tính và Phụ thuộc:}
+    \begin{itemize}
+        \item \texttt{payosConfig: PayosConfig} -- Quản lý Client ID, API Key và Checksum Key bảo mật.
+        \item \texttt{paymentRepository: PaymentRepository} -- Lưu vết lịch sử các giao dịch tài chính.
+        \item \texttt{refundService: RefundService} -- Kích hoạt luồng hoàn tiền hoặc cấp tín dụng cho khách hàng.
+    \end{itemize}
+    \item \textbf{Các phương thức tiêu biểu:}
+    \begin{itemize}
+        \item \texttt{createPaymentLink(long orderCode, long amount, String desc, String deadline): Map<String, Object>} -- Gọi Open API PayOS tạo chuỗi VietQR động kèm thông tin hạn chót thanh toán đồng bộ máy chủ.
+        \item \texttt{verifyWebhookSignature(PayosWebhookDto webhookData): boolean} -- Sắp xếp từ điển các trường dữ liệu và băm chữ ký đối xứng HMAC-SHA256 để đối soát.
+        \item \texttt{processPayosWebhook(PayosWebhookDto webhookData): void} -- Thực thi giao dịch nguyên tử (@Transactional) cập nhật trạng thái \texttt{CONFIRMED} cho đơn đặt chỗ và \texttt{COMPLETED} cho thanh toán.
+    \end{itemize}
+\end{itemize}
 
 \begin{lstlisting}[language=Java, caption={Hiện thực tiếp nhận và xác thực Webhook thanh toán PayOS}]
 @Service
@@ -240,11 +221,22 @@ public class PayosService {
 }
 \end{lstlisting}
 
-Tại \texttt{PaymentService}, khi nhận tín hiệu thanh toán thành công, hệ thống thực hiện kiểm tra tính bất biến (Idempotency Check) bằng cách tra cứu trạng thái giao dịch trong bảng \texttt{payments}. Nếu giao dịch đã ở trạng thái \texttt{COMPLETED}, hệ thống lập tức phản hồi HTTP 200 mà không cập nhật lại trạng thái đơn hàng. Nếu đơn đặt chỗ tương ứng đã bị hủy do quá hạn trước khi tiền vào (Late Webhook), hệ thống tự động kích hoạt tiến trình hoàn tiền hoặc ghi có số dư tín dụng (\textit{ghost payment credit}) nhằm bảo vệ quyền lợi tài chính của khách hàng.
+\subsubsection{Hiện thực Dịch vụ Gợi ý Đối tác Thông minh (PartnerMatchingService)}
 
-\subsubsection{Hiện thực Module Gợi ý Đối tác kết nối thông minh}
-
-Module gợi ý đối tác kết nối là một trong những nét đột phá của CoSpace nhằm xây dựng mạng lưới làm việc chung giàu tính tương tác. Dịch vụ \texttt{PartnerMatchingService} tính toán chỉ số tương đồng giữa người dùng hiện tại và các thành viên khác dựa trên công thức Jaccard kết hợp độ ưu tiên cùng chi nhánh:
+\begin{itemize}
+    \item \textbf{Trách nhiệm chính:}
+    \begin{itemize}
+        \item Đo lường chỉ số tương đồng chuyên môn giữa các thành viên dựa trên hệ thống nhãn kỹ năng và sở thích.
+        \item Áp dụng công thức tính điểm Jaccard có trọng số kết hợp điểm thưởng cùng cơ sở chi nhánh (+0.15).
+        \item Gọi mô hình ngôn ngữ lớn Google Gemini AI để tự động tạo một câu tóm tắt lý do kết nối mang tính cá nhân hóa cao.
+    \end{itemize}
+    \item \textbf{Các thuộc tính và Phụ thuộc:}
+    \begin{itemize}
+        \item \texttt{profileSkillRepository: ProfileSkillRepository} -- Danh sách thẻ kỹ năng chuyên môn của người dùng.
+        \item \texttt{profileInterestRepository: ProfileInterestRepository} -- Danh mục lĩnh vực và sở thích hợp tác.
+        \item \texttt{geminiClient: GeminiClient} -- Lớp kết nối HTTP Client giao tiếp với Google AI Studio.
+    \end{itemize}
+\end{itemize}
 
 \begin{lstlisting}[language=Java, caption={Đoạn mã tính toán chỉ số tương đồng Jaccard trong PartnerMatchingService}]
 @Service
@@ -285,11 +277,17 @@ public class PartnerMatchingService {
 }
 \end{lstlisting}
 
-Sau khi lọc ra top các ứng viên có điểm số tương đồng cao nhất ($Score \ge 0.30$), hệ thống chuyển danh sách sang \texttt{GeminiClient} để mô hình ngôn ngữ lớn Google Gemini tự động sinh ra một câu lý do gặp gỡ ngắn gọn, cá nhân hóa (ví dụ: \textit{"Cả hai bạn đều đang phát triển ứng dụng di động Flutter và quan tâm đến thị trường EdTech"}).
+\subsubsection{Hiện thực Dịch vụ Trợ lý ảo AI Chatbot (ChatbotService)}
 
-\subsubsection{Hiện thực Module Trợ lý ảo AI Chatbot}
-
-Trợ lý ảo được thiết kế để giải đáp các thắc mắc thường gặp của khách hàng về bảng giá, vị trí chi nhánh, quy định check-in và chính sách hoàn hủy. Dịch vụ \texttt{ChatbotService} giao tiếp với Google Generative AI API (\texttt{gemini-3.5-flash} và dự phòng \texttt{gemini-3.7-flash}) thông qua lớp khách \texttt{GeminiClient}:
+\begin{itemize}
+    \item \textbf{Trách nhiệm chính:}
+    \begin{itemize}
+        \item Đóng vai trò chuyên gia tư vấn thông minh, hỗ trợ giải đáp thắc mắc về không gian, giá cả và nội quy.
+        \item Áp dụng kỹ thuật Prompt Engineering đưa tri thức nghiệp vụ CoSpace vào lời nhắc hệ thống (System Prompt).
+        \item Tích hợp cơ chế triệu gọi công cụ (Tool Calling) để tra cứu trạng thái bàn ghế theo thời gian thực.
+        \item Tự động chuyển đổi sang mô hình dự phòng \texttt{gemini-3.7-flash} khi mô hình chính chạm ngưỡng giới hạn.
+    \end{itemize}
+\end{itemize}
 
 \begin{lstlisting}[language=Java, caption={Hiện thực giao tiếp Gemini AI trong ChatbotService}]
 @Service
@@ -301,7 +299,6 @@ public class ChatbotService {
     private final WorkspaceEntityRepository workspaceRepository;
 
     public String askAssistant(String userQuestion, List<ChatMessageDto> history) {
-        // Xây dựng System Prompt chứa toàn bộ tri thức đặc tả nghiệp vụ CoSpace
         String systemInstruction = """
             Bạn là CoSpace Assistant - Trợ lý ảo thông minh của Hệ thống Văn phòng chia sẻ CoSpace.
             Nhiệm vụ của bạn là giải đáp chính xác, lịch thiệp về:
@@ -324,9 +321,7 @@ public class ChatbotService {
 }
 \end{lstlisting}
 
-\subsubsection{Hiện thực Tác vụ định kỳ tự động hủy đặt chỗ quá hạn}
-
-Để giải phóng chỗ ngồi cho người dùng khác khi khách hàng không thanh toán đúng hạn 15 phút, hệ thống hiện thực lớp \texttt{BookingExpiryScheduler} sử dụng tính năng \texttt{@Scheduled} của Spring Framework:
+\subsubsection{Hiện thực Tác vụ định kỳ tự động hủy đặt chỗ quá hạn (BookingExpiryScheduler)}
 
 \begin{lstlisting}[language=Java, caption={Tác vụ định kỳ quét và giải phóng đơn đặt chỗ quá hạn}]
 @Service
@@ -355,7 +350,6 @@ public class BookingExpiryScheduler {
                 booking.setStatus(BookingStatus.CANCELLED);
                 bookingRepository.save(booking);
 
-                // Cập nhật trạng thái giao dịch thanh toán tương ứng sang EXPIRED
                 paymentRepository.findByBookingId(booking.getId()).ifPresent(p -> {
                     p.setStatus(PaymentStatus.EXPIRED);
                     paymentRepository.save(p);
@@ -368,10 +362,6 @@ public class BookingExpiryScheduler {
     }
 }
 \end{lstlisting}
-
-\subsubsection{Hiện thực Tối ưu hóa hiệu năng với Bộ nhớ đệm (Caffeine Cache)}
-
-Các danh mục dữ liệu có tần suất đọc cực cao nhưng ít khi biến đổi (như danh sách loại không gian \texttt{workspace\_types}, bảng chính sách giá \texttt{price\_policies}, và cây danh mục thẻ kỹ năng \texttt{tags}) được cấu hình lưu trữ trực tiếp trên bộ nhớ RAM của ứng dụng thông qua thư viện \textbf{Caffeine Cache}. Cấu hình thời gian sống (TTL - Time to Live) là 10 phút, giúp giảm tải hơn 80\% các câu truy vấn \texttt{SELECT} xuống cơ sở dữ liệu PostgreSQL.
 
 \subsection{Hiện thực các phân hệ Front-end và trải nghiệm tương tác}
 
