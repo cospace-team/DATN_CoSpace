@@ -1570,17 +1570,17 @@ Quy trình này kiểm soát tính hợp lệ của việc nhận phòng tại c
     \node (start) [startstop] {};
     \node (scan) [activity, below=0.8cm of start] {Nhân viên quét mã QR đặt chỗ của khách};
     \node (lookup) [activity, below=0.8cm of scan] {Hệ thống tra cứu đơn \& kiểm tra trạng thái};
-    \node (check_time) [decision, below=0.8cm of lookup] {Trong khoảng $\pm 30$p giờ bắt đầu?};
-    \node (refuse) [activity, right=1.5cm of check_time] {Từ chối check-in, thông báo ngoài khung giờ};
-    \node (execute) [activity, below=0.8cm of check_time] {Cập nhật trạng thái \texttt{CHECKED\_IN}};
+    \node (checktime) [decision, below=0.8cm of lookup] {Trong khoảng $\pm 30$p giờ bắt đầu?};
+    \node (refuse) [activity, right=1.5cm of checktime] {Từ chối check-in, thông báo ngoài khung giờ};
+    \node (execute) [activity, below=0.8cm of checktime] {Cập nhật trạng thái \texttt{CHECKED\_IN}};
     \node (tab) [activity, below=0.8cm of execute] {Khởi tạo Running Tab và hướng dẫn vào chỗ};
     \node (end) [startstop, double, below=0.8cm of tab] {};
 
     \draw [arrow] (start) -- (scan);
     \draw [arrow] (scan) -- (lookup);
-    \draw [arrow] (lookup) -- (check_time);
-    \draw [arrow] (check_time) -- node[above] {Không} (refuse);
-    \draw [arrow] (check_time) -- node[right] {Hợp lệ} (execute);
+    \draw [arrow] (lookup) -- (checktime);
+    \draw [arrow] (checktime) -- node[above] {Không} (refuse);
+    \draw [arrow] (checktime) -- node[right] {Hợp lệ} (execute);
     \draw [arrow] (execute) -- (tab);
     \draw [arrow] (tab) -- (end);
 \end{tikzpicture}
@@ -1605,17 +1605,17 @@ Nhằm giải phóng tài nguyên chỗ ngồi cho các khách hàng khác, mộ
     \node (start) [startstop] {};
     \node (cron) [activity, below=0.8cm of start] {Scheduler thức dậy mỗi chu kỳ 30 giây};
     \node (query) [activity, below=0.8cm of cron] {Quét các booking \texttt{PENDING\_PAYMENT}};
-    \node (check_time) [decision, below=0.8cm of query] {Thời gian tạo $> 15$ phút?};
-    \node (skip) [activity, right=1.5cm of check_time] {Bỏ qua, chờ chu kỳ tiếp theo};
-    \node (expire) [activity, below=0.8cm of check_time] {Cập nhật trạng thái thành \texttt{EXPIRED}};
+    \node (checktime) [decision, below=0.8cm of query] {Thời gian tạo $> 15$ phút?};
+    \node (skip) [activity, right=1.5cm of checktime] {Bỏ qua, chờ chu kỳ tiếp theo};
+    \node (expire) [activity, below=0.8cm of checktime] {Cập nhật trạng thái thành \texttt{EXPIRED}};
     \node (release) [activity, below=0.8cm of expire] {Giải phóng slot trên sơ đồ SVG mặt bằng};
     \node (end) [startstop, double, below=0.8cm of release] {};
 
     \draw [arrow] (start) -- (cron);
     \draw [arrow] (cron) -- (query);
-    \draw [arrow] (query) -- (check_time);
-    \draw [arrow] (check_time) -- node[above] {Chưa quá} (skip);
-    \draw [arrow] (check_time) -- node[right] {Quá 15p} (expire);
+    \draw [arrow] (query) -- (checktime);
+    \draw [arrow] (checktime) -- node[above] {Chưa quá} (skip);
+    \draw [arrow] (checktime) -- node[right] {Quá 15p} (expire);
     \draw [arrow] (expire) -- (release);
     \draw [arrow] (release) -- (end);
 \end{tikzpicture}
@@ -1641,18 +1641,18 @@ Quy trình xử lý hoàn tiền minh bạch dựa trên thời điểm hủy ph
     \node (req) [activity, below=0.8cm of start] {Khách hàng gửi yêu cầu hủy đơn đặt phòng};
     \node (calc) [activity, below=0.8cm of req] {Hệ thống tính khoảng cách thời gian đến giờ bắt đầu};
     \node (policy) [activity, below=0.8cm of calc] {Tra cứu chính sách hủy (\texttt{priority DESC})};
-    \node (cond_refund) [decision, below=0.8cm of policy] {Tỷ lệ hoàn tiền $> 0\%$?};
-    \node (zero) [activity, right=1.5cm of cond_refund] {Ghi nhận hủy, tiền hoàn bằng 0 VNĐ};
-    \node (refund) [activity, below=0.8cm of cond_refund] {Cộng tiền hoàn vào ví nội bộ của khách};
+    \node (condrefund) [decision, below=0.8cm of policy] {Tỷ lệ hoàn tiền $> 0\%$?};
+    \node (zero) [activity, right=1.5cm of condrefund] {Ghi nhận hủy, tiền hoàn bằng 0 VNĐ};
+    \node (refund) [activity, below=0.8cm of condrefund] {Cộng tiền hoàn vào ví nội bộ của khách};
     \node (update) [activity, below=0.8cm of refund] {Cập nhật booking \texttt{CANCELED} \& Gửi thông báo};
     \node (end) [startstop, double, below=0.8cm of update] {};
 
     \draw [arrow] (req) -- (calc);
     \draw [arrow] (start) -- (req);
     \draw [arrow] (calc) -- (policy);
-    \draw [arrow] (policy) -- (cond_refund);
-    \draw [arrow] (cond_refund) -- node[above] {Bằng 0\%} (zero);
-    \draw [arrow] (cond_refund) -- node[right] {$> 0\%$} (refund);
+    \draw [arrow] (policy) -- (condrefund);
+    \draw [arrow] (condrefund) -- node[above] {Bằng 0\%} (zero);
+    \draw [arrow] (condrefund) -- node[right] {$> 0\%$} (refund);
     \draw [arrow] (zero) |- (update);
     \draw [arrow] (refund) -- (update);
     \draw [arrow] (update) -- (end);

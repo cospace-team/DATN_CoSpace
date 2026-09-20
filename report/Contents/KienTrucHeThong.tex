@@ -126,15 +126,15 @@ Sơ đồ tuần tự tại Hình~\ref{fig:seq-auth-jwt} thể hiện chi tiết
     \node[db] (dbnode) at (13, 0) {Database\\(PostgreSQL)};
 
     % Lifeline tails
-    \coordinate (c_end) at (0, -7.5);
-    \coordinate (s_end) at (4, -7.5);
-    \coordinate (b_end) at (8.5, -7.5);
-    \coordinate (d_end) at (13, -7.5);
+    \coordinate (cend) at (0, -7.5);
+    \coordinate (send) at (4, -7.5);
+    \coordinate (bend) at (8.5, -7.5);
+    \coordinate (dend) at (13, -7.5);
 
-    \draw[lifeline] (client) -- (c_end);
-    \draw[lifeline] (supa) -- (s_end);
-    \draw[lifeline] (backend) -- (b_end);
-    \draw[lifeline] (dbnode) -- (d_end);
+    \draw[lifeline] (client) -- (cend);
+    \draw[lifeline] (supa) -- (send);
+    \draw[lifeline] (backend) -- (bend);
+    \draw[lifeline] (dbnode) -- (dend);
 
     % Sequence steps
     \draw[-{Latex[length=2mm]}] (0, -1.0) -- node[msg] {1. OAuth2 Login with Google} (4, -1.0);
@@ -183,15 +183,15 @@ Quy trình thanh toán là mắt xích tài chính trọng yếu. Để đảm b
     \node[bank] (banknode) at (14, 0) {Ngân hàng\\Napas 24/7};
 
     % Lifeline tails
-    \coordinate (c_end) at (0, -11.0);
-    \coordinate (cs_end) at (4.5, -11.0);
-    \coordinate (p_end) at (9.5, -11.0);
-    \coordinate (b_end) at (14, -11.0);
+    \coordinate (cend) at (0, -11.0);
+    \coordinate (csend) at (4.5, -11.0);
+    \coordinate (pend) at (9.5, -11.0);
+    \coordinate (bend) at (14, -11.0);
 
-    \draw[lifeline] (cust) -- (c_end);
-    \draw[lifeline] (cospace) -- (cs_end);
-    \draw[lifeline] (pay) -- (p_end);
-    \draw[lifeline] (banknode) -- (b_end);
+    \draw[lifeline] (cust) -- (cend);
+    \draw[lifeline] (cospace) -- (csend);
+    \draw[lifeline] (pay) -- (pend);
+    \draw[lifeline] (banknode) -- (bend);
 
     % Sequence steps
     \draw[-{Latex[length=2mm]}] (0, -1.0) -- node[msg] {1. POST /api/bookings (Tạo đơn)} (4.5, -1.0);
@@ -221,16 +221,16 @@ Quy trình thanh toán là mắt xích tài chính trọng yếu. Để đảm b
 
 \subsubsection{Cấu trúc tổ chức mã nguồn Back-end}
 
-Nhằm đáp ứng yêu cầu cấu trúc chuẩn mực cho một ứng dụng cấp độ doanh nghiệp (Enterprise Architecture), mã nguồn Back-end của hệ thống được tổ chức phân cấp rõ ràng theo các package chức năng trong thư mục \texttt{BE/src/main/java/com/cospace}:
+Nhằm đáp ứng yêu cầu cấu trúc chuẩn mực cho một ứng dụng cấp độ doanh nghiệp (Enterprise Architecture), mã nguồn Back-end của hệ thống được tổ chức phân cấp rõ ràng theo các package chức năng trong thư mục \texttt{BE/src/main/java/com/cospace/app}:
 
 \begin{itemize}
-    \item \texttt{com.cospace.config}: Cấu hình toàn cục cho ứng dụng bao gồm \texttt{SecurityConfig} (CORS, CSRF, URL matchers), \texttt{WebConfig}, \texttt{CacheConfig} (Caffeine Cache), \texttt{OpenApiConfig} (Swagger/OpenAPI 3.0), và \texttt{PayOSConfig} (Khởi tạo kết nối SDK PayOS).
-    \item \texttt{com.cospace.controller}: Điểm tiếp nhận và phân phối các yêu cầu HTTP. Bao gồm các controller chính: \texttt{AuthController}, \texttt{BookingController}, \texttt{PaymentController}, \texttt{WorkspaceController}, \texttt{BranchController}, \texttt{PartnerMatchingController}, \texttt{ChatbotController}, \texttt{ReportController}, \texttt{AuditLogController}, \texttt{ExtraServiceController}.
-    \item \texttt{com.cospace.service}: Định nghĩa giao diện (Interface) và hiện thực hóa logic nghiệp vụ lõi (Service Implementation). Đảm bảo tính trừu tượng và khả năng thay thế linh hoạt phục vụ kiểm thử đơn vị (Unit Testing).
-    \item \texttt{com.cospace.repository}: Kế thừa từ \texttt{JpaRepository<Entity, UUID>} để tương tác với các bảng cơ sở dữ liệu; sử dụng các phương thức derived query và các hàm gán khóa tương tranh đặc biệt (\texttt{@Query}).
-    \item \texttt{com.cospace.model}: Định nghĩa 17 Entity lớp thực thể tương ứng với lược đồ cơ sở dữ liệu quan hệ, thiết lập các quan hệ liên kết \texttt{@OneToMany}, \texttt{@ManyToOne}, \texttt{@ManyToMany} cùng các quy tắc cascade và fetch type phù hợp.
-    \item \texttt{com.cospace.dto}: Các lớp Data Transfer Object dùng để nhận dữ liệu đầu vào (\texttt{RequestDTO}) và định dạng dữ liệu phản hồi (\texttt{ResponseDTO}), ngăn chặn việc phơi bày trực tiếp cấu trúc bảng cơ sở dữ liệu ra ngoài API.
-    \item \texttt{com.cospace.security}: Bộ lọc JWT \texttt{SupabaseJwtFilter}, trình cung cấp dữ liệu định danh người dùng \texttt{CustomUserDetailsService}, và các trình xử lý ngoại lệ bảo mật \texttt{RestAuthenticationEntryPoint}.
-    \item \texttt{com.cospace.scheduler}: Chứa các tiến trình ngầm được tự động kích hoạt định kỳ bởi Spring Framework để dọn dẹp các đặt chỗ quá hạn hoặc cập nhật chỉ số thống kê hàng ngày.
-    \item \texttt{com.cospace.exception}: Cơ chế quản lý lỗi tập trung (\texttt{@ControllerAdvice} và \texttt{@ExceptionHandler}), chuyển đổi mọi lỗi hệ thống hoặc vi phạm nghiệp vụ thành thông báo lỗi JSON chuẩn mực định dạng \texttt{\{ "error": "<code>", "message": "<detail>" \}}.
+    \item \texttt{com.cospace.app.config}: Cấu hình toàn cục cho ứng dụng bao gồm \texttt{SecurityConfig} (CORS, CSRF, URL matchers), \texttt{WebConfig}, \texttt{CacheConfig} (Caffeine Cache), \texttt{OpenApiConfig} (Swagger/OpenAPI 3.0), và \texttt{PayOSConfig} (Khởi tạo kết nối SDK PayOS).
+    \item \texttt{com.cospace.app.controller}: Điểm tiếp nhận và phân phối các yêu cầu HTTP. Bao gồm các controller chính: \texttt{AuthController}, \texttt{BookingController}, \texttt{PaymentController}, \texttt{WorkspaceController}, \texttt{BranchController}, \texttt{PartnerMatchingController}, \texttt{ChatbotController}, \texttt{ReportController}, \texttt{AuditLogController}, \texttt{ExtraServiceController}.
+    \item \texttt{com.cospace.app.service}: Định nghĩa giao diện (Interface) và hiện thực hóa logic nghiệp vụ lõi (Service Implementation). Đảm bảo tính trừu tượng và khả năng thay thế linh hoạt phục vụ kiểm thử đơn vị (Unit Testing).
+    \item \texttt{com.cospace.app.repository}: Kế thừa từ \texttt{JpaRepository<Entity, UUID>} để tương tác với các bảng cơ sở dữ liệu; sử dụng các phương thức derived query và các hàm gán khóa tương tranh đặc biệt (\texttt{@Query}).
+    \item \texttt{com.cospace.app.entity}: Định nghĩa 17 Entity lớp thực thể tương ứng với lược đồ cơ sở dữ liệu quan hệ, thiết lập các quan hệ liên kết \texttt{@OneToMany}, \texttt{@ManyToOne}, \texttt{@ManyToMany} cùng các quy tắc cascade và fetch type phù hợp.
+    \item \texttt{com.cospace.app.dto}: Các lớp Data Transfer Object dùng để nhận dữ liệu đầu vào (\texttt{RequestDTO}) và định dạng dữ liệu phản hồi (\texttt{ResponseDTO}), ngăn chặn việc phơi bày trực tiếp cấu trúc bảng cơ sở dữ liệu ra ngoài API.
+    \item \texttt{com.cospace.app.security}: Bộ lọc JWT \texttt{SupabaseJwtFilter}, trình cung cấp dữ liệu định danh người dùng \texttt{CustomUserDetailsService}, và các trình xử lý ngoại lệ bảo mật \texttt{RestAuthenticationEntryPoint}.
+    \item \texttt{com.cospace.app.scheduler}: Chứa các tiến trình ngầm được tự động kích hoạt định kỳ bởi Spring Framework để dọn dẹp các đặt chỗ quá hạn hoặc cập nhật chỉ số thống kê hàng ngày.
+    \item \texttt{com.cospace.app.exception}: Cơ chế quản lý lỗi tập trung (\texttt{@ControllerAdvice} và \texttt{@ExceptionHandler}), chuyển đổi mọi lỗi hệ thống hoặc vi phạm nghiệp vụ thành thông báo lỗi JSON chuẩn mực định dạng \texttt{\{ "error": "<code>", "message": "<detail>" \}}.
 \end{itemize}
