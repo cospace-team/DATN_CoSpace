@@ -1,0 +1,63 @@
+\chapter{Giới thiệu đề tài}
+\label{ch:gioithieu}
+
+\ghichu{Chương mở đầu trả lời bốn câu hỏi: đề tài giải quyết vấn đề gì, vì sao vấn đề đó đáng giải quyết, làm đến đâu, và làm bằng cách nào. Dung lượng đề xuất 6--8 trang.}
+
+\section{Bối cảnh và động lực thực hiện}
+\label{sec:boicanh}
+
+\subsection{Sự phát triển của mô hình văn phòng chia sẻ}
+\ghichu{Trình bày sự hình thành và tăng trưởng của mô hình co-working trên thế giới và tại Việt Nam: nhu cầu làm việc linh hoạt sau đại dịch, sự bùng nổ của startup và lao động tự do, tốc độ mở rộng của các chuỗi trong nước. Dẫn số liệu thị trường có trích dẫn nguồn.}
+
+\subsection{Thực trạng vận hành của các chuỗi văn phòng chia sẻ đa chi nhánh}
+\ghichu{Nêu các khó khăn vận hành thực tế: quản lý chỗ ngồi thủ công qua bảng tính, không có cái nhìn trực quan theo sơ đồ mặt bằng, xung đột khi hai khách đặt cùng một chỗ, đối soát thanh toán và hoàn tiền thủ công, chính sách hủy không nhất quán giữa các chi nhánh, dữ liệu báo cáo phân mảnh. Mỗi khó khăn dẫn tới một nhóm chức năng của hệ thống ở các chương sau.}
+
+\subsection{Nhu cầu kết nối cộng đồng trong không gian làm việc chung}
+\ghichu{Chỉ ra giá trị cộng đồng là khác biệt cốt lõi của co-working so với văn phòng truyền thống, nhưng hiện chủ yếu dựa vào sự kiện thủ công. Đây là động lực cho module gợi ý đối tác và bảng tin cộng đồng.}
+
+\section{Phát biểu bài toán}
+\label{sec:baitoan}
+\ghichu{Phát biểu cô đọng trong 1--2 đoạn: cần một hệ thống thông tin tập trung phục vụ đồng thời bốn nhóm người dùng (khách hàng, nhân viên, quản lý chi nhánh, quản trị hệ thống), bảo đảm tính đúng đắn của dữ liệu đặt chỗ và giao dịch tiền trong điều kiện nhiều người dùng thao tác đồng thời.}
+\bangcho{Ánh xạ từ vấn đề thực tiễn sang nhu cầu chức năng của hệ thống}{tab:vande_chucnang}
+
+\section{Mục tiêu đề tài}
+\label{sec:muctieu}
+
+\subsection{Mục tiêu về nghiệp vụ}
+\ghichu{Liệt kê 5--7 mục tiêu nghiệp vụ có thể kiểm chứng: số hóa toàn bộ vòng đời đặt chỗ từ tìm kiếm đến thanh toán và check-out; quản lý tập trung nhiều chi nhánh với phân quyền rõ ràng; tự động hóa chính sách hủy và hoàn tiền; cung cấp báo cáo doanh thu và tỷ lệ lấp đầy cho ban quản lý; tăng tương tác cộng đồng giữa các thành viên.}
+\nguon{docs/SYSTEM\_SPEC.md \S1.2, \S2}
+
+\subsection{Mục tiêu về kỹ thuật}
+\ghichu{Liệt kê các mục tiêu kỹ thuật: kiến trúc phân tầng rõ ràng và dễ mở rộng; bảo đảm không xảy ra đặt chỗ trùng lịch trong điều kiện tương tranh; xử lý webhook thanh toán bảo đảm tính bất biến khi bị gọi lặp; bảo mật theo vai trò và cô lập dữ liệu giữa các chi nhánh; tối ưu hiệu năng tải trang và truy vấn; triển khai được lên môi trường đám mây thực tế.}
+
+\section{Đối tượng và phạm vi đề tài}
+\label{sec:phamvi}
+
+\subsection{Đối tượng người dùng}
+\ghichu{Mô tả bốn vai trò và đặc điểm sử dụng của từng vai trò: Khách hàng, Nhân viên, Quản lý chi nhánh, Quản trị hệ thống. Nêu rõ ràng buộc dữ liệu giữa vai trò và chi nhánh.}
+\nguon{docs/SYSTEM\_SPEC.md \S2}
+
+\subsection{Phạm vi chức năng}
+\ghichu{Nêu ranh giới: những gì hệ thống làm (đặt chỗ ngắn hạn và hợp đồng dài hạn, thanh toán trực tuyến và tiền mặt, hủy--hoàn tiền tự động, check-in/out, dịch vụ bổ sung, tích điểm thành viên, gợi ý đối tác, bảng tin, trợ lý ảo, báo cáo, nhật ký kiểm toán) và những gì nằm ngoài phạm vi (ví dụ: hoàn tiền thật về ví điện tử, ứng dụng di động gốc, tính lương nhân sự).}
+
+\subsection{Phạm vi triển khai và thử nghiệm}
+\ghichu{Nêu môi trường thử nghiệm: dữ liệu mô phỏng nhiều chi nhánh, cổng thanh toán chạy ở chế độ sandbox, hệ thống triển khai trên nền tảng đám mây miễn phí, quy mô người dùng thử nghiệm.}
+
+\section{Phương pháp thực hiện}
+\label{sec:phuongphap}
+\ghichu{Mô tả quy trình làm việc: khảo sát hệ thống tương tự, đặc tả yêu cầu và quy tắc nghiệp vụ dưới dạng tài liệu sống, thiết kế CSDL và API trước khi lập trình, phát triển lặp theo từng module, kiểm thử tự động ở tầng dịch vụ, rà soát chéo mã nguồn và triển khai liên tục. Có thể chèn sơ đồ quy trình và bảng phân công công việc theo tuần.}
+\nguon{docs/working\_methodology.md, docs/DEVELOPMENT\_PLAN.md, task.md}
+\bangcho{Kế hoạch thực hiện đề tài theo tuần và phân công công việc}{tab:kehoach}
+
+\section{Ý nghĩa của đề tài}
+\label{sec:ynghia}
+
+\subsection{Ý nghĩa khoa học}
+\ghichu{Nhấn mạnh việc vận dụng các kỹ thuật điều khiển đồng thời ở tầng cơ sở dữ liệu, thiết kế tích hợp thanh toán bảo đảm tính bất biến, và ứng dụng mô hình ngôn ngữ lớn vào quy trình nghiệp vụ có trạng thái.}
+
+\subsection{Ý nghĩa thực tiễn}
+\ghichu{Nhấn mạnh khả năng áp dụng cho các chuỗi văn phòng chia sẻ quy mô vừa và nhỏ tại Việt Nam, giảm thao tác thủ công và sai sót đối soát.}
+
+\section{Cấu trúc báo cáo}
+\label{sec:cautruc}
+\ghichu{Tóm tắt mỗi chương trong 1--2 câu, theo đúng thứ tự từ Chương \ref{ch:gioithieu} đến Chương \ref{ch:ketluan}. Viết mục này sau cùng, khi nội dung các chương đã ổn định.}

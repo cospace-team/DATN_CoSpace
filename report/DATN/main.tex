@@ -1,0 +1,118 @@
+%=====================================================================
+%  BÁO CÁO ĐỒ ÁN TỐT NGHIỆP
+%  Đề tài: Xây dựng hệ thống quản lý văn phòng chia sẻ (CoSpace)
+%  Trường ĐH Bách khoa - ĐHQG TP.HCM, Khoa KH & KT Máy tính
+%---------------------------------------------------------------------
+%  Cách biên dịch:  pdflatex main  ->  pdflatex main  ->  pdflatex main
+%  (hoặc: latexmk -pdf main.tex)
+%---------------------------------------------------------------------
+%  Khi nộp bản chính thức: mở preamble.tex, đổi \hienghichutrue
+%  thành \hienghichufalse để ẩn toàn bộ khung hướng dẫn màu xám.
+%=====================================================================
+\documentclass[a4paper,13pt,oneside]{report}
+\input{preamble}
+
+%---------------------------------------------------------------------
+%  THÔNG TIN ĐỀ TÀI - chỉnh sửa tập trung tại đây
+%---------------------------------------------------------------------
+\newcommand{\tendetai}{XÂY DỰNG HỆ THỐNG QUẢN LÝ VĂN PHÒNG CHIA SẺ}
+\newcommand{\tendetaiphu}{(CoSpace -- Co-working Space Management System)}
+\newcommand{\nganh}{KHOA HỌC MÁY TÍNH}
+\newcommand{\hoidong}{\ldots\ldots\ldots}          % TODO: điền hội đồng
+\newcommand{\gvhd}{ThS. Trương Quỳnh Chi}
+\newcommand{\gvpb}{\ldots\ldots\ldots}             % TODO: điền GV phản biện
+\newcommand{\svmot}{Vương Song Toàn (2213544)}
+\newcommand{\svhai}{Lê Đăng Khoa (2211599)}
+\newcommand{\thoigian}{TP. HỒ CHÍ MINH, THÁNG 12/NĂM 2026}  % TODO: chỉnh tháng bảo vệ
+
+\begin{document}
+\hypersetup{pageanchor=false}
+
+%=====================================================================
+%  TRANG BÌA
+%=====================================================================
+\begin{titlepage}
+\begin{tikzpicture}[remember picture, overlay]
+  \draw[line width=4pt] ($(current page.north west)+(0.4in,-0.5in)$) rectangle ($(current page.south east)+(-0.4in,0.5in)$);
+  \draw[line width=1.5pt] ($(current page.north west)+(0.45in,-0.55in)$) rectangle ($(current page.south east)+(-0.45in,0.55in)$);
+\end{tikzpicture}
+
+\begin{center}
+\LARGE \textbf{ĐẠI HỌC QUỐC GIA THÀNH PHỐ HỒ CHÍ MINH}\[0.2cm]
+\LARGE \textbf{TRƯỜNG ĐẠI HỌC BÁCH KHOA}\[0.2cm]
+\LARGE \textbf{KHOA KHOA HỌC VÀ KỸ THUẬT MÁY TÍNH}
+\end{center}
+
+\vspace{0.4cm}
+\begin{figure}[h!]
+\centering
+\includegraphics[width=4cm]{hcmut.png}
+\end{figure}
+
+\begin{center}
+\parbox{0.95\textwidth}{\centering
+\textbf{{\LARGE BÁO CÁO}}\[0.25cm]
+\textbf{{\LARGE ĐỒ ÁN TỐT NGHIỆP}}\[0.6cm]
+\textbf{\LARGE ĐỀ TÀI:}\[0.2cm]
+\textbf{\LARGE \tendetai}\[0.25cm]
+{\large \tendetaiphu}\[0.6cm]
+{\Large NGÀNH: \nganh}
+}
+\end{center}
+
+\vspace{0.6cm}
+\begin{table}[h]
+\begin{tabular}{rll}
+\hspace{4.5cm} & \textbf{\Large HỘI ĐỒNG:} & {\Large \hoidong}\[0.35cm]
+\hspace{4.5cm} & \textbf{\Large GVHD:}     & {\Large \gvhd}\[0.35cm]
+\hspace{4.5cm} & \textbf{\Large GVPB:}     & {\Large \gvpb}\[0.35cm]
+\hspace{4.5cm} & \multicolumn{2}{l}{\hspace{2.2cm}\textbf{\Large ---o0o---}}\[0.35cm]
+\hspace{4.5cm} & \textbf{\Large SVTH 1:}   & {\Large \svmot}\[0.35cm]
+\hspace{4.5cm} & \textbf{\Large SVTH 2:}   & {\Large \svhai}\[0.35cm]
+\end{tabular}
+\end{table}
+
+\vspace{0.4cm}
+\begin{center}{\Large \thoigian}\end{center}
+\end{titlepage}
+
+%=====================================================================
+%  PHẦN ĐẦU (đánh số La Mã)
+%=====================================================================
+\pagenumbering{roman}
+\input{Intro/LoiCamOn}
+\input{Intro/LoiCamDoan}
+\input{Intro/TomTat}
+\input{Intro/DanhMucVietTat}
+
+\newpage \tableofcontents
+\newpage \listoffigures
+\newpage \listoftables
+
+%=====================================================================
+%  PHẦN NỘI DUNG (đánh số Ả Rập)
+%=====================================================================
+\newpage
+\hypersetup{pageanchor=true}
+\pagenumbering{arabic}
+
+\input{Contents/Ch01_GioiThieu}
+\input{Contents/Ch02_KhaoSatTongQuan}
+\input{Contents/Ch03_KienThucNenTang}
+\input{Contents/Ch04_PhanTichYeuCau}
+\input{Contents/Ch05_MoHinhHoaUseCase}
+\input{Contents/Ch06_KienTrucThietKe}
+\input{Contents/Ch07_HienThucHeThong}
+\input{Contents/Ch08_GiaoDienKetQua}
+\input{Contents/Ch09_KiemThuDanhGia}
+\input{Contents/Ch10_TrienKhaiVanHanh}
+\input{Contents/Ch11_KetLuan}
+
+%=====================================================================
+%  PHẦN CUỐI
+%=====================================================================
+\input{Outro/TaiLieuThamKhao}
+\appendix
+\input{Outro/PhuLuc}
+
+\end{document}

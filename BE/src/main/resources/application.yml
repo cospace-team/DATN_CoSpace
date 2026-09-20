@@ -46,7 +46,13 @@ spring:
     hibernate:
       ddl-auto: none # Changed to none to avoid Postgres ENUM type errors during startup
     show-sql: true
-    defer-datasource-initialization: true
+    # No defer-datasource-initialization here. It only matters when Hibernate builds the schema
+    # itself (ddl-auto: create), and setting it makes Spring Boot treat the entityManagerFactory
+    # as a database initializer: JpaDatabaseInitializerDetector then forces every *other*
+    # initializer — Flyway included — to depend on it, while JPA still has to wait for Flyway's
+    # migrations. Those two edges close a loop and the context dies at boot with
+    # "Circular depends-on relationship between 'flyway' and 'entityManagerFactory'".
+    # Flyway owns the schema, and data.sql already runs after it (see spring.sql.init below).
     properties:
       hibernate:
         format_sql: true
@@ -60,7 +66,10 @@ spring:
     baseline-description: "Existing CoSpace schema"
   sql:
     init:
-      # Dev convenience only: seeds demo rows from data.sql after Flyway has built the schema.
+      # Dev convenience only: seeds demo rows from data.sql after Flyway has built the schema
+      # (Flyway's initializer is ordered ahead of the SQL-script one). There is deliberately no
+      # schema.sql any more — db/migration is the only place DDL lives; the old patch script is
+      # kept for reference under database/archive/migrations-legacy/.
       # Production turns this off entirely (see application-prod.yml).
       mode: always
       encoding: UTF-8

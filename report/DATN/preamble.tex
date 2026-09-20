@@ -1,0 +1,182 @@
+%=====================================================================
+%  preamble.tex — Cấu hình chung cho báo cáo Đồ án Tốt nghiệp
+%  Biên dịch: pdflatex (chạy 2-3 lần để cập nhật mục lục / tham chiếu)
+%=====================================================================
+
+%---------------------- Ngôn ngữ & phông chữ -------------------------
+\usepackage[utf8]{vntex}
+\usepackage{mathptmx}          % Times New Roman cho cả văn bản và công thức
+
+%---------------------- Trình bày trang ------------------------------
+\usepackage{geometry}
+\geometry{a4paper, left=30mm, right=20mm, top=25mm, bottom=25mm}
+\usepackage{setspace}
+\onehalfspacing                % Giãn dòng 1.5 theo quy định báo cáo
+\setlength{\parindent}{1cm}
+\usepackage{indentfirst}
+\usepackage{lastpage}
+\usepackage{emptypage}
+
+%---------------------- Bảng biểu & hình ảnh -------------------------
+\usepackage{graphicx}
+\graphicspath{{Images/}{../Images/}}   % dùng lại kho ảnh của báo cáo ĐACN
+\usepackage{array, multirow, multicol, longtable, tabularx, booktabs, hhline}
+\usepackage{float}
+\usepackage{caption, subcaption}
+\usepackage{rotating}
+\usepackage{diagbox}
+\usepackage{tikz}
+\usetikzlibrary{arrows, backgrounds, calc, positioning, shapes.geometric}
+
+%---------------------- Toán học & thuật toán ------------------------
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage[lined, boxed, commentsnumbered]{algorithm2e}
+
+%---------------------- Mã nguồn -------------------------------------
+\usepackage{xcolor}
+\usepackage{listings}
+\lstdefinestyle{cospace}{
+    basicstyle=\footnotesize\ttfamily,
+    keywordstyle=\color{blue!70!black}\bfseries,
+    commentstyle=\color{green!40!black}\itshape,
+    stringstyle=\color{red!60!black},
+    numbers=left, numberstyle=\tiny\color{gray}, numbersep=8pt,
+    frame=single, rulecolor=\color{gray!50},
+    backgroundcolor=\color{gray!5},
+    breaklines=true, breakatwhitespace=false,
+    showstringspaces=false, tabsize=2, captionpos=b,
+    extendedchars=true, literate={ă}{{\u a}}1 {â}{{\^a}}1 {đ}{{\dj}}1 {ê}{{\^e}}1 {ô}{{\^o}}1 {ơ}{{\ohorn}}1 {ư}{{\uhorn}}1
+}
+\lstset{style=cospace}
+
+%---------------------- Danh mục & liên kết --------------------------
+\usepackage[unicode]{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black, citecolor=black, urlcolor=blue,
+    pdftitle={Bao cao Do an Tot nghiep - He thong quan ly Co-working Space CoSpace},
+    pdfauthor={Vuong Song Toan - Le Dang Khoa}
+}
+\usepackage[nottoc]{tocbibind}   % đưa Tài liệu tham khảo vào mục lục
+
+%---------------------- Việt hóa tên mục ----------------------------
+\renewcommand{\chaptername}{Chương}
+\renewcommand{\contentsname}{Mục lục}
+\renewcommand{\listfigurename}{Danh sách hình vẽ}
+\renewcommand{\listtablename}{Danh sách bảng}
+\renewcommand{\bibname}{Tài liệu tham khảo}
+\renewcommand{\appendixname}{Phụ lục}
+\renewcommand{\figurename}{Hình}
+\renewcommand{\tablename}{Bảng}
+\renewcommand{\lstlistingname}{Đoạn mã}
+
+%---------------------- Đầu trang / chân trang -----------------------
+\usepackage{fancyhdr}
+\setlength{\headheight}{40pt}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{%
+ \begin{tabular}{rl}
+    \begin{picture}(25,15)(0,0)
+    \put(0,-8){\includegraphics[width=10mm, height=10mm]{hcmut.png}}
+   \end{picture}&
+	\begin{tabular}{l}
+		\textbf{\small Trường Đại học Bách khoa -- Đại học Quốc gia TP.HCM}\
+		\textbf{\small Khoa Khoa học \& Kỹ thuật Máy tính}
+	\end{tabular}
+ \end{tabular}%
+}
+\fancyfoot[L]{\scriptsize Báo cáo Đồ án Tốt nghiệp -- Hệ thống quản lý văn phòng chia sẻ CoSpace}
+\fancyfoot[R]{\scriptsize Trang {\thepage}/\pageref{LastPage}}
+\renewcommand{\headrulewidth}{0.3pt}
+\renewcommand{\footrulewidth}{0.3pt}
+\fancypagestyle{plain}{%   % trang đầu mỗi chương vẫn giữ header/footer
+  \fancyhf{}
+  \fancyhead[L]{%
+    \begin{tabular}{rl}
+      \begin{picture}(25,15)(0,0)\put(0,-8){\includegraphics[width=10mm, height=10mm]{hcmut.png}}\end{picture}&
+      \begin{tabular}{l}
+        \textbf{\small Trường Đại học Bách khoa -- Đại học Quốc gia TP.HCM}\
+        \textbf{\small Khoa Khoa học \& Kỹ thuật Máy tính}
+      \end{tabular}
+    \end{tabular}%
+  }
+  \fancyfoot[L]{\scriptsize Báo cáo Đồ án Tốt nghiệp -- Hệ thống quản lý văn phòng chia sẻ CoSpace}
+  \fancyfoot[R]{\scriptsize Trang {\thepage}/\pageref{LastPage}}
+}
+
+%---------------------- Cấp mục & đánh số ---------------------------
+\setcounter{secnumdepth}{4}
+\setcounter{tocdepth}{3}
+\makeatletter
+\newcounter{subsubsubsection}[subsubsection]
+\renewcommand\thesubsubsubsection{\thesubsubsection.\@alph\c@subsubsubsection}
+\newcommand\subsubsubsection{\@startsection{subsubsubsection}{4}{\z@}%
+    {-3.25ex\@plus -1ex \@minus -.2ex}{1.5ex \@plus .2ex}{\normalfont\normalsize\bfseries}}
+\newcommand*\l@subsubsubsection{\@dottedtocline{4}{10.0em}{4.1em}}
+\providecommand*{\toclevel@subsubsubsection}{4}
+\newcommand*{\subsubsubsectionmark}[1]{}
+\makeatother
+
+%---------------------- Định lý / định nghĩa -------------------------
+\newtheorem{definition}{\bf Định nghĩa}[chapter]
+\newtheorem{theorem}{\bf Định lý}[chapter]
+\newtheorem{property}{\bf Tính chất}[chapter]
+
+%=====================================================================
+%  CÁC LỆNH TIỆN ÍCH DÙNG TRONG SƯỜN BÁO CÁO
+%=====================================================================
+
+% Bật/tắt toàn bộ khung hướng dẫn viết bài:
+%   \hienghichutrue  -> hiển thị (khi đang viết nháp)
+%   \hienghichufalse -> ẩn hết (khi nộp bản chính thức)
+\newif\ifhienghichu
+\hienghichutrue
+
+% \ghichu{...} : khung gợi ý nội dung cần viết cho mục đang soạn
+\newcommand{\ghichu}[1]{%
+  \ifhienghichu
+    \par\vspace{2pt}
+    \noindent\begin{tikzpicture}
+      \node[draw=gray!55, fill=gray!8, rounded corners=3pt, line width=0.4pt,
+            inner sep=7pt, text width=\dimexpr\linewidth-18pt\relax, align=justify]
+        {\small\itshape\color{black!72}\textbf{[Nội dung cần viết]}~#1};
+    \end{tikzpicture}
+    \par\vspace{4pt}
+  \fi
+}
+
+% \nguon{...} : chỉ ra tài liệu/mã nguồn trong repo dùng làm dữ liệu viết mục này
+\newcommand{\nguon}[1]{%
+  \ifhienghichu
+    \par\noindent{\footnotesize\color{blue!45!black}\textbf{Nguồn dữ liệu:} \texttt{#1}}\par\vspace{4pt}
+  \fi
+}
+
+% \hinhcho{tỉ lệ bề rộng}{chú thích}{nhãn} : chỗ trống chờ chèn hình
+\newcommand{\hinhcho}[3]{%
+  \begin{figure}[H]
+    \centering
+    \begin{tikzpicture}
+      \node[draw=gray!60, dashed, fill=gray!5, rounded corners=4pt,
+            minimum height=3.2cm, text width=\dimexpr#1\linewidth-20pt\relax, align=center]
+        {\small\color{black!60}\textit{[Chèn hình: #2]}};
+    \end{tikzpicture}
+    \caption{#2}
+    \label{#3}
+  \end{figure}%
+}
+
+% \bangcho{chú thích}{nhãn} : chỗ trống chờ chèn bảng
+\newcommand{\bangcho}[2]{%
+  \begin{table}[H]
+    \centering
+    \begin{tabular}{|p{0.9\linewidth}|}
+      \hline
+      \rule{0pt}{2.2cm}\centering\small\color{black!60}\textit{[Chèn bảng: #1]}\tabularnewline
+      \hline
+    \end{tabular}
+    \caption{#1}
+    \label{#2}
+  \end{table}%
+}
