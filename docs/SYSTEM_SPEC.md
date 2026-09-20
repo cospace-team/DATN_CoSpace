@@ -62,7 +62,7 @@ Ngoài ra, hệ sinh thái CoSpace tích hợp mạng lưới kết nối đối
 - Kiểm tra tình trạng còn trống và đặt chỗ
 
 **Thanh toán & quản lý:**
-- Thanh toán trực tuyến qua MoMo hoặc tiền mặt tại quầy (nhân viên xác nhận)
+- Thanh toán trực tuyến qua PayOS (VietQR) hoặc MoMo. Tiền mặt là hình thức tại quầy do nhân viên thu và xác nhận, khách tự đặt chỗ **không** chọn được (xem §4.3)
 - Xem lịch sử đặt chỗ và giao dịch thanh toán
 - Gửi yêu cầu hủy đặt chỗ (hệ thống tự động tính refund theo chính sách, thông báo kết quả)
 
@@ -162,10 +162,13 @@ Ngoài ra, hệ sinh thái CoSpace tích hợp mạng lưới kết nối đối
 **Booking status flow:**
 ```
 pending_payment → confirmed → checked_in → completed (Staff checkout hoặc Auto EOD)
-                                         ↘ canceled (Khách yêu cầu hoàn tiền sớm)
+                            ↘ no_show   (hết giờ mà không có lượt check-in nào)
+                            ↘ canceled  (khách hủy TRƯỚC giờ bắt đầu, staff hủy thay, hoặc bảo trì)
 pending_payment → expired (15 min timeout)
-pending_payment → canceled (Khách tự hủy / Auto-cancel bảo trì)
+pending_payment → canceled (Khách tự hủy / Staff hủy thay / Auto-cancel bảo trì)
 ```
+- Đơn đang `checked_in` KHÔNG hủy được: khách muốn về sớm thì check-out.
+- Khách chỉ tự hủy được trước `start_at`; sau thời điểm đó chỉ nhân viên hủy thay được (§7.49).
 
 **Constraints:**
 - `total_amount = subtotal_amount - discount_amount + addon_amount`
@@ -226,7 +229,7 @@ pending → paid (Staff xác nhận cash)
 1. Khách gửi yêu cầu hủy
 2. Hệ thống tìm policy phù hợp (ưu tiên branch → global, priority DESC)
 3. Tính refund_amount = total_amount × refund_percent / 100
-4. Ghi nhận `refund_status = confirmed` ngay (không cần admin xét duyệt)
+4. Ghi nhận yêu cầu hoàn tiền ở trạng thái `pending` và đưa vào hàng chờ `refunds`. Nhân viên hoặc quản lý chi nhánh xác nhận đã chuyển/trả tiền thì mới chuyển sang `processed` — MVP không payout tự động qua cổng thanh toán, và tiền mặt phải trả tận tay
 5. Thông báo khách: chính sách áp dụng + số tiền hoàn
 6. MVP: Chỉ ghi nhận nội bộ, không payout MoMo thực tế
 
@@ -251,11 +254,15 @@ pending → paid (Staff xác nhận cash)
 
 **Matching Formula (MVP):**
 ```
-score = (skill_overlap × 0.6) + (interest_overlap × 0.25) + (same_branch_bonus × 0.15)
+weighted = (skill_overlap × 0.5) + (interest_overlap × 0.2) + (post_affinity × 0.2)
+score    = weighted / (tổng trọng số của các tín hiệu CẢ HAI bên cùng có) + same_branch_bonus
 ```
 - `skill_overlap` = số skill tags trùng / tổng skill tags (Jaccard)
 - `interest_overlap` = số interest tags trùng / tổng interest tags (Jaccard)
-- `same_branch_bonus` = 1.0 nếu cùng `primary_branch_id`, 0.0 nếu khác
+- `post_affinity` = số tag trùng giữa bài viết của đối phương và mối quan tâm của mình / min(số tag hai bên)
+- Chuẩn hóa theo trọng số thực có: người chưa điền kỹ năng vẫn được chấm điểm từ bài viết, thay vì bị ép về gần 0
+- `same_branch_bonus` = 0.15 nếu cùng `primary_branch_id`, 0.0 nếu khác; điểm cuối chặn trên ở 1.0
+- Chỉ gợi ý tài khoản `role = customer`; nhân viên, quản trị viên và khách vãng lai (walk-in) bị loại
 - Scope: **Toàn hệ thống** (cross-branch), cùng branch = bonus
 
 ### 3.9 Notification (In-app)
@@ -532,10 +539,13 @@ Customer cập nhật profile → chọn skills/interests từ danh sách tags c
 3. **Maintenance block**: Booking không overlap maintenance (status ∈ {scheduled, active})
 4. **Payment timeout**: pending_payment auto-expire sau 15 phút
 5. **Hủy tự động & Thứ tự ưu tiên chính sách**: Engine tìm kiếm policy phù hợp theo nguyên tắc nghiêm ngặt: (1) Tìm chính sách riêng của chi nhánh (`branch_id = booking.branch_id`) trước, nếu không có mới tìm chính sách toàn cục (`branch_id IS NULL`); (2) Sắp xếp theo độ ưu tiên giảm dần `priority DESC`; (3) Khớp theo hai loại luật: `GRACE_HOURS` (số giờ kể từ khi tạo đơn `createdAt`) và `BEFORE_START_DAYS` / `BEFORE_START_HOURS` (số ngày/giờ trước thời điểm bắt đầu `startAt`). Nếu không khớp policy nào → mặc định hoàn tiền 0%. Bất biến: `refund_amount + penalty_amount = booking.total_amount`.
+    - **Fallback**: chi nhánh có policy riêng nhưng không policy nào khớp khung thời gian thì engine vẫn dùng policy toàn cục. Policy chi nhánh chỉ ghi đè những khung mà nó định nghĩa, giống cơ chế bảng giá (§7.11).
+    - **Biên khoảng**: so sánh theo **phút** và dùng nửa khoảng `[min_value, max_value)`. "Miễn phí hủy trong 2 giờ đầu" kết thúc đúng 02:00:00, và hai khung liền nhau không bao giờ cùng khớp một thời điểm.
+    - **Không hủy sau giờ bắt đầu**: đơn đã thanh toán mà quá `start_at` thì không hủy trực tuyến được nữa; khách không đến sẽ thành no-show và mất phí (§7.28). Đơn chưa thanh toán vẫn hủy được vì không có tiền liên quan.
 6. **Idempotency**: payment_events.idempotency_key unique (webhook chống lặp)
 7. **Staff scope**: Staff chỉ thao tác chi nhánh của mình
 8. **Branch Admin scope**: Branch Admin chỉ quản lý chi nhánh được gán
-9. **Một check-in mở & Tolerance Window 30 phút**: Mỗi booking tối đa 1 bản ghi `checkin_logs` với `checkout_at = null`. Nhân viên quầy chỉ được phép thực hiện check-in trong khoảng thời gian dung sai hợp lệ: từ **30 phút trước `startAt`** cho đến **30 phút sau `endAt`**. Ngoài khoảng này hệ thống chặn lại để bảo đảm an ninh ca trực.
+9. **Một check-in mở & Tolerance Window 30 phút**: Mỗi booking tối đa 1 bản ghi `checkin_logs` với `checkout_at = null`. Nhân viên quầy chỉ được phép check-in từ **30 phút trước `startAt`** cho đến **`endAt`**. Không cho check-in sau giờ kết thúc, vì scheduler chuyển đơn chưa dùng sang `NO_SHOW` ngay sau `endAt`; nếu mở tới `endAt + 30'` thì hai cơ chế sẽ đá nhau.
 10. **Giá hiện tại**: Không lịch sử/effective_dates ở MVP
 11. **Pricing fallback**: Branch-specific → Global default
 12. **Tiền tệ**: VND
@@ -545,7 +555,7 @@ Customer cập nhật profile → chọn skills/interests từ danh sách tags c
 16. **Workspace type lock**: KHÔNG cho đổi workspace type khi còn booking active (pending_payment/confirmed/checked_in). Phải được thực thi ở App Layer khi gọi API `PUT /workspaces/{id}` bằng cách kiểm tra bảng `bookings`.
 17. **Tags predefined**: Admin quản lý danh sách tags. User chỉ chọn, không tự tạo.
 18. **Matching scope**: Toàn hệ thống, cùng `primary_branch_id` = bonus score (+0.15).
-19. **Hạng thành viên & Điểm tích lũy (Loyalty Program)**: 4 hạng thành viên (`Bronze`, `Silver`, `Gold`, `Platinum`). Điểm tích lũy được cộng tự động khi đơn đặt phòng chuyển sang `PAID` (10.000 VNĐ = 1 điểm). Tự động chiết khấu trực tiếp trên tiền thuê không gian khi thành viên hạng cao thực hiện đặt chỗ.
+19. **Hạng thành viên (Loyalty Program)**: 4 hạng thành viên (`Bronze`, `Silver`, `Gold`, `Platinum`), tự động chiết khấu trên tiền thuê không gian khi đặt chỗ. Hạng được suy ra từ tổng chi tiêu và số đơn **đã sử dụng xong** (`completed`, `no_show`), trừ đi các khoản đã hoàn — cùng cơ sở với định nghĩa doanh thu ở §7.11 của báo cáo. Không dùng hệ thống điểm tích lũy: đơn mới thanh toán mà chưa sử dụng thì chưa được tính, nếu không khách có thể đặt đơn lớn để lên hạng rồi hủy.
 20. **Notification**: In-app notification qua bảng `notifications`. Email → V2+.
 21. **Timezone**: API trả UTC. FE convert theo `branch.timezone`.
 22. **SVG Storage**: Upload qua Supabase Storage. Khi cập nhật bản đồ (tăng `map_version`), CHỈ cho phép thêm mới hoặc giữ nguyên SVG ID cũ. Nếu một không gian vật lý bị xóa, phải đánh dấu `workspace.status = 'inactive'` thay vì xóa cứng để tránh mồ côi dữ liệu lịch sử.
@@ -554,17 +564,16 @@ Customer cập nhật profile → chọn skills/interests từ danh sách tags c
 25. **Identity Auth Sync**: Bất kỳ thay đổi Auth nào (như đổi email) phải thực hiện qua API của CoSpace Backend. BE sẽ đồng thời gọi Admin API của Supabase và update DB nội bộ để đảm bảo đồng bộ.
 26. **Late Webhook (Ghost Payment)**: Khách lỡ chuyển tiền muộn, hoặc khách bấm Hủy đúng lúc webhook đang bay về. Nếu Webhook PayOS/MoMo trả Success nhưng booking đã `expired` hoặc `canceled`, hệ thống sẽ cập nhật `payments.status = 'paid'`, giữ nguyên `bookings.status` (`expired`/`canceled`), và TỰ ĐỘNG tạo một bản ghi Refund (đưa vào `booking_cancellations` với `refund_status = pending`) để hoàn tiền lại cho khách. **Race condition prevention**: Cả webhook handler và timer/cancel handler PHẢI `SELECT ... FROM bookings WHERE id = ? FOR UPDATE` trước khi đọc/sửa status.
 27. **Giờ Hoạt Động (Operating Hours)**: Bảng `branches` có `open_time` và `close_time`. Hệ thống kiểm tra giờ mở cửa khi đặt chỗ. Nếu `NULL`, mặc định là 24/7.
-28. **Bỏ Cọc (No-Show)**: Nếu khách đã thanh toán (`confirmed`) nhưng không đến check-in và qua giờ `end_at`, hệ thống tự động coi như `completed`. Khách mất phí, nhân viên không cần xử lý đóng ca thủ công.
+28. **Bỏ Cọc (No-Show)**: Nếu khách đã thanh toán (`confirmed`) nhưng không đến check-in và qua giờ `end_at`, hệ thống tự động chuyển đơn sang trạng thái riêng `no_show`. Khách mất phí, nhân viên không cần xử lý đóng ca thủ công. Dùng trạng thái riêng thay vì `completed` để báo cáo phân biệt được đơn đã sử dụng với đơn bị bỏ lỡ.
 29. **Sức Chứa (Capacity)**: Cột `capacity` mang tính chất tham khảo. Nếu khách đi quá số người, nhân viên linh động tạo thêm phiếu Add-on để thu phụ phí. Không block cứng ở DB.
 30. **Gọi Thêm Dịch Vụ (Running Tab — Cyber-cafe model)**: Booking row là "hóa đơn chạy" (running tab). Khi khách đã check-in, Staff INSERT dòng mới vào `booking_services` (cho phép nhiều dòng cùng service — không UNIQUE) và UPDATE `bookings.addon_amount += line_total`, `bookings.total_amount += line_total` trong cùng 1 transaction. Sau đó tạo Payment mới (tiền mặt) cho phần add-on. Invariant: `SUM(payments.amount WHERE status='paid') = booking.total_amount`. Giao dịch bán lẻ độc lập (POS) → V2+.
 31. **Check-in/out Hợp Đồng Dài Hạn**: Khách thuê theo tuần/tháng (`is_contract = true`) vẫn phải thực hiện quét mã check-in khi đến và check-out khi về **MỖI NGÀY** để xác thực danh tính và kiểm soát an ninh. Bảng `checkin_logs` hỗ trợ nhiều lần check-in trên cùng 1 booking.
 32. **Quyền Quản Lý Dịch Vụ**: Branch Admin được phép TẠO MỚI, SỬA, XÓA các dịch vụ phụ (Extra Services) dành riêng cho chi nhánh của mình (`branch_id` NOT NULL). System Admin có quyền quản lý cả dịch vụ chung (Global) lẫn dịch vụ riêng của bất kỳ chi nhánh nào.
 33. **Chống Spam Đặt Chỗ (Concurrent Rate Limit)**: Mỗi user chỉ được có tối đa **3 booking đang ở trạng thái `pending_payment`**. Để chống Race Condition (script bắn spam request), App Layer BẮT BUỘC phải dùng `pg_advisory_xact_lock(hashtext('rate_limit:' || user_id))` để xin khóa độc quyền của user trước khi thực hiện lệnh `COUNT(*)`.
 34. **Gia Hạn Thời Gian (Extending Duration)**: Cập nhật `end_at` của booking hiện tại (khách muốn ngồi thêm). Điều kiện: khoảng thời gian gia hạn không Overlap (dùng Advisory Lock kiểm tra). Khi gia hạn, UPDATE `bookings.end_at`, `bookings.subtotal_amount += delta_price`, `bookings.total_amount += delta_price` trong cùng transaction, tạo Payment mới cho số tiền chênh lệch. CHECK constraint `total = subtotal - discount + addon` luôn đúng vì UPDATE atomic.
-35. **Bảo Trì Tự Động Hủy (Maintenance Auto-Cancel)**: Khi Admin tạo lịch bảo trì (`workspace_maintenance`), hệ thống quét TẤT CẢ booking (`pending_payment`, `confirmed`, `checked_in`) bị TRÙNG LỊCH:
-    - `pending_payment`: Chuyển sang `canceled` (từ chối thanh toán).
-    - `confirmed`: Chuyển sang `canceled`, hoàn tiền 100%, báo Noti.
-    - `checked_in`: Ép buộc checkout sớm (sang `completed`), hoàn tiền % thời gian chưa sử dụng, báo Noti.
+35. **Bảo Trì & Booking Trùng Lịch**: Không cho tạo lịch bảo trì có `start_at` trong quá khứ. Khi tạo lịch, hệ thống quét booking (`pending_payment`, `confirmed`, `checked_in`) bị TRÙNG LỊCH và xử lý theo mức độ ảnh hưởng:
+    - **Bảo trì phủ TRỌN booking** (`maintenance.start_at <= booking.start_at` và `maintenance.end_at >= booking.end_at`): `pending_payment`/`confirmed` chuyển sang `canceled` và hoàn 100% số đã trả; `checked_in` bị ép checkout sớm (sang `completed`) và hoàn phần thời gian còn lại. Báo Noti.
+    - **Bảo trì chỉ phủ MỘT PHẦN**: booking được GIỮ NGUYÊN, chỉ hoàn pro-rata đúng khoảng thời gian giao nhau và báo Noti. Một đợt bảo trì 2 giờ không được phép hủy cả hợp đồng tháng.
 36. **Cách Ly Chi Nhánh (Branch Isolation)**: Tài khoản Staff chỉ được phép xem sơ đồ (floorplan), danh sách booking và thao tác trong phạm vi chi nhánh (`branch_id`) của mình. Không được quyền xem chéo chi nhánh khác.
 37. **Bảo Lưu Giá (Price Immutability)**: Khi Admin thay đổi hoặc vô hiệu hóa Bảng giá (`price_policies`), giá của các Booking ĐÃ ĐẶT (lưu trong `bookings.subtotal_amount`) sẽ không bị thay đổi.
 38. **Webhook Transaction Atomicity**: Toàn bộ xử lý webhook (cập nhật `payments.status`, `bookings.status`, đánh dấu `payment_events.processed`) PHẢI chạy trong 1 DB transaction (`@Transactional`). Nếu bất kỳ bước nào fail → rollback toàn bộ. Webhook retry + idempotency_key ngăn xử lý lặp.
@@ -577,6 +586,9 @@ Customer cập nhật profile → chọn skills/interests từ danh sách tags c
 45. **Bộ Nhớ Đệm In-Memory (Spring Cache + Caffeine)**: Các tài nguyên đọc thường xuyên và ít biến động (`branches`, `workspace_types`, `price_policies`, `extra_services`, `cancellation_policies`, `reports_overview`) được lưu đệm bộ nhớ In-Memory với Caffeine Cache. Khi có thao tác thay đổi dữ liệu, hệ thống tự động gọi `@CacheEvict` để xóa bỏ dữ liệu cũ.
 46. **Trợ Lý Ảo Thông Minh (Gemini AI Chatbot Assistant)**: Tích hợp Google Gemini Flash API cho phép khách hàng tra cứu thông tin dịch vụ, giải đáp chính sách và thực hiện đặt chỗ trực tiếp qua giao diện đàm thoại.
 47. **Bảo Mật Xác Thực Kép & Single Source API URL**: Xác thực qua hai cơ chế: Supabase Auth (OAuth2 JWT) và App Local JWT (HS384 với `APP_JWT_SECRET` tối thiểu 48 bytes). Toàn bộ Frontend sử dụng duy nhất một nguồn cấu hình URL từ `config/api.ts` kết nối qua `VITE_API_BASE_URL`.
+49. **Hủy Thay Khách (Staff Cancellation)**: Vì khách không tự hủy được sau `start_at`, nhân viên và quản lý chi nhánh có API riêng để hủy thay khách trong phạm vi chi nhánh mình. Bắt buộc nhập lý do, mọi lần gọi đều ghi `audit_logs`. Mặc định vẫn áp bảng chính sách hủy; riêng trường hợp lỗi thuộc về chi nhánh thì được chọn miễn phí phạt (hoàn 100% số đã trả). Đơn đang `checked_in` vẫn không hủy được.
+50. **Giới Hạn Thời Lượng Đơn**: Tối đa 24 giờ, 30 ngày, 52 tuần hoặc 12 tháng cho mỗi đơn, tùy đơn vị thời gian đã chọn (UC-BOOK-01, UC-BOOK-02 R8).
+51. **Lượt Dùng Mã Khuyến Mãi**: Đơn hết hạn vì chưa thanh toán sẽ trả lại lượt dùng mã; đơn đã thanh toán rồi bị hủy thì KHÔNG trả lại, tránh việc đặt–hủy liên tục để dùng lại mã giới hạn một lượt.
 48. **Bảo Vệ Môi Trường Production (PayOS Production Guard)**: Khi chạy ở profile `prod`, hệ thống kích hoạt `PayosProductionGuard` để từ chối khởi động nếu PayOS còn ở chế độ demo-mode hoặc sử dụng credential mặc định, đồng thời vô hiệu hóa hoàn toàn endpoint `/simulate` nhằm ngăn ngừa gian lận tài chính.
 
 ---
