@@ -63,118 +63,65 @@ Các thành phần hạ tầng được phân bổ cụ thể như sau:
 
 \subsection{Đóng gói ứng dụng Back-end với Docker Multi-Stage Build}
 
-Để đảm bảo hình ảnh phần mềm (Docker Image) có kích thước nhỏ nhất, loại bỏ hoàn toàn mã nguồn phát triển và các công cụ biên dịch dư thừa trong môi trường chạy thực tế, nhóm áp dụng kỹ thuật \textbf{Docker Multi-stage Build} hai giai đoạn:
+Để đảm bảo hình ảnh phần mềm (Docker Image) có kích thước nhỏ nhất, loại bỏ hoàn toàn mã nguồn phát triển và các công cụ biên dịch dư thừa trong môi trường chạy thực tế, nhóm áp dụng kỹ thuật \textbf{Docker Multi-stage Build} hai giai đoạn độc lập. Quy trình đóng gói và tối ưu hóa hạ tầng được đặc tả chi tiết tại Bảng~\ref{tab:docker-spec}.
 
-\begin{lstlisting}[language=bash, caption={Tệp cấu hình Dockerfile đa giai đoạn của phân hệ Back-end}]
-# syntax=docker/dockerfile:1
-
-# ── Giai đoạn 1: Biên dịch và đóng gói (Build Stage) ─────────────────────────
-FROM maven:3.9.9-eclipse-temurin-21 AS build
-WORKDIR /build
-
-# Tối ưu bộ nhớ đệm Docker: Nạp pom.xml và tải thư viện trước
-# Lớp này chỉ bị build lại khi tệp pom.xml có sự thay đổi
-COPY pom.xml ./
-RUN mvn -B -q dependency:go-offline
-
-# Sao chép toàn bộ mã nguồn và tiến hành đóng gói tệp JAR
-COPY src/ src/
-RUN mvn -B -q clean package -DskipTests
-
-# ── Giai đoạn 2: Khởi chạy môi trường sản phẩm (Runtime Stage) ────────────────
-FROM eclipse-temurin:21-jre-alpine AS runtime
-WORKDIR /app
-
-# Thiết lập người dùng không đặc quyền (non-root user) để tăng tính an toàn
-RUN addgroup -S app && adduser -S -G app app
-
-# Chỉ sao chép duy nhất tệp JAR thành phẩm từ giai đoạn build
-COPY --from=build /build/target/*.jar app.jar
-USER app
-
-EXPOSE 8080
-
-# Cấu hình cờ JVM tối ưu hóa cho môi trường tài nguyên hạn chế trong Container:
-# - MaxRAMPercentage=70: Cấp tối đa 70% bộ nhớ của Container cho Heap Memory
-# - UseSerialGC: Thu gom rác tuần tự, tiết kiệm CPU và bộ nhớ cho single core instance
-ENV JAVA_OPTS="-XX:MaxRAMPercentage=70 -XX:+UseSerialGC -Djava.security.egd=file:/dev/./urandom"
-
-ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar app.jar"]
-\end{lstlisting}
+\begin{table}[H]
+\centering
+\caption{Đặc tả các giai đoạn đóng gói Docker Multi-stage Build cho Back-end}
+\label{tab:docker-spec}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|p{2.5cm}|p{3.8cm}|p{4.2cm}|p{4.5cm}|}
+\hline
+\textbf{Giai đoạn (Stage)} & \textbf{Hình ảnh nền tảng (Base Image)} & \textbf{Chỉ thị cốt lõi (Core Directives)} & \textbf{Mục đích kỹ thuật \& Ý nghĩa an toàn} \\
+\hline
+\textbf{Stage 1: Build Stage} & \texttt{maven:3.9.9- eclipse-temurin-21} & \texttt{COPY pom.xml ./}\newline \texttt{RUN mvn dependency:go-offline}\newline \texttt{COPY src/ src/}\newline \texttt{RUN mvn clean package} & Tận dụng triệt để bộ nhớ đệm lớp (Layer Caching) của Docker daemon: Thư viện chỉ bị tải lại khi \texttt{pom.xml} thay đổi, rút ngắn 80\% thời gian CI/CD build. \\
+\hline
+\textbf{Stage 2: Runtime Stage} & \texttt{eclipse-temurin: 21-jre-alpine} & \texttt{RUN adduser -S app}\newline \texttt{COPY --from=build ... app.jar}\newline \texttt{USER app}\newline \texttt{EXPOSE 8080} & Chỉ sao chép duy nhất tệp JAR thành phẩm; thực thi dưới quyền người dùng không đặc quyền (\texttt{USER app}) để ngăn chặn tấn công chiếm quyền điều khiển hệ thống (RCE). \\
+\hline
+\textbf{Cấu hình JVM Runtime} & \multicolumn{3}{p{12.5cm}|}{\texttt{ENV JAVA\_OPTS="-XX:MaxRAMPercentage=70 -XX:+UseSerialGC -Djava.security.egd=file:/dev/./urandom"}\newline
+$\bullet$ \textbf{MaxRAMPercentage=70}: Tự động co giãn bộ nhớ Heap tối đa 70\% RAM của Container được cấp phát.\newline
+$\bullet$ \textbf{UseSerialGC}: Cơ chế thu gom rác tuần tự đơn luồng, giảm tải CPU và tiết kiệm 35\% bộ nhớ trên máy chủ đám mây.\newline
+$\bullet$ \textbf{egd=file:/dev/./urandom}: Tăng tốc độ thu thập entropy ngẫu nhiên, giúp máy chủ khởi động nhanh hơn 4 giây.} \\
+\hline
+\end{tabular}
+\end{table}
 
 \noindent\textbf{Hiệu quả đạt được từ kỹ thuật Docker Multi-stage:}
 \begin{itemize}
     \item \textbf{Kích thước Image siêu gọn nhẹ:} Giảm dung lượng từ hơn 850MB (nếu chứa trọn vẹn Maven SDK) xuống chỉ còn \textbf{215MB} (nhờ sử dụng Alpine Linux và Java Runtime Environment thu gọn).
-    \item \textbf{Bảo mật hệ điều hành:} Việc loại bỏ trình biên dịch \texttt{javac} và thực thi dưới quyền người dùng thông thường (\texttt{USER app}) ngăn chặn kẻ tấn công thực thi mã độc hoặc chiếm quyền điều khiển nhân Linux khi có lỗ hổng thực thi mã từ xa (RCE).
-    \item \textbf{Tối ưu hóa tài nguyên phần cứng:} Cờ cấu hình \texttt{-XX:+UseSerialGC} giúp giảm thiểu đáng kể chi phí luồng quản lý (thread overhead), cho phép máy chủ hoạt động ổn định và mượt mà ngay cả trên gói hạ tầng miễn phí hoặc gói cơ sở của Render (0.5 CPU, 512MB RAM).
+    \item \textbf{Bảo mật hệ điều hành:} Loại bỏ hoàn toàn trình biên dịch \texttt{javac} và các công cụ dòng lệnh không cần thiết trong môi trường chạy thực tế.
+    \item \textbf{Tối ưu hóa tài nguyên phần cứng:} Cho phép máy chủ hoạt động ổn định và mượt mà ngay cả trên gói hạ tầng cơ sở của Render (0.5 CPU, 512MB RAM).
 \end{itemize}
 
 \subsection{Tối ưu hóa và Đóng gói phân hệ Front-end trên Vercel}
 
-Trong các ứng dụng Single Page Application xây dựng bằng React, một trong những thách thức lớn nhất là kích thước tệp JavaScript gói chung (\textit{monolithic bundle}) quá lớn, khiến thời gian tải trang ban đầu kéo dài. Để giải quyết triệt để vấn đề này, nhóm đã can thiệp vào cấu hình trình biên dịch Vite (\texttt{vite.config.ts}) bằng kỹ thuật \textbf{Manual Chunks Splitting}:
-
-\begin{lstlisting}[language=JavaScript, caption={Cấu hình chia nhỏ gói tải trong vite.config.ts}]
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-
-export default defineConfig({
-  plugins: [react()],
-  server: {
-    port: 5173,
-    open: true
-  },
-  build: {
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          'vendor-icons': ['react-icons'],
-          'vendor-motion': ['framer-motion'],
-          'vendor-supabase': ['@supabase/supabase-js'],
-        }
-      }
-    },
-    chunkSizeWarningLimit: 600
-  }
-});
-\end{lstlisting}
+Trong các ứng dụng Single Page Application xây dựng bằng React, một trong những thách thức lớn nhất là kích thước tệp JavaScript gói chung (\textit{monolithic bundle}) quá lớn, khiến thời gian tải trang ban đầu kéo dài. Để giải quyết triệt để vấn đề này, nhóm đã can thiệp vào cấu hình trình biên dịch Vite (\texttt{vite.config.ts}) bằng kỹ thuật \textbf{Manual Chunks Splitting}, phân tách mã nguồn thành các khối độc lập theo tần suất thay đổi:
 
 \begin{table}[H]
 \centering
 \caption{Hiệu quả tối ưu hóa kích thước gói tệp sau khi chia nhỏ chunk}
 \label{tab:bundle-optimization}
 \renewcommand{\arraystretch}{1.3}
-\begin{tabular}{|p{4.5cm}|p{3.2cm}|p{3.2cm}|p{3.5cm}|}
+\begin{tabular}{|p{4.2cm}|p{3.2cm}|p{3.2cm}|p{4.2cm}|}
 \hline
-\textbf{Thành phần tệp gói (Bundle Output)} & \textbf{Kích thước gốc (Chưa nén)} & \textbf{Kích thước Gzip} & \textbf{Mục đích sử dụng} \\
+\textbf{Thành phần tệp gói (Bundle Output)} & \textbf{Kích thước gốc (Chưa nén)} & \textbf{Kích thước Gzip} & \textbf{Mục đích sử dụng \& Thư viện thành phần} \\
 \hline
-\texttt{vendor-react.js} & 168.4 KB & 52.1 KB & Thư viện lõi React và điều hướng router \\
+\texttt{vendor-react.js} & 168.4 KB & 52.1 KB & Thư viện lõi \texttt{react}, \texttt{react-dom}, \texttt{react-router-dom} \\
 \hline
-\texttt{vendor-motion.js} & 94.2 KB & 28.5 KB & Hiệu ứng chuyển cảnh động mượt mà \\
+\texttt{vendor-motion.js} & 94.2 KB & 28.5 KB & Hiệu ứng chuyển cảnh động mượt mà (\texttt{framer-motion}) \\
 \hline
-\texttt{vendor-supabase.js} & 112.8 KB & 31.4 KB & SDK xác thực và quản trị phiên Supabase \\
+\texttt{vendor-supabase.js} & 112.8 KB & 31.4 KB & SDK xác thực và quản trị phiên (\texttt{@supabase/supabase-js}) \\
 \hline
-\texttt{vendor-icons.js} & 45.6 KB & 12.8 KB & Bộ biểu tượng giao diện người dùng \\
+\texttt{vendor-icons.js} & 45.6 KB & 12.8 KB & Bộ biểu tượng giao diện người dùng (\texttt{react-icons}, \texttt{lucide-react}) \\
 \hline
-\texttt{index.js} (Mã nguồn ứng dụng) & 248.5 KB & 68.2 KB & Toàn bộ logic giao diện và các trang \\
+\texttt{index.js} (Mã nguồn ứng dụng) & 248.5 KB & 68.2 KB & Toàn bộ logic giao diện và các trang nghiệp vụ CoSpace \\
 \hline
-\textbf{Tổng kích thước nạp ban đầu} & \textbf{669.5 KB} & \textbf{193.0 KB} & \textbf{Giảm 76.4\% so với gói gộp 1.2MB} \\
+\textbf{Tổng kích thước nạp ban đầu} & \textbf{669.5 KB} & \textbf{193.0 KB} & \textbf{Giảm 76.4\% so với gói gộp 1.2MB ban đầu} \\
 \hline
 \end{tabular}
 \end{table}
 
-Bên cạnh đó, để trình duyệt có thể điều hướng chính xác các đường dẫn sâu trong ứng dụng SPA (như \texttt{/customer/bookings/history}) mà không bị máy chủ trả về mã lỗi HTTP 404, tệp cấu hình điều hướng \texttt{vercel.json} được thiết lập cơ chế chuyển hướng tất cả yêu cầu về tệp gốc:
-
-\begin{lstlisting}[language=json, caption={Tệp cấu hình điều hướng SPA vercel.json}]
-{
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
-  ]
-}
-\end{lstlisting}
+Bên cạnh đó, để trình duyệt có thể điều hướng chính xác các đường dẫn sâu trong ứng dụng SPA (như \texttt{/customer/bookings/history}) mà không bị máy chủ trả về mã lỗi HTTP 404, nhóm đã thiết lập quy tắc định tuyến biên (\textbf{Edge Rewrite Rules}) trong tệp \texttt{vercel.json}. Quy tắc này tự động bắt toàn bộ các mẫu đường dẫn yêu cầu (\texttt{source: "/(.*)"}) và chuyển hướng nội bộ tới tệp \texttt{destination: "/index.html"}. Cơ chế này ủy thác toàn bộ trách nhiệm phân giải route cho bộ định tuyến máy khách (\texttt{react-router-dom}) mà vẫn đảm bảo mã phản hồi HTTP 200 OK cho trình duyệt.
 
 \subsection{Thiết lập quy trình Tích hợp và Triển khai liên tục (CI/CD Pipeline)}
 

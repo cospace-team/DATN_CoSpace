@@ -1,12 +1,12 @@
-\subsection{Thiết kế giao diện hệ thống}
+\subsection{Kết quả hiện thực giao diện người dùng các phân hệ}
 
-Trong phần này, toàn bộ giao diện màn hình của hệ thống được tổ chức và trình bày chi tiết theo 4 phân hệ người dùng chính (Customer, Staff, Branch Admin, Admin) và giao diện xác thực chung. Việc thiết kế tuân thủ nguyên tắc lấy người dùng làm trung tâm, phân chia luồng thao tác rõ ràng nhằm đảm bảo hiệu suất vận hành và trải nghiệm liền mạch.
+Trong phần này, toàn bộ kết quả hiện thực giao diện màn hình của hệ thống CoSpace được tổ chức và trình bày chi tiết theo 4 phân hệ người dùng chính (Customer, Staff, Branch Admin, Admin) cùng giao diện xác thực định danh tập trung. Việc thiết kế và hiện thực tuân thủ nguyên tắc lấy người dùng làm trung tâm (User-Centered Design), phân tách thẩm quyền rõ ràng theo vai trò (RBAC) và mang lại trải nghiệm tương tác liền mạch, mượt mà trên nền tảng Web hiện đại.
 
 \providecommand{\FloatBarrier}{\relax}
 
-\subsubsection{Giao diện xác thực chung}
+\subsubsection{Giao diện xác thực định danh và phân luồng người dùng}
 
-Giao diện đăng nhập là điểm tiếp xúc đầu tiên và cũng là chốt chặn bảo mật quan trọng nhất của hệ thống. Dựa trên thông tin định danh được cung cấp, hệ thống sẽ xác thực và tự động điều hướng người dùng đến đúng phân hệ tương ứng với vai trò và quyền hạn của họ.
+Giao diện đăng nhập là điểm tiếp xúc đầu tiên và cũng là chốt chặn bảo mật quan trọng nhất của hệ thống. Dựa trên thông tin định danh được cung cấp, hệ thống sẽ xác thực qua Supabase Auth và tự động điều hướng người dùng đến đúng phân hệ tương ứng với vai trò và quyền hạn của họ (Hình~\ref{fig:ui_login_page}).
 
 \begin{figure}[H]
     \centering
@@ -18,44 +18,57 @@ Giao diện đăng nhập là điểm tiếp xúc đầu tiên và cũng là ch�
 \FloatBarrier
 \newpage
 
-\subsubsection{Phân hệ Giao diện Khách hàng (Customer)}
+\subsubsection{Phân hệ Giao diện Khách hàng (Customer Portal)}
 
 Phân hệ khách hàng cung cấp các công cụ trực quan giúp người dùng cuối dễ dàng tiếp cận không gian, quản lý quá trình sử dụng dịch vụ và mở rộng các mối quan hệ chuyên môn.
 
-Giao diện Đặt chỗ đóng vai trò như một danh mục điện tử thông minh, cho phép người dùng tìm kiếm, lọc và tra cứu thông tin về các vị trí làm việc, phòng họp dựa trên nhiều tiêu chí như chi nhánh, sức chứa và mức giá.
+\noindent\textbf{1. Sơ đồ mặt bằng tương tác (Interactive Floorplan Canvas) và Quy trình Đặt chỗ:}\\
+Khác biệt với các hệ thống thông thường chỉ hiển thị danh sách dạng bảng đơn điệu, CoSpace hiện thực một Canvas đồ họa vector tương tác trực tiếp (\texttt{InteractiveFloorplan.tsx}). Mặt bằng kiến trúc tầng được kết xuất bằng các thẻ SVG chuẩn hóa. Vị trí các bàn làm việc, phòng họp được định vị tọa độ thực tế (\texttt{coordX}, \texttt{coordY}, \texttt{width}, \texttt{height}) trích xuất trực tiếp từ cơ sở dữ liệu.
+\begin{itemize}
+    \item \textbf{Phản hồi trạng thái bằng mã màu trực quan:} Màu xanh lá (\texttt{\#10b981}) biểu thị chỗ ngồi đang trống và khả dụng; màu đỏ (\texttt{\#ef4444}) biểu thị vị trí đã có người đặt hoặc đang sử dụng; màu vàng hổ phách (\texttt{\#f59e0b}) là vị trí khách hàng đang nhấp chọn; màu xám (\texttt{\#94a3b8}) biểu thị bàn đang trong lịch bảo trì.
+    \item \textbf{Tương tác mượt mà:} Khách hàng có thể di chuột để xem thông tin chi tiết (mã bàn, tiện ích nguồn điện, ổ cắm), phóng to/thu nhỏ hoặc kéo rê mặt bằng một cách trực quan trước khi xác nhận chọn chỗ (Hình~\ref{fig:ui_booking_page}).
+\end{itemize}
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.9\textwidth]{Images/Chuong4/customer-booking-page.png}
-    \caption{Giao diện tìm kiếm và đặt chỗ}
+    \caption{Giao diện tìm kiếm và đặt chỗ với sơ đồ mặt bằng tương tác}
     \label{fig:ui_booking_page}
 \end{figure}
 \FloatBarrier
 
-Giao diện Thanh toán cung cấp tính minh bạch về mặt tài chính. Mọi giao dịch phát sinh từ việc đặt chỗ, mua thêm dịch vụ hay phí phạt đều được liệt kê chi tiết, giúp khách hàng dễ dàng đối soát chi tiêu.
+\noindent\textbf{2. Thanh toán trực tuyến VietQR Napas 24/7 với đồng hồ đếm ngược:}\\
+Giao diện Thanh toán (\texttt{VietQRCheckoutPage.tsx} -- Hình~\ref{fig:ui_payment_page}) cung cấp sự minh bạch tuyệt đối về tài chính. Sau khi hoàn tất chọn chỗ, giao diện tự động kết nối PayOS Open API hiển thị mã QR động chuẩn Napas 24/7 kèm chính xác số tiền và nội dung chuyển khoản bảo mật.
+\begin{itemize}
+    \item \textbf{Đồng hồ đếm ngược 15:00:} Được điều khiển bởi hook tùy biến \texttt{useCountdown}, đếm lùi thời gian còn lại trước khi hạn chót \texttt{paymentDeadlineAt} hết hạn.
+    \item \textbf{Cơ chế lắng nghe tự động (Polling Webhook):} Một hook \texttt{usePolling} gửi tín hiệu ngầm mỗi 3 giây đến máy chủ. Khi máy chủ nhận được IPN Webhook thành công từ cổng PayOS, giao diện lập tức kích hoạt hiệu ứng chúc mừng màu xanh và điều hướng người dùng mà không cần bấm F5.
+\end{itemize}
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.9\textwidth]{Images/Chuong4/customer-payment-page.png}
-    \caption{Giao diện thanh toán của khách hàng}
+    \caption{Giao diện thanh toán VietQR động với đồng hồ đếm ngược 15 phút}
     \label{fig:ui_payment_page}
 \end{figure}
 
 \FloatBarrier
 
-Giao diện Lịch sử đặt chỗ cá nhân là nơi tổng hợp toàn bộ lịch trình của người dùng. Tại đây, khách hàng có thể theo dõi lịch sử sử dụng trong quá khứ và chủ động thực hiện các thao tác thay đổi hoặc hủy lịch khi cần thiết.
+\noindent\textbf{3. Lịch sử đặt chỗ và Quy trình hủy đơn minh bạch:}\\
+Giao diện Lịch sử đặt chỗ cá nhân (\texttt{CustomerHistoryPage.tsx} -- Hình~\ref{fig:ui_my_bookings_page}) tổng hợp toàn bộ các đơn dịch vụ theo dạng thẻ trực quan kèm huy hiệu trạng thái chuẩn hóa: \texttt{CONFIRMED} (Đã xác nhận), \texttt{PENDING\_PAYMENT} (Chờ thanh toán), \texttt{CHECKED\_IN} (Đang sử dụng), \texttt{COMPLETED} (Hoàn tất) và \texttt{CANCELLED} (Đã hủy).
+
+Khi có nhu cầu hủy đơn, người dùng nhấn nút Hủy để mở giao diện Hủy đơn (\texttt{CustomerCancelPage.tsx} -- Hình~\ref{fig:ui_cancel_page}). Hệ thống tự động đối chiếu thời điểm hiện tại với mốc bắt đầu sử dụng theo chính sách hoàn tiền đa tầng (Rule \#40): Hủy trước 24 giờ hoàn 100\% giá trị, hủy trước từ 2 đến 24 giờ hoàn 50\%, và hủy trong vòng 2 giờ không hoàn tiền. Số tiền hoàn dự kiến được hiển thị minh bạch kèm cảnh báo xác nhận trước khi gửi lệnh.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.9\textwidth]{Images/Chuong4/customer-history-page.png}
-    \caption{Giao diện thống kê lịch sử sử dụng dịch vụ}
+    \caption{Giao diện quản lý lịch sử đặt chỗ cá nhân}
     \label{fig:ui_my_bookings_page}
 \end{figure}
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.9\textwidth]{Images/Chuong4/customer-cancel-page.png}
-    \caption{Giao diện lịch sử hủy}
+    \caption{Giao diện hủy đơn đặt chỗ với chính sách hoàn tiền minh bạch}
     \label{fig:ui_cancel_page}
 \end{figure}
 \FloatBarrier
@@ -113,12 +126,17 @@ Bảng điều khiển hoạt động cung cấp cái nhìn tổng quan theo th�
 \end{figure}
 
 \FloatBarrier
-Giao diện Check-in được thiết kế tối giản quy trình xác thực. Nhân viên sử dụng giao diện này để ghi nhận thời điểm khách hàng bắt đầu hoặc kết thúc ca sử dụng, đảm bảo tính chính xác cho dữ liệu hệ thống.
+Giao diện Check-in (\texttt{StaffCheckinDeskPage.tsx} -- Hình~\ref{fig:ui_staff_check_page}) được thiết kế tối giản quy trình tiếp đón khách hàng:
+\begin{itemize}
+    \item \textbf{Tìm kiếm nhanh một chạm:} Nhân viên chỉ cần nhập mã đơn đặt chỗ (ví dụ: \texttt{BK-2026-0012}), số điện thoại hoặc quét mã QR trên điện thoại của khách hàng.
+    \item \textbf{Cơ chế dung sai Check-in $\pm 30$ phút (Rule \#10):} Nút xác nhận Check-in chỉ kích hoạt khi thời điểm hiện tại nằm trong khoảng dung sai $[\text{Start} - 30\text{ phút}, \, \text{End} + 30\text{ phút}]$. Nếu khách đến sớm hơn hoặc muộn hơn khoảng cho phép, hệ thống tự động khóa nút bấm và hiển thị cảnh báo kèm hướng dẫn nghiệp vụ cho lễ tân.
+    \item \textbf{Thủ tục Check-out và Hóa đơn phát sinh (Running Tab):} Khi khách trả phòng, hệ thống tự động liệt kê toàn bộ dịch vụ phụ trợ đã sử dụng trong phiên làm việc để thu tiền bổ sung và giải phóng trạng thái không gian.
+\end{itemize}
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.9\textwidth]{Images/Chuong4/staff-check.png}
-    \caption{Giao diện checkin và checkout tại quầy}
+    \caption{Giao diện check-in và check-out tại quầy lễ tân với cơ chế dung sai 30 phút}
     \label{fig:ui_staff_check_page}
 \end{figure}
 
