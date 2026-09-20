@@ -171,9 +171,53 @@ Dù đã đạt được những bước tiến lớn trong việc tự động 
     \item \textbf{Môi trường kết nối cộng đồng số chưa được tích hợp:} Đây là điểm hạn chế lớn khi đối chiếu với bản chất networking của văn phòng chia sẻ. Hệ thống trực tuyến của CirCO hiện tại chủ yếu phục vụ mục đích giao dịch thương mại giữa khách hàng và ban quản lý. Hệ thống chưa cung cấp không gian mạng xã hội nội bộ (Community Dashboard) để các thành viên đang làm việc tại các chi nhánh có thể tự khởi tạo hồ sơ năng lực, công khai bộ kỹ năng chuyên môn (Skills/Tags) và sử dụng bộ lọc để chủ động tìm kiếm đối tác (partner matching) lẫn nhau.
 \end{itemize}
 
+\subsubsection{Bảng so sánh tổng hợp và Phân tích khoảng trống (Gap Analysis)}
+
+Dựa trên kết quả khảo sát thực tế các hệ thống tiêu biểu trên thị trường (Regus đại diện cho chuỗi quốc tế cao cấp, WorkFlow Space đại diện cho chuỗi trong nước quy mô vừa, và CirCO đại diện cho đơn vị tiên phong ứng dụng cổng thanh toán trực tuyến), nhóm tác giả tiến hành tổng hợp ma trận so sánh tính năng và phân tích khoảng trống kỹ thuật tại Bảng~\ref{tab:gap-analysis}.
+
+\begin{table}[H]
+\centering
+\caption{Bảng so sánh tính năng và Phân tích khoảng trống (Gap Analysis)}
+\label{tab:gap-analysis}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|p{5.5cm}|c|c|c|c|}
+\hline
+\textbf{Tiêu chí / Tính năng} & \textbf{Regus} & \textbf{WorkFlow} & \textbf{CirCO} & \textbf{CoSpace (Đề tài)} \\
+\hline
+Sơ đồ mặt bằng SVG 2D tương tác trực quan & $\times$ & $\times$ & $\times$ & $\checkmark$ \\
+\hline
+Đặt chỗ chống trùng lịch thời gian thực & $\checkmark$ & $\times$ & $\checkmark$ & $\checkmark$ (Khóa 2 tầng) \\
+\hline
+Đa dạng đơn vị thuê (Giờ/Ngày/Tuần/Tháng) & $\checkmark$ & $\times$ & Một phần & $\checkmark$ (Ma trận 4 mức) \\
+\hline
+Thanh toán tự động nội địa (VietQR 24/7, MoMo) & $\times$ & $\times$ & $\checkmark$ (MoMo/VNPAY) & $\checkmark$ (PayOS Napas/MoMo) \\
+\hline
+Tự động giải phóng slot quá hạn (15 phút) & $\times$ & $\times$ & $\times$ & $\checkmark$ (Scheduler 30s) \\
+\hline
+Kiểm soát Check-in kèm dung sai (Tolerance 30p) & $\times$ & $\times$ & $\times$ & $\checkmark$ \\
+\hline
+Gọi dịch vụ phát sinh tại chỗ (Running Tab) & $\times$ & $\times$ & $\times$ & $\checkmark$ \\
+\hline
+Hệ thống gợi ý kết nối đối tác (Partner Matching) & $\times$ & $\times$ & $\times$ & $\checkmark$ (Jaccard Similarity) \\
+\hline
+Trợ lý ảo AI đàm thoại tự nhiên hỗ trợ đặt phòng & $\times$ & $\times$ & $\times$ & $\checkmark$ (Google Gemini) \\
+\hline
+Phân quyền chặt chẽ 4 vai trò (4 Roles RBAC) & Một phần & $\times$ & Một phần & $\checkmark$ (Super/Branch/Staff/Cust) \\
+\hline
+\end{tabular}
+\end{table}
+
+Qua Bảng~\ref{tab:gap-analysis}, có thể nhận thấy rõ ràng khoảng trống công nghệ trên thị trường hiện nay:
+\begin{itemize}
+    \item Hầu hết các hệ thống hiện tại chỉ giải quyết bài toán giao dịch thương mại đơn thuần (đặt phòng và trả tiền), hoàn toàn bỏ ngỏ bài toán \textbf{trực quan hóa sơ đồ mặt bằng tương tác} và \textbf{kết nối mạng lưới cộng đồng thành viên}.
+    \item Quy trình vận hành tại quầy vẫn còn phụ thuộc nhiều vào nhân sự thủ công, chưa có cơ chế kiểm soát tự động đối với \textbf{thời gian thanh toán tối đa (timeout 15 phút)}, \textbf{khoảng dung sai check-in (tolerance window 30 phút)} và \textbf{quản lý tab gọi món phát sinh (running tab)}.
+    \item Chưa có hệ thống nào tại Việt Nam tích hợp \textbf{thuật toán đối sánh đối tác thông minh} và \textbf{Trợ lý ảo AI (LLM)} vào quy trình tư vấn và đặt chỗ.
+\end{itemize}
+Do đó, việc phát triển hệ thống CoSpace với đầy đủ các tính năng trên mang tính đột phá và có giá trị thực tiễn rất cao.
+
 \subsection{Phân tích yêu cầu hệ thống}
 
-Phần này trình bày các yêu cầu chính của hệ thống quản lý Co-working Space, bao gồm yêu cầu chức năng theo từng vai trò người dùng và các yêu cầu phi chức năng nhằm đảm bảo hệ thống hoạt động an toàn, ổn định, hiệu quả và dễ mở rộng.
+Phần này trình bày chi tiết các yêu cầu chức năng (Functional Requirements) và yêu cầu phi chức năng (Non-Functional Requirements) của hệ thống CoSpace, làm cơ sở định hình kiến trúc và hiện thực phần mềm.
 
 \subsubsection{Yêu cầu chức năng}
 
@@ -255,49 +299,91 @@ Phần này mô tả các chức năng mà mỗi vai trò người dùng (actor)
     \item Quản trị viên có thể quản lý tất cả tài khoản người dùng và phân quyền truy cập cho từng vai trò.
 \end{itemize}
 
+\begin{table}[H]
+\centering
+\caption{Bảng tổng hợp Yêu cầu chức năng (Functional Requirements)}
+\label{tab:functional-requirements}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{|c|l|p{7.5cm}|}
+\hline
+\textbf{Mã Yêu Cầu} & \textbf{Phân Hệ / Vai Trò} & \textbf{Mô Tả Chức Năng Cốt Lõi} \\
+\hline
+\textbf{FR-CUST-01} & Khách hàng & Đăng ký, đăng nhập tài khoản bằng Email/Password hoặc Google SSO. \\
+\hline
+\textbf{FR-CUST-02} & Khách hàng & Xem sơ đồ mặt bằng SVG tương tác và tra cứu trạng thái chỗ ngồi thời gian thực. \\
+\hline
+\textbf{FR-CUST-03} & Khách hàng & Đặt chỗ theo 4 đơn vị thời gian (Giờ/Ngày/Tuần/Tháng) có áp mã giảm giá/hạng thành viên. \\
+\hline
+\textbf{FR-CUST-04} & Khách hàng & Thanh toán trực tuyến tự động qua mã VietQR động chuẩn Napas 24/7 (PayOS) và ví MoMo. \\
+\hline
+\textbf{FR-CUST-05} & Khách hàng & Hủy phòng trực tuyến và tự động hoàn tiền nội bộ theo ma trận chính sách đa bậc. \\
+\hline
+\textbf{FR-CUST-06} & Khách hàng & Quản lý hồ sơ năng lực (Skills/Interests) và nhận gợi ý kết nối qua Partner Matching Engine. \\
+\hline
+\textbf{FR-CUST-07} & Khách hàng & Đăng bài chia sẻ, bình luận và tìm kiếm đối tác trên Bảng tin cộng đồng (Community Feed). \\
+\hline
+\textbf{FR-CUST-08} & Khách hàng & Tra cứu thông tin và đàm thoại đặt phòng qua Trợ lý ảo thông minh AI Chatbot (Google Gemini). \\
+\hline
+\textbf{FR-STF-01} & Nhân viên vận hành & Tạo booking đặt chỗ trực tiếp và xác nhận thanh toán tiền mặt tại quầy. \\
+\hline
+\textbf{FR-STF-02} & Nhân viên vận hành & Quét mã QR Check-in với cơ chế kiểm soát khung giờ cho phép (Tolerance Window 30 phút). \\
+\hline
+\textbf{FR-STF-03} & Nhân viên vận hành & Mở thẻ dịch vụ tại chỗ (Running Tab) để khách gọi thêm đồ ăn, thức uống, thiết bị. \\
+\hline
+\textbf{FR-STF-04} & Nhân viên vận hành & Thực hiện Check-out, chốt hóa đơn tổng (tiền phòng + running tab) và in biên lai giao dịch. \\
+\hline
+\textbf{FR-STF-05} & Nhân viên vận hành & Khởi tạo lịch bảo trì không gian làm việc và theo dõi ca trực trên Dashboard vận hành. \\
+\hline
+\textbf{FR-BADM-01} & Quản lý chi nhánh & Thiết lập bảng giá không gian và biểu giá dịch vụ gia tăng áp dụng riêng cho chi nhánh. \\
+\hline
+\textbf{FR-BADM-02} & Quản lý chi nhánh & Quản trị nhân sự chi nhánh (tạo, cập nhật và khóa tài khoản nhân viên). \\
+\hline
+\textbf{FR-BADM-03} & Quản lý chi nhánh & Cấu hình sơ đồ tầng, khu vực làm việc và điều phối bảo trì tài nguyên chi nhánh. \\
+\hline
+\textbf{FR-BADM-04} & Quản lý chi nhánh & Xem báo cáo tổng quan hoạt động kinh doanh và lịch sử ca làm việc tại chi nhánh. \\
+\hline
+\textbf{FR-SADM-01} & Quản trị hệ thống & Quản lý danh mục chuỗi chi nhánh, các tầng và phân loại không gian trên toàn hệ thống. \\
+\hline
+\textbf{FR-SADM-02} & Quản trị hệ thống & Quản lý trung tâm biểu phí tập trung (Unified Pricing Hub) và chính sách hủy hoàn tiền. \\
+\hline
+\textbf{FR-SADM-03} & Quản trị hệ thống & Quản trị toàn bộ người dùng, cấu hình hạng thành viên (Loyalty) và phân quyền 4 Roles. \\
+\hline
+\textbf{FR-SADM-04} & Quản trị hệ thống & Tra cứu và theo dõi nhật ký kiểm toán hệ thống (Audit Log) cho mọi thao tác nhạy cảm. \\
+\hline
+\textbf{FR-SADM-05} & Quản trị hệ thống & Báo cáo phân tích doanh thu, tỷ lệ lấp đầy trực quan và xuất dữ liệu báo cáo ra file CSV. \\
+\hline
+\end{tabular}
+\end{table}
+
 \subsubsection{Yêu cầu phi chức năng}
 
-Đây là các yêu cầu về chất lượng, đảm bảo hệ thống không chỉ chạy được mà còn chạy tốt, an toàn và ổn định.
+Các yêu cầu phi chức năng (Non-Functional Requirements -- NFR) đóng vai trò quyết định đến chất lượng, sự ổn định, tính an toàn và trải nghiệm người dùng của toàn bộ hệ sinh thái CoSpace. Chi tiết các tiêu chí được chuẩn hóa tại Bảng~\ref{tab:non-functional-requirements}.
 
-\textbf{Bảo mật (Security):}
-
-\begin{itemize}
-    \item \textbf{Mã hóa dữ liệu:} Mật khẩu người dùng phải được mã hóa. Dữ liệu truyền tải trên mạng phải được mã hóa bằng HTTPS.
-    \item \textbf{Phân quyền truy cập (RBAC):} Hệ thống phải áp dụng cơ chế kiểm soát truy cập dựa trên vai trò, đảm bảo người dùng chỉ thấy và thực hiện được những chức năng mà họ được phép sử dụng.
-    \item \textbf{Chống tấn công cơ bản:} Hệ thống cần có biện pháp phòng chống các loại tấn công web phổ biến như SQL Injection, XSS (Cross-Site Scripting) và CSRF (Cross-Site Request Forgery).
-\end{itemize}
-
-\textbf{Hiệu năng (Performance):}
-
-\begin{itemize}
-    \item \textbf{Thời gian phản hồi:} Các thao tác chính của người dùng như tải trang và tìm kiếm phải có thời gian phản hồi nhanh, dưới 2--3 giây trong điều kiện mạng thông thường.
-    \item \textbf{Tối ưu truy vấn:} Các truy vấn đến cơ sở dữ liệu phải được tối ưu bằng chỉ mục (indexing), đặc biệt là các truy vấn kiểm tra lịch trống để tránh làm chậm hệ thống.
-    \item \textbf{Khả năng chịu tải:} Hệ thống cần được thiết kế để có thể phục vụ một lượng người dùng truy cập đồng thời và có khả năng nâng cấp (scale) khi cần thiết.
-\end{itemize}
-
-\textbf{Độ tin cậy (Reliability):}
-
-\begin{itemize}
-    \item \textbf{Tính sẵn sàng cao:} Hệ thống phải hoạt động ổn định và liên tục, giảm thiểu thời gian chết (downtime) để không ảnh hưởng đến hoạt động kinh doanh.
-    \item \textbf{Sao lưu và phục hồi:} Dữ liệu quan trọng như thông tin người dùng và lịch sử giao dịch phải được sao lưu định kỳ, đồng thời cần có kế hoạch phục hồi rõ ràng khi xảy ra sự cố.
-    \item \textbf{Xử lý giao dịch an toàn:} Các giao dịch quan trọng như thanh toán phải có cơ chế đảm bảo tính nhất quán (idempotency), tránh trường hợp một giao dịch bị xử lý nhiều lần gây sai sót.
-\end{itemize}
-
-\textbf{Tính dễ sử dụng (Usability):}
-
-\begin{itemize}
-    \item \textbf{Giao diện thân thiện:} Giao diện người dùng phải được thiết kế đơn giản, trực quan và nhất quán để người dùng có thể dễ dàng làm quen và sử dụng.
-    \item \textbf{Thiết kế đáp ứng (Responsive Design):} Hệ thống phải hiển thị tốt trên nhiều loại thiết bị khác nhau, từ máy tính để bàn đến điện thoại di động.
-    \item \textbf{Phản hồi và hướng dẫn:} Hệ thống cần cung cấp các thông báo lỗi rõ ràng và các hướng dẫn cần thiết để người dùng hiểu chuyện gì đang xảy ra và cần làm gì tiếp theo.
-\end{itemize}
-
-\textbf{Khả năng bảo trì và mở rộng (Maintainability \& Scalability):}
-
-\begin{itemize}
-    \item \textbf{Kiến trúc module:} Hệ thống nên được xây dựng theo kiến trúc module, giúp việc sửa lỗi, nâng cấp và thêm tính năng mới trong tương lai trở nên dễ dàng hơn.
-    \item \textbf{Ghi log (Logging):} Hệ thống cần ghi lại các log hoạt động và lỗi một cách có cấu trúc để đội ngũ kỹ thuật có thể dễ dàng chẩn đoán và khắc phục sự cố.
-    \item \textbf{Triển khai tự động (CI/CD):} Nên có một quy trình tự động để triển khai phiên bản mới của ứng dụng, giúp giảm thiểu sai sót do con người và tăng tốc độ cập nhật.
-\end{itemize}
+\begin{table}[H]
+\centering
+\caption{Bảng tổng hợp Yêu cầu phi chức năng (Non-Functional Requirements)}
+\label{tab:non-functional-requirements}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|c|l|p{8cm}|}
+\hline
+\textbf{Mã Yêu Cầu} & \textbf{Nhóm Tiêu Chí} & \textbf{Chỉ Số / Mô Tả Kỹ Thuật Đạt Được} \\
+\hline
+\textbf{NFR-PERF-01} & Hiệu năng (Performance) & Thời gian phản hồi API (Latency) $< 500\text{ms}$ đối với truy vấn nghiệp vụ thường; $< 1.5\text{s}$ đối với truy vấn ghép nối Jaccard hoặc tải báo cáo. Tải trang ban đầu tối ưu qua CDN Edge. \\
+\hline
+\textbf{NFR-CONC-01} & Xử lý đồng thời (Concurrency) & Đảm bảo tính nhất quán dữ liệu tuyệt đối (Zero Overbooking) khi có $\ge 50$ giao dịch đặt chỗ đồng thời trên cùng một vị trí thông qua cơ chế khóa hai tầng PostgreSQL GiST Constraint và Advisory Xact Lock. \\
+\hline
+\textbf{NFR-SEC-01} & An toàn bảo mật (Security) & Xác thực kép qua Supabase Auth và App JWT mã hóa thuật toán HS384; phân quyền chặt chẽ theo vai trò (RBAC); truyền tải mã hóa HTTPS; ngăn chặn tấn công injection và CSRF. \\
+\hline
+\textbf{NFR-REL-01} & Độ tin cậy (Reliability) & Cơ chế Webhook Idempotency đảm bảo không xử lý lặp giao dịch tài chính; bộ xử lý Late Webhook Ghost Payment tự động hoàn tiền an toàn khi webhook thanh toán về muộn sau khi slot đã bị hủy. \\
+\hline
+\textbf{NFR-SCAL-01} & Khả năng mở rộng (Scalability) & Tách biệt hoàn toàn Presentation Layer (Vercel CDN Edge) và Business Layer (Render Container) theo mô hình Cloud Native, sẵn sàng mở rộng quy mô khi tăng số lượng chi nhánh. \\
+\hline
+\textbf{NFR-USAB-01} & Trải nghiệm (Usability) & Giao diện tương thích đa thiết bị (Responsive Mobile/Desktop), tương tác trực quan trên bản đồ SVG; gói bundle Frontend được phân mảnh (Chunk Splitting) giảm $76.4\%$ dung lượng tải về. \\
+\hline
+\textbf{NFR-MAINT-01} & Khả năng bảo trì (Maintainability) & Mã nguồn tổ chức theo mô hình Layered Architecture chuẩn mực (Controller -- Service -- Repository); cấu hình Production cô lập qua Docker và biến môi trường độc lập. \\
+\hline
+\end{tabular}
+\end{table}
 
 \subsection{Các bài toán trong hệ thống \& Giải pháp}
 

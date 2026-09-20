@@ -72,7 +72,7 @@
 \usepackage{epsfig}
 \usepackage{tikz}
 
-\usetikzlibrary{arrows,backgrounds,calc}
+\usetikzlibrary{arrows,arrows.meta,backgrounds,calc,positioning,shapes.geometric,fit}
 \usepackage[unicode]{hyperref}
 \hypersetup{urlcolor=blue,linkcolor=black,citecolor=black,colorlinks=true} 
 \usepackage{listings}
@@ -160,7 +160,7 @@ morekeywords={}
 		\tiny \bf 
 	\end{tabular}  }
 \fancyfoot{} % clear all footer fields
-\fancyfoot[L]{\scriptsize  Báo cáo Đồ án chuyên ngành (CO4029) - HK2 2025 - 2026}
+\fancyfoot[L]{\scriptsize  Báo cáo Đồ án tốt nghiệp (CO4337) - HK253 2025 - 2026}
 \fancyfoot[R]{\scriptsize  Trang {\thepage}/\pageref{LastPage}}
 
 \renewcommand{\headrulewidth}{0.3pt}
@@ -226,48 +226,104 @@ morekeywords={}
 \begin{center}
 \parbox{0.95\textwidth}{\centering
 \textbf{{\LARGE BÁO CÁO}}\\[0.2cm]
-\textbf{{\LARGE ĐỒ ÁN CHUYÊN NGÀNH}}\\[0.5cm]
-\textbf{\LARGE XÂY DỰNG HỆ THỐNG QUẢN LÝ VĂN PHÒNG CHIA SẺ}\\[0.5cm]
+\textbf{{\LARGE ĐỒ ÁN TỐT NGHIỆP}}\\[0.5cm]
+\textbf{\LARGE PHÁT TRIỂN HỆ THỐNG QUẢN LÝ VĂN PHÒNG CHIA SẺ}\\[0.4cm]
+{\large \textbf{CHUYÊN NGÀNH: HỆ THỐNG THÔNG TIN VÀ BẢO MẬT}}\\[0.2cm]
 {\Large NGÀNH: KHOA HỌC MÁY TÍNH}
 }
 \end{center}
-\vspace{0.5cm}
+\vspace{0.4cm}
 \begin{table}[h]
 \begin{tabular}{rll}
-\hspace{4.8cm} &  \textbf{\Large HỘI ĐỒNG:} {\Large 
- 	
-HĐ 4L Đồ án chuyên ngành}
+\hspace{4.2cm} &  \textbf{\large HỘI ĐỒNG:} & {\large Hội đồng 4L Khoa học Máy tính (Cơ sở 2)}
+\\
+\hspace{4.2cm} &  \textbf{\large MÃ ĐỒ ÁN:} & {\large HK253-DATN-126}
 \\
 \\
-\hspace{4.8cm} &   \textbf{\Large GVHD:} {\Large ThS. Trương Quỳnh Chi}
+\hspace{4.2cm} &   \textbf{\large GVHD:} & {\large ThS. Trương Quỳnh Chi (CBGD: 002889)}
 \\
 \\
-\hspace{4.8cm}  &   \textbf{\Large TKHĐ:} {\Large ThS. Trần Thị Quế Nguyệt}
+\hspace{4.2cm} &     \textbf{$\;$ $\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$ \Large ---o0o---} 
 \\
 \\
-% TKHĐ là THƯ KÝ HỘI ĐỒNG
-\hspace{4.8cm} &     \textbf{$\;$ $\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$ \Large ---o0o---} 
+\hspace{4.2cm} &   \textbf{\large SVTH 1:} & {\large Vương Song Toàn -- 2213544 (KHMT - CQ)}
 \\
-\\
-\hspace{4.8cm} &   \textbf{\Large SVTH1:} {\Large Vương Song Toàn (2213544)}
-\\
-\\
-\hspace{4.8cm}&   \textbf{\Large SVTH2:}  {\Large Lê Đăng Khoa (2211599)}
-\\
+\hspace{4.2cm}&   \textbf{\large SVTH 2:}  & {\large Lê Đăng Khoa -- 2211599 (KHMT - CQ)}
 \\
 \end{tabular}
 \end{table}
-\vspace{0.5cm}
+\vspace{0.4cm}
 \begin{center}
-{\Large TP. HỒ CHÍ MINH, THÁNG 5/ NĂM 2026 }
+{\Large TP. HỒ CHÍ MINH, THÁNG 10/2026 }
 \end{center}
 \end{titlepage}
-%\thispagestyle{empty}
+
+%%%%%%%%%%%%%%%%%TRANG THÔNG TIN HỘI ĐỒNG & CHỮ KÝ GVHD%%%%%%%%%%%%%%%%%
+\newpage
+\thispagestyle{empty}
+\begin{center}
+\textbf{\large TRƯỜNG ĐẠI HỌC BÁCH KHOA - ĐHQG-HCM} \\
+\textbf{\large KHOA KHOA HỌC VÀ KỸ THUẬT MÁY TÍNH} \\
+\vspace{0.8cm}
+\rule{12cm}{0.5pt} \\
+\vspace{0.5cm}
+{\Large \textbf{BÁO CÁO ĐỒ ÁN TỐT NGHIỆP}} \\[0.3cm]
+{\LARGE \textbf{PHÁT TRIỂN HỆ THỐNG QUẢN LÝ VĂN PHÒNG CHIA SẺ}} \\[0.3cm]
+\textbf{MÃ ĐỒ ÁN: HK253-DATN-126} \\[0.2cm]
+\textbf{Chuyên ngành: Hệ thống thông tin và Bảo mật -- Ngành: Khoa học Máy tính}
+\end{center}
+\vspace{0.4cm}
+
+\noindent \textbf{HỘI ĐỒNG CHẤM ĐỒ ÁN TỐT NGHIỆP: HỘI ĐỒNG 4L}
+\begin{itemize}
+    \item \textbf{Địa điểm}: Cơ sở 2, Trường Đại học Bách Khoa -- ĐHQG-HCM
+    \item \textbf{Thời gian bảo vệ}: 13:30, Ngày 05 tháng 10 năm 2026
+\end{itemize}
+
+\vspace{0.2cm}
+\noindent \textbf{DANH SÁCH THÀNH VIÊN HỘI ĐỒNG:}
+\begin{table}[h!]
+\centering
+\begin{tabular}{|c|l|c|l|}
+\hline
+\textbf{STT} & \textbf{Họ và tên} & \textbf{Mã CBGD} & \textbf{Đơn vị công tác} \\
+\hline
+1 & PGS. TS. Lê Hồng Trang & 003744 & Khoa KH\&KT Máy tính \\
+\hline
+2 & TS. Phạm An Vinh & 004361 & Khoa KH\&KT Máy tính \\
+\hline
+3 & ThS. Lê Thị Bảo Thu & 003383 & Khoa KH\&KT Máy tính \\
+\hline
+4 & ThS. Trương Quỳnh Chi (GVHD) & 002889 & Khoa KH\&KT Máy tính \\
+\hline
+\end{tabular}
+\end{table}
+
+\vspace{0.3cm}
+\noindent \textbf{SINH VIÊN THỰC HIỆN:}
+\begin{itemize}
+    \item Vương Song Toàn -- MSSV: 2213544 -- Hệ: Chính quy (KHMT - CQ)
+    \item Lê Đăng Khoa -- MSSV: 2211599 -- Hệ: Chính quy (KHMT - CQ)
+\end{itemize}
+
+\vspace{1.5cm}
+\begin{flushright}
+\begin{tabular}{c}
+\textit{TP. Hồ Chí Minh, ngày 05 tháng 10 năm 2026} \\
+\textbf{XÁC NHẬN CỦA GIẢNG VIÊN HƯỚNG DẪN} \\[2.2cm]
+\textbf{ThS. Trương Quỳnh Chi}
+\end{tabular}
+\end{flushright}
+
+\vfill
+\noindent \rule{\textwidth}{0.3pt} \\
+\scriptsize \textbf{Đồ án tốt nghiệp (CO4337) - HK253 2025 - 2026}
+
 \pagenumbering{roman}
 \newpage
 %%%%%%%%%%%%%%%%%INTRO%%%%%%%%%%%%%%%%%%%
-\input{Intro/LoiCamOn}
 \input{Intro/LoiCamDoan}
+\input{Intro/LoiCamOn}
 \input{Intro/TomTat}
 \newpage
 \tableofcontents
@@ -288,12 +344,12 @@ HĐ 4L Đồ án chuyên ngành}
 \newpage
 \input{Contents/PhanTichThietKeHeThong}
 \newpage
-% \input{Contents/HienThuc}
-% \newpage
-% \input{Contents/TrienKhai}
-% \newpage
-% \input{Contents/KiemThuHeThong}
-% \newpage
+\input{Contents/HienThuc}
+\newpage
+\input{Contents/TrienKhai}
+\newpage
+\input{Contents/KiemThuHeThong}
+\newpage
 \input{Contents/TongKet}
 \newpage
 %%%%%%%%%%%%%%%%%OUTRO%%%%%%%%%%%%%%%%%%%
