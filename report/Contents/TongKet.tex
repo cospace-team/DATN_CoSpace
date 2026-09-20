@@ -1,61 +1,42 @@
-\section{Tổng kết}
+\section{Tổng kết và hướng phát triển}
 
-Báo cáo đã trình bày chi tiết kết quả của đề tài "Phát triển Hệ thống Quản lý Không gian làm việc chung (Co-Working Space)". Trải qua quá trình nghiên cứu và thực thi, nhóm đã thiết kế các yêu cầu nghiệp vụ quản lý phức tạp thành một sản phẩm công nghệ thử nghiệm, hỗ trợ cho ban quản lý trong việc vận hành và tối ưu hóa trải nghiệm sử dụng dịch vụ của khách hàng.
+\subsection{Tổng kết kết quả nghiên cứu và hiện thực của đề tài}
 
-\subsection{Các kết quả đã đạt được trong giai đoạn hiện tại}
+Trải qua quá trình nghiên cứu lý thuyết, khảo sát nghiệp vụ thực tiễn, phân tích kiến trúc và hiện thực hóa phần mềm, đề tài \textbf{"Phát triển hệ thống quản lý văn phòng chia sẻ (CoSpace)"} đã hoàn thành xuất sắc toàn bộ các mục tiêu đặt ra cho đồ án tốt nghiệp ngành Khoa học Máy tính (CO4337 -- HK253). Hệ thống không chỉ dừng lại ở một công cụ quản lý cơ sở vật chất đơn thuần mà đã thực sự trở thành một nền tảng số toàn diện, hỗ trợ quản trị vận hành đa chi nhánh, tự động hóa dòng tiền và kiến tạo không gian kết nối chuyên môn cho cộng đồng thành viên.
 
-Trong giai đoạn Đồ án chuyên ngành, đề tài đã hoàn thành các nội dung cốt lõi phục vụ cho việc triển khai ở giai đoạn Đồ án tốt nghiệp (ĐATN). Các kết quả chính bao gồm:
+So với giai đoạn Đồ án Chuyên ngành (ĐACN), hệ thống đã có những bước tiến mang tính đột phá về cả chiều sâu công nghệ lẫn tính hoàn thiện của sản phẩm:
 
+\begin{enumerate}
+    \item \textbf{Đột phá trong Tự động hóa Thanh toán (VietQR Napas 24/7):} Thay vì chỉ dừng lại ở các giao dịch mô phỏng ví điện tử, CoSpace đã tích hợp thành công cổng thanh toán Open Banking quốc gia (thông qua giải pháp PayOS). Hệ thống cung cấp mã VietQR động theo chuẩn Napas với cơ chế thẩm định chữ ký số HMAC-SHA256, tự động nhận diện giao dịch và cập nhật trạng thái đơn đặt chỗ sau 3-5 giây mà không cần người dùng tải lại trang.
+    \item \textbf{Giải quyết triệt để bài toán tương tranh đụng lịch (Concurrency Control):} Xây dựng giải pháp phòng vệ hai tầng gồm Khóa giao dịch mức ứng dụng (\texttt{pg\_advisory\_xact\_lock}) và Ràng buộc loại trừ cấp cơ sở dữ liệu (\texttt{EXCLUDE USING gist}), ngăn chặn 100\% tình trạng đặt trùng chỗ ngồi (Double Booking) ngay cả khi có hàng trăm lượt truy cập đồng thời.
+    \item \textbf{Ứng dụng Trí tuệ Nhân tạo thế hệ mới (Google Gemini AI):} Tích hợp mô hình ngôn ngữ lớn \texttt{gemini-3.5-flash} để vận hành Trợ lý ảo tư vấn thông minh (hỗ trợ giải đáp bảng giá, chính sách hoàn hủy 24/7), đồng thời kết hợp với thuật toán tương đồng Jaccard để tự động sinh lý do gợi ý kết nối đối tác mang tính cá nhân hóa cao.
+    \item \textbf{Trải nghiệm người dùng trực quan và hiện đại:} Hiện thực Sơ đồ mặt bằng tương tác (SVG Interactive Floorplan Canvas) cho phép người dùng quan sát vị trí thực tế của bàn làm việc theo thời gian thực; Cung cấp bảng điều khiển Lễ tân hỗ trợ cơ chế dung sai 30 phút và quản lý dịch vụ phát sinh (Running Tab).
+    \item \textbf{Đóng gói chuẩn mực và Triển khai Đám mây thực tế:} Áp dụng kỹ thuật Docker Multi-stage build rút gọn dung lượng Back-end xuống chỉ còn 215MB, triển khai thành công lên Render Cloud, phân phối Front-end trên mạng lưới biên Vercel Edge CDN và cơ sở dữ liệu trên Supabase Cloud.
+    \item \textbf{Bảo chứng chất lượng với 250 ca kiểm thử tự động:} Hệ thống được bao phủ bởi 236 ca kiểm thử tự động Java (JUnit 5, Mockito) và 14 kịch bản kiểm thử tích hợp SQL chuyên sâu, đạt tỷ lệ thành công tuyệt đối 100\% PASS.
+\end{enumerate}
+
+\subsection{Đánh giá ưu điểm và mặt hạn chế của hệ thống}
+
+\subsubsection{Ưu điểm nổi bật}
 \begin{itemize}
-    \item Đề xuất và xây dựng thành công kiến trúc hệ thống Client-Server vững chắc. Trong đó, Backend (Spring Boot) đảm nhiệm tốt các luồng logic nghiệp vụ phức tạp (chống trùng lịch, xử lý giao dịch) và Database (PostgreSQL) được chuẩn hóa để quản lý dữ liệu đa cấp từ Chi nhánh đến từng Không gian làm việc (Workspace).
-    
-    \item Thiết kế hệ thống tính năng Đặt chỗ (Booking Engine) linh hoạt, hỗ trợ đặt phòng theo nhiều khung thời gian (giờ/ngày/tuần/tháng) và tích hợp luồng xử lý bảo trì (Maintenance) thông minh nhằm tối đa hóa công suất khai thác.
-    
-    \item Xây dựng luồng thanh toán và giao dịch toàn diện, bao gồm thanh toán trực tuyến qua MoMo có sử dụng Webhook xác nhận tự động, xử lý thanh toán tiền mặt tại quầy, cũng như cơ chế Chính sách hủy và Hoàn tiền (Cancellation \& Refund) tự động hóa dựa trên hệ thống luật (Rules).
-    
-    \item Triển khai cơ chế xác thực an toàn thông qua Supabase Auth (hỗ trợ Email/Password và Google SSO) và thiết lập mô hình kiểm soát truy cập (RBAC) chặt chẽ, đảm bảo phân quyền rành mạch cho 4 vai trò: Super Admin, Branch Admin, Staff và Customer.
-    
-    \item Hiện thực ứng dụng Frontend (React/TypeScript) với độ hoàn thiện cao, giao diện hiện đại và đáp ứng (Responsive). Điểm nhấn là việc tích hợp thành công bản đồ không gian trực quan (SVG Floorplan) kết hợp với các thao tác tương tác thời gian thực.
-    
-    \item Thiết kế và xây dựng module Gợi ý đối tác (Partner Matching), ứng dụng thuật toán tính điểm tương đồng dựa trên kỹ năng và sở thích nhằm kết nối cộng đồng người sử dụng không gian làm việc.
+    \item \textbf{Tính thực tiễn và nghiệp vụ chuyên sâu:} Hệ thống mô phỏng chuẩn xác toàn bộ các quy trình nghiệp vụ phức tạp của thị trường coworking space hiện đại: chính sách giá phân tầng linh hoạt (theo giờ/ngày/tháng), cơ chế hủy phạt 3 nấc thời gian minh bạch, bảo trì không gian định kỳ và đối soát tài chính tức thời.
+    \item \textbf{Kiến trúc phần mềm chuẩn mực:} Phân tách rõ ràng giữa tầng hiển thị và tầng máy chủ (3-Tier Layered Architecture). Mã nguồn Back-end tuân thủ nghiêm ngặt các nguyên tắc Clean Architecture và SOLID, giúp mã nguồn dễ bảo trì, dễ mở rộng và có độ tương thích cao.
+    \item \textbf{Tính an toàn và bảo mật cao:} Hệ thống triển khai cơ chế xác thực Stateless JWT kết hợp Supabase Auth, phân quyền truy cập nghiêm ngặt theo vai trò (RBAC), bảo vệ nguồn gốc chéo (CORS) và lưu vết kiểm toán (Audit Log) toàn vẹn mọi thao tác nhạy cảm.
 \end{itemize}
 
-Nhìn chung, giai đoạn hiện tại đã hoàn thiện nền tảng phân tích -- thiết kế ở mức hệ thống, hoàn thành ``khung xương'' của hệ thống (core services) và chứng minh tính khả thi về mặt kỹ thuật đối với bài toán quản lý và vận hành Không gian làm việc chung (Co-Working Space).
+\subsubsection{Những mặt còn hạn chế}
+\begin{itemize}
+    \item \textbf{Nền tảng người dùng:} Mặc dù giao diện web đã được tối ưu hóa theo hướng đáp ứng (Responsive Design) tương thích tốt trên điện thoại di động, hệ thống hiện vẫn chưa có ứng dụng di động bản địa (Native Mobile Application) chuyên biệt trên hai kho ứng dụng App Store và Google Play.
+    \item \textbf{Tích hợp phần cứng thông minh:} Hiện tại quá trình check-in ra vào cửa vẫn phụ thuộc vào thao tác xác thực của nhân viên quầy lễ tân thông qua giao diện máy trạm, chưa tích hợp trực tiếp với các thiết bị phần cứng IoT (như khóa cửa từ tử thông minh, barrier cổng tự động).
+\end{itemize}
 
-\subsection{Kế hoạch triển khai giai đoạn Đồ án Tốt nghiệp}
+\subsection{Hướng phát triển và mở rộng trong tương lai}
 
-Trong giai đoạn Đồ án Tốt nghiệp (kéo dài 15 tuần), đề tài sẽ tập trung vào việc hiện thực hóa các chức năng nâng cao, bao gồm hệ sinh thái tương tác, tích hợp thanh toán thực tế, ứng dụng di động và các tính năng hỗ trợ bằng Trí tuệ nhân tạo (AI). Chi tiết kế hoạch được thể hiện trong Bảng \ref{tab:plan_15_weeks_datn}.
+Để đưa hệ thống CoSpace tiến xa hơn nữa hướng tới mục tiêu thương mại hóa thực tế trên quy mô chuỗi dịch vụ, nhóm nghiên cứu đề xuất một số định hướng phát triển tiếp theo:
 
-\begin{table}[hbt!]
-\centering
-\small
-\setlength{\tabcolsep}{5pt}
-\renewcommand{\arraystretch}{1.3}
-\begin{tabular}{c p{8.5cm} p{4.5cm}}
-\hline
-\textbf{Tuần} & \textbf{Nội dung công việc} & \textbf{Sản phẩm/Đầu ra} \\
-\hline
-1 - 2  & Khảo sát yêu cầu bổ sung; thiết kế lại CSDL và kiến trúc API cho các tính năng mới (Chat, AI, Payment); thiết lập môi trường dự án Mobile. & Đặc tả yêu cầu, bản vẽ ERD \& API cập nhật \\
-\hline
-3 - 4  & Hiện thực tính năng Nhắn tin trực tiếp (Real-time Chat) và hệ thống Thông báo (Push Notification) trên Backend và Web Frontend. & Module Chat \& Notification \\
-\hline
-5 - 6  & Tích hợp sâu cổng thanh toán (MoMo, ZaloPay, VNPay) cho luồng Hoàn tiền tự động (Auto-Payout); phát triển cơ chế lưu trữ lịch sử bảng giá (Pricing History). & Module thanh toán \& hoàn tiền \\
-\hline
-7 - 8  & Xây dựng ứng dụng di động (Mobile App) ở mức cơ bản (MVP): Giao diện người dùng, xác thực đăng nhập, xem danh sách không gian và đặt chỗ. & Mobile App (MVP) \\
-\hline
-9 - 10 & Tích hợp tính năng Check-in/Check-out tự động bằng mã QR trên Mobile App và đồng bộ dữ liệu thời gian thực với hệ thống Backend. & Tính năng QR Check-in/out \\
-\hline
-11 & Nghiên cứu và ứng dụng Machine Learning để tối ưu hóa thuật toán Gợi ý đối tác (Matching Algorithm) dựa trên hồ sơ khách hàng. & Thuật toán Matching tối ưu \\
-\hline
-12 & Tích hợp Chatbot AI hỗ trợ giải đáp thắc mắc và hướng dẫn khách hàng sử dụng dịch vụ trên nền tảng Web và Mobile. & Chatbot AI hoạt động \\
-\hline
-13 & Nâng cấp Dashboard Thống kê cho Ban quản lý, hỗ trợ xuất báo cáo định kỳ (PDF/Excel) với biểu đồ phân tích chuyên sâu. & Dashboard nâng cao \\
-\hline
-14 & Kiểm thử toàn diện (Integration Test, UAT), sửa lỗi (Bug fixing), tối ưu hóa hiệu năng và trải nghiệm người dùng (UX/UI). & Phiên bản ổn định (RC) \\
-\hline
-15 & Đóng gói ứng dụng, triển khai hệ thống lên môi trường thực tế (Deployment); hoàn thiện báo cáo Đồ án Tốt nghiệp và chuẩn bị demo. & Báo cáo ĐATN, sản phẩm hoàn thiện \\
-\hline
-\end{tabular}
-\caption{Kế hoạch triển khai 15 tuần trong giai đoạn Đồ án Tốt nghiệp.}
-\label{tab:plan_15_weeks_datn}
-\end{table}
+\begin{enumerate}
+    \item \textbf{Phát triển Ứng dụng Di động Đa nền tảng (Mobile Native App):} Xây dựng ứng dụng di động bằng React Native hoặc Flutter nhằm tận dụng các tính năng phần cứng của điện thoại như Thông báo đẩy (Push Notifications) nhắc nhở lịch hẹn, quét mã QR check-in một chạm và mở khóa bằng sinh trắc học (FaceID / Fingerprint).
+    \item \textbf{Tích hợp giải pháp Phần cứng Thông minh IoT (Smart IoT Access Control):} Kết nối máy chủ với các bộ điều khiển khóa cửa điện tử (Smart Door Locks) và cảm biến hiện diện tại vị trí làm việc thông qua giao thức mạng nhẹ \textbf{MQTT} hoặc \textbf{WebSockets}. Khi khách hàng thanh toán thành công, hệ thống tự động cấp mã số PIN tạm thời hoặc mã QR mở cửa có hiệu lực đúng trong khung giờ đã đặt.
+    \item \textbf{Mở rộng Kiến trúc Đa bên thuê (Multi-tenant SaaS Architecture):} Nâng cấp kiến trúc dữ liệu và logic phân quyền để CoSpace trở thành một nền tảng phần mềm dưới dạng dịch vụ (SaaS). Cho phép các chủ doanh nghiệp văn phòng chia sẻ khác nhau có thể đăng ký tài khoản doanh nghiệp, tự thiết lập thương hiệu, cấu hình bảng giá và vận hành cơ sở kinh doanh của riêng mình trên cùng một hạ tầng máy chủ tập trung.
+    \item \textbf{Tối ưu hóa gợi ý đối tác bằng Học máy Chuyên sâu (Advanced Graph AI):} Ứng dụng mạng nơ-ron đồ thị (Graph Neural Networks -- GNN) để mô hình hóa mạng lưới quan hệ giữa các thành viên, kết hợp dữ liệu lịch sử các dự án thành công để đưa ra các gợi ý hợp tác kinh doanh có độ chuẩn xác và giá trị thương mại cao hơn.
+\end{enumerate}

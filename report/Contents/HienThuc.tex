@@ -1,1 +1,444 @@
-\section{Hiện thực}
+\section{Hiện thực hệ thống}
+
+\subsection{Môi trường phát triển và cấu trúc mã nguồn}
+
+\subsubsection{Môi trường phần cứng và phần mềm}
+
+Quá trình nghiên cứu, thiết kế và phát triển hệ thống CoSpace được thực hiện trên môi trường tiêu chuẩn hóa, đảm bảo tính ổn định và tương thích cao giữa các thành viên trong nhóm:
+
+\begin{itemize}
+    \item \textbf{Môi trường phần cứng máy phát triển:} Bộ vi xử lý Intel Core i7 / AMD Ryzen 7 (8 nhân, 16 luồng), bộ nhớ RAM 16GB -- 32GB DDR4/DDR5, ổ cứng thể rắn SSD NVMe PCIe 4.0 tốc độ cao.
+    \item \textbf{Hệ điều hành:} Microsoft Windows 11 Pro 64-bit và Linux Ubuntu 22.04 LTS (thông qua môi trường ảo hóa WSL 2).
+    \item \textbf{Nền tảng Back-end:} Java Development Kit (OpenJDK 17 Temurin LTS), Apache Maven 3.9+, Spring Boot 3.2.x framework.
+    \item \textbf{Nền tảng Front-end:} Node.js LTS v20.x, npm v10.x, React 18, TypeScript 5.x, Vite 5.x build tool.
+    \item \textbf{Hệ quản trị cơ sở dữ liệu:} PostgreSQL 15 với tiện ích mở rộng \texttt{btree\_gist} và \texttt{pgcrypto} kích hoạt sẵn.
+    \item \textbf{Công cụ lập trình và quản lý:} IntelliJ IDEA Ultimate, Visual Studio Code, Git v2.4x, GitHub Repository, Postman (kiểm thử RESTful API), Docker Desktop (containerization).
+\end{itemize}
+
+\subsubsection{Cấu trúc cây thư mục toàn dự án}
+
+Hệ thống được tổ chức theo mô hình Monorepo tinh gọn với hai phân hệ chính tách biệt: thư mục \texttt{BE} (mã nguồn máy chủ Spring Boot) và \texttt{FE} (mã nguồn giao diện React TypeScript). Cấu trúc chi tiết được tổ chức như sau:
+
+\begin{lstlisting}[language=bash, caption={Cấu trúc cây thư mục mã nguồn dự án CoSpace}]
+cospace-root/
+├── BE/                                  # Tầng Back-end (Spring Boot 3)
+│   ├── pom.xml                          # Khai báo phụ thuộc Maven
+│   ├── Dockerfile                       # Multi-stage Docker build cho Backend
+│   └── src/
+│       ├── main/
+│       │   ├── java/com/cospace/app/
+│       │   │   ├── config/              # SecurityConfig, PayosConfig, CacheConfig
+│       │   │   ├── controller/          # REST Controllers tiếp nhận HTTP requests
+│       │   │   ├── dto/                 # Data Transfer Objects (Request/Response)
+│       │   │   ├── entity/              # 17 JPA Entities tương ứng lược đồ DB
+│       │   │   ├── exception/           # GlobalExceptionHandler, Custom Exceptions
+│       │   │   ├── repository/          # Spring Data JPA Repositories
+│       │   │   ├── scheduler/           # BookingExpiryScheduler, LifecycleScheduler
+│       │   │   ├── security/            # SupabaseJwtFilter, CustomUserDetailsService
+│       │   │   └── service/             # Logic nghiệp vụ lõi (Booking, Payment, v.v.)
+│       │   └── resources/
+│       │       ├── application.yml      # Cấu hình DataSource, JPA, PayOS, Gemini
+│       │       └── application-prod.yml # Cấu hình môi trường Production
+│       └── test/java/com/cospace/app/   # 250+ Unit & Integration Tests (JUnit 5, Mockito)
+├── FE/                                  # Tầng Front-end (React 18 + TypeScript)
+│   ├── package.json                     # Khai báo dependencies thư viện giao diện
+│   ├── vite.config.ts                   # Cấu hình Vite & manualChunks code splitting
+│   ├── tsconfig.json                    # Cấu hình TypeScript compiler
+│   └── src/
+│       ├── assets/                      # Hình ảnh, biểu tượng, sơ đồ tĩnh
+│       ├── components/                  # Các UI components tái sử dụng
+│       │   ├── common/                  # Navbar, Footer, Modal, LoadingSpinner
+│       │   ├── floorplan/               # Interactive SVG Floorplan Canvas
+│       │   └── notifications/           # NotificationBell, Toast provider
+│       ├── context/                     # AuthContext, NotificationContext
+│       ├── hooks/                       # useAuth, useCountdown, usePolling
+│       ├── lib/                         # Client API wrappers (spaceApi, supabaseClient)
+│       ├── pages/                       # 4 phân hệ Portal giao diện
+│       │   ├── admin/                   # Branches, Users, Policies, AuditLog
+│       │   ├── branch-admin/            # SpaceManager, PricingHub, Maintenance
+│       │   ├── customer/                # BookingHub, VietQRCheckout, History, Matching
+│       │   └── staff/                   # CheckinDesk, RunningTab, WalkinBooking
+│       └── types/                       # TypeScript Interface & Type definitions
+└── database/
+    └── migrations/                      # Tập lệnh khởi tạo DDL và seed data
+\end{lstlisting}
+
+\subsection{Hiện thực các phân hệ Back-end then chốt}
+
+\subsubsection{Hiện thực Bộ lọc bảo mật và Xác thực phân quyền đa tầng}
+
+Tầng bảo mật được hiện thực dựa trên \texttt{Spring Security 6} kết hợp \texttt{Supabase Authentication}. Mọi yêu cầu truy cập tài nguyên được bảo vệ đều phải đi qua bộ lọc \texttt{SupabaseJwtFilter}. Đoạn mã dưới đây minh họa quá trình bóc tách mã thông báo (Bearer token), thẩm định chữ ký và nạp vai trò người dùng vào ngữ cảnh bảo mật của Spring:
+
+\begin{lstlisting}[language=Java, caption={Hiện thực bộ lọc xác thực SupabaseJwtFilter}]
+@Component
+@Slf4j
+public class SupabaseJwtFilter extends OncePerRequestFilter {
+
+    private final JwtTokenValidator jwtTokenValidator;
+    private final UserRepository userRepository;
+
+    public SupabaseJwtFilter(JwtTokenValidator jwtTokenValidator, UserRepository userRepository) {
+        this.jwtTokenValidator = jwtTokenValidator;
+        this.userRepository = userRepository;
+    }
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain filterChain) throws ServletException, IOException {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        String token = authHeader.substring(7);
+        try {
+            Claims claims = jwtTokenValidator.validateAndGetClaims(token);
+            String email = claims.get("email", String.class);
+
+            // Truy vấn thông tin người dùng nội bộ để lấy phân quyền thực tế
+            Optional<User> userOpt = userRepository.findByEmail(email);
+            if (userOpt.isPresent()) {
+                User user = userOpt.get();
+                if (user.getStatus() != UserStatus.ACTIVE) {
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "Tài khoản của bạn đã bị khóa.");
+                    return;
+                }
+
+                List<SimpleGrantedAuthority> authorities = List.of(
+                    new SimpleGrantedAuthority("ROLE_" + user.getRole().name())
+                );
+                UserPrincipal principal = new UserPrincipal(user.getId(), user.getEmail(), user.getRole(), user.getBranchId());
+                UsernamePasswordAuthenticationToken authentication =
+                    new UsernamePasswordAuthenticationToken(principal, null, authorities);
+                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+            }
+        } catch (JwtException e) {
+            log.warn("Mã thông báo JWT không hợp lệ hoặc đã hết hạn: {}", e.getMessage());
+        }
+
+        filterChain.doFilter(request, response);
+    }
+}
+\end{lstlisting}
+
+Nhờ kiến trúc này, máy chủ Spring Boot không lưu giữ trạng thái phiên (Stateless Session), cho phép hệ thống dễ dàng mở rộng theo chiều ngang (Horizontally Scalable) mà không gặp hiện tượng trôi phiên đăng nhập giữa các instance.
+
+\subsubsection{Hiện thực Module Đặt chỗ và Kiểm soát tương tranh hai tầng}
+
+Để xử lý bài toán chống đụng lịch (Overlapping Double Booking) và áp dụng quy tắc nghiệp vụ giới hạn tần suất (Rate Limiting Rule \#33), \texttt{BookingService} hiện thực hóa cơ chế khóa phân tán mức giao dịch \texttt{pg\_advisory\_xact\_lock}:
+
+\begin{lstlisting}[language=Java, caption={Đoạn mã xử lý khóa tương tranh và đặt chỗ trong BookingService}]
+@Service
+@Transactional
+public class BookingService {
+
+    @PersistenceContext
+    private EntityManager entityManager;
+    private final BookingRepository bookingRepository;
+    private final WorkspaceEntityRepository workspaceRepository;
+    private final FloorRepository floorRepository;
+
+    public BookingResponse createBooking(UUID userId, BookingCreateRequest req) {
+        // 1. Áp dụng Rule #33: Giới hạn tối đa 3 đơn chờ thanh toán cho mỗi người dùng
+        // Sử dụng PostgreSQL Advisory Lock trên userId để ngăn ngừa race condition
+        entityManager.createNativeQuery("SELECT pg_advisory_xact_lock(hashtext(:key))")
+                .setParameter("key", "rate_limit:" + userId.toString())
+                .getSingleResult();
+
+        int pendingCount = bookingRepository.countByUserIdAndStatus(userId, BookingStatus.PENDING_PAYMENT);
+        if (pendingCount >= 3) {
+            throw new IllegalStateException("Bạn đang có 3 đơn chờ thanh toán. Vui lòng hoàn tất hoặc hủy bớt trước khi đặt tiếp.");
+        }
+
+        // 2. Tự động tính toán branchId phía máy chủ từ Workspace -> Floor (Rule #42)
+        WorkspaceEntity ws = workspaceRepository.findById(req.getWorkspaceId())
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy không gian làm việc."));
+        Floor floor = floorRepository.findById(ws.getFloorId())
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thông tin tầng."));
+        UUID branchId = floor.getBranchId();
+
+        // 3. Khóa tương tranh trên đối tượng không gian làm việc (Workspace Advisory Lock)
+        String lockKey = "booking:" + req.getWorkspaceId().toString();
+        entityManager.createNativeQuery("SELECT pg_advisory_xact_lock(hashtext(:key))")
+                .setParameter("key", lockKey)
+                .getSingleResult();
+
+        // 4. Kiểm tra xung đột lịch trình (Conflict Overlap Detection)
+        OffsetDateTime startOffset = req.getStartAt().withOffsetSameInstant(ZoneOffset.UTC);
+        OffsetDateTime endOffset = req.getEndAt().withOffsetSameInstant(ZoneOffset.UTC);
+        List<BookingStatus> activeStatuses = List.of(
+            BookingStatus.PENDING_PAYMENT, BookingStatus.CONFIRMED, BookingStatus.CHECKED_IN
+        );
+
+        List<Booking> conflicts = bookingRepository.findOverlappingBookings(
+            req.getWorkspaceId(), startOffset, endOffset, activeStatuses
+        );
+        if (!conflicts.isEmpty()) {
+            throw new IllegalStateException("Khung giờ này đã được đặt bởi người dùng khác. Vui lòng chọn khung giờ khác.");
+        }
+
+        // 5. Khởi tạo đối tượng Booking mới với hạn chót thanh toán 15 phút
+        Booking booking = new Booking();
+        booking.setUserId(userId);
+        booking.setWorkspaceId(req.getWorkspaceId());
+        booking.setBranchId(branchId);
+        booking.setStartAt(startOffset);
+        booking.setEndAt(endOffset);
+        booking.setStatus(BookingStatus.PENDING_PAYMENT);
+        booking.setPaymentDeadlineAt(OffsetDateTime.now(ZoneOffset.UTC).plusMinutes(15));
+        bookingRepository.save(booking);
+
+        return mapToResponse(booking);
+    }
+}
+\end{lstlisting}
+
+Hàm \texttt{pg\_advisory\_xact\_lock} có đặc tính sống trong phạm vi giao dịch hiện tại (\texttt{@Transactional}). Ngay khi phương thức kết thúc (dù thành công hay ngoại lệ được ném ra), khóa sẽ tự động được giải phóng bởi PostgreSQL, đảm bảo tuyệt đối không xảy ra tình trạng bế tắc (deadlock) hoặc rò rỉ tài nguyên hệ thống.
+
+\subsubsection{Hiện thực Module Thanh toán tự động VietQR Napas 24/7 và Webhook Idempotency}
+
+Để phục vụ khách hàng thanh toán nhanh chóng không cần nhập thủ công số tài khoản, hệ thống tích hợp giải pháp VietQR thông qua \texttt{PayosService}. Mỗi yêu cầu thanh toán được cấp phát một mã đơn hàng duy nhất (\texttt{orderCode}). Phía máy chủ tiếp nhận Webhook với cơ chế thẩm định chữ ký số HMAC-SHA256:
+
+\begin{lstlisting}[language=Java, caption={Hiện thực tiếp nhận và xác thực Webhook thanh toán PayOS}]
+@Service
+@Slf4j
+public class PayosService {
+
+    private final PayosConfig payosConfig;
+
+    public boolean verifyWebhookSignature(PayosWebhookDto webhookData) {
+        try {
+            // Sắp xếp dữ liệu nhận được theo thứ tự bảng chữ cái để tạo chuỗi dữ liệu gốc
+            String rawData = String.format("amount=%d&cancelUrl=%s&description=%s&orderCode=%d&returnUrl=%s&status=%s",
+                webhookData.getData().getAmount(),
+                payosConfig.getCancelUrl(),
+                webhookData.getData().getDescription(),
+                webhookData.getData().getOrderCode(),
+                payosConfig.getReturnUrl(),
+                webhookData.getData().getCode()
+            );
+
+            Mac sha256Hmac = Mac.getInstance("HmacSHA256");
+            SecretKeySpec secretKey = new SecretKeySpec(payosConfig.getChecksumKey().getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+            sha256Hmac.init(secretKey);
+
+            byte[] hmacBytes = sha256Hmac.doFinal(rawData.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hmacBytes) {
+                hexString.append(String.format("%02x", b));
+            }
+
+            return hexString.toString().equalsIgnoreCase(webhookData.getSignature());
+        } catch (Exception e) {
+            log.error("Lỗi thẩm định chữ ký Webhook PayOS: {}", e.getMessage());
+            return false;
+        }
+    }
+}
+\end{lstlisting}
+
+Tại \texttt{PaymentService}, khi nhận tín hiệu thanh toán thành công, hệ thống thực hiện kiểm tra tính bất biến (Idempotency Check) bằng cách tra cứu trạng thái giao dịch trong bảng \texttt{payments}. Nếu giao dịch đã ở trạng thái \texttt{COMPLETED}, hệ thống lập tức phản hồi HTTP 200 mà không cập nhật lại trạng thái đơn hàng. Nếu đơn đặt chỗ tương ứng đã bị hủy do quá hạn trước khi tiền vào (Late Webhook), hệ thống tự động kích hoạt tiến trình hoàn tiền hoặc ghi có số dư tín dụng (\textit{ghost payment credit}) nhằm bảo vệ quyền lợi tài chính của khách hàng.
+
+\subsubsection{Hiện thực Module Gợi ý Đối tác kết nối thông minh}
+
+Module gợi ý đối tác kết nối là một trong những nét đột phá của CoSpace nhằm xây dựng mạng lưới làm việc chung giàu tính tương tác. Dịch vụ \texttt{PartnerMatchingService} tính toán chỉ số tương đồng giữa người dùng hiện tại và các thành viên khác dựa trên công thức Jaccard kết hợp độ ưu tiên cùng chi nhánh:
+
+\begin{lstlisting}[language=Java, caption={Đoạn mã tính toán chỉ số tương đồng Jaccard trong PartnerMatchingService}]
+@Service
+public class PartnerMatchingService {
+
+    private final GeminiClient geminiClient;
+    private final ProfileSkillRepository profileSkillRepository;
+    private final ProfileInterestRepository profileInterestRepository;
+
+    public double calculateSimilarityScore(UUID currentUserId, UUID candidateId, 
+                                          UUID currentBranchId, UUID candBranchId) {
+        Set<UUID> mySkills = profileSkillRepository.findTagIdsByUserId(currentUserId);
+        Set<UUID> candSkills = profileSkillRepository.findTagIdsByUserId(candidateId);
+
+        // 1. Chỉ số tương đồng kỹ năng chuyên môn (Skill Jaccard)
+        Set<UUID> sharedSkills = new HashSet<>(mySkills);
+        sharedSkills.retainAll(candSkills);
+        Set<UUID> unionSkills = new HashSet<>(mySkills);
+        unionSkills.addAll(candSkills);
+        double skillScore = unionSkills.isEmpty() ? 0.0 : (double) sharedSkills.size() / unionSkills.size();
+
+        // 2. Chỉ số tương đồng sở thích & lĩnh vực quan tâm (Interest Jaccard)
+        Set<UUID> myInterests = profileInterestRepository.findTagIdsByUserId(currentUserId);
+        Set<UUID> candInterests = profileInterestRepository.findTagIdsByUserId(candidateId);
+        Set<UUID> sharedInterests = new HashSet<>(myInterests);
+        sharedInterests.retainAll(candInterests);
+        Set<UUID> unionInterests = new HashSet<>(myInterests);
+        unionInterests.addAll(candInterests);
+        double interestScore = unionInterests.isEmpty() ? 0.0 : (double) sharedInterests.size() / unionInterests.size();
+
+        // 3. Điểm cộng làm việc cùng cơ sở chi nhánh (Rule #18: +0.15)
+        double branchBonus = (currentBranchId != null && currentBranchId.equals(candBranchId)) ? 0.15 : 0.0;
+
+        // Trọng số tổng hợp: Kỹ năng 50%, Sở thích 35%, Cùng chi nhánh 15%
+        double totalScore = (skillScore * 0.50) + (interestScore * 0.35) + branchBonus;
+        return Math.min(1.0, totalScore);
+    }
+}
+\end{lstlisting}
+
+Sau khi lọc ra top các ứng viên có điểm số tương đồng cao nhất ($Score \ge 0.30$), hệ thống chuyển danh sách sang \texttt{GeminiClient} để mô hình ngôn ngữ lớn Google Gemini tự động sinh ra một câu lý do gặp gỡ ngắn gọn, cá nhân hóa (ví dụ: \textit{"Cả hai bạn đều đang phát triển ứng dụng di động Flutter và quan tâm đến thị trường EdTech"}).
+
+\subsubsection{Hiện thực Module Trợ lý ảo AI Chatbot}
+
+Trợ lý ảo được thiết kế để giải đáp các thắc mắc thường gặp của khách hàng về bảng giá, vị trí chi nhánh, quy định check-in và chính sách hoàn hủy. Dịch vụ \texttt{ChatbotService} giao tiếp với Google Generative AI API (\texttt{gemini-3.5-flash} và dự phòng \texttt{gemini-3.7-flash}) thông qua lớp khách \texttt{GeminiClient}:
+
+\begin{lstlisting}[language=Java, caption={Hiện thực giao tiếp Gemini AI trong ChatbotService}]
+@Service
+@Slf4j
+public class ChatbotService {
+
+    private final GeminiClient geminiClient;
+    private final BranchEntityRepository branchRepository;
+    private final WorkspaceEntityRepository workspaceRepository;
+
+    public String askAssistant(String userQuestion, List<ChatMessageDto> history) {
+        // Xây dựng System Prompt chứa toàn bộ tri thức đặc tả nghiệp vụ CoSpace
+        String systemInstruction = """
+            Bạn là CoSpace Assistant - Trợ lý ảo thông minh của Hệ thống Văn phòng chia sẻ CoSpace.
+            Nhiệm vụ của bạn là giải đáp chính xác, lịch thiệp về:
+            1. Các gói dịch vụ: Chỗ ngồi linh hoạt (Hot Desk), Chỗ ngồi cố định (Dedicated Desk), Phòng họp (Meeting Room).
+            2. Quy định check-in: Cửa sổ dung sai cho phép check-in sớm hoặc muộn tối đa 30 phút.
+            3. Hạn chót thanh toán: 15 phút qua cổng VietQR tự động.
+            4. Chính sách hoàn hủy: Hủy trước 24h hoàn 100%, trước 2h hoàn 50%, sau đó không hoàn tiền.
+            Luôn trả lời ngắn gọn, thân thiện bằng Tiếng Việt.
+            """;
+
+        try {
+            JsonNode payload = buildGeminiPayload(systemInstruction, userQuestion, history);
+            JsonNode response = geminiClient.generateContent(payload);
+            return extractTextFromGemini(response);
+        } catch (Exception e) {
+            log.error("Lỗi khi gọi API Google Gemini: {}", e.getMessage());
+            return "Xin lỗi, hiện tại trợ lý ảo đang bận xử lý. Bạn có thể liên hệ lễ tân để được hỗ trợ tức thì!";
+        }
+    }
+}
+\end{lstlisting}
+
+\subsubsection{Hiện thực Tác vụ định kỳ tự động hủy đặt chỗ quá hạn}
+
+Để giải phóng chỗ ngồi cho người dùng khác khi khách hàng không thanh toán đúng hạn 15 phút, hệ thống hiện thực lớp \texttt{BookingExpiryScheduler} sử dụng tính năng \texttt{@Scheduled} của Spring Framework:
+
+\begin{lstlisting}[language=Java, caption={Tác vụ định kỳ quét và giải phóng đơn đặt chỗ quá hạn}]
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class BookingExpiryScheduler {
+
+    private final BookingRepository bookingRepository;
+    private final PaymentRepository paymentRepository;
+
+    @Scheduled(fixedRate = 30000) // Kích hoạt định kỳ mỗi 30 giây một lần
+    @Transactional
+    public void expirePendingBookings() {
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        List<Booking> expiredBookings = bookingRepository.findAllByStatusAndPaymentDeadlineAtBefore(
+                BookingStatus.PENDING_PAYMENT, now
+        );
+
+        if (expiredBookings.isEmpty()) {
+            return;
+        }
+
+        log.info("Phát hiện {} đơn đặt chỗ quá hạn thanh toán. Đang tiến hành giải phóng...", expiredBookings.size());
+        for (Booking booking : expiredBookings) {
+            try {
+                booking.setStatus(BookingStatus.CANCELLED);
+                bookingRepository.save(booking);
+
+                // Cập nhật trạng thái giao dịch thanh toán tương ứng sang EXPIRED
+                paymentRepository.findByBookingId(booking.getId()).ifPresent(p -> {
+                    p.setStatus(PaymentStatus.EXPIRED);
+                    paymentRepository.save(p);
+                });
+                log.info("Đã giải phóng thành công chỗ ngồi mã đơn: {}", booking.getId());
+            } catch (Exception e) {
+                log.error("Lỗi khi hủy đơn quá hạn {}: {}", booking.getId(), e.getMessage());
+            }
+        }
+    }
+}
+\end{lstlisting}
+
+\subsubsection{Hiện thực Tối ưu hóa hiệu năng với Bộ nhớ đệm (Caffeine Cache)}
+
+Các danh mục dữ liệu có tần suất đọc cực cao nhưng ít khi biến đổi (như danh sách loại không gian \texttt{workspace\_types}, bảng chính sách giá \texttt{price\_policies}, và cây danh mục thẻ kỹ năng \texttt{tags}) được cấu hình lưu trữ trực tiếp trên bộ nhớ RAM của ứng dụng thông qua thư viện \textbf{Caffeine Cache}. Cấu hình thời gian sống (TTL - Time to Live) là 10 phút, giúp giảm tải hơn 80\% các câu truy vấn \texttt{SELECT} xuống cơ sở dữ liệu PostgreSQL.
+
+\subsection{Hiện thực các phân hệ Front-end và trải nghiệm tương tác}
+
+\subsubsection{Sơ đồ mặt bằng tương tác (SVG Floorplan Interactive Canvas)}
+
+Một trong những điểm nhấn nổi bật về trải nghiệm người dùng tại phân hệ Khách hàng là Sơ đồ mặt bằng tương tác (\texttt{InteractiveFloorplan.tsx}). Thay vì danh sách đơn điệu, không gian được kết xuất trực tiếp bằng đồ họa vector SVG (Scalable Vector Graphics), cho phép người dùng quan sát trực quan vị trí thực tế của từng bàn làm việc, khoảng cách tới cửa ra vào, khu vệ sinh hay khu vực pantry:
+
+\begin{lstlisting}[language=HTML, caption={Cấu trúc xử lý kết xuất đồ họa SVG trong InteractiveFloorplan.tsx}]
+// FE/src/components/floorplan/InteractiveFloorplan.tsx
+export const InteractiveFloorplan: React.FC<FloorplanProps> = ({ workspaces, onSelectWorkspace, selectedId }) => {
+  return (
+    <div className="relative w-full overflow-auto bg-slate-50 border rounded-xl p-4">
+      <svg viewBox="0 0 1000 650" className="w-full h-auto select-none">
+        {/* Lớp nền kiến trúc: Tường bao, cửa sổ, lối đi */}
+        <rect x="10" y="10" width="980" height="630" rx="8" fill="#ffffff" stroke="#cbd5e1" strokeWidth="2" />
+        <path d="M 300 10 L 300 200 M 700 10 L 700 200" stroke="#94a3b8" strokeWidth="2" strokeDasharray="4" />
+
+        {/* Lớp hiển thị các vị trí bàn làm việc động */}
+        {workspaces.map((ws) => {
+          const isSelected = ws.id === selectedId;
+          const isBooked = ws.status === 'OCCUPIED' || ws.status === 'RESERVED';
+          const isMaintenance = ws.status === 'MAINTENANCE';
+
+          // Màu sắc trạng thái: Xanh lá (Khả dụng), Vàng (Đang chọn), Đỏ (Đã đặt), Xám (Bảo trì)
+          let fillBg = "#10b981"; // Trống - Available
+          if (isBooked) fillBg = "#ef4444";
+          if (isMaintenance) fillBg = "#94a3b8";
+          if (isSelected) fillBg = "#f59e0b";
+
+          return (
+            <g key={ws.id} onClick={() => !isBooked && !isMaintenance && onSelectWorkspace(ws)}
+               className={isBooked || isMaintenance ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:scale-105"}>
+              <rect x={ws.coordX} y={ws.coordY} width={ws.width || 60} height={ws.height || 40}
+                    rx="6" fill={fillBg} stroke="#334155" strokeWidth="1.5" />
+              <text x={ws.coordX + 30} y={ws.coordY + 24} textAnchor="middle" 
+                    fill="#ffffff" fontSize="12" fontWeight="bold">
+                {ws.code}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+};
+\end{lstlisting}
+
+Giao diện tương tác trên liên kết chặt chẽ với màn hình đặt chỗ của khách hàng được minh họa tại Hình~\ref{fig:ui_booking_page}.
+
+\subsubsection{Trình tính giá linh hoạt và Luồng quét mã VietQR tự động}
+
+Khi người dùng chọn khung giờ sử dụng, giao diện tức thời gọi API tính giá để hiển thị bảng phân tích chi phí minh bạch bao gồm đơn giá gốc, phụ phí ngoài giờ và chiết khấu thời lượng. 
+
+Tại trang thanh toán (\texttt{VietQRCheckoutPage.tsx} -- Hình~\ref{fig:ui_payment_page}), giao diện hiển thị mã VietQR động cùng chuỗi đồng hồ đếm ngược 15:00 được quản lý bởi hook tùy biến \texttt{useCountdown}. Đồng thời, một hook lắng nghe \texttt{usePolling} sẽ gửi truy vấn định kỳ mỗi 3 giây đến endpoint \texttt{GET /api/payments/status/\{orderCode\}}. Khi máy chủ nhận được webhook từ ngân hàng Napas, trạng thái trên màn hình tự động chuyển sang thông báo chúc mừng màu xanh và điều hướng người dùng tới trang thông tin hóa đơn mà không cần tải lại trình duyệt.
+
+\subsubsection{Bảng điều khiển nghiệp vụ Lễ tân (Staff Portal)}
+
+Giao diện Lễ tân (\texttt{StaffDashboardPage.tsx}) được tối ưu hóa theo tiêu chí tối giản và phản hồi nhanh:
+\begin{itemize}
+    \item \textbf{Tìm kiếm nhanh một chạm:} Hỗ trợ tra cứu theo mã đặt chỗ, số điện thoại hoặc email khách hàng.
+    \item \textbf{Cơ chế dung sai Check-in (Tolerance Window):} Hệ thống tự động thẩm tra thời điểm hiện tại. Nếu khách hàng đến sớm hơn 30 phút trước giờ bắt đầu hoặc muộn hơn 30 phút sau giờ kết thúc, nút bấm Check-in sẽ bị vô hiệu hóa kèm cảnh báo trực quan.
+    \item \textbf{Quản lý hóa đơn phát sinh (Running Tab):} Lễ tân có thể thêm nhanh các dịch vụ phát sinh trong quá trình khách làm việc (ví dụ: gọi cà phê espresso, sử dụng máy in màu, thuê thêm thiết bị trình chiếu). Toàn bộ chi phí này được tự động cộng dồn vào hóa đơn thanh toán khi khách thực hiện thủ tục Check-out.
+\end{itemize}
+
+\subsubsection{Trung tâm quản trị Chi nhánh và Toàn hệ thống}
+
+\begin{itemize}
+    \item \textbf{Pricing Hub (Branch Admin):} Cung cấp giao diện bảng quản lý chính sách giá đa tầng. Cho phép định hình giá thuê linh hoạt theo giờ, theo ngày hoặc theo tháng đối với từng phân loại không gian cụ thể.
+    \item \textbf{Quản trị mạng lưới và Phân quyền (System Admin):} Giao diện được thiết kế với các bảng dữ liệu (Data Table) hỗ trợ tìm kiếm toàn văn, phân trang động và lọc nhiều điều kiện. Quản trị viên tối cao có thể kích hoạt, tạm dừng tài khoản hoặc xem xét nhật ký kiểm toán (Audit Log -- Hình~\ref{fig:ui_admin_audit_log_page}) nhằm đảm bảo an ninh vận hành.
+\end{itemize}

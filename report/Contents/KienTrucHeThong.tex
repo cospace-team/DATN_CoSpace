@@ -1,109 +1,236 @@
 \subsection{Kiến trúc hệ thống}
 
-\subsubsection{Yêu cầu kiến trúc}
+\subsubsection{Yêu cầu kiến trúc và nguyên tắc thiết kế}
 
-Hệ thống Quản lý Co-working Space phục vụ nhiều nhóm người dùng với các vai trò khác nhau (khách hàng, nhân viên, quản lý chi nhánh, quản trị viên hệ thống), đồng thời xử lý các nghiệp vụ phức tạp và đa dạng. Để đảm bảo chất lượng và tính bền vững của phần mềm, kiến trúc hệ thống cần đáp ứng các yêu cầu phi chức năng sau:
+Hệ thống Quản lý Co-working Space phục vụ đồng thời nhiều nhóm người dùng với các vai trò khác nhau (khách hàng, nhân viên lễ tân, quản lý chi nhánh, quản trị viên hệ thống), đồng thời phải xử lý các nghiệp vụ phức tạp về quản lý tài nguyên hữu hạn, thanh toán trực tuyến tức thời và gợi ý kết nối mạng lưới thành viên. Để đảm bảo chất lượng, tính sẵn sàng và độ tin cậy của phần mềm, kiến trúc hệ thống được xây dựng tuân thủ nghiêm ngặt các nguyên tắc và yêu cầu phi chức năng sau:
 
 \begin{itemize}
-    \item \textbf{Khả năng mở rộng (Scalability):} Cho phép bổ sung các module nghiệp vụ mới (ví dụ: quản lý sự kiện, hệ thống điểm thưởng) mà không cần thay đổi cấu trúc tổng thể của hệ thống.
-    \item \textbf{Khả năng bảo trì (Maintainability):} Các thành phần được phân tách rõ ràng theo trách nhiệm, giúp việc sửa lỗi, cập nhật và nâng cấp diễn ra độc lập, giảm thiểu rủi ro ảnh hưởng lẫn nhau.
-    \item \textbf{Bảo mật (Security):} Hỗ trợ cơ chế xác thực và phân quyền đa tầng, đảm bảo mỗi vai trò người dùng chỉ truy cập được các chức năng và dữ liệu được phép.
-    \item \textbf{Khả năng tích hợp (Integrability):} Dễ dàng kết nối với các dịch vụ bên thứ ba như cổng thanh toán (MoMo), dịch vụ xác thực (Google OAuth2, Supabase Authentication) thông qua các giao diện chuẩn hóa.
+    \item \textbf{Khả năng mở rộng (Scalability):} Cho phép hệ thống dễ dàng tiếp nhận thêm chi nhánh mới, tầng không gian mới, gói dịch vụ bổ sung mà không đòi hỏi tái cấu trúc mã nguồn lõi. Các tác vụ nặng như thuật toán so khớp đối tác Jaccard hay gọi API trí tuệ nhân tạo được xử lý bất đồng bộ hoặc bộ nhớ đệm (caching) để không nghẽn luồng xử lý chính.
+    \item \textbf{Tính nhất quán dữ liệu và kiểm soát tương tranh (Concurrency Control \& Data Consistency):} Trong bối cảnh nhiều khách hàng cùng lúc chọn một vị trí chỗ ngồi hoặc phòng họp tại cùng một khung giờ, hệ thống bắt buộc phải ngăn chặn tuyệt đối tình trạng đặt trùng lịch (double booking) thông qua cơ chế khóa hai tầng: Khóa mức ứng dụng (PostgreSQL Advisory Transaction Lock) và Ràng buộc loại trừ tại mức cơ sở dữ liệu (GiST Exclusion Constraint).
+    \item \textbf{Khả năng bảo trì và phân tách trách nhiệm (Maintainability \& Separation of Concerns):} Các thành phần được phân chia rõ ràng theo từng tầng logic độc lập. Tầng giao diện không can thiệp vào quy tắc tính toán giá; tầng nghiệp vụ không phụ thuộc vào chi tiết giao tiếp HTTP; tầng dữ liệu được trừu tượng hóa hoàn toàn.
+    \item \textbf{Bảo mật đa tầng (Multi-layered Security):} Cơ chế xác thực không lưu trạng thái (Stateless Authentication) dựa trên JSON Web Token (JWT) từ Supabase Auth, kết hợp với kiểm soát truy cập dựa trên vai trò (Role-Based Access Control - RBAC) tại từng REST endpoint của Spring Security.
+    \item \textbf{Khả năng tích hợp mở (Integrability):} Chuẩn hóa giao tiếp thông qua RESTful API định dạng JSON, dễ dàng tích hợp các dịch vụ bên thứ ba: Cổng thanh toán quốc gia VietQR (thông qua PayOS Open API), Mô hình ngôn ngữ lớn Google Gemini AI, và hạ tầng xác thực đám mây Supabase.
 \end{itemize}
 
-\subsubsection{Phân tích và lựa chọn kiến trúc}
+\subsubsection{Phân tích và lựa chọn mô hình kiến trúc}
 
-Nhóm đã tiến hành phân tích và so sánh ba mô hình kiến trúc phổ biến trong phát triển ứng dụng web để lựa chọn phương án phù hợp nhất cho hệ thống.
+Nhóm nghiên cứu đã tiến hành khảo sát và so sánh ba mô hình kiến trúc phổ biến trong công nghệ phần mềm hiện đại nhằm tìm ra phương án tối ưu cho bài toán của CoSpace:
 
 \begin{table}[H]
 \centering
-\caption{So sánh các mô hình kiến trúc phần mềm}
+\caption{So sánh chi tiết các mô hình kiến trúc phần mềm}
 \label{tab:architecture-comparison}
-\renewcommand{\arraystretch}{1.4}
-\begin{tabular}{|p{3.5cm}|p{3.5cm}|p{3.5cm}|p{3.5cm}|}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|p{3.2cm}|p{3.6cm}|p{3.6cm}|p{3.6cm}|}
 \hline
-\textbf{Tiêu chí} & \textbf{Monolithic} & \textbf{Microservices} & \textbf{Client-Server 3-Tier + Layered} \\
+\textbf{Tiêu chí đánh giá} & \textbf{Kiến trúc Đơn khối (Monolithic)} & \textbf{Kiến trúc Vi dịch vụ (Microservices)} & \textbf{Client-Server 3-Tier + Layered Architecture} \\
 \hline
-Độ phức tạp triển khai & Thấp – đóng gói và triển khai dưới dạng một ứng dụng duy nhất & Cao – yêu cầu container hóa, hệ thống điều phối (orchestration) và giám sát phân tán & Trung bình – triển khai tách biệt client và server \\
+Độ phức tạp triển khai \& vận hành & Thấp -- đóng gói thành 1 tệp duy nhất, nhưng phụ thuộc chặt chẽ giữa các module. & Rất cao -- đòi hỏi container orchestration (Kubernetes), API Gateway, distributed tracing, service mesh. & Trung bình -- tách rời hoàn toàn Client (SPA) và Server (REST API), triển khai độc lập trên CDN và Cloud Server. \\
 \hline
-Khả năng mở rộng & Hạn chế – phải mở rộng toàn bộ ứng dụng & Rất cao – mở rộng độc lập từng dịch vụ & Tốt – mở rộng theo tầng hoặc theo module nghiệp vụ \\
+Kiểm soát tương tranh \& Giao dịch & Dễ xử lý giao dịch ACID trong phạm vi 1 cơ sở dữ liệu duy nhất. & Rất phức tạp -- đòi hỏi giải pháp Distributed Transaction (Saga pattern, 2PC), nguy cơ mất đồng bộ tài chính cao. & Tối ưu -- Cơ sở dữ liệu tập trung đảm bảo trọn vẹn chuẩn ACID, hỗ trợ cơ chế khóa tương tranh mạnh mẽ. \\
 \hline
-Khả năng bảo trì & Khó khăn khi hệ thống phát triển lớn, các module phụ thuộc chặt chẽ & Tốt – các dịch vụ độc lập, dễ cập nhật riêng lẻ & Tốt – phân tách rõ ràng theo tầng và trách nhiệm \\
+Khả năng mở rộng theo chiều ngang & Hạn chế -- phải nhân bản toàn bộ ứng dụng cồng kềnh khi chỉ một tính năng quá tải. & Rất cao -- mở rộng vi dịch vụ cụ thể theo nhu cầu tải thực tế. & Tốt -- mở rộng độc lập tầng giao diện (Vercel Edge Network) và tầng ứng dụng (Render autoscaling instances). \\
 \hline
-Phù hợp quy mô dự án & Dự án nhỏ, đơn giản & Dự án lớn, đội ngũ nhiều người & Dự án vừa, đội ngũ nhỏ đến trung bình \\
-\hline
-Chi phí vận hành & Thấp & Cao – cần hạ tầng phức tạp & Trung bình \\
+Phù hợp quy mô dự án & Doanh nghiệp vừa và nhỏ, dự án một lập trình viên. & Tập đoàn quy mô lớn, hàng chục đội ngũ phát triển độc lập. & Phù hợp nhất cho hệ thống quản trị chuyên sâu, yêu cầu giao dịch tài chính chuẩn xác và phát triển tinh gọn. \\
 \hline
 \end{tabular}
 \end{table}
 
-Dựa trên kết quả phân tích ở Bảng~\ref{tab:architecture-comparison}, nhóm quyết định lựa chọn mô hình \textbf{Client-Server với kiến trúc 3 tầng (3-Tier Architecture)} kết hợp \textbf{kiến trúc phân lớp (Layered Architecture)} cho phần back-end. Lý do cụ thể bao gồm:
+Từ bảng phân tích so sánh ở Bảng~\ref{tab:architecture-comparison}, nhóm quyết định lựa chọn mô hình \textbf{Client-Server với kiến trúc 3 tầng (3-Tier Architecture)} kết hợp \textbf{kiến trúc phân lớp chuyên sâu (Layered Architecture)} cho phần Back-end. Mô hình này mang lại sự cân bằng hoàn hảo giữa tính tin cậy tuyệt đối trong xử lý giao dịch tài chính (ACID transactions) với khả năng phân tách độc lập giữa đội ngũ phát triển giao diện người dùng và kỹ sư hệ thống.
 
-\begin{itemize}
-    \item \textbf{Cân bằng giữa tính mở rộng và độ phức tạp:} So với Monolithic, kiến trúc 3 tầng cho phép phát triển và mở rộng từng tầng một cách độc lập. So với Microservices, mô hình này có độ phức tạp vận hành thấp hơn đáng kể, phù hợp hơn với quy mô và nguồn lực của nhóm phát triển.
-    \item \textbf{Phân tách trách nhiệm rõ ràng:} Kiến trúc phân lớp trong back-end (Security $\rightarrow$ Controller $\rightarrow$ Service $\rightarrow$ Repository) tuân thủ nguyên tắc \textit{Separation of Concerns}, giúp mỗi tầng chỉ đảm nhận một trách nhiệm cụ thể, từ đó tăng tính dễ đọc và bảo trì của mã nguồn.
-    \item \textbf{Phù hợp với công nghệ sử dụng:} Mô hình này tương thích tốt với bộ công nghệ đã chọn — Spring Boot hỗ trợ tự nhiên kiến trúc phân lớp, React xây dựng SPA tách biệt hoàn toàn với back-end, và giao tiếp giữa hai tầng thông qua RESTful API theo chuẩn HTTP/JSON.
-\end{itemize}
-
-\subsubsection{Mô tả các thành phần kiến trúc}
+\subsubsection{Mô tả chi tiết các tầng kiến trúc hệ thống}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.85\textwidth]{Images/Chuong4/ArchitectureDiagram.png}
-    \caption{Sơ đồ tổng quan kiến trúc của hệ thống}
+    \includegraphics[width=0.9\textwidth]{Images/Chuong4/ArchitectureDiagram.png}
+    \caption{Sơ đồ tổng quan kiến trúc 3 tầng phân lớp của hệ thống CoSpace}
     \label{fig:architecture-diagram}
 \end{figure}
 
-Kiến trúc của hệ thống được tổ chức thành ba tầng chính như trong Hình~\ref{fig:architecture-diagram}, cùng với các dịch vụ bên thứ ba được tích hợp. Chi tiết từng thành phần như sau:
+Như được minh họa trên Hình~\ref{fig:architecture-diagram}, toàn bộ hệ sinh thái CoSpace được phân tách thành 3 tầng chức năng riêng biệt cùng mạng lưới dịch vụ tích hợp bên ngoài:
 
-\subsubsubsection{Tầng Trình bày (Presentation Tier)}
+\subsubsubsection{1. Tầng Trình bày (Presentation Tier -- Frontend)}
 
-Tầng trình bày là một ứng dụng web đơn trang (Single Page Application -- SPA) được xây dựng bằng \textbf{React} và \textbf{TypeScript}. Giao diện được thiết kế theo hướng đáp ứng (responsive), đảm bảo trải nghiệm nhất quán trên nhiều kích thước màn hình. Ứng dụng được chia thành bốn cổng giao diện (portal), mỗi cổng phục vụ một nhóm người dùng với vai trò cụ thể:
+Tầng trình bày là một ứng dụng web đơn trang (Single Page Application -- SPA) hiện đại được xây dựng hoàn toàn bằng ngôn ngữ \textbf{TypeScript} trên nền tảng thư viện \textbf{React 18} và công cụ đóng gói siêu tốc \textbf{Vite}. Để đạt hiệu năng cao và trải nghiệm người dùng mượt mà, frontend không thực hiện reload toàn trang mà sử dụng cơ chế Client-Side Routing với \textbf{React Router v6}. 
 
+Tầng này được phân chia thành 4 phân hệ cổng thông tin (Portal) chuyên biệt:
 \begin{itemize}
-    \item \textbf{Customer Portal:} Cung cấp chức năng tìm kiếm không gian, đặt chỗ, thanh toán trực tuyến, xem lịch sử đặt chỗ và quản lý thông tin cá nhân cho khách hàng.
-    \item \textbf{Staff Portal:} Hỗ trợ nhân viên thực hiện check-in/check-out cho khách hàng, xác nhận thanh toán, tạo đặt chỗ walk-in và quản lý vận hành hàng ngày.
-    \item \textbf{Branch Admin Portal:} Cho phép quản lý chi nhánh theo dõi hiệu suất kinh doanh, quản lý không gian, nhân viên, giá cả và chính sách tại chi nhánh mình phụ trách.
-    \item \textbf{System Admin Portal:} Dành cho quản trị viên hệ thống để quản lý toàn bộ chi nhánh, người dùng, chính sách giá, dịch vụ bổ sung, xem báo cáo tổng hợp và nhật ký hoạt động.
+    \item \textbf{Customer Portal:} Cung cấp giao diện trực quan cho khách hàng: Bản đồ sơ đồ mặt bằng tương tác (SVG Floorplan interactive canvas) theo thời gian thực; Luồng thanh toán quét mã VietQR tự động cập nhật trạng thái sau 3-5 giây; Hồ sơ cá nhân và mạng lưới gợi ý đối tác tiềm năng dựa trên chỉ số tương đồng; Trợ lý ảo AI Chatbot hỗ trợ tra cứu chính sách và tiện ích 24/7.
+    \item \textbf{Staff Portal:} Giao diện tối ưu thao tác nhanh tại quầy lễ tân: Bảng điều khiển Check-in/Check-out tức thì thông qua mã đặt chỗ; Cơ chế cửa sổ dung sai thời gian 30 phút (Tolerance window); Tính năng Running Tab cho phép ghi nhận đồ uống, in ấn, phòng họp phát sinh vào hóa đơn tổng khi trả phòng.
+    \item \textbf{Branch Admin Portal:} Dành cho ban quản lý chi nhánh: Thiết lập bảng giá linh hoạt theo giờ/ngày/tháng; Cấu hình phòng, bàn làm việc, sơ đồ tầng (Floorplan editor); Đặt lịch bảo trì định kỳ; Xem báo cáo doanh thu và công suất sử dụng tại cơ sở.
+    \item \textbf{System Admin Portal:} Trung tâm điều phối toàn cục dành cho Quản trị viên tối cao: Quản lý danh mục toàn bộ chi nhánh; Phân quyền và giám sát tài khoản người dùng; Cấu hình khung pháp lý chính sách hủy phạt; Theo dõi vết thao tác dữ liệu (Audit Log).
 \end{itemize}
 
-\subsubsubsection{Tầng Ứng dụng (Application Tier)}
+\subsubsubsection{2. Tầng Ứng dụng (Application Tier -- Backend)}
 
-Tầng ứng dụng được xây dựng bằng \textbf{Spring Boot (Java)} theo kiến trúc phân lớp, bao gồm bốn lớp con xếp chồng theo thứ tự xử lý yêu cầu từ trên xuống:
+Tầng ứng dụng được hiện thực hóa bằng framework \textbf{Spring Boot 3} trên nền tảng máy ảo Java 17 LTS. Tầng này tuân thủ cấu trúc phân lớp nghiêm ngặt (Separation of Concerns):
 
 \begin{itemize}
-    \item \textbf{Security Layer (Lớp bảo mật):} Sử dụng Spring Security để thực hiện xác thực (authentication) và phân quyền (authorization). Mọi yêu cầu HTTP đều phải đi qua lớp này trước khi được chuyển tiếp xuống các lớp bên dưới. Lớp bảo mật tích hợp với Supabase Authentication và Google OAuth2 để xác thực danh tính người dùng, đồng thời sử dụng JSON Web Token (JWT) để duy trì phiên đăng nhập và kiểm soát quyền truy cập vào các API endpoint.
-    
-    \item \textbf{REST Controllers (Lớp điều khiển):} Đóng vai trò là điểm tiếp nhận các yêu cầu HTTP từ tầng trình bày. Lớp này trích xuất dữ liệu từ request, chuyển tiếp đến lớp nghiệp vụ tương ứng và trả về kết quả dưới dạng HTTP Response với dữ liệu JSON. Hệ thống bao gồm các controller chính: AuthController, BookingController, PaymentController, UserController, MomoController và BranchAdminSpaceController.
-    
-    \item \textbf{Business Services (Lớp nghiệp vụ):} Chứa toàn bộ logic xử lý cốt lõi của hệ thống. Mỗi service đảm nhận một miền nghiệp vụ riêng biệt:
+    \item \textbf{Lớp Bảo mật (Security \& Filter Layer):} Tiếp nhận mọi HTTP Request gửi tới server. Bộ lọc \texttt{SupabaseJwtFilter} bóc tách và giải mã Access Token từ tiêu đề \texttt{Authorization: Bearer <token>}, xác thực chữ ký khóa công khai, truy vấn thông tin quyền hạn trong bảng \texttt{users} và thiết lập đối tượng \texttt{Authentication} vào \texttt{SecurityContextHolder}.
+    \item \textbf{Lớp Điều khiển (REST API Controller Layer):} Định nghĩa các API endpoint RESTful, tiếp nhận tham số yêu cầu (Path variables, Query parameters, Request Body), thực hiện thẩm định dữ liệu đầu vào (Bean Validation với \texttt{@Valid}) và trả về phản hồi chuẩn hóa \texttt{ResponseEntity<ApiResponse<T>>}.
+    \item \textbf{Lớp Nghiệp vụ (Business Service Layer):} Trái tim xử lý logic của toàn bộ hệ thống:
     \begin{itemize}
-        \item \textit{BookingService:} Xử lý tạo, cập nhật và hủy đặt chỗ, kiểm tra xung đột lịch.
-        \item \textit{PaymentService:} Quản lý luồng thanh toán và theo dõi trạng thái giao dịch.
-        \item \textit{PricingService:} Tính toán giá dựa trên loại không gian, thời gian sử dụng và chính sách giá.
-        \item \textit{SpaceManagementService:} Quản lý thông tin không gian, trạng thái và cấu hình.
-        \item \textit{AuthService \& UserService:} Xử lý đăng ký, đăng nhập và quản lý thông tin người dùng.
-        \item \textit{MomoService:} Tích hợp với cổng thanh toán MoMo để xử lý giao dịch trực tuyến.
+        \item \texttt{BookingService}: Tiếp nhận yêu cầu đặt chỗ, khởi tạo khóa phân tán mức giao dịch \texttt{pg\_advisory\_xact\_lock}, kiểm tra đụng lịch đa chiều, tính toán tổng tiền tạm tính và xác lập trạng thái \texttt{PENDING}.
+        \item \texttt{PaymentService}: Tích hợp cổng PayOS, khởi tạo liên kết thanh toán VietQR Napas 24/7 động; xử lý webhook callback bất đồng bộ với cơ chế bảo vệ Idempotency và thuật toán kiểm tra trạng thái quá hạn (late webhook ghost refund).
+        \item \texttt{PartnerMatchingService}: Triển khai thuật toán đo độ tương đồng Jaccard có trọng số kết hợp giữa kỹ năng chuyên môn, sở thích và lĩnh vực công tác để tính điểm $Score \in [0, 1]$ gợi ý hợp tác giữa các thành viên.
+        \item \texttt{ChatbotService}: Tích hợp Google Gemini API, áp dụng kỹ thuật Prompt Engineering định hình ngữ cảnh chuyên sâu về CoSpace, phản hồi các thắc mắc của khách hàng tự động với độ trễ thấp.
+        \item \texttt{PricingService \& CancellationService}: Tự động tính toán chi phí thuê dựa trên chính sách giá phân tầng (Hourly, Daily, Monthly) và khấu trừ phí hoàn tiền theo thang thời gian trước giờ bắt đầu.
     \end{itemize}
-    
-    \item \textbf{Repository Layer (Lớp truy cập dữ liệu):} Sử dụng Spring Data JPA để tương tác với cơ sở dữ liệu. Lớp này cung cấp các phương thức truy vấn dữ liệu được trừu tượng hóa, giúp lớp nghiệp vụ không phụ thuộc trực tiếp vào cú pháp SQL hay hệ quản trị cơ sở dữ liệu cụ thể.
+    \item \textbf{Lớp Tác vụ định kỳ (Scheduled Tasks Layer):} Bộ lập lịch \texttt{BookingExpiryScheduler} kích hoạt chu kỳ mỗi 30 giây để rà soát các phiên đặt chỗ trạng thái \texttt{PENDING} vượt quá 15 phút, tự động giải phóng vị trí ghế và hủy giao dịch tương ứng.
+    \item \textbf{Lớp Truy xuất Dữ liệu (Repository Layer):} Sử dụng Spring Data JPA kết hợp Hibernate ORM, ánh xạ trực tiếp các Entity sang cấu trúc bảng quan hệ, cung cấp các truy vấn tùy biến tối ưu thông qua JPQL và Native SQL.
 \end{itemize}
 
-\subsubsubsection{Tầng Dữ liệu (Data Tier)}
+\subsubsubsection{3. Tầng Dữ liệu (Data Tier -- PostgreSQL Database)}
 
-Hệ thống sử dụng \textbf{PostgreSQL} làm hệ quản trị cơ sở dữ liệu quan hệ. PostgreSQL được lựa chọn nhờ khả năng đảm bảo tính toàn vẹn dữ liệu với giao dịch ACID, hỗ trợ truy vấn phức tạp, kiểu dữ liệu JSON linh hoạt, và hiệu năng ổn định với lượng dữ liệu lớn. Toàn bộ dữ liệu nghiệp vụ của hệ thống -- bao gồm thông tin người dùng, đặt chỗ, thanh toán, không gian, chính sách giá -- đều được lưu trữ tại tầng này.
+Hệ thống sử dụng hệ quản trị cơ sở dữ liệu quan hệ mã nguồn mở mạnh mẽ nhất hiện nay -- \textbf{PostgreSQL 15}. PostgreSQL đảm bảo trọn vẹn 4 đặc tính ACID (Atomicity, Consistency, Isolation, Durability). Đặc biệt, hệ thống khai thác triệt để các tính năng nâng cao của PostgreSQL bao gồm:
+\begin{itemize}
+    \item Ràng buộc loại trừ thời gian \texttt{EXCLUDE USING gist (... WITH \&\&)} kết hợp tiện ích mở rộng \texttt{btree\_gist} nhằm ngăn chặn xung đột lịch trình cấp độ vật lý trên đĩa từ tầng DB.
+    \item Khóa tương tranh giao dịch cấp cao \texttt{pg\_advisory\_xact\_lock(hash\_id)} cho phép đồng bộ hóa các thao tác ghi dữ liệu của cùng một không gian làm việc mà không khóa toàn bộ bảng.
+    \item Hỗ trợ các hàm mở rộng JSONB để lưu trữ thông tin cấu hình linh hoạt và tiện ích đi kèm.
+\end{itemize}
 
-\subsubsubsection{Dịch vụ bên thứ ba (3rd Party Services)}
-
-Hệ thống tích hợp với các dịch vụ bên ngoài để mở rộng chức năng mà không cần tự phát triển từ đầu:
+\subsubsubsection{4. Tầng Dịch vụ Tích hợp Bên thứ ba (3rd-Party Cloud Services)}
 
 \begin{itemize}
-    \item \textbf{Supabase Authentication \& Google OAuth2:} Cung cấp giải pháp xác thực người dùng, hỗ trợ đăng nhập bằng tài khoản Google và quản lý phiên đăng nhập. Việc sử dụng dịch vụ xác thực của bên thứ ba giúp đảm bảo tính bảo mật cao và giảm thiểu rủi ro trong việc tự quản lý mật khẩu người dùng.
-    \item \textbf{MoMo Payment Gateway:} Cổng thanh toán trực tuyến được tích hợp để xử lý các giao dịch thanh toán cho việc đặt chỗ, cho phép khách hàng thanh toán nhanh chóng và an toàn thông qua ví điện tử MoMo.
+    \item \textbf{PayOS Open Banking Gateway:} Cổng tích hợp thanh toán mã QR chuẩn quốc gia (VietQR Napas 24/7), hỗ trợ webhook tự động báo có tức thì (Real-time Payment Confirmation).
+    \item \textbf{Supabase Cloud Platform:} Cung cấp hạ tầng xác thực đám mây (Auth Engine), hỗ trợ đăng nhập một chạm với Google OAuth2 và cấp phát JWT tiêu chuẩn RFC-7519.
+    \item \textbf{Google Gemini Generative AI:} Mô hình ngôn ngữ lớn (LLM) hỗ trợ dịch vụ trợ lý ảo thông minh giải đáp thắc mắc và tư vấn không gian.
 \end{itemize}
 
-\subsubsubsection{Giao tiếp giữa các tầng}
+\subsubsection{Sơ đồ tương tác tuần tự (Sequence Diagrams)}
 
-Tầng trình bày và tầng ứng dụng giao tiếp thông qua \textbf{RESTful API} theo giao thức HTTP, với dữ liệu trao đổi ở định dạng JSON. Mọi tương tác từ người dùng trên giao diện đều được chuyển đổi thành các HTTP Request gửi đến các API endpoint tương ứng. Tầng ứng dụng xử lý yêu cầu và trả về HTTP Response chứa dữ liệu kết quả hoặc thông báo lỗi. Cách tiếp cận này cho phép front-end và back-end được phát triển, triển khai và mở rộng hoàn toàn độc lập với nhau.
+Để làm rõ nguyên lý vận hành của các quy trình then chốt nhất trong hệ thống, nhóm phân tích hai kịch bản tương tác phức tạp: Quy trình xác thực phân quyền đa tầng và Quy trình thanh toán VietQR kết hợp xử lý Webhook Idempotent.
 
-% \end{itemize}
+\subsubsubsection{1. Sơ đồ xác thực và ủy quyền người dùng đa tầng}
+
+Sơ đồ tuần tự tại Hình~\ref{fig:seq-auth-jwt} thể hiện chi tiết luồng dữ liệu khi người dùng đăng nhập bằng tài khoản Google, nhận JWT từ Supabase và gửi yêu cầu truy cập tài nguyên bảo mật về máy chủ Spring Boot.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    scale=0.9, every node/.style={transform shape},
+    actor/.style={rectangle, draw=blue!70, fill=blue!10, rounded corners=2pt, font=\small\bfseries, minimum height=0.7cm, minimum width=2.2cm, align=center},
+    be/.style={rectangle, draw=teal!70, fill=teal!10, rounded corners=2pt, font=\small\bfseries, minimum height=0.7cm, minimum width=2.2cm, align=center},
+    db/.style={rectangle, draw=purple!70, fill=purple!10, rounded corners=2pt, font=\small\bfseries, minimum height=0.7cm, minimum width=2.2cm, align=center},
+    third/.style={rectangle, draw=orange!70, fill=orange!10, rounded corners=2pt, font=\small\bfseries, minimum height=0.7cm, minimum width=2.2cm, align=center},
+    lifeline/.style={draw=gray!50, dashed, thick},
+    msg/.style={font=\scriptsize, above, align=center},
+    reply/.style={font=\scriptsize, dashed, below, align=center},
+    boxnote/.style={rectangle, draw=black!40, fill=yellow!10, font=\tiny, align=left}
+]
+
+    % Lifeline headers
+    \node[actor] (client) at (0, 0) {Client\\(React SPA)};
+    \node[third] (supa) at (4, 0) {Supabase\\Auth};
+    \node[be] (backend) at (8.5, 0) {Backend\\(Spring Boot)};
+    \node[db] (dbnode) at (13, 0) {Database\\(PostgreSQL)};
+
+    % Lifeline tails
+    \coordinate (c_end) at (0, -7.5);
+    \coordinate (s_end) at (4, -7.5);
+    \coordinate (b_end) at (8.5, -7.5);
+    \coordinate (d_end) at (13, -7.5);
+
+    \draw[lifeline] (client) -- (c_end);
+    \draw[lifeline] (supa) -- (s_end);
+    \draw[lifeline] (backend) -- (b_end);
+    \draw[lifeline] (dbnode) -- (d_end);
+
+    % Sequence steps
+    \draw[-{Latex[length=2mm]}] (0, -1.0) -- node[msg] {1. OAuth2 Login with Google} (4, -1.0);
+    \draw[-{Latex[length=2mm]}, dashed] (4, -1.8) -- node[reply] {2. Return Session \& JWT Token} (0, -1.8);
+
+    \node[boxnote] at (2, -2.4) {Lưu JWT vào bộ nhớ tạm thời\\Chuẩn bị tiêu đề Authorization};
+
+    \draw[-{Latex[length=2mm]}] (0, -3.2) -- node[msg] {3. HTTP Request + Bearer <JWT>} (8.5, -3.2);
+
+    \draw[-{Latex[length=2mm]}] (8.5, -3.8) -- node[msg] {4. Bóc tách JWT, kiểm tra chữ ký khóa công khai} (8.5, -4.2);
+
+    \draw[-{Latex[length=2mm]}] (8.5, -4.7) -- node[msg] {5. SELECT role, status FROM users WHERE email=?} (13, -4.7);
+    \draw[-{Latex[length=2mm]}, dashed] (13, -5.4) -- node[reply] {6. Trả về User Entity \& Active Status} (8.5, -5.4);
+
+    \node[boxnote] at (8.5, -6.1) {Gán SecurityContextHolder với Role\\Kiểm tra quyền hạn qua @PreAuthorize};
+
+    \draw[-{Latex[length=2mm]}, dashed] (8.5, -6.8) -- node[reply] {7. HTTP 200 OK + JSON Payload} (0, -6.8);
+
+\end{tikzpicture}
+\caption{Sơ đồ tuần tự: Quy trình xác thực và phân quyền đa tầng với Supabase JWT}
+\label{fig:seq-auth-jwt}
+\end{figure}
+
+\subsubsubsection{2. Sơ đồ thanh toán VietQR Napas 24/7 và xử lý Webhook Idempotent}
+
+Quy trình thanh toán là mắt xích tài chính trọng yếu. Để đảm bảo tính tin cậy tuyệt đối, hệ thống triển khai cơ chế Webhook Idempotency nhằm ngăn chặn hiện tượng cập nhật trùng lặp khi bên trung gian gửi tín hiệu nhiều lần, đồng thời nhận diện giao dịch đến trễ (late webhook). Sơ đồ tương tác được mô tả chi tiết tại Hình~\ref{fig:seq-vietqr-payos}.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    scale=0.88, every node/.style={transform shape},
+    actor/.style={rectangle, draw=blue!70, fill=blue!10, rounded corners=2pt, font=\small\bfseries, minimum height=0.7cm, minimum width=2.2cm, align=center},
+    be/.style={rectangle, draw=teal!70, fill=teal!10, rounded corners=2pt, font=\small\bfseries, minimum height=0.7cm, minimum width=2.2cm, align=center},
+    payos/.style={rectangle, draw=orange!70, fill=orange!10, rounded corners=2pt, font=\small\bfseries, minimum height=0.7cm, minimum width=2.2cm, align=center},
+    bank/.style={rectangle, draw=red!70, fill=red!10, rounded corners=2pt, font=\small\bfseries, minimum height=0.7cm, minimum width=2.2cm, align=center},
+    lifeline/.style={draw=gray!50, dashed, thick},
+    msg/.style={font=\scriptsize, above, align=center},
+    reply/.style={font=\scriptsize, dashed, below, align=center},
+    boxnote/.style={rectangle, draw=black!40, fill=yellow!10, font=\tiny, align=left}
+]
+
+    % Lifeline headers
+    \node[actor] (cust) at (0, 0) {Khách hàng\\(App/Web)};
+    \node[be] (cospace) at (4.5, 0) {CoSpace\\Backend};
+    \node[payos] (pay) at (9.5, 0) {Cổng PayOS\\(VietQR)};
+    \node[bank] (banknode) at (14, 0) {Ngân hàng\\Napas 24/7};
+
+    % Lifeline tails
+    \coordinate (c_end) at (0, -11.0);
+    \coordinate (cs_end) at (4.5, -11.0);
+    \coordinate (p_end) at (9.5, -11.0);
+    \coordinate (b_end) at (14, -11.0);
+
+    \draw[lifeline] (cust) -- (c_end);
+    \draw[lifeline] (cospace) -- (cs_end);
+    \draw[lifeline] (pay) -- (p_end);
+    \draw[lifeline] (banknode) -- (b_end);
+
+    % Sequence steps
+    \draw[-{Latex[length=2mm]}] (0, -1.0) -- node[msg] {1. POST /api/bookings (Tạo đơn)} (4.5, -1.0);
+    \draw[-{Latex[length=2mm]}] (4.5, -1.8) -- node[msg] {2. POST /v2/payment-requests\\(Tạo liên kết thanh toán)} (9.5, -1.8);
+    \draw[-{Latex[length=2mm]}, dashed] (9.5, -2.6) -- node[reply] {3. Trả về qrCode string \& orderCode} (4.5, -2.6);
+    \draw[-{Latex[length=2mm]}, dashed] (4.5, -3.4) -- node[reply] {4. Hiển thị mã QR động + Đếm ngược 15p} (0, -3.4);
+
+    % Payment execution
+    \draw[-{Latex[length=2mm]}] (0, -4.4) -- node[msg] {5. Quét QR \& Chuyển khoản trên Mobile Banking} (14, -4.4);
+    \draw[-{Latex[length=2mm]}] (14, -5.2) -- node[msg] {6. Biến động số dư tức thời (Napas IPN)} (9.5, -5.2);
+
+    % Webhook callback
+    \draw[-{Latex[length=2mm]}] (9.5, -6.2) -- node[msg] {7. POST /api/payments/payos/webhook\\(Signature HMAC-SHA256, OrderCode)} (4.5, -6.2);
+
+    \node[boxnote] at (4.5, -7.1) {Kiểm tra chữ ký bảo mật HMAC-SHA256\\Xác thực tính duy nhất (Idempotency Check)\\Rà soát trạng thái booking (Active vs Expired)};
+
+    \draw[-{Latex[length=2mm]}, dashed] (4.5, -8.0) -- node[reply] {8. HTTP 200 OK (Xác nhận webhook thành công)} (9.5, -8.0);
+
+    \node[boxnote] at (4.5, -8.7) {UPDATE bookings SET status='CONFIRMED'\\UPDATE payments SET status='COMPLETED'\\INSERT INTO payment\_events (Audit log)};
+
+    \draw[-{Latex[length=2mm]}, dashed] (4.5, -9.8) -- node[reply] {9. Polling / WebSocket: Báo thành công, chuyển hướng hóa đơn} (0, -9.8);
+
+\end{tikzpicture}
+\caption{Sơ đồ tuần tự: Luồng thanh toán VietQR Napas 24/7 và xử lý Webhook Idempotent}
+\label{fig:seq-vietqr-payos}
+\end{figure}
+
+\subsubsection{Cấu trúc tổ chức mã nguồn Back-end}
+
+Nhằm đáp ứng yêu cầu cấu trúc chuẩn mực cho một ứng dụng cấp độ doanh nghiệp (Enterprise Architecture), mã nguồn Back-end của hệ thống được tổ chức phân cấp rõ ràng theo các package chức năng trong thư mục \texttt{BE/src/main/java/com/cospace}:
+
+\begin{itemize}
+    \item \texttt{com.cospace.config}: Cấu hình toàn cục cho ứng dụng bao gồm \texttt{SecurityConfig} (CORS, CSRF, URL matchers), \texttt{WebConfig}, \texttt{CacheConfig} (Caffeine Cache), \texttt{OpenApiConfig} (Swagger/OpenAPI 3.0), và \texttt{PayOSConfig} (Khởi tạo kết nối SDK PayOS).
+    \item \texttt{com.cospace.controller}: Điểm tiếp nhận và phân phối các yêu cầu HTTP. Bao gồm các controller chính: \texttt{AuthController}, \texttt{BookingController}, \texttt{PaymentController}, \texttt{WorkspaceController}, \texttt{BranchController}, \texttt{PartnerMatchingController}, \texttt{ChatbotController}, \texttt{ReportController}, \texttt{AuditLogController}, \texttt{ExtraServiceController}.
+    \item \texttt{com.cospace.service}: Định nghĩa giao diện (Interface) và hiện thực hóa logic nghiệp vụ lõi (Service Implementation). Đảm bảo tính trừu tượng và khả năng thay thế linh hoạt phục vụ kiểm thử đơn vị (Unit Testing).
+    \item \texttt{com.cospace.repository}: Kế thừa từ \texttt{JpaRepository<Entity, UUID>} để tương tác với các bảng cơ sở dữ liệu; sử dụng các phương thức derived query và các hàm gán khóa tương tranh đặc biệt (\texttt{@Query}).
+    \item \texttt{com.cospace.model}: Định nghĩa 17 Entity lớp thực thể tương ứng với lược đồ cơ sở dữ liệu quan hệ, thiết lập các quan hệ liên kết \texttt{@OneToMany}, \texttt{@ManyToOne}, \texttt{@ManyToMany} cùng các quy tắc cascade và fetch type phù hợp.
+    \item \texttt{com.cospace.dto}: Các lớp Data Transfer Object dùng để nhận dữ liệu đầu vào (\texttt{RequestDTO}) và định dạng dữ liệu phản hồi (\texttt{ResponseDTO}), ngăn chặn việc phơi bày trực tiếp cấu trúc bảng cơ sở dữ liệu ra ngoài API.
+    \item \texttt{com.cospace.security}: Bộ lọc JWT \texttt{SupabaseJwtFilter}, trình cung cấp dữ liệu định danh người dùng \texttt{CustomUserDetailsService}, và các trình xử lý ngoại lệ bảo mật \texttt{RestAuthenticationEntryPoint}.
+    \item \texttt{com.cospace.scheduler}: Chứa các tiến trình ngầm được tự động kích hoạt định kỳ bởi Spring Framework để dọn dẹp các đặt chỗ quá hạn hoặc cập nhật chỉ số thống kê hàng ngày.
+    \item \texttt{com.cospace.exception}: Cơ chế quản lý lỗi tập trung (\texttt{@ControllerAdvice} và \texttt{@ExceptionHandler}), chuyển đổi mọi lỗi hệ thống hoặc vi phạm nghiệp vụ thành thông báo lỗi JSON chuẩn mực định dạng \texttt{\{ "error": "<code>", "message": "<detail>" \}}.
+\end{itemize}

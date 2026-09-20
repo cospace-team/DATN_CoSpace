@@ -383,5 +383,110 @@ Trong các ứng dụng web hiện đại, Supabase thường được dùng nh�
     \item Với các hệ thống có logic nghiệp vụ phức tạp, vẫn cần xây dựng thêm backend riêng thay vì chỉ phụ thuộc vào API tự động.
     \item Khi ứng dụng tăng trưởng lớn, chi phí vận hành và yêu cầu tối ưu hiệu năng cơ sở dữ liệu cần được theo dõi cẩn thận.
 \end{itemize}
-% \subsection{Cơ sở hạ tầng và Devops} %Docker và công cụ Deploy
-% \subsection{Các công cụ quản lý khác } %(optional)
+
+\subsection{Cơ sở lý thuyết các bài toán đặc thù}
+
+Bên cạnh các công nghệ nền tảng, hệ thống CoSpace ứng dụng một số lý thuyết khoa học máy tính và thuật toán chuyên sâu nhằm giải quyết triệt để các bài toán nghiệp vụ phức tạp.
+
+\subsubsection{Độ tương đồng Jaccard (Jaccard Similarity) trong Partner Matching}
+
+Trong không gian Co-working, việc kết nối các thành viên có năng lực hoặc nhu cầu hợp tác tương đồng đóng vai trò then chốt trong việc tạo dựng giá trị mạng lưới. Hệ thống sử dụng \textbf{Hệ số tương đồng Jaccard (Jaccard Similarity Coefficient)} để định lượng mức độ phù hợp giữa hai thành viên dựa trên tập hợp các thẻ kỹ năng (Skills) và sở thích chuyên môn (Interests).
+
+Độ tương đồng Jaccard giữa hai tập hợp $A$ và $B$ được định nghĩa bằng tỷ số giữa kích thước phần giao và kích thước phần hợp của hai tập hợp:
+\begin{equation}
+    J(A, B) = \frac{|A \cap B|}{|A \cup B|} = \frac{|A \cap B|}{|A| + |B| - |A \cap B|}
+\end{equation}
+
+Hệ số $J(A, B)$ có giá trị nằm trong khoảng $[0, 1]$:
+\begin{itemize}
+    \item $J(A, B) = 0$ khi và chỉ khi hai tập hợp rời nhau hoàn toàn ($A \cap B = \emptyset$), tức hai thành viên không có điểm chung nào.
+    \item $J(A, B) = 1$ khi và chỉ khi hai tập hợp trùng khớp hoàn toàn ($A = B$).
+\end{itemize}
+
+Trong hệ thống CoSpace, thuật toán được mở rộng bằng cách kết hợp có trọng số giữa điểm tương đồng kỹ năng ($J_{skills}$), điểm tương đồng sở thích ($J_{interests}$) và hệ số thưởng vị trí địa lý ($\alpha_{branch}$):
+\begin{equation}
+    \text{Score}(u_1, u_2) = w_1 \cdot J(\text{Skills}_{u_1}, \text{Skills}_{u_2}) + w_2 \cdot J(\text{Interests}_{u_1}, \text{Interests}_{u_2}) + \alpha_{branch}
+\end{equation}
+Trong đó $w_1 = 0.6$, $w_2 = 0.3$, và $\alpha_{branch} = 0.1$ nếu hai thành viên đang cùng ngồi làm việc tại một chi nhánh trong ngày. Điểm số tổng hợp được chuẩn hóa để xếp hạng top $N$ đối tác tiềm năng nhất cho người dùng.
+
+\subsubsection{Mô hình ngôn ngữ lớn (LLM) và Google Gemini API}
+
+Mô hình ngôn ngữ lớn (Large Language Model -- LLM) là các mạng nơ-ron học sâu dựa trên kiến trúc Transformer, được huấn luyện trước trên tập dữ liệu văn bản quy mô khổng lồ để hiểu ngữ cảnh, suy luận logic và sinh văn bản tự nhiên.
+
+Hệ thống CoSpace tích hợp mô hình \textbf{Google Gemini 3.5 Flash} thông qua RESTful API để xây dựng Trợ lý ảo AI thông minh hỗ trợ khách hàng:
+\begin{itemize}
+    \item \textbf{Cơ chế System Instruction \& Prompt Engineering:} Hệ thống cung cấp cho mô hình ngữ cảnh chi tiết về bảng giá, các loại không gian, danh sách chi nhánh và chính sách hủy phòng của CoSpace. Nhờ đó, AI đóng vai trò như một nhân viên lễ tân am hiểu sâu sắc, phản hồi chính xác mọi thắc mắc của khách.
+    \item \textbf{Xử lý ngôn ngữ tự nhiên đa ngữ:} Hỗ trợ nhận diện và phản hồi linh hoạt bằng Tiếng Việt và Tiếng Anh với ngữ điệu thân thiện, lịch thiệp.
+    \item \textbf{Cơ chế tư vấn đặt phòng tự động:} AI có khả năng trích xuất các thông tin cần thiết từ đoạn chat của khách (loại phòng cần thuê, thời gian bắt đầu, số lượng người) để gợi ý vị trí chỗ ngồi phù hợp nhất kèm liên kết điều hướng đặt phòng trực tiếp.
+\end{itemize}
+
+\subsubsection{Chuẩn thanh toán VietQR Napas 24/7 và Webhook Idempotency}
+
+Để thay thế hình thức chuyển khoản thủ công cần nhân viên đối soát, hệ thống tích hợp tiêu chuẩn \textbf{VietQR} thông qua cổng thanh toán trung gian \textbf{PayOS}:
+\begin{itemize}
+    \item \textbf{VietQR động (Dynamic VietQR):} Mã QR được tạo động cho từng giao dịch đặt phòng, chứa sẵn số tài khoản nhận tiền, số tiền chính xác và nội dung chuyển khoản mã hóa (chứa mã booking duy nhất). Khách hàng chỉ cần dùng ứng dụng ngân hàng quét mã là toàn bộ thông tin được điền tự động, loại bỏ hoàn toàn sai sót nhập số tiền hay nội dung.
+    \item \textbf{Xử lý thông báo tức thời (Webhook Callback):} Khi tiền về tài khoản ngân hàng thông qua mạng lưới Napas 24/7, hệ thống PayOS gửi ngay một tín hiệu HTTP POST (Webhook) đến máy chủ CoSpace.
+    \item \textbf{Nguyên tắc Idempotency (Tính duy nhất của giao dịch):} Trong môi trường mạng, Webhook có thể bị gửi lặp lại nhiều lần do cơ chế retry của bên thứ ba. Hệ thống áp dụng bảng kiểm soát giao dịch (\texttt{payments}) và cơ chế khóa bản ghi để đảm bảo mỗi giao dịch thành công chỉ được cập nhật trạng thái đơn hàng đúng một lần duy nhất, ngăn ngừa rủi ro cộng dồn thanh toán hoặc sai lệch kế toán.
+    \item \textbf{Late Webhook Ghost Payment Recovery:} Trong trường hợp khách hàng thanh toán muộn sau khi đơn hàng đã hết hạn timeout 15 phút, hệ thống tự động ghi nhận tiền vào ví điểm hoàn tiền (Refund Wallet) cho khách hàng thay vì làm thất thoát tiền của người dùng.
+\end{itemize}
+
+\subsubsection{Cơ chế khóa hai tầng chống xung đột đặt phòng (Concurrency Control)}
+
+Trong các nền tảng đặt phòng trực tuyến, xung đột đặt trùng chỗ (Overbooking) là vấn đề nghiêm trọng nhất. Hệ thống CoSpace xây dựng giải pháp phòng ngừa hai tầng:
+\begin{enumerate}
+    \item \textbf{Tầng 1 -- Khóa giao dịch cấp ứng dụng (PostgreSQL Advisory Xact Lock):} Khi một khách hàng bấm xác nhận đặt chỗ cho vị trí $W$ trong khoảng thời gian $[T_{start}, T_{end}]$, máy chủ Spring Boot thực thi hàm khóa logic \texttt{pg\_advisory\_xact\_lock(hashtext(concat(workspace\_id, date)))}. Khóa này tự động giữ đến khi transaction kết thúc, buộc mọi yêu cầu đặt phòng khác nhắm vào cùng vị trí đó phải xếp hàng chờ đợi, triệt tiêu hoàn toàn hiện tượng Race Condition ở tầng ứng dụng.
+    \item \textbf{Tầng 2 -- Ràng buộc loại trừ cấp cơ sở dữ liệu (PostgreSQL Exclusion Constraint):} Ở cấp độ bảng \texttt{bookings}, hệ thống khai báo ràng buộc loại trừ sử dụng chỉ mục GiST trên kiểu dữ liệu \texttt{tstzrange}:
+    \begin{equation*}
+        \text{EXCLUDE USING gist (workspace\_id WITH =, tstzrange(start\_at, end\_at) WITH \&\&)}
+    \end{equation*}
+    Ràng buộc này đóng vai trò như một ``bức tường thép'' cuối cùng: ngay cả khi logic ứng dụng gặp sự cố, cơ sở dữ liệu PostgreSQL cũng sẽ tự động từ chối bất kỳ câu lệnh chèn nào có khoảng thời gian giao nhau (\&\&) trên cùng một mã không gian.
+\end{enumerate}
+
+\subsection{Cơ sở hạ tầng và DevOps (Cloud \& Containerization)}
+
+\subsubsection{Container hóa với Docker}
+
+Docker là nền tảng ảo hóa mức hệ điều hành (Containerization) cho phép đóng gói toàn bộ ứng dụng cùng môi trường thực thi, thư viện phụ thuộc và cấu hình hệ thống vào một khối duy nhất gọi là Docker Image. 
+
+Hệ thống CoSpace ứng dụng kỹ thuật \textbf{Multi-stage build} để tối ưu hóa kích thước và bảo mật cho Backend Spring Boot:
+\begin{itemize}
+    \item \textbf{Giai đoạn 1 (Builder):} Sử dụng image \texttt{maven:3.9.9-eclipse-temurin-21} để tải thư viện và biên dịch mã nguồn Java thành file JAR.
+    \item \textbf{Giai đoạn 2 (Runtime):} Chỉ sao chép file JAR thành phẩm sang image siêu nhẹ \texttt{eclipse-temurin:21-jre-alpine}. Image thành phẩm không chứa mã nguồn thô hay công cụ build, giúp giảm dung lượng image từ gần $800\text{MB}$ xuống dưới $250\text{MB}$, khởi động nhanh và hạn chế tối đa lỗ hổng bảo mật.
+    \item \textbf{Tối ưu bộ nhớ JVM trong Container:} Cấu hình cờ \texttt{-XX:MaxRAMPercentage=75.0} giúp máy ảo Java tự động điều chỉnh kích thước bộ nhớ Heap linh hoạt theo dung lượng RAM được cấp phát bởi máy chủ Cloud, ngăn ngừa hiện tượng crash do tràn bộ nhớ (Out-Of-Memory).
+\end{itemize}
+
+\subsubsection{Hạ tầng Đám mây: Render Cloud và Vercel CDN Edge}
+
+Nhằm đảm bảo tính sẵn sàng cao và chi phí vận hành tối ưu, hệ sinh thái CoSpace triển khai tách biệt hai phân hệ trên nền tảng đám mây:
+\begin{itemize}
+    \item \textbf{Backend API -- Render Cloud Platform:} Triển khai dưới dạng Web Service container hóa. Hệ thống hỗ trợ lắng nghe biến môi trường \texttt{\$\{PORT:8080\}} để gán cổng động do Render cấp phát, kích hoạt cơ chế Health Check tự động khởi động lại container khi có sự cố, và tích hợp Graceful Shutdown để chờ các tiến trình thanh toán dở dang hoàn tất trước khi dừng máy chủ.
+    \item \textbf{Frontend SPA -- Vercel Edge CDN:} Triển khai dưới dạng Single Page Application (SPA). Mã nguồn giao diện được phân phối qua mạng lưới máy chủ biên (Edge Network) toàn cầu của Vercel, đảm bảo tốc độ tải trang cực nhanh và tự động gia hạn chứng chỉ bảo mật SSL/TLS.
+\end{itemize}
+
+\subsection{Bảng đối chiếu lý do lựa chọn công nghệ (Technology Justification Matrix)}
+
+Để đảm bảo tính khoa học và minh bạch trong thiết kế hệ thống, nhóm tác giả xây dựng Bảng~\ref{tab:technology-justification} đối chiếu giữa công nghệ được lựa chọn và các giải pháp thay thế phổ biến trên thị trường.
+
+\begin{table}[H]
+\centering
+\caption{Bảng đối chiếu lý do lựa chọn công nghệ (Technology Justification Matrix)}
+\label{tab:technology-justification}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|p{3cm}|p{3.5cm}|p{4.5cm}|p{4cm}|}
+\hline
+\textbf{Thành Phần} & \textbf{Công Nghệ Chọn} & \textbf{Giải Pháp Thay Thế} & \textbf{Lý Do Lựa Chọn Cốt Lõi} \\
+\hline
+\textbf{Backend Framework} & \textbf{Spring Boot 3 (Java 17/21)} & Node.js (Express), Python (Django), Go (Gin) & Tính chặt chẽ về hướng đối tượng và kiểu dữ liệu (Strongly-typed), hệ sinh thái bảo mật Spring Security mạnh mẽ, xử lý giao dịch tài chính ACID tin cậy. \\
+\hline
+\textbf{Frontend Framework} & \textbf{React 18 + Vite + TypeScript} & Next.js, Angular, Vue.js & Kiến trúc Component linh hoạt, Vite có tốc độ HMR và build nhanh gấp 10 lần Webpack, TypeScript đảm bảo an toàn kiểu dữ liệu ở Client, dễ dàng thao tác trực tiếp với DOM SVG. \\
+\hline
+\textbf{Cơ Sở Dữ Liệu} & \textbf{PostgreSQL 15 (Supabase)} & MySQL, MongoDB, Microsoft SQL Server & Hỗ trợ chỉ mục GiST và ràng buộc loại trừ thời gian (\texttt{tstzrange}) vượt trội, hỗ trợ lưu trữ JSONB linh hoạt, chuẩn ACID nghiêm ngặt. \\
+\hline
+\textbf{Cổng Thanh Toán} & \textbf{PayOS (VietQR) + MoMo} & VNPay, ZaloPay, Stripe & VietQR tương thích với $100\%$ ngân hàng tại Việt Nam, luồng tiền về trực tiếp tài khoản chủ chuỗi ngay lập tức không bị giam vốn, chi phí giao dịch thấp. \\
+\hline
+\textbf{Trí Tuệ Nhân Tạo} & \textbf{Google Gemini 3.5 Flash} & OpenAI GPT-4o, Anthropic Claude, Llama 3 & Chi phí truy xuất tối ưu, độ trễ phản hồi cực thấp (phù hợp cho chatbot thời gian thực), hỗ trợ hiểu ngữ cảnh Tiếng Việt xuất sắc. \\
+\hline
+\textbf{Hạ Tầng Triển Khai} & \textbf{Docker + Render + Vercel} & AWS (EC2/S3), Google Cloud, VPS truyền thống & Mô hình Cloud Native hiện đại, CI/CD tự động qua Git push, chi phí vận hành tối ưu cho giai đoạn khởi nghiệp, dễ dàng quản trị. \\
+\hline
+\end{tabular}
+\end{table}
