@@ -1,64 +1,131 @@
-\section{Giới thiệu}
-\subsection{Đặt vấn đề}
+\section{Giới thiệu đề tài}
 
-Trong bối cảnh nền kinh tế số và tinh thần khởi nghiệp (startup) đang bùng nổ mạnh mẽ, nhu cầu về một môi trường làm việc linh hoạt, chuyên nghiệp và giàu tính kết nối ngày càng trở nên cấp thiết. Trước đây tại các quán cafe chưa áp dụng mô hình coworking space thường xuyên gặp vấn đề khi kinh doanh đối với những khách hàng ngồi hàng giờ với một cốc cafe duy nhất. Thậm chí, đã có những quán cafe đã phải buộc khách hàng phải order thêm sản phẩm, điều này dẫn tới sự không hài lòng cho khách hàng. Thấu hiểu được nhu cầu cần một không gian làm việc tại quán cafe của thị trường, mô hình coworking space cafe ra đời và đã được khách hàng cực kỳ quan tâm và hưởng ứng. Sự chuyển dịch từ mô hình văn phòng truyền thống sang các không gian làm việc chung (Co-working Space) không chỉ là xu hướng nhất thời mà đã trở thành một nhu cầu thực tế của các freelancer, các doanh nghiệp nhỏ và cả những người làm việc từ xa. Tuy nhiên, nhiều người dùng hiện nay vẫn đang đứng trước sự lựa chọn khó khăn giữa việc làm việc tại các quán cà phê hay sử dụng dịch vụ văn phòng chia sẻ.
+\subsection{Bối cảnh và Thực trạng thị trường văn phòng chia sẻ tại Việt Nam}
 
-Thực tế cho thấy, dù các quán cà phê mang lại sự tự do và chi phí thấp, nhưng chúng thường tồn tại nhiều hạn chế về tiếng ồn, tính riêng tư, sự thiếu hụt các tiện ích văn phòng chuyên dụng (phòng họp, in ấn) và đặc biệt là thiếu đi một môi trường thúc đẩy năng suất lao động. Ngược lại, các hệ thống quản lý Co-working Space hiện nay tại Việt Nam dù đã phát triển nhưng vẫn đối mặt với nhiều thách thức: quy trình đặt chỗ và thanh toán còn thủ công, dữ liệu tình trạng không gian chưa được cập nhật theo thời gian thực, và quan trọng nhất là sự thiếu hụt các công cụ giúp gắn kết cộng đồng thành viên – giá trị cốt lõi vốn tạo nên sự khác biệt cho mô hình này.
+Trong bối cảnh nền kinh tế số và làn sóng khởi nghiệp đổi mới sáng tạo đang phát triển mạnh mẽ tại Việt Nam, nhu cầu về một môi trường làm việc linh hoạt, hiện đại và tối ưu hóa chi phí ngày càng trở nên cấp thiết. Theo báo cáo của các đơn vị nghiên cứu thị trường bất động sản thương mại (CBRE, Savills), thị trường không gian làm việc chia sẻ (Co-working Space) tại các đô thị lớn như TP. Hồ Chí Minh và Hà Nội ghi nhận mức tăng trưởng trung bình trên 25\% mỗi năm trong giai đoạn 2021--2025. Sự dịch chuyển từ mô hình văn phòng truyền thống sang văn phòng chia sẻ không chỉ là phản ứng tạm thời sau đại dịch mà đã trở thành xu thế tất yếu của lực lượng lao động tri thức thế hệ mới (Gen Z, Millennial), bao gồm các lập trình viên làm việc tự do (Freelancers), các nhóm làm việc từ xa (Remote teams) và các doanh nghiệp công nghệ quy mô vừa và nhỏ (SMEs).
 
-Nhiều hệ thống hiện tại mới chỉ dừng lại ở mức độ là một "công cụ cho thuê bàn ghế" điện tử, thiếu đi sự tương tác giữa các cá nhân trong cùng một không gian. Điều này khiến các thành viên bỏ lỡ cơ hội tìm kiếm đối tác, chia sẻ nguồn lực và xây dựng mạng lưới chuyên môn ngay tại nơi mình làm việc. Xuất phát từ những yêu cầu thực tiễn đó, nhóm thực hiện đề tài nghiên cứu, phân tích, thiết kế và triển khai Hệ thống quản lý văn phòng chia sẻ tích hợp kết nối cộng đồng. Đề tài kỳ vọng mang lại giải pháp quản trị tập trung, tích hợp thanh toán tự động, đồng thời kiến tạo một nền tảng số giúp tối ưu hóa việc sử dụng không gian và thu hẹp khoảng cách giữa các thành viên thông qua tính năng gợi ý đối tác thông minh.
-
-\subsection{Các hướng giải quyết liên quan}
-
-Để đáp ứng nhu cầu quản lý và vận hành không gian làm việc chung, hiện nay đã có nhiều mô hình và giải pháp được triển khai. Tuy nhiên, mỗi hướng tiếp cận đều tồn tại những ưu điểm và hạn chế riêng:
-
-\subsubsection*{1. Sử dụng các quán cà phê làm việc (Work-friendly Cafe)}
-Đây là lựa chọn phổ biến nhất của các cá nhân làm việc tự do nhờ tính sẵn có và chi phí thấp. Tuy nhiên, hướng giải quyết này không thể coi là một giải pháp bền vững cho doanh nghiệp hay dự án dài hạn vì:
+Trước đây, nhóm đối tượng này thường lựa chọn làm việc tại các quán cà phê có không gian yên tĩnh (Work-friendly Cafe). Tuy nhiên, mô hình này nhanh chóng bộc lộ nhiều điểm nghẽn nghiêm trọng:
 \begin{itemize}
-\item Không gian không ổn định, ô nhiễm tiếng ồn và thiếu tính chuyên nghiệp khi tiếp khách.
-\item Cơ sở hạ tầng (Internet, điện, bàn ghế) không được thiết kế cho việc làm việc cường độ cao.
-\item Thiếu hụt hoàn toàn các công cụ quản lý và khả năng kết nối mạng lưới chuyên môn có tổ chức.
+    \item \textbf{Ô nhiễm tiếng ồn và thiếu tính riêng tư:} Không gian mở tại quán cà phê không đảm bảo sự tập trung cao độ, gây khó khăn lớn khi thực hiện các cuộc họp trực tuyến hoặc tiếp đón đối tác kinh doanh.
+    \item \textbf{Hạ tầng kỹ thuật không chuyên dụng:} Đường truyền mạng Internet thường xuyên chập chờn khi lượng khách đông, thiếu hụt ổ cắm điện tại bàn, ghế ngồi không đạt tiêu chuẩn công thái học (ergonomic) dẫn đến mệt mỏi khi làm việc liên tục nhiều giờ.
+    \item \textbf{Mâu thuẫn lợi ích kinh tế giữa quán và khách hàng:} Tình trạng khách hàng chiếm dụng chỗ ngồi trong nhiều giờ chỉ với một ly nước duy nhất khiến các quán cà phê buộc phải đưa ra các quy định giới hạn thời gian hoặc yêu cầu gọi thêm đồ uống, tạo ra sự ức chế tâm lý cho cả hai bên.
 \end{itemize}
 
-\subsubsection*{2. Sử dụng các phần mềm quản lý văn phòng truyền thống (ERP/Office Management)}
-Nhiều đơn vị lựa chọn các hệ thống quản trị doanh nghiệp lớn để áp dụng vào Co-working Space. Hướng tiếp cận này có ưu điểm về tính chặt chẽ trong quản lý nhân sự và tài chính, nhưng gặp thách thức:
+Sự xuất hiện của các chuỗi Co-working Space chuyên nghiệp đã giải quyết được bài toán mặt bằng vật lý. Dẫu vậy, qua khảo sát thực tế tại thị trường Việt Nam, phần lớn các đơn vị vận hành hiện nay vẫn quản lý bằng các phương thức bán thủ công hoặc chắp vá nhiều phần mềm rời rạc:
 \begin{itemize}
-\item Quy trình quá cồng kềnh, không phù hợp với tính linh hoạt của đặt chỗ theo giờ/ngày.
-\item Chi phí bản quyền và vận hành rất cao, yêu cầu đội ngũ kỹ thuật chuyên sâu để bảo trì.
-\item Không hỗ trợ các tính năng tương tác cộng đồng dành cho khách hàng thuê bên ngoài.
+    \item Đặt chỗ qua tin nhắn mạng xã hội (Fanpage/Zalo) hoặc gọi điện thoại trực tiếp, dẫn đến tình trạng nhân viên lễ tân ghi nhận nhầm lẫn, trùng lịch (double booking) vào các khung giờ cao điểm.
+    \item Quy trình thanh toán chuyển khoản thủ công đòi hỏi nhân viên phải chụp lại màn hình ngân hàng, đối soát dòng tiền vào cuối ngày rất tốn thời gian và dễ xảy ra thất thoát tài chính.
+    \item Thông tin tình trạng chỗ ngồi còn trống (khả dụng) không được cập nhật theo thời gian thực, khiến khách hàng đến nơi mới biết không còn vị trí phù hợp.
+    \item Đặc biệt, các hệ thống hiện tại mới dừng lại ở vai trò là một "công cụ cho thuê bàn ghế điện tử", hoàn toàn bỏ ngỏ giá trị cốt lõi nhất của không gian làm việc chung: \textbf{sức mạnh kết nối cộng đồng (Community Networking)}. Các thành viên ngồi làm việc cạnh nhau nhưng không có kênh thông tin để biết về năng lực chuyên môn, sở thích hoặc nhu cầu hợp tác dự án của nhau, làm mất đi cơ hội liên kết nguồn lực quý báu.
 \end{itemize}
 
-\subsubsection*{3. Các nền tảng SaaS quản lý Co-working chuyên dụng quốc tế}
-Các giải pháp như \textit{Nexudus}, \textit{OfficeRnD} hay \textit{Cobot} cung cấp đầy đủ các tính năng vận hành. Tuy nhiên, khi áp dụng tại thị trường Việt Nam:
+\subsection{Lý do cần phát triển hệ thống CoSpace}
+
+Xuất phát từ những bất cập nêu trên, việc nghiên cứu và phát triển một nền tảng số hóa quản trị tập trung, tự động hóa thanh toán và tích hợp mạng lưới gợi ý đối tác là giải pháp tất yếu mang lại lợi ích đa chiều cho toàn bộ các đối tượng tham gia:
+
+\subsubsection{Góc nhìn người dùng cuối (Khách hàng -- End-User)}
+Khách hàng cần một ứng dụng hiện đại, minh bạch và tiện lợi:
 \begin{itemize}
-\item Khó khăn trong việc tích hợp các cổng thanh toán nội địa (MoMo, ZaloPay, VietQR).
-\item Ngôn ngữ và quy trình hỗ trợ khách hàng chưa thực sự tối ưu cho người dùng Việt.
-\item Chi phí đăng ký theo tháng tính trên số lượng user thường khá cao đối với các đơn vị vừa và nhỏ.
+    \item Cho phép tra cứu và quan sát vị trí chỗ ngồi trực quan trên Sơ đồ mặt bằng tương tác (SVG Interactive Floorplan) theo thời gian thực trước khi đến.
+    \item Khởi tạo đơn đặt chỗ linh hoạt theo giờ, theo ngày hoặc theo tháng chỉ với vài cú nhấp chuột.
+    \item Thanh toán tự động tức thời qua mã VietQR Napas 24/7 mà không cần nhớ số tài khoản ngân hàng hay chờ nhân viên xác nhận.
+    \item Cơ chế nhận phòng (Check-in) nhanh chóng bằng mã QR tại quầy với khoảng dung sai thời gian hợp lý (Tolerance window 30 phút).
+    \item Sở hữu hồ sơ năng lực chuyên môn (Profile) và nhận được các gợi ý kết nối đối tác tiềm năng (Smart Matching) cùng sở thích, cùng kỹ năng và cùng cơ sở làm việc; đồng thời được hỗ trợ giải đáp chính sách 24/7 thông qua Trợ lý ảo thông minh Google Gemini AI.
 \end{itemize}
 
-\subsubsection*{4. Xây dựng hệ thống quản lý tập trung hướng cộng đồng và tự động hóa}
-Đây là hướng tiếp cận hiện đại mà đề tài lựa chọn, tập trung vào việc mô-đun hóa các chức năng để vừa đảm bảo vận hành, vừa tăng cường giá trị kết nối. Hệ thống được thiết kế bao gồm:
+\subsubsection{Góc nhìn Nhân viên Lễ tân quầy (Staff)}
+Nhân viên vận hành tại chỗ cần công cụ tinh gọn để giải phóng áp lực công việc bàn giấy:
 \begin{itemize}
-\item Quản lý tài nguyên linh hoạt: Sơ đồ chỗ ngồi thời gian thực, quản lý đa chi nhánh.
-\item Tự động hóa thanh toán và vận hành: Tích hợp các ví điện tử (MoMo/PayOS) và quy trình check-in/out bằng mã định danh.
-\item Hệ sinh thái Networking: Module quản lý kỹ năng và gợi ý đối tác (Matching) dựa trên nhu cầu thực tế của thành viên.
+    \item Bảng điều khiển Check-in/Check-out một chạm, tự động đối soát tính hợp lệ của đơn đặt chỗ trong khoảng thời gian cho phép.
+    \item Quản lý "Hóa đơn chạy" (Running Tab): Ghi nhận nhanh chóng các dịch vụ đồ ăn, thức uống hoặc thiết bị phát sinh trong ca làm việc của khách trực tiếp vào hóa đơn tổng.
+    \item Hỗ trợ tạo đơn đặt chỗ trực tiếp tại quầy (Walk-in booking) cho khách vãng lai và nhận thanh toán tiền mặt có biên lai đối soát.
+    \item Cảnh báo kịp thời khi khách hàng sử dụng quá thời gian quy định (overstay) để hỗ trợ thủ tục gia hạn hoặc trả phòng.
 \end{itemize}
 
-Bên cạnh đó, một điểm then chốt trong giải pháp của đề tài là khả năng Gợi ý đối tác thông minh (Smart Partner Matching). Các hệ thống hiện nay thường chỉ cung cấp danh sách thành viên tĩnh, nhưng đề tài hướng tới:
+\subsubsection{Góc nhìn Ban quản lý Chi nhánh (Branch Admin)}
+Nhà quản lý cơ sở cần quyền kiểm soát sâu sát tài nguyên và chiến lược giá tại địa phương:
 \begin{itemize}
-\item Cho phép người dùng tự định nghĩa "Hồ sơ năng lực" và "Nhu cầu hợp tác" thông qua hệ thống Tags chuyên sâu.
-\item Thuật toán tìm kiếm và gợi ý dựa trên sự tương đồng về kỹ năng và vị trí địa lý (cùng chi nhánh).
-\item Tích hợp bảng tin cộng đồng nội bộ để chia sẻ dự án và tìm kiếm nguồn lực nhanh chóng.
+    \item Chủ động cấu hình bảng giá linh hoạt theo từng bậc thời gian (giờ/ngày/tháng) phù hợp với phân khúc thị trường tại vị trí địa lý của chi nhánh.
+    \item Thiết lập danh mục dịch vụ tiện ích bổ sung độc quyền tại cơ sở (Extra Services).
+    \item Quản lý sơ đồ mặt bằng và lên lịch bảo trì cơ sở vật chất định kỳ mà không làm ảnh hưởng đến các đơn đặt chỗ đang hoạt động.
+    \item Theo dõi trực quan tỷ lệ lấp đầy (Occupancy Rate), hiệu suất kinh doanh và xuất báo cáo dữ liệu định dạng CSV.
 \end{itemize}
 
-Tổng kết lại, các giải pháp hiện có dù đã đáp ứng được phần nào nhu cầu đặt chỗ cơ bản nhưng vẫn bỏ ngỏ tiềm năng kết nối con người – yếu tố giúp Co-working Space vượt xa mô hình quán cà phê hay văn phòng truyền thống. Vì vậy, đề tài lựa chọn hướng tiếp cận tích hợp toàn diện, lấy người dùng làm trung tâm để tạo ra một hệ thống quản lý văn phòng chia sẻ hiện đại và giàu tính thực tiễn.
-
-\subsection{Mục tiêu và tính cấp thiết của đề tài}
-Mục tiêu của đề tài là phát triển một hệ thống quản lý văn phòng chia sẻ (co‑working Space) nhằm khắc phục việc quản lý rời rạc và tận dụng lợi thế của dịch vụ trực tuyến để nâng cao hiệu suất vận hành và trải nghiệm khách hàng. Hệ thống bao gồm:
+\subsubsection{Góc nhìn Quản trị viên Tối cao (Super Admin)}
+Ban lãnh đạo toàn chuỗi cần một trạm chỉ huy trung tâm:
 \begin{itemize}
-\item Cho quản lý chuỗi: cổng web cho phép quản lý sản phẩm và tồn kho, quản lý chương trình khuyến mãi, đăng tuyển, quản lý chi nhánh, chỗ ngồi, phòng và thiết bị cho thuê, quản lý nhân sự, và thu thập/ứng xử với phản hồi khách hàng — tất cả được thiết kế để giảm sai sót thủ công, rút ngắn các quy trình vận hành và tối ưu hoá hoạt động tiếp thị.
-\item Hỗ trợ đặt chỗ cho khách, ghi nhận và giao đơn đồ ăn/đồ uống, đặt/phát hành phòng và thiết bị cho thuê, theo dõi trạng thái đặt chỗ, xử lý hủy/đổi chỗ, và thanh toán tại chỗ — giúp nhân viên hoạt động nhanh, nhất quán và ít sai sót.
-\item Cho phép tìm kiếm và đặt chỗ trước, xem chi tiết sản phẩm/dịch vụ, thuê phòng/thiết bị, theo dõi khuyến mãi và tuyển dụng, đánh giá dịch vụ, thanh toán trực tuyến an toàn, và tham gia diễn đàn cộng đồng để chia sẻ trải nghiệm và kết nối với người dùng khác.
+    \item Điều phối danh mục mạng lưới toàn bộ các chi nhánh trên cả nước.
+    \item Phân quyền chặt chẽ theo mô hình RBAC (Role-Based Access Control) cho từng vị trí nhân sự.
+    \item Chuẩn hóa khung pháp lý chính sách hủy phạt hoàn tiền tự động, đảm bảo công bằng cho khách hàng và bảo toàn doanh thu tối thiểu cho doanh nghiệp.
+    \item Truy vết toàn vẹn mọi hành động nhạy cảm của hệ thống thông qua Nhật ký kiểm toán (Audit Log) nhằm ngăn ngừa gian lận nội bộ.
 \end{itemize}
-Hệ thống hướng tới yêu cầu bảo mật, độ tin cậy và khả năng mở rộng để phục vụ nhiều chi nhánh, đồng thời tối ưu hóa quy trình nghiệp vụ từ đặt chỗ đến thanh toán và báo cáo.
-\subsection{Phạm vi đề tài}
-Sản phẩm đầu ra là một hệ thống quản lý văn phòng chia sẻ triển khai trong phạm vi Việt Nam, hoàn thiện trong vòng 2 kỳ theo kế hoạch phát triển. Tính năng cơ bản bao gồm cổng quản trị cho chủ/chủ quản lý chuỗi, cho nhân viên, và website dành cho khách hàng; các nền tảng hỗ trợ: trình duyệt phổ biến trên desktop và mobile. Đối tượng chính là nhóm 18–30 tuổi — những người thường tìm kiếm không gian làm việc linh hoạt, có khả năng chi trả cho dịch vụ và thành thạo công nghệ, phù hợp với mô hình co‑working space.
+
+\subsection{Tính cấp thiết của đề tài}
+
+Đề tài \textbf{"Phát triển hệ thống quản lý văn phòng chia sẻ (CoSpace)"} có ý nghĩa khoa học và thực tiễn sâu sắc:
+\begin{enumerate}
+    \item \textbf{Về mặt công nghệ:} Đề tài giải quyết bài toán kỹ thuật phức tạp về kiểm soát tương tranh dữ liệu tài nguyên hữu hạn (Concurrency Control \& Race Condition Prevention) trong hệ thống phân tán thông qua cơ chế khóa hai tầng độc đáo (\texttt{pg\_advisory\_xact\_lock} kết hợp ràng buộc \texttt{EXCLUDE USING gist}). Đồng thời, đề tài ứng dụng các công nghệ tiên tiến nhất hiện nay: Chuẩn thanh toán quốc gia VietQR Napas 24/7, Xử lý webhook bất biến (Idempotency), Mô hình ngôn ngữ lớn (Google Gemini LLM) và Kiến trúc triển khai đám mây (Cloud-native Containerization).
+    \item \textbf{Về mặt xã hội và kinh tế:} Hệ thống cung cấp một giải pháp chuyển đổi số toàn diện cho các đơn vị kinh doanh không gian làm việc chung vừa và nhỏ tại Việt Nam, tiết kiệm tới 60\% chi phí nhân sự vận hành quầy, loại trừ hoàn toàn sai sót đối soát tài chính, đồng thời thúc đẩy văn hóa kết nối hợp tác chuyên môn trong cộng đồng startup và công nghệ.
+\end{enumerate}
+
+\subsection{Mục tiêu của đề tài}
+
+\subsubsection{Mục tiêu tổng quát}
+Xây dựng và triển khai hoàn chỉnh một hệ thống phần mềm cấp độ doanh nghiệp (Enterprise-grade) phục vụ công tác quản lý chuỗi không gian làm việc chia sẻ đa chi nhánh, tích hợp thanh toán tự động, tối ưu hóa quy trình vận hành và ứng dụng trí tuệ nhân tạo để kết nối mạng lưới thành viên.
+
+\subsubsection{Mục tiêu cụ thể}
+\begin{itemize}
+    \item \textbf{Phân tích và mô hình hóa hệ thống:} Khảo sát toàn diện thực tế, phân tích khoảng trống (Gap Analysis), xây dựng đầy đủ 22 yêu cầu chức năng (FR) và 7 yêu cầu phi chức năng (NFR); đặc tả chi tiết 22 use cases và 4 biểu đồ hoạt động quy trình cốt lõi.
+    \item \textbf{Thiết kế kiến trúc và cơ sở dữ liệu:} Xây dựng kiến trúc 3 tầng phân lớp chuẩn mực (Client-Server 3-Tier Layered Architecture); thiết kế lược đồ cơ sở dữ liệu quan hệ gồm 22 bảng chuẩn hóa ở dạng chuẩn 3NF, đảm bảo toàn vẹn giao dịch ACID.
+    \item \textbf{Hiện thực hóa sản phẩm hoàn chỉnh:}
+    \begin{itemize}
+        \item Back-end: Phát triển bằng Spring Boot 3 (Java 17/21), hiện thực trọn vẹn các dịch vụ lõi: \texttt{BookingService} (chống đụng lịch), \texttt{PaymentService} (VietQR PayOS, Webhook Idempotency), \texttt{PartnerMatchingService} (Thuật toán Jaccard + Gemini AI), \texttt{ChatbotService} (Google Gemini Flash LLM) và \texttt{BookingExpiryScheduler} (chu kỳ 30s giải phóng đơn quá hạn 15 phút).
+        \item Front-end: Xây dựng ứng dụng SPA với React 18 và TypeScript, cung cấp Sơ đồ mặt bằng tương tác SVG Floorplan Canvas, đồng hồ đếm ngược thanh toán VietQR động, và 4 phân hệ cổng thông tin (Customer, Staff, Branch Admin, Super Admin).
+    \end{itemize}
+    \item \textbf{Kiểm thử và Đảm bảo chất lượng:} Viết bộ kiểm thử tự động toàn diện với 236 ca kiểm thử đơn vị và tích hợp Java (JUnit 5, Mockito) cùng 14 kịch bản kiểm thử SQL chuyên sâu, cam kết đạt tỷ lệ 100\% thành công.
+    \item \textbf{Đóng gói và Triển khai Đám mây:} Ứng dụng kỹ thuật Docker Multi-stage build rút gọn Back-end còn 215MB, triển khai trên Render Cloud; tối ưu hóa chia nhỏ chunk tệp tĩnh (-76.4\% dung lượng) trên Vercel Edge CDN và cơ sở dữ liệu Supabase Managed PostgreSQL.
+\end{itemize}
+
+\subsection{Đối tượng và Phạm vi nghiên cứu}
+
+\begin{itemize}
+    \item \textbf{Đối tượng nghiên cứu:}
+    \begin{itemize}
+        \item Mô hình vận hành kinh doanh văn phòng chia sẻ (Co-working Space).
+        \item Các giải thuật kiểm soát tương tranh và khóa phân tán trong cơ sở dữ liệu quan hệ.
+        \item Thuật toán đo độ tương đồng tập hợp (Jaccard Similarity Coefficient).
+        \item Kỹ thuật tích hợp và tương tác với Mô hình Ngôn ngữ Lớn (LLM Prompt Engineering \& Tool Calling).
+        \item Chuẩn trao đổi dữ liệu thanh toán quốc gia VietQR Napas 24/7 và cơ chế bảo mật chữ ký điện tử HMAC-SHA256.
+    \end{itemize}
+    \item \textbf{Phạm vi hệ thống:}
+    \begin{itemize}
+        \item \textit{Phạm vi không gian:} Áp dụng cho chuỗi văn phòng chia sẻ hoạt động trên lãnh thổ Việt Nam, múi giờ mặc định \texttt{Asia/Ho\_Chi\_Minh}, đơn vị tiền tệ tiêu chuẩn là Việt Nam Đồng (VNĐ).
+        \item \textit{Phạm vi nền tảng:} Ứng dụng Web đáp ứng (Responsive Web Application) hoạt động mượt mà trên tất cả các trình duyệt hiện đại (Chrome, Edge, Firefox, Safari) trên cả máy tính để bàn, máy tính bảng và điện thoại thông minh.
+        \item \textit{Giới hạn nghiên cứu:} Trong phạm vi đồ án tốt nghiệp, hệ thống tập trung hoàn thiện phiên bản Web hoàn chỉnh; các tính năng phần cứng IoT (khóa cửa từ thông minh) và ứng dụng di động bản địa (Native Mobile App) được định hướng nghiên cứu trong giai đoạn tiếp theo.
+    \end{itemize}
+\end{itemize}
+
+\subsection{Phương pháp nghiên cứu}
+
+Nhóm thực hiện đề tài áp dụng phương pháp luận kỹ nghệ phần mềm hiện đại:
+\begin{itemize}
+    \item \textbf{Phương pháp nghiên cứu tài liệu (Desk Research):} Nghiên cứu các tiêu chuẩn kỹ thuật quốc tế (RFC 7519 về JSON Web Token, OpenAPI 3.0), tài liệu chính thống của Spring Framework, React.js, PostgreSQL và các bài báo khoa học về thuật toán tương đồng Jaccard.
+    \item \textbf{Phương pháp khảo sát thực tiễn (Field Survey):} Trải nghiệm và khảo sát trực tiếp tại các chuỗi văn phòng chia sẻ nổi tiếng tại Việt Nam (Toong, Dreamplex, CirCO, Regus) để thu thập yêu cầu thực tế và phân tích khoảng trống (Gap Analysis).
+    \item \textbf{Mô hình phát triển Agile/Scrum:} Chia nhỏ chu trình phát triển thành 6 Sprint (mỗi Sprint 2 tuần), liên tục kiểm thử, đối soát và tinh chỉnh tính năng dựa trên phản hồi của Giảng viên hướng dẫn.
+\end{itemize}
+
+\subsection{Bố cục của bài báo cáo tốt nghiệp}
+
+Nội dung của bài báo cáo được tổ chức thành 9 chương mạch lạc theo đúng quy chuẩn học thuật của Khoa Khoa học và Kỹ thuật Máy tính -- Trường Đại học Bách khoa, ĐHQG-HCM:
+
+\begin{itemize}
+    \item \textbf{Chương 1: Giới thiệu đề tài} -- Trình bày bối cảnh, lý do, tính cấp thiết, mục tiêu, đối tượng, phạm vi và phương pháp nghiên cứu.
+    \item \textbf{Chương 2: Khảo sát hiện trạng và Phân tích yêu cầu} -- Phân tích các mô hình tương tự, đánh giá khoảng trống (Gap Analysis), xác định 22 yêu cầu chức năng (FR) và 7 yêu cầu phi chức năng (NFR).
+    \item \textbf{Chương 3: Cơ sở lý thuyết và Công nghệ} -- Trình bày kiến trúc phần mềm, nền tảng Frontend, Backend, Cơ sở dữ liệu, công thức toán học Jaccard, Google Gemini AI, chuẩn VietQR PayOS và Ma trận biện luận công nghệ.
+    \item \textbf{Chương 4: Phân tích hệ thống} -- Mô hình hóa hệ thống bằng sơ đồ Use-case tổng quát, bảng đặc tả chi tiết 22 Use-case và 4 Biểu đồ hoạt động (Activity Diagrams) bằng TikZ.
+    \item \textbf{Chương 5: Thiết kế hệ thống} -- Thiết kế kiến trúc 3 tầng phân lớp, 2 Biểu đồ tuần tự (Sequence Diagrams) bằng TikZ, Lược đồ ERD, Từ điển dữ liệu chi tiết 22 bảng và Thiết kế giao diện chi tiết 4 phân hệ.
+    \item \textbf{Chương 6: Hiện thực hệ thống} -- Mô tả cấu trúc mã nguồn Monorepo, hiện thực chi tiết các Service Back-end then chốt với mã nguồn thực tế và phân hệ Front-end tương tác.
+    \item \textbf{Chương 7: Triển khai hệ thống} -- Trình bày hình trạng đám mây (Cloud Topology), kỹ thuật Docker Multi-stage build, tối ưu hóa chia nhỏ chunk Vercel, quy trình CI/CD và quản trị an ninh môi trường.
+    \item \textbf{Chương 8: Kiểm thử hệ thống} -- Trình bày chiến lược kiểm thử Kim tự tháp, kết quả thực thi 250 ca kiểm thử tự động, 5 kịch bản kiểm thử E2E đầu cuối và đánh giá yêu cầu phi chức năng.
+    \item \textbf{Chương 9: Tổng kết và Hướng phát triển} -- Tổng kết kết quả đạt được so với ĐACN, đánh giá ưu khuyết điểm và vạch ra các định hướng mở rộng trong tương lai.
+\end{itemize}

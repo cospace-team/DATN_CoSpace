@@ -1431,3 +1431,232 @@
 \caption{Đặc tả chi tiết Use-case Xem nhật ký hoạt động (Audit Log)}
 \label{tab:audit-log-spec}
 \end{table}
+
+\subsubsubsection{Use-case: Tương tác với Trợ lý ảo AI Chatbot (Google Gemini)}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Tên Use-case} & Tương tác với Trợ lý ảo AI Chatbot \\
+\hline
+\textbf{Use-case ID} & CUST-AI-01 \\
+\hline
+\textbf{Mục tiêu} & Hỗ trợ khách hàng hỏi đáp thông tin, tư vấn dịch vụ và đặt phòng qua giao tiếp ngôn ngữ tự nhiên. \\
+\hline
+\textbf{Tác nhân chính} & Khách hàng (Customer) hoặc Khách vãng lai (Guest). \\
+\hline
+\textbf{Điều kiện tiên quyết} & Khách hàng truy cập vào hệ thống CoSpace. \\
+\hline
+\textbf{Điều kiện kết thúc} & Khách hàng nhận được câu trả lời giải đáp hoặc đường dẫn đặt phòng tương ứng. \\
+\hline
+\textbf{Luồng chính} & 
+\begin{enumerate}
+    \item Khách hàng mở cửa sổ chat trợ lý ảo ở góc màn hình.
+    \item Khách hàng nhập câu hỏi (ví dụ: ``Tôi cần phòng họp 8 người chiều nay tại chi nhánh Quận 1'').
+    \item Hệ thống gửi ngữ cảnh CoSpace cùng tin nhắn người dùng đến Google Gemini API.
+    \item Mô hình Gemini phân tích ý định, tra cứu dữ liệu không gian và sinh câu trả lời tự nhiên.
+    \item Hệ thống hiển thị câu trả lời kèm thẻ gợi ý phòng trống và nút chuyển nhanh đến trang đặt chỗ.
+    \item Khách hàng nhấp vào thẻ gợi ý để hoàn tất luồng đặt phòng.
+\end{enumerate} \\
+\hline
+\textbf{Luồng thay thế} & 
+\begin{itemize}
+    \item Khách hỏi thông tin ngoài phạm vi: AI lịch thiệp phản hồi và hướng dẫn khách liên hệ hotline lễ tân.
+    \item Mất kết nối API Gemini: Hệ thống hiển thị thông báo lỗi thân thiện và gợi ý khách thử lại sau.
+\end{itemize} \\
+\hline
+\end{tabular}
+\caption{Đặc tả chi tiết Use-case Tương tác với Trợ lý ảo AI Chatbot}
+\label{tab:uc-chatbot}
+\end{table}
+
+\subsubsubsection{Use-case: Quản lý Thẻ dịch vụ tại chỗ (Running Tab)}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Tên Use-case} & Quản lý Thẻ dịch vụ tại chỗ (Running Tab) \\
+\hline
+\textbf{Use-case ID} & STF-TAB-01 \\
+\hline
+\textbf{Mục tiêu} & Cho phép nhân viên ghi nhận các dịch vụ bổ sung (nước uống, đồ ăn, in ấn, thiết bị) phát sinh trong suốt thời gian khách ngồi làm việc. \\
+\hline
+\textbf{Tác nhân chính} & Nhân viên vận hành (Staff). \\
+\hline
+\textbf{Điều kiện tiên quyết} & Khách hàng đã được check-in vào không gian (Booking ở trạng thái \texttt{checked\_in}). \\
+\hline
+\textbf{Điều kiện kết thúc} & Các món dịch vụ được thêm vào Running Tab của đơn đặt chỗ và sẵn sàng thanh toán khi check-out. \\
+\hline
+\textbf{Luồng chính} & 
+\begin{enumerate}
+    \item Nhân viên tìm kiếm thông tin khách hàng hoặc quét mã chỗ ngồi của khách.
+    \item Hệ thống hiển thị thẻ chi tiết booking đang hoạt động của khách.
+    \item Nhân viên chọn chức năng ``Thêm dịch vụ Running Tab''.
+    \item Nhân viên chọn các món từ danh mục dịch vụ phụ trợ (Extra Services) kèm số lượng.
+    \item Hệ thống tự động snapshot đơn giá tại thời điểm gọi và cộng dồn vào tổng tiền tạm tính.
+    \item Nhân viên xác nhận; hệ thống lưu trữ bản ghi vào bảng \texttt{booking\_services}.
+\end{enumerate} \\
+\hline
+\textbf{Luồng thay thế} & Khách hàng hủy món trước khi phục vụ: Nhân viên chọn xóa món khỏi Running Tab; hệ thống hoàn lại số tiền tạm tính. \\
+\hline
+\end{tabular}
+\caption{Đặc tả chi tiết Use-case Quản lý Thẻ dịch vụ tại chỗ (Running Tab)}
+\label{tab:uc-running-tab}
+\end{table}
+
+\subsection{Biểu đồ hoạt động (Activity Diagrams) cho các quy trình nghiệp vụ cốt lõi}
+
+Nhằm trực quan hóa logic điều hướng và phân nhánh nghiệp vụ giữa các tác nhân và hệ thống, phần này trình bày 4 biểu đồ hoạt động cho 4 quy trình quan trọng nhất trong CoSpace.
+
+\subsubsection{Quy trình Đặt chỗ và Thanh toán trực tuyến (VietQR/MoMo)}
+
+Quy trình này mô tả luồng khách hàng lựa chọn không gian làm việc trực quan trên sơ đồ SVG, hệ thống thực hiện kiểm tra và khóa chỗ tạm thời, sau đó xử lý thanh toán tự động qua mã VietQR chuẩn Napas 24/7 (hoặc ví MoMo).
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    node distance=1.2cm and 1.5cm,
+    font=\small\sffamily,
+    startstop/.style={circle, draw=black, fill=black, text=white, minimum size=0.6cm},
+    activity/.style={rectangle, draw=blue!80!black, fill=blue!10, rounded corners=5pt, minimum height=0.8cm, minimum width=3cm, align=center, text width=3.2cm},
+    decision/.style={diamond, draw=orange!90!black, fill=orange!15, aspect=2, minimum width=2.5cm, align=center, inner sep=1pt},
+    arrow/.style={-Latex, thick, draw=gray!80!black},
+    line/.style={thick, draw=gray!80!black}
+]
+    \node (start) [startstop] {};
+    \node (select) [activity, below=0.8cm of start] {Khách hàng chọn chỗ ngồi trên sơ đồ SVG};
+    \node (lock) [activity, below=0.8cm of select] {Hệ thống kiểm tra lịch \& áp Advisory Lock};
+    \node (cond1) [decision, below=0.8cm of lock] {Còn trống?};
+    \node (reject) [activity, right=1.5cm of cond1] {Thông báo chỗ đã bị đặt, chọn lại};
+    \node (create) [activity, below=0.8cm of cond1] {Tạo Booking \texttt{PENDING\_PAYMENT} \& Sinh VietQR};
+    \node (pay) [activity, below=0.8cm of create] {Khách quét mã VietQR bằng app Ngân hàng};
+    \node (webhook) [activity, below=0.8cm of pay] {PayOS gửi Webhook xác nhận về máy chủ};
+    \node (confirm) [activity, below=0.8cm of webhook] {Chuyển trạng thái \texttt{CONFIRMED} \& Gửi thông báo};
+    \node (end) [startstop, double, below=0.8cm of confirm] {};
+
+    \draw [arrow] (start) -- (select);
+    \draw [arrow] (select) -- (lock);
+    \draw [arrow] (lock) -- (cond1);
+    \draw [arrow] (cond1) -- node[above] {Không} (reject);
+    \draw [arrow] (reject) |- (select);
+    \draw [arrow] (cond1) -- node[right] {Có} (create);
+    \draw [arrow] (create) -- (pay);
+    \draw [arrow] (pay) -- (webhook);
+    \draw [arrow] (webhook) -- (confirm);
+    \draw [arrow] (confirm) -- (end);
+\end{tikzpicture}
+\caption{Biểu đồ hoạt động: Quy trình Đặt chỗ và Thanh toán trực tuyến VietQR}
+\label{fig:act-booking-payment}
+\end{figure}
+
+\subsubsection{Quy trình Check-in tại quầy với Tolerance Window 30 phút}
+
+Quy trình này kiểm soát tính hợp lệ của việc nhận phòng tại chi nhánh. Hệ thống chỉ cho phép check-in nếu thời điểm khách đến nằm trong khoảng dung sai $\pm 30$ phút so với giờ bắt đầu đã đăng ký.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    node distance=1.2cm and 1.5cm,
+    font=\small\sffamily,
+    startstop/.style={circle, draw=black, fill=black, text=white, minimum size=0.6cm},
+    activity/.style={rectangle, draw=green!60!black, fill=green!10, rounded corners=5pt, minimum height=0.8cm, minimum width=3cm, align=center, text width=3.4cm},
+    decision/.style={diamond, draw=orange!90!black, fill=orange!15, aspect=2, minimum width=2.5cm, align=center, inner sep=1pt},
+    arrow/.style={-Latex, thick, draw=gray!80!black}
+]
+    \node (start) [startstop] {};
+    \node (scan) [activity, below=0.8cm of start] {Nhân viên quét mã QR đặt chỗ của khách};
+    \node (lookup) [activity, below=0.8cm of scan] {Hệ thống tra cứu đơn \& kiểm tra trạng thái};
+    \node (checktime) [decision, below=0.8cm of lookup] {Trong khoảng $\pm 30$p giờ bắt đầu?};
+    \node (refuse) [activity, right=1.5cm of checktime] {Từ chối check-in, thông báo ngoài khung giờ};
+    \node (execute) [activity, below=0.8cm of checktime] {Cập nhật trạng thái \texttt{CHECKED\_IN}};
+    \node (tab) [activity, below=0.8cm of execute] {Khởi tạo Running Tab và hướng dẫn vào chỗ};
+    \node (end) [startstop, double, below=0.8cm of tab] {};
+
+    \draw [arrow] (start) -- (scan);
+    \draw [arrow] (scan) -- (lookup);
+    \draw [arrow] (lookup) -- (checktime);
+    \draw [arrow] (checktime) -- node[above] {Không} (refuse);
+    \draw [arrow] (checktime) -- node[right] {Hợp lệ} (execute);
+    \draw [arrow] (execute) -- (tab);
+    \draw [arrow] (tab) -- (end);
+\end{tikzpicture}
+\caption{Biểu đồ hoạt động: Quy trình Check-in tại quầy với Tolerance Window 30 phút}
+\label{fig:act-checkin-tolerance}
+\end{figure}
+
+\subsubsection{Quy trình Tự động hủy phòng quá hạn (Payment Timeout 15 phút)}
+
+Nhằm giải phóng tài nguyên chỗ ngồi cho các khách hàng khác, một tác vụ nền chạy tự động mỗi 30 giây để rà soát và hủy các đơn chưa thanh toán quá 15 phút.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    node distance=1.2cm and 1.5cm,
+    font=\small\sffamily,
+    startstop/.style={circle, draw=black, fill=black, text=white, minimum size=0.6cm},
+    activity/.style={rectangle, draw=red!70!black, fill=red!10, rounded corners=5pt, minimum height=0.8cm, minimum width=3cm, align=center, text width=3.4cm},
+    decision/.style={diamond, draw=orange!90!black, fill=orange!15, aspect=2, minimum width=2.5cm, align=center, inner sep=1pt},
+    arrow/.style={-Latex, thick, draw=gray!80!black}
+]
+    \node (start) [startstop] {};
+    \node (cron) [activity, below=0.8cm of start] {Scheduler thức dậy mỗi chu kỳ 30 giây};
+    \node (query) [activity, below=0.8cm of cron] {Quét các booking \texttt{PENDING\_PAYMENT}};
+    \node (checktime) [decision, below=0.8cm of query] {Thời gian tạo $> 15$ phút?};
+    \node (skip) [activity, right=1.5cm of checktime] {Bỏ qua, chờ chu kỳ tiếp theo};
+    \node (expire) [activity, below=0.8cm of checktime] {Cập nhật trạng thái thành \texttt{EXPIRED}};
+    \node (release) [activity, below=0.8cm of expire] {Giải phóng slot trên sơ đồ SVG mặt bằng};
+    \node (end) [startstop, double, below=0.8cm of release] {};
+
+    \draw [arrow] (start) -- (cron);
+    \draw [arrow] (cron) -- (query);
+    \draw [arrow] (query) -- (checktime);
+    \draw [arrow] (checktime) -- node[above] {Chưa quá} (skip);
+    \draw [arrow] (checktime) -- node[right] {Quá 15p} (expire);
+    \draw [arrow] (expire) -- (release);
+    \draw [arrow] (release) -- (end);
+\end{tikzpicture}
+\caption{Biểu đồ hoạt động: Tác vụ nền quét và tự động hủy booking quá hạn}
+\label{fig:act-payment-timeout}
+\end{figure}
+
+\subsubsection{Quy trình Hủy chỗ và Hoàn tiền nội bộ theo ma trận chính sách}
+
+Quy trình xử lý hoàn tiền minh bạch dựa trên thời điểm hủy phòng so với giờ bắt đầu, tra cứu theo mức độ ưu tiên (\texttt{priority DESC}) của bảng chính sách hủy.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    node distance=1.2cm and 1.5cm,
+    font=\small\sffamily,
+    startstop/.style={circle, draw=black, fill=black, text=white, minimum size=0.6cm},
+    activity/.style={rectangle, draw=purple!70!black, fill=purple!10, rounded corners=5pt, minimum height=0.8cm, minimum width=3cm, align=center, text width=3.4cm},
+    decision/.style={diamond, draw=orange!90!black, fill=orange!15, aspect=2, minimum width=2.5cm, align=center, inner sep=1pt},
+    arrow/.style={-Latex, thick, draw=gray!80!black}
+]
+    \node (start) [startstop] {};
+    \node (req) [activity, below=0.8cm of start] {Khách hàng gửi yêu cầu hủy đơn đặt phòng};
+    \node (calc) [activity, below=0.8cm of req] {Hệ thống tính khoảng cách thời gian đến giờ bắt đầu};
+    \node (policy) [activity, below=0.8cm of calc] {Tra cứu chính sách hủy (\texttt{priority DESC})};
+    \node (condrefund) [decision, below=0.8cm of policy] {Tỷ lệ hoàn tiền $> 0\%$?};
+    \node (zero) [activity, right=1.5cm of condrefund] {Ghi nhận hủy, tiền hoàn bằng 0 VNĐ};
+    \node (refund) [activity, below=0.8cm of condrefund] {Cộng tiền hoàn vào ví nội bộ của khách};
+    \node (update) [activity, below=0.8cm of refund] {Cập nhật booking \texttt{CANCELED} \& Gửi thông báo};
+    \node (end) [startstop, double, below=0.8cm of update] {};
+
+    \draw [arrow] (req) -- (calc);
+    \draw [arrow] (start) -- (req);
+    \draw [arrow] (calc) -- (policy);
+    \draw [arrow] (policy) -- (condrefund);
+    \draw [arrow] (condrefund) -- node[above] {Bằng 0\%} (zero);
+    \draw [arrow] (condrefund) -- node[right] {$> 0\%$} (refund);
+    \draw [arrow] (zero) |- (update);
+    \draw [arrow] (refund) -- (update);
+    \draw [arrow] (update) -- (end);
+\end{tikzpicture}
+\caption{Biểu đồ hoạt động: Quy trình Hủy chỗ và Hoàn tiền nội bộ theo ma trận chính sách}
+\label{fig:act-cancellation-refund}
+\end{figure}

@@ -1,0 +1,37 @@
+sequenceDiagram
+  autonumber
+  actor U as Người dùng
+  participant FE as Frontend React
+  participant AC as AuthController
+  participant AS as AuthService
+  participant DB as PostgreSQL
+  participant SB as Supabase Auth
+  alt Đăng nhập bằng email và mật khẩu
+    U->>FE: Nhập email, mật khẩu
+    FE->>AC: POST /api/auth/login
+    AC->>AS: login(request)
+    AS->>DB: findByEmail(email)
+    DB-->>AS: User
+    AS->>AS: BCrypt so khớp mật khẩu, kiểm tra status active
+    AS->>AS: JwtUtil ký access token (1 giờ) và refresh token (30 ngày) bằng HS384
+    AS-->>AC: AuthResponse
+    AC-->>FE: 200 OK kèm token và thông tin người dùng
+  else Đăng nhập bằng Google (Supabase SSO)
+    U->>FE: Chọn Đăng nhập bằng Google
+    FE->>SB: OAuth2 với Google
+    SB-->>FE: Supabase JWT (khóa ECC P-256)
+    FE->>AC: POST /api/auth/sync kèm Bearer Supabase JWT
+    AC->>AS: syncGoogleUser(jwt)
+    AS->>DB: findById(id Supabase)
+    opt Chưa có User với id này
+      AS->>DB: Liên kết tài khoản khách hàng cùng email (chỉ khi token từ Google), hoặc tạo User mới role customer
+    end
+    Note over AS,DB: Tài khoản nhân viên và quản trị không bao giờ được liên kết tự động
+    AC-->>FE: AuthUserDto
+  end
+  opt Access token hết hạn sau 1 giờ
+    FE->>AC: POST /api/auth/refresh kèm refresh token
+    AC->>AS: refresh(refreshToken)
+    AS->>DB: findById(userId), kiểm tra tài khoản chưa bị khóa
+    AC-->>FE: Cặp token mới
+  end

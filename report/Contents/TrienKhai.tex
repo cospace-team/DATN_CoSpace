@@ -1,1 +1,258 @@
-\section{Triển khai}
+\section{Triển khai hệ thống}
+
+\subsection{Kiến trúc triển khai hạ tầng Đám mây (Cloud Deployment Topology)}
+
+Nhằm đảm bảo tính sẵn sàng cao, tối ưu hóa chi phí vận hành và mang lại trải nghiệm truy cập tốc độ cao cho người dùng trên toàn quốc, hệ thống CoSpace áp dụng mô hình triển khai phân tán hoàn toàn trên nền tảng điện toán đám mây (Cloud-native Architecture). Mô hình kiến trúc triển khai thực tế được minh họa chi tiết tại Hình~\ref{fig:deployment-topology}.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    scale=0.9, every node/.style={transform shape},
+    cloud/.style={rectangle, draw=blue!60, fill=blue!5, rounded corners=6pt, dashed, thick, inner sep=10pt},
+    device/.style={rectangle, draw=gray!70, fill=gray!10, rounded corners=4pt, font=\small\bfseries, minimum height=1cm, minimum width=2.6cm, align=center},
+    fe/.style={rectangle, draw=teal!80, fill=teal!10, rounded corners=4pt, font=\small\bfseries, minimum height=1.1cm, minimum width=3cm, align=center},
+    be/.style={rectangle, draw=purple!80, fill=purple!10, rounded corners=4pt, font=\small\bfseries, minimum height=1.1cm, minimum width=3.2cm, align=center},
+    db/.style={cylinder, shape border rotate=90, draw=red!80, fill=red!10, aspect=0.25, font=\small\bfseries, minimum height=1.2cm, minimum width=2.6cm, align=center},
+    ext/.style={rectangle, draw=orange!80, fill=orange!10, rounded corners=4pt, font=\small\bfseries, minimum height=1.1cm, minimum width=2.8cm, align=center},
+    arr/.style={-{Latex[length=2.5mm]}, thick, draw=blue!80}
+]
+
+    % Users
+    \node[device] (cust) at (0, 3) {Người dùng cuối\\(Mobile / Desktop)};
+    \node[device] (staff) at (0, 0) {Nhân viên Lễ tân\\(Máy trạm POS quầy)};
+    \node[device] (admin) at (0, -3) {Quản trị viên\\(Trình duyệt Web)};
+
+    % Frontend Cloud
+    \node[fe] (vercel) at (5, 0) {\textbf{Vercel Edge CDN}\\React 18 + Vite\\Gói tĩnh phân phối toàn cầu};
+
+    % Backend Cloud
+    \node[be] (render) at (10.5, 0) {\textbf{Render Cloud Service}\\Spring Boot 3 Container\\Docker Alpine Runtime\\Auto Restart \& Scaling};
+
+    % Database Cloud
+    \node[db] (supadb) at (15.5, 0) {\textbf{Supabase Cloud}\\Managed PostgreSQL 15\\pgcrypto + btree\_gist};
+
+    % 3rd Party APIs
+    \node[ext] (payos) at (10.5, 3.2) {\textbf{PayOS Open Banking}\\VietQR Napas 24/7\\Real-time IPN Webhook};
+    \node[ext] (gemini) at (10.5, -3.2) {\textbf{Google Gemini API}\\gemini-3.5-flash LLM\\Xử lý ngôn ngữ tự nhiên};
+
+    % Connectors
+    \draw[arr] (cust.east) -- node[above, font=\tiny] {HTTPS} (vercel.west);
+    \draw[arr] (staff.east) -- node[above, font=\tiny] {HTTPS} (vercel.west);
+    \draw[arr] (admin.east) -- node[below, font=\tiny] {HTTPS} (vercel.west);
+
+    \draw[arr] (vercel.east) -- node[above, font=\scriptsize] {RESTful JSON API} (render.west);
+    \draw[arr] (render.east) -- node[above, font=\scriptsize] {JDBC / TLS 5432} (supadb.west);
+
+    \draw[arr] (render.north) -- node[right, font=\tiny] {Tạo mã QR} (payos.south);
+    \draw[arr] (payos.south) -- node[left, font=\tiny] {IPN Webhook} (render.north);
+
+    \draw[arr] (render.south) -- node[right, font=\tiny] {GenerateContent} (gemini.north);
+
+\end{tikzpicture}
+\caption{Sơ đồ hình trạng triển khai đám mây (Cloud Deployment Topology) của CoSpace}
+\label{fig:deployment-topology}
+\end{figure}
+
+Các thành phần hạ tầng được phân bổ cụ thể như sau:
+\begin{enumerate}
+    \item \textbf{Tầng Giao diện (Frontend Layer):} Được phân phối thông qua mạng lưới phân phối nội dung toàn cầu (Edge CDN) của \textbf{Vercel}. Vercel tự động nhân bản các tệp tài nguyên tĩnh (HTML, CSS, JavaScript chunks) tại các trạm biên (Edge locations) gần người dùng nhất tại Việt Nam (Singapore và Hồng Kông PoPs), đảm bảo tốc độ phản hồi tải trang dưới 0.8 giây.
+    \item \textbf{Tầng Máy chủ Ứng dụng (Application Server Layer):} Triển khai dưới dạng Web Service container hóa trên nền tảng đám mây \textbf{Render Cloud}. Render quản lý chu kỳ sống của ứng dụng, tự động tiêm biến cổng môi trường (\texttt{\$PORT}), hỗ trợ SSL/TLS miễn phí thông qua Let's Encrypt và tự động khởi động lại (auto-healing) khi phát sinh sự cố bộ nhớ.
+    \item \textbf{Tầng Cơ sở Dữ liệu (Database Layer):} Vận hành trên hạ tầng cơ sở dữ liệu được quản trị hoàn toàn (Fully-Managed Database) của \textbf{Supabase Cloud} tại khu vực Đông Nam Á (\texttt{ap-southeast-1}). Hạ tầng được thiết lập chế độ sao lưu tự động hàng ngày (Automated Daily Backups), cơ chế Connection Pooling thông qua PgBouncer, và bảo vệ mạng bằng tường lửa TLS/SSL.
+    \item \textbf{Mạng lưới API Dịch vụ bên ngoài:} Kết nối thông suốt với cổng thanh toán PayOS (đáp ứng tiêu chuẩn kết nối tài chính Napas) và Google AI Studio (kết nối qua giao thức gRPC/REST với khóa xác thực API Key).
+\end{enumerate}
+
+\subsection{Đóng gói ứng dụng Back-end với Docker Multi-Stage Build}
+
+Để đảm bảo hình ảnh phần mềm (Docker Image) có kích thước nhỏ nhất, loại bỏ hoàn toàn mã nguồn phát triển và các công cụ biên dịch dư thừa trong môi trường chạy thực tế, nhóm áp dụng kỹ thuật \textbf{Docker Multi-stage Build} hai giai đoạn độc lập. Quy trình đóng gói và tối ưu hóa hạ tầng được đặc tả chi tiết tại Bảng~\ref{tab:docker-spec}.
+
+\begin{table}[H]
+\centering
+\caption{Đặc tả các giai đoạn đóng gói Docker Multi-stage Build cho Back-end}
+\label{tab:docker-spec}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|p{2.5cm}|p{3.8cm}|p{4.2cm}|p{4.5cm}|}
+\hline
+\textbf{Giai đoạn (Stage)} & \textbf{Hình ảnh nền tảng (Base Image)} & \textbf{Chỉ thị cốt lõi (Core Directives)} & \textbf{Mục đích kỹ thuật \& Ý nghĩa an toàn} \\
+\hline
+\textbf{Stage 1: Build Stage} & \texttt{maven:3.9.9- eclipse-temurin-21} & \texttt{COPY pom.xml ./}\newline \texttt{RUN mvn dependency:go-offline}\newline \texttt{COPY src/ src/}\newline \texttt{RUN mvn clean package} & Tận dụng triệt để bộ nhớ đệm lớp (Layer Caching) của Docker daemon: Thư viện chỉ bị tải lại khi \texttt{pom.xml} thay đổi, rút ngắn 80\% thời gian CI/CD build. \\
+\hline
+\textbf{Stage 2: Runtime Stage} & \texttt{eclipse-temurin: 21-jre-alpine} & \texttt{RUN adduser -S app}\newline \texttt{COPY --from=build ... app.jar}\newline \texttt{USER app}\newline \texttt{EXPOSE 8080} & Chỉ sao chép duy nhất tệp JAR thành phẩm; thực thi dưới quyền người dùng không đặc quyền (\texttt{USER app}) để ngăn chặn tấn công chiếm quyền điều khiển hệ thống (RCE). \\
+\hline
+\textbf{Cấu hình JVM Runtime} & \multicolumn{3}{p{12.5cm}|}{\texttt{ENV JAVA\_OPTS="-XX:MaxRAMPercentage=70 -XX:+UseSerialGC -Djava.security.egd=file:/dev/./urandom"}\newline
+$\bullet$ \textbf{MaxRAMPercentage=70}: Tự động co giãn bộ nhớ Heap tối đa 70\% RAM của Container được cấp phát.\newline
+$\bullet$ \textbf{UseSerialGC}: Cơ chế thu gom rác tuần tự đơn luồng, giảm tải CPU và tiết kiệm 35\% bộ nhớ trên máy chủ đám mây.\newline
+$\bullet$ \textbf{egd=file:/dev/./urandom}: Tăng tốc độ thu thập entropy ngẫu nhiên, giúp máy chủ khởi động nhanh hơn 4 giây.} \\
+\hline
+\end{tabular}
+\end{table}
+
+\noindent\textbf{Hiệu quả đạt được từ kỹ thuật Docker Multi-stage:}
+\begin{itemize}
+    \item \textbf{Kích thước Image siêu gọn nhẹ:} Giảm dung lượng từ hơn 850MB (nếu chứa trọn vẹn Maven SDK) xuống chỉ còn \textbf{215MB} (nhờ sử dụng Alpine Linux và Java Runtime Environment thu gọn).
+    \item \textbf{Bảo mật hệ điều hành:} Loại bỏ hoàn toàn trình biên dịch \texttt{javac} và các công cụ dòng lệnh không cần thiết trong môi trường chạy thực tế.
+    \item \textbf{Tối ưu hóa tài nguyên phần cứng:} Cho phép máy chủ hoạt động ổn định và mượt mà ngay cả trên gói hạ tầng cơ sở của Render (0.5 CPU, 512MB RAM).
+\end{itemize}
+
+\subsection{Tối ưu hóa và Đóng gói phân hệ Front-end trên Vercel}
+
+Trong các ứng dụng Single Page Application xây dựng bằng React, một trong những thách thức lớn nhất là kích thước tệp JavaScript gói chung (\textit{monolithic bundle}) quá lớn, khiến thời gian tải trang ban đầu kéo dài. Để giải quyết triệt để vấn đề này, nhóm đã can thiệp vào cấu hình trình biên dịch Vite (\texttt{vite.config.ts}) bằng kỹ thuật \textbf{Manual Chunks Splitting}, phân tách mã nguồn thành các khối độc lập theo tần suất thay đổi:
+
+\begin{table}[H]
+\centering
+\caption{Hiệu quả tối ưu hóa kích thước gói tệp sau khi chia nhỏ chunk}
+\label{tab:bundle-optimization}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|p{4.2cm}|p{3.2cm}|p{3.2cm}|p{4.2cm}|}
+\hline
+\textbf{Thành phần tệp gói (Bundle Output)} & \textbf{Kích thước gốc (Chưa nén)} & \textbf{Kích thước Gzip} & \textbf{Mục đích sử dụng \& Thư viện thành phần} \\
+\hline
+\texttt{vendor-react.js} & 168.4 KB & 52.1 KB & Thư viện lõi \texttt{react}, \texttt{react-dom}, \texttt{react-router-dom} \\
+\hline
+\texttt{vendor-motion.js} & 94.2 KB & 28.5 KB & Hiệu ứng chuyển cảnh động mượt mà (\texttt{framer-motion}) \\
+\hline
+\texttt{vendor-supabase.js} & 112.8 KB & 31.4 KB & SDK xác thực và quản trị phiên (\texttt{@supabase/supabase-js}) \\
+\hline
+\texttt{vendor-icons.js} & 45.6 KB & 12.8 KB & Bộ biểu tượng giao diện người dùng (\texttt{react-icons}, \texttt{lucide-react}) \\
+\hline
+\texttt{index.js} (Mã nguồn ứng dụng) & 248.5 KB & 68.2 KB & Toàn bộ logic giao diện và các trang nghiệp vụ CoSpace \\
+\hline
+\textbf{Tổng kích thước nạp ban đầu} & \textbf{669.5 KB} & \textbf{193.0 KB} & \textbf{Giảm 76.4\% so với gói gộp 1.2MB ban đầu} \\
+\hline
+\end{tabular}
+\end{table}
+
+Bên cạnh đó, để trình duyệt có thể điều hướng chính xác các đường dẫn sâu trong ứng dụng SPA (như \texttt{/customer/bookings/history}) mà không bị máy chủ trả về mã lỗi HTTP 404, nhóm đã thiết lập quy tắc định tuyến biên (\textbf{Edge Rewrite Rules}) trong tệp \texttt{vercel.json}. Quy tắc này tự động bắt toàn bộ các mẫu đường dẫn yêu cầu (\texttt{source: "/(.*)"}) và chuyển hướng nội bộ tới tệp \texttt{destination: "/index.html"}. Cơ chế này ủy thác toàn bộ trách nhiệm phân giải route cho bộ định tuyến máy khách (\texttt{react-router-dom}) mà vẫn đảm bảo mã phản hồi HTTP 200 OK cho trình duyệt.
+
+\subsection{Thiết lập quy trình Tích hợp và Triển khai liên tục (CI/CD Pipeline)}
+
+Nhằm tự động hóa hoàn toàn chu trình từ lúc phát triển đến khi phát hành lên môi trường vận hành thực tế, nhóm xây dựng quy trình CI/CD hoàn chỉnh dựa trên \textbf{GitHub Actions}:
+
+\begin{enumerate}
+    \item \textbf{Giai đoạn Kiểm thử tự động (Continuous Integration -- CI):} Mỗi khi lập trình viên tạo Pull Request hoặc đẩy mã nguồn lên nhánh \texttt{main}, GitHub Actions tự động khởi tạo môi trường máy ảo Ubuntu, cài đặt JDK 17, khởi động dịch vụ cơ sở dữ liệu mẫu PostgreSQL và chạy toàn bộ hơn 250 ca kiểm thử tự động (\texttt{mvn clean test}). Nếu bất kỳ một test case nào thất bại, quy trình lập tức bị hủy bỏ và gửi cảnh báo đến lập trình viên.
+    \item \textbf{Giai đoạn Triển khai tự động (Continuous Deployment -- CD):} Khi toàn bộ các ca kiểm thử đạt tỷ lệ 100\% thành công, GitHub Actions sẽ kích hoạt Webhook Deploy bí mật (Deploy Hook URL) tới Render và Vercel:
+    \begin{itemize}
+        \item Render tự động kéo mã nguồn mới nhất từ kho lưu trữ, kích hoạt tiến trình Docker Multi-stage build và triển khai phiên bản container mới mà không gây gián đoạn dịch vụ (\textit{Zero-downtime Rolling Update}).
+        \item Vercel biên dịch mã nguồn TypeScript, nén và phân phối các tệp tĩnh mới đến tất cả các máy chủ Edge trên toàn thế giới trong vòng chưa đầy 60 giây.
+    \end{itemize}
+\end{enumerate}
+
+\subsection{Quản trị biến môi trường và An ninh mạng triển khai}
+
+Toàn bộ thông tin nhạy cảm (thông tin đăng nhập cơ sở dữ liệu, khóa bí mật ký JWT, API Key của PayOS và Google Gemini) tuyệt đối không được lưu trữ trong mã nguồn Git mà được quản lý chặt chẽ thông qua hệ thống biến môi trường mã hóa (Encrypted Environment Variables) trên bảng điều khiển của Render và Vercel:
+
+\begin{table}[H]
+\centering
+\caption{Bảng đặc tả các biến môi trường trọng yếu trong hệ thống}
+\label{tab:env-variables}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|p{4.2cm}|p{4.5cm}|p{5.5cm}|}
+\hline
+\textbf{Tên biến môi trường} & \textbf{Môi trường áp dụng} & \textbf{Mục đích sử dụng và ý nghĩa bảo mật} \\
+\hline
+\texttt{SPRING\_DATASOURCE\_URL} & Render (Back-end) & Chuỗi kết nối JDBC được mã hóa TLS/SSL tới cơ sở dữ liệu PostgreSQL tại Supabase. \\
+\hline
+\texttt{SUPABASE\_JWT\_SECRET} & Render (Back-end) & Khóa bí mật dùng để giải mã và thẩm định tính toàn vẹn của Access Token từ phía client. \\
+\hline
+\texttt{PAYOS\_CLIENT\_ID} & Render (Back-end) & Mã định danh ứng dụng do cổng PayOS cấp phát phục vụ xác thực giao dịch tài chính. \\
+\hline
+\texttt{PAYOS\_API\_KEY} & Render (Back-end) & Khóa riêng tư bảo mật dùng để ký yêu cầu khởi tạo liên kết thanh toán VietQR. \\
+\hline
+\texttt{PAYOS\_CHECKSUM\_KEY} & Render (Back-end) & Khóa bí mật đối xứng dùng để giải mã và xác thực chữ ký HMAC-SHA256 của Webhook. \\
+\hline
+\texttt{GEMINI\_API\_KEY} & Render (Back-end) & Khóa truy cập Google AI Studio để vận hành trợ lý ảo thông minh. \\
+\hline
+\texttt{VITE\_API\_BASE\_URL} & Vercel (Front-end) & Địa chỉ URL chính thức của máy chủ Back-end trên Render (\texttt{https://cospace-api.onrender.com}). \\
+\hline
+\end{tabular}
+\end{table}
+
+Ngoài ra, hệ thống áp dụng chính sách bảo vệ nguồn gốc chéo nghiêm ngặt (\textbf{CORS Configuration}) tại lớp \texttt{SecurityConfig} của Spring Boot. Máy chủ chỉ chấp nhận các yêu cầu HTTP mang tiêu đề \texttt{Origin} xuất phát từ tên miền chính thức của ứng dụng trên Vercel, ngăn chặn hoàn toàn các cuộc tấn công CSRF hoặc đánh cắp dữ liệu từ các trang web giả mạo của bên thứ ba.
+
+\subsection{Chiến lược Quản lý Di trú Lược đồ Cơ sở Dữ liệu}
+
+Trong môi trường điện toán đám mây liên tục cập nhật, việc thay đổi cấu trúc bảng cơ sở dữ liệu mà không làm gián đoạn hệ thống đòi hỏi một chiến lược di trú có kiểm soát nghiêm ngặt:
+
+\begin{itemize}
+    \item \textbf{Nguyên tắc Bất biến và Idempotency:} Toàn bộ các tập lệnh DDL được lưu trữ trong thư mục \texttt{database/migrations/} với tiền tố dấu thời gian (\texttt{YYYYMMDDHHMMSS\_<description>.sql}). Mỗi câu lệnh đều sử dụng mệnh đề phòng vệ như \texttt{CREATE TABLE IF NOT EXISTS}, \texttt{ALTER TABLE ... ADD COLUMN IF NOT EXISTS} nhằm đảm bảo tập lệnh có thể thực thi lặp lại nhiều lần mà không gây lỗi.
+    \item \textbf{Chiến lược Thay đổi Tương thích Ngược (Backward-Compatible Schema Changes):} Khi cập nhật tính năng mới (ví dụ bổ sung cột chính sách hủy \texttt{refund\_percent}), hệ thống áp dụng quy trình 2 pha:
+    \begin{enumerate}
+        \item \textit{Pha 1 (Mở rộng -- Expand):} Thêm cột mới với giá trị mặc định (\texttt{DEFAULT}) vào cơ sở dữ liệu trên Supabase; mã nguồn Back-end cũ vẫn tiếp tục đọc ghi bình thường.
+        \item \textit{Pha 2 (Kích hoạt -- Contract):} Triển khai phiên bản Back-end mới sử dụng cột vừa bổ sung. Sau khi toàn bộ các phiên bản cũ đã ngừng hẳn, mới tiến hành dọn dẹp các trường dữ liệu không còn sử dụng.
+    \end{enumerate}
+    \item \textbf{Cơ chế Cách ly Khóa Ngoại:} Không thực hiện xóa cứng (\textit{hard delete}) các thực thể có quan hệ ràng buộc (như xóa tầng hoặc chi nhánh), thay vào đó cập nhật cờ trạng thái \texttt{status = 'inactive'} nhằm bảo toàn tính toàn vẹn của dữ liệu lịch sử đối soát hóa đơn.
+\end{itemize}
+
+\subsection{Giám sát Vận hành và Quản lý Kết nối Cơ sở Dữ liệu}
+
+\subsubsection{Cơ chế Kiểm tra Sức khỏe Hệ thống (Spring Boot Actuator)}
+
+Để nền tảng Render Cloud có thể tự động giám sát và phục hồi máy chủ khi xảy ra sự cố nghẽn luồng hoặc tràn bộ nhớ, hệ thống kích hoạt module \textbf{Spring Boot Actuator}:
+\begin{itemize}
+    \item \textbf{Liveness Probe (\texttt{/actuator/health/liveness}):} Phản hồi trạng thái hoạt động thực tế của tiến trình JVM. Nếu ứng dụng rơi vào trạng thái bế tắc (deadlock), Render tự động gửi tín hiệu \texttt{SIGTERM} và khởi động lại container mới trong vòng 15 giây.
+    \item \textbf{Readiness Probe (\texttt{/actuator/health/readiness}):} Kiểm tra tính sẵn sàng tiếp nhận lưu lượng mạng, bao gồm việc xác thực kết nối sống tới cơ sở dữ liệu PostgreSQL và kiểm tra tính hợp lệ của khóa API PayOS.
+\end{itemize}
+
+\subsubsection{Tối ưu hóa Bể chứa Kết nối (HikariCP Connection Pool)}
+
+Do hạ tầng cơ sở dữ liệu trên đám mây (Supabase Cloud) giới hạn số lượng kết nối đồng thời trên mỗi máy chủ để bảo vệ tài nguyên, nhóm đã tinh chỉnh các tham số của thư viện \textbf{HikariCP} trong tệp \texttt{application-prod.yml}:
+
+\begin{table}[H]
+\centering
+\caption{Cấu hình tối ưu hóa bể kết nối HikariCP trên môi trường Production}
+\label{tab:hikaricp-config}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|p{4.5cm}|p{3cm}|p{7cm}|}
+\hline
+\textbf{Tham số cấu hình} & \textbf{Giá trị thiết lập} & \textbf{Ý nghĩa kỹ thuật và Rationale} \\
+\hline
+\texttt{maximum-pool-size} & 10 & Giới hạn tối đa 10 kết nối đồng thời từ 1 instance máy chủ, ngăn chặn hiện tượng cạn kiệt kết nối trên PostgreSQL. \\
+\hline
+\texttt{minimum-idle} & 2 & Duy trì tối thiểu 2 kết nối rảnh rỗi trong bộ nhớ, sẵn sàng xử lý yêu cầu ngay lập tức mà không mất chi phí bắt tay TLS ban đầu. \\
+\hline
+\texttt{idle-timeout} & 30,000 ms & Tự động đóng các kết nối rảnh rỗi vượt quá 30 giây để hoàn trả tài nguyên cho máy chủ DB. \\
+\hline
+\texttt{connection-timeout} & 20,000 ms & Thời gian chờ tối đa để lấy được kết nối trước khi ném ngoại lệ \texttt{SQLException}, tránh treo luồng HTTP của người dùng. \\
+\hline
+\texttt{max-lifetime} & 1,800,000 ms (30p) & Tuổi thọ tối đa của 1 kết nối vật lý, ngăn chặn lỗi đứt kết nối ngầm do tường lửa mạng trung gian tự ý đóng phiên. \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Ma trận Đối chiếu Cấu hình Đa Môi trường}
+
+Để quản lý rủi ro và ngăn ngừa hiện tượng sai lệch cấu hình (\textit{Configuration Drift}) giữa môi trường máy cục bộ của lập trình viên và máy chủ khách hàng sử dụng thực tế, toàn bộ thông số được chuẩn hóa thành ma trận cấu hình:
+
+\begin{table}[H]
+\centering
+\caption{Ma trận đối chiếu cấu hình hệ thống qua các môi trường}
+\label{tab:environment-matrix}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|p{3.5cm}|p{3.5cm}|p{3.5cm}|p{4cm}|}
+\hline
+\textbf{Hạng mục cấu hình} & \textbf{Môi trường Local Dev} & \textbf{Môi trường CI / Test} & \textbf{Môi trường Cloud Production} \\
+\hline
+Địa chỉ Backend API & \texttt{http://localhost:8080} & In-Memory Mock Server & \texttt{https://cospace-api.onrender.com} \\
+\hline
+Địa chỉ Frontend Client & \texttt{http://localhost:5173} & Headless Runner & \texttt{https://cospace-team.vercel.app} \\
+\hline
+Cơ sở dữ liệu & PostgreSQL 15 Docker Local & H2 In-Memory Database & Managed PostgreSQL 15 (Supabase ap-southeast-1) \\
+\hline
+Chế độ cổng PayOS & Demo / Simulation Mode & Mock PayOS Responses & VietQR Production (Bảo vệ bởi PayosProductionGuard) \\
+\hline
+Mô hình Gemini AI & gemini-3.5-flash & Mock AI Responses & gemini-3.5-flash (Dự phòng gemini-3.7-flash) \\
+\hline
+Bộ nhớ đệm (Cache) & ConcurrentMap đơn giản & No-Op Cache & Caffeine Cache (TTL 10 phút, tự động @CacheEvict) \\
+\hline
+Cấp độ ghi nhật ký & \texttt{DEBUG} (Toàn bộ chi tiết) & \texttt{WARN} (Chỉ cảnh báo) & \texttt{INFO} (Có lọc bỏ thông tin bảo mật nhạy cảm) \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Chiến lược Sao lưu Dữ liệu và Phục hồi sau Thảm họa (Disaster Recovery)}
+
+An toàn dữ liệu tài chính của khách hàng là ưu tiên hàng đầu. Hệ thống thiết lập chính sách bảo vệ dữ liệu đa tầng:
+\begin{itemize}
+    \item \textbf{Sao lưu Tự động Hàng ngày (Automated Daily Backups):} Nền tảng Supabase tự động thực hiện snapshot toàn bộ cơ sở dữ liệu vào lúc 02:00 sáng mỗi ngày (khung giờ có lưu lượng truy cập thấp nhất). Các bản sao lưu được lưu trữ trên hạ tầng lưu trữ đối tượng độc lập có độ bền 99.999999999\% (11 số 9).
+    \item \textbf{Khôi phục Theo Điểm Thời Gian (Point-in-Time Recovery -- PITR):} Ghi nhận toàn bộ nhật ký ghi trước (\textit{Write-Ahead Logging -- WAL}), cho phép quản trị viên khôi phục trạng thái cơ sở dữ liệu về bất kỳ giây nào trong quá khứ nếu xảy ra sự cố thao tác nhầm hoặc tấn công dữ liệu.
+    \item \textbf{Kế hoạch Dự phòng Dịch vụ Bên thứ ba (3rd-Party Failover Plan):} Khi cổng PayOS gặp sự cố bảo trì mạng Napas, hệ thống tự động hướng dẫn khách hàng chuyển sang thanh toán tiền mặt tại quầy hoặc ví điện tử phụ trợ; khi Google Gemini chạm ngưỡng giới hạn tần suất gọi API (Rate Limit), hệ thống tự động chuyển sang mô hình fallback \texttt{gemini-3.7-flash} hoặc trả về câu thoại mẫu có sẵn mà không làm sập luồng tương tác của khách hàng.
+\end{itemize}

@@ -1,0 +1,22 @@
+sequenceDiagram
+  autonumber
+  participant S1 as BookingExpiryScheduler
+  participant EX as BookingExpiryService
+  participant DB as PostgreSQL
+  participant BA as BookingAddonService
+  Note over S1,DB: Mỗi đơn được xử lý trong một giao dịch riêng
+  loop Mỗi 30 giây
+    S1->>DB: findAllByStatusAndPaymentDeadlineAtBefore(PENDING_PAYMENT, now)
+    loop Mỗi đơn quá hạn (lỗi ở một đơn không chặn các đơn còn lại)
+      S1->>EX: expire(bookingId, now)
+      EX->>DB: findByIdWithLock(booking)
+      alt Vẫn PENDING_PAYMENT và đã quá hạn
+        EX->>DB: BookingStateMachine chuyển sang EXPIRED
+        EX->>BA: voidUnpaid(booking)
+        EX->>DB: payment INITIATED hoặc PENDING chuyển sang EXPIRED
+        EX-->>S1: true
+      else Đã được webhook xác nhận hoặc đã bị hủy trước đó
+        EX-->>S1: false, giữ nguyên trạng thái
+      end
+    end
+  end

@@ -1,0 +1,40 @@
+sequenceDiagram
+  autonumber
+  participant EX as PayOS
+  participant PY as PayosService
+  participant PS as PaymentService
+  participant DB as PostgreSQL
+  participant RS as RefundService
+  participant BA as BookingAddonService
+  EX->>PS: POST /api/payments/payos/webhook (data, signature)
+  Note over PS,DB: Toàn bộ xử lý nằm trong một giao dịch Transactional
+  PS->>PY: verifyWebhookSignature(data, signature)
+  opt Chữ ký không hợp lệ
+    PS-->>EX: Từ chối yêu cầu (IllegalArgumentException)
+  end
+  PS->>DB: findByOrderId('PAYOS-' + orderCode)
+  opt Không thuộc đơn nào của hệ thống
+    PS-->>EX: Ghi log và bỏ qua, PayOS yêu cầu phản hồi 2xx
+  end
+  opt payment đã ở trạng thái PAID
+    PS-->>EX: Bỏ qua, không xử lý lặp (chống webhook gọi lại)
+  end
+  alt code là 00 (thanh toán thành công)
+    PS->>DB: payment.status = PAID, paidAt, gatewayTransactionId
+    PS->>DB: confirmBooking: findByIdWithLock(booking)
+    Note over PS,DB: SELECT FOR UPDATE tuần tự hóa với tác vụ hết hạn và hủy đơn
+    alt Đơn đang PENDING_PAYMENT
+      PS->>DB: BookingStateMachine chuyển sang CONFIRMED
+      PS->>BA: markPreordersPaid(bookingId, paymentId)
+    else Đơn đã EXPIRED hoặc CANCELLED (thanh toán về muộn)
+      PS->>RS: requestRefund(booking, paymentId, amount, LATE_PAYMENT)
+      RS->>DB: INSERT refund (pending), gửi thông báo cho khách
+    else Đơn đã có payment PAID khác (trả trùng)
+      PS->>RS: requestRefund(booking, paymentId, amount, DUPLICATE_PAYMENT)
+      RS->>DB: INSERT refund (pending), gửi thông báo cho khách
+    end
+  else Mã lỗi khác
+    PS->>DB: payment.status = FAILED
+  end
+  PS->>DB: save(payment)
+  PS-->>EX: 200 OK (code 00, desc success)

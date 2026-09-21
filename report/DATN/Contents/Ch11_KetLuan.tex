@@ -1,0 +1,194 @@
+\chapter{Kết luận và hướng phát triển}
+\label{ch:ketluan}
+
+\ghichu{Chương kết luận trả lời ba câu hỏi cốt lõi: đề tài đã giải quyết được những gì so với mục tiêu đề ra ở Chương \ref{ch:gioithieu}, còn những hạn chế kỹ thuật nào cần khắc phục, và định hướng phát triển tiếp theo của hệ thống. Toàn bộ các kết luận được đối chiếu trực tiếp với các số liệu và bằng chứng thực nghiệm đã phân tích ở các chương trước.}
+
+\section{Kết quả đạt được}
+\label{sec:kl_ketqua}
+
+Sau quá trình nghiên cứu lý thuyết, khảo sát các giải pháp hiện hành, thiết kế kiến trúc và hiện thực hệ thống, đề tài đã xây dựng thành công nền tảng phần mềm quản lý văn phòng chia sẻ đa chi nhánh \textbf{CoSpace}. Hệ thống hoàn thiện bao gồm máy chủ ứng dụng viết bằng Java trên nền tảng Spring Boot 3, giao diện người dùng tương tác phong phú viết bằng React/TypeScript, và hệ quản trị cơ sở dữ liệu quan hệ PostgreSQL lưu trữ tập trung trên hạ tầng Supabase Cloud. Hệ thống phục vụ trọn vẹn bốn nhóm tác nhân người dùng với các phạm vi quyền hạn và nghiệp vụ riêng biệt, đồng thời đã được phát hành và vận hành thử nghiệm trên môi trường đám mây thực tế tại các nền tảng Vercel, Render và Supabase.
+
+Bảng \ref{tab:kl_solieu} tổng hợp các số liệu kỹ thuật then chốt của sản phẩm phần mềm CoSpace, được đo đạc và thống kê trực tiếp từ kho mã nguồn của dự án tính đến thời điểm ngày 21/09/2026.
+
+\begin{table}[H]
+\centering
+\caption{Số liệu tổng hợp về quy mô và các thành phần kỹ thuật của hệ thống CoSpace}
+\label{tab:kl_solieu}
+\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{|p{7.4cm}|p{6.2cm}|}
+\hline
+\textbf{Hạng mục đo đạc / Thành phần kỹ thuật} & \textbf{Kết quả thực tế trong kho mã nguồn} \\
+\hline
+Vai trò người dùng và số trang giao diện Web & 4 vai trò (Customer, Staff, Branch Admin, Super Admin); 33 trang giao diện có đường dẫn định tuyến \\
+\hline
+Lớp điều khiển Back-end và điểm cuối API RESTful & 26 lớp Controller; 133 điểm cuối API (124 nhận diện tự động, 9 điểm cuối bổ sung) \\
+\hline
+Bảng dữ liệu trong cơ sở dữ liệu quan hệ & 30 bảng dữ liệu, quản lý phiên bản di trú tự động bằng Flyway (\texttt{V1} và \texttt{V2}) \\
+\hline
+Cơ chế bảo vệ chống xung đột đặt trùng lịch & 2 lớp độc lập (Khóa tư vấn \texttt{pg\_advisory\_xact\_lock} và ràng buộc loại trừ \texttt{EXCLUDE USING gist}) \\
+\hline
+Phương thức thanh toán được hỗ trợ & 3 phương thức (Cổng PayOS VietQR Napas 24/7, Ví điện tử MoMo Sandbox, Tiền mặt tại quầy) \\
+\hline
+Công cụ tích hợp của Trợ lý ảo AI (Gemini) & 9 công cụ gọi hàm (6 công cụ chỉ đọc thực thi trực tiếp, 3 công cụ thay đổi dữ liệu cần khách xác nhận) \\
+\hline
+Kiểm thử tự động phía máy chủ Back-end & 273 ca kiểm thử trong 20 lớp, 0 ca thất bại, 1 ca tắt có chủ đích do môi trường thử nghiệm \\
+\hline
+Kết quả rà soát chất lượng logic (Logic Audit) & 55 phát hiện được phân loại, trong đó 17 mã khiếm khuyết trọng yếu đã được khắc phục triệt để \\
+\hline
+Kích thước gói phân phối giao diện (Front-end Bundle) & 199{,}75 kB (sau khi nén gzip), mã nguồn được tách 3 gói độc lập (\texttt{vendor}, \texttt{lucide}, \texttt{index}) \\
+\hline
+\end{tabular}
+\end{table}
+
+Để đánh giá mức độ hoàn thành nhiệm vụ nghiên cứu và phát triển một cách khách quan, Bảng \ref{tab:kl_muctieu} trình bày kết quả đối chiếu chi tiết giữa các mục tiêu đề ra ban đầu tại Mục \ref{sec:muctieu} (Chương \ref{ch:gioithieu}) với thành phẩm thực tế đạt được của hệ thống CoSpace, phân loại theo ba mức độ: \textit{Đạt}, \textit{Một phần}, và \textit{Chưa đạt}.
+
+\begin{table}[H]
+\centering
+\caption{Đối chiếu mục tiêu đề tài (Mục \ref{sec:muctieu}) với kết quả thực tế đạt được}
+\label{tab:kl_muctieu}
+\small
+\renewcommand{\arraystretch}{1.22}
+\begin{tabular}{|p{1.4cm}|p{4.2cm}|p{6.4cm}|c|}
+\hline
+\textbf{Nhóm} & \textbf{Mục tiêu đề ra} & \textbf{Kết quả thực tế đạt được} & \textbf{Đánh giá} \\
+\hline
+Nghiệp vụ & 1. Số hóa toàn diện vòng đời đặt chỗ & Xây dựng trọn vẹn quy trình 5 bước: tra cứu mặt bằng SVG động, giữ chỗ tạm thời 15 phút, thanh toán VietQR/MoMo, xác nhận đơn qua vé điện tử chứa mã QR động. & Đạt \\
+\cline{2-4}
+ & 2. Quản lý tập trung chuỗi đa chi nhánh & Phân cấp mô hình dữ liệu Tòa nhà -- Tầng -- Không gian; phân quyền 4 vai trò người dùng; hỗ trợ cấu hình bảng giá và danh mục dịch vụ gia tăng riêng cho từng cơ sở. & Đạt \\
+\cline{2-4}
+ & 3. Tự động hóa chính sách hủy và minh bạch hoàn tiền & Thuật toán tự động tính phí phạt và tiền hoàn theo bậc thời gian $[min, max)$; ghi nhận tự động vào bảng \texttt{refund\_requests}. Khâu giải ngân tiền hoàn thực tế được chuyển vào hàng chờ thủ công. & Một phần \\
+\cline{2-4}
+ & 4. Tối ưu hóa quy trình vận hành quầy & Giao diện Check-in quét mã QR một chạm qua camera trình duyệt trong cửa sổ hợp lệ 30 phút; tạo đơn tại quầy cho khách vãng lai thu tiền mặt; ghi nhận dịch vụ phát sinh. & Đạt \\
+\cline{2-4}
+ & 5. Thúc đẩy gắn kết cộng đồng thành viên & Quản lý hồ sơ năng lực cá nhân; thuật toán gợi ý đối tác Jaccard kết hợp trọng số (Kỹ năng, Lĩnh vực, Mối quan tâm, Chi nhánh); diễn đàn chia sẻ bài viết nội bộ. & Đạt \\
+\cline{2-4}
+ & 6. Cung cấp hệ thống báo cáo quản trị trực quan & Trang Dashboard hiển thị biểu đồ doanh thu theo thời gian, so sánh giữa các cơ sở, xuất dữ liệu ra CSV. (Chỉ số tỷ lệ lấp đầy tính dựa trên số giờ đặt, chưa có cảm biến IoT). & Đạt \\
+\hline
+Kỹ thuật & 7. Kiến trúc phân tầng và dễ bảo trì & Hiện thực kiến trúc 3 tầng chuẩn mực (React Front-end, Spring Boot Back-end, PostgreSQL Database); tách biệt DTO rõ ràng, không sử dụng quan hệ lười biếng Hibernate. & Đạt \\
+\cline{2-4}
+ & 8. Bảo đảm tính đúng đắn khi tương tranh cao & Thiết kế cơ chế phòng vệ 2 lớp: khóa tư vấn \texttt{pg\_advisory\_xact\_lock} ở tầng ứng dụng và ràng buộc \texttt{EXCLUDE USING gist} ở tầng CSDL. (Chưa kiểm thử tải với CSDL thật). & Một phần \\
+\cline{2-4}
+ & 9. Xử lý Webhook thanh toán an toàn và bất biến & Xác thực chữ ký HMAC-SHA256; kiểm tra tính bất biến với khóa dòng bi quan \texttt{SELECT FOR UPDATE}; tự động kích hoạt yêu cầu hoàn tiền khi nhận thanh toán muộn hoặc trả thừa. & Đạt \\
+\cline{2-4}
+ & 10. Bảo mật phân quyền chặt chẽ và cô lập dữ liệu & Mô hình xác thực kép (Supabase JWT cho OAuth2 và JWT nội bộ ký HS384); RBAC đa tầng; \texttt{BranchAccessGuard} ngăn chặn triệt để tấn công IDOR và rò rỉ dữ liệu chéo. & Đạt \\
+\cline{2-4}
+ & 11. Tích hợp Trí tuệ nhân tạo có kiểm soát an toàn & Tích hợp Google Gemini 1.5 Flash hỗ trợ 9 công cụ gọi hàm; áp dụng cơ chế thẻ đề xuất hành động (Proposal Card) buộc khách bấm nút xác nhận trước khi gọi dịch vụ ghi dữ liệu thật. & Đạt \\
+\cline{2-4}
+ & 12. Khả năng triển khai và vận hành đám mây & Đóng gói Docker Multi-stage tối ưu dung lượng; triển khai tự động lên Vercel Edge, Render và Supabase; tích hợp kịch bản kiểm tra sức khỏe tự động qua GitHub Actions. & Đạt \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Đóng góp chính của đề tài}
+\label{sec:kl_donggop}
+
+Từ những kết quả thu được trong suốt quá trình thực hiện, đề tài đã đóng góp những giá trị kỹ thuật và phương pháp luận cụ thể sau đây cho lĩnh vực phát triển phần mềm ứng dụng:
+
+\begin{enumerate}
+    \item \textbf{Mô hình phòng vệ tương tranh hai lớp và Máy trạng thái đơn đặt chỗ:} Đề tài đã đề xuất và chứng minh tính hiệu quả của mô hình kiểm soát tương tranh kết hợp: sử dụng khóa tư vấn mức giao dịch của PostgreSQL (\texttt{pg\_advisory\_xact\_lock}) ở tầng dịch vụ ứng dụng để tuần tự hóa các thao tác tranh chấp cùng tài nguyên, phối hợp với ràng buộc loại trừ chỉ mục GiST (\texttt{EXCLUDE USING gist}) ở tầng cơ sở dữ liệu làm chốt chặn cuối cùng. Đồng thời, việc thiết kế \texttt{BookingStateMachine} làm "cổng duy nhất" kiểm soát mọi chuyển đổi trạng thái đã loại bỏ hoàn toàn các trạng thái bất hợp lệ trong vòng đời đặt chỗ (Mục \ref{ssec:ht_be_datcho}).
+    
+    \item \textbf{Kiến trúc xử lý thanh toán Webhook an toàn lỗi (Fail-safe) và bất biến (Idempotent):} Hệ thống đã hiện thực quy trình tiếp nhận Webhook thanh toán chuẩn hóa: xác thực chữ ký mật mã, sử dụng khóa dòng dữ liệu bi quan (\texttt{SELECT FOR UPDATE}) để ngăn chặn hiện tượng xử lý trùng lặp giao dịch (Idempotency), và đặc biệt là cơ chế tự động chuyển hướng các giao dịch thanh toán về muộn (khi đơn đã hết hạn giữ chỗ) hoặc thanh toán thừa tiền vào hàng chờ hoàn tiền thay vì nuốt lỗi hay làm thất thoát tài chính của khách hàng (Mục \ref{ssec:ht_be_thanhtoan}).
+    
+    \item \textbf{Mô hình tích hợp Trợ lý ảo AI có kiểm soát an toàn (Proposal-Confirmation):} Khắc phục triệt để rủi ro mô hình ngôn ngữ lớn (LLM) tự ý thực thi các giao dịch ngoài tầm kiểm soát hoặc sinh ảo giác, đề tài đã thiết kế cơ chế rào chắn an toàn: phân tách rạch ròi giữa các công cụ chỉ đọc (thực thi tự động) và các công cụ ghi dữ liệu (chỉ sinh thẻ đề xuất hành động trên giao diện để người dùng bấm nút xác nhận tường minh). Mọi thao tác sau khi xác nhận đều được định tuyến qua đúng các tầng dịch vụ nghiệp vụ thông thường (Mục \ref{sssec:ht_chatbot}).
+    
+    \item \textbf{Phương pháp luận rà soát logic nghiêm ngặt (Logic Audit Methodology):} Quá trình thực hiện đề tài đã áp dụng quy trình rà soát logic chuyên sâu trên toàn bộ mã nguồn và cơ sở dữ liệu, phân loại và lập hồ sơ 55 phát hiện kỹ thuật, giải quyết 16 quyết định nghiệp vụ cốt lõi (từ Q1 đến Q16), chuẩn hóa các tình huống biên (Edge Cases) về hủy đơn và thanh toán, và bổ sung các ca kiểm thử hồi quy tương ứng (Mục \ref{sec:kt_audit}).
+    
+    \item \textbf{Bộ công cụ tự động hóa sinh tài liệu từ mã nguồn (Source-to-Doc Automation):} Nhóm tác giả đã phát triển các tập lệnh phân tích mã nguồn (AST Parsing) để tự động sinh các sơ đồ kiến trúc (sơ đồ lớp PlantUML, sơ đồ tuần tự, sơ đồ thực thể liên kết ERD) và bảng đặc tả 133 điểm cuối API trực tiếp từ mã nguồn Java và TypeScript thực tế, bảo đảm tính nhất quán tuyệt đối giữa tài liệu học thuật và hệ thống vận hành.
+\end{enumerate}
+
+\section{Hạn chế của hệ thống}
+\label{sec:kl_hanche}
+
+Bên cạnh những kết quả đạt được, nhóm tác giả thẳng thắn nhìn nhận hệ thống CoSpace vẫn còn tồn tại các hạn chế kỹ thuật và phạm vi cần tiếp tục hoàn thiện, cụ thể như sau:
+
+\begin{enumerate}
+    \item \textbf{Phạm vi kiểm thử tự động chưa bao phủ toàn diện:} Toàn bộ 273 ca kiểm thử tự động phía Back-end hiện tại đang sử dụng Mockito và cơ sở dữ liệu giả lập H2 trong bộ nhớ, chưa triển khai kiểm thử tích hợp (Integration Test) với phiên bản PostgreSQL thật có kích hoạt tiện ích mở rộng \texttt{btree\_gist}. Do đó, các cơ chế khóa tư vấn \texttt{pg\_advisory\_xact\_lock}, ràng buộc loại trừ \texttt{EXCLUDE} và các xung đột tiềm ẩn giữa tác vụ nền với Webhook thanh toán chưa được kiểm chứng tự động bằng máy (Mục \ref{sec:kt_hanche}). Ngoài ra, phía Front-end hoàn toàn thiếu vắng các bài kiểm thử tự động (Unit Test với Vitest hay E2E Test với Playwright).
+    
+    \item \textbf{Chưa tiến hành kiểm thử tải và đánh giá hiệu năng sâu:} Hệ thống mới chỉ dừng lại ở việc đo đạc kích thước gói phân phối Front-end, chưa tiến hành đo lường thời gian phản hồi API (Latency p95, p99) và kiểm thử khả năng chịu tải (Stress/Load Testing bằng k6 hoặc JMeter). Bên cạnh đó, do ứng dụng Back-end đang được triển khai trên gói miễn phí (Free Tier) của Render, hiện tượng "khởi động lạnh" (Cold Start) vẫn xảy ra khi máy chủ chuyển sang trạng thái ngủ đông sau 15 phút không có yêu cầu, dẫn đến độ trễ yêu cầu đầu tiên có thể lên tới 30--50 giây.
+    
+    \item \textbf{Quy trình giải ngân hoàn tiền còn phụ thuộc vào con người:} Mặc dù hệ thống đã tự động hóa việc tính toán biểu phí phạt và ghi nhận số tiền hoàn vào bảng \texttt{refund\_requests}, việc chuyển tiền thực tế về tài khoản ngân hàng hoặc ví điện tử của khách hàng chưa được tích hợp với API chi hộ (Disbursement API) của các cổng thanh toán. Quản lý chi nhánh vẫn phải thực hiện chuyển khoản thủ công bên ngoài rồi đánh dấu trạng thái \texttt{PROCESSED} trên hệ thống.
+    
+    \item \textbf{Một số tồn dư kỹ thuật và nguy cơ bảo mật cần khắc phục:}
+    \begin{itemize}
+        \item Khóa định danh của cổng MoMo Sandbox hiện vẫn đang được lưu ở dạng văn bản thô trong tệp cấu hình \texttt{application.yml} (mã phát hiện \texttt{PAY-01}).
+        \item Quản lý chi nhánh hiện tại có toàn quyền tạo mới và ghi đè chính sách hủy đơn toàn cục mà không chịu sự phê duyệt của Quản trị viên hệ thống (mã \texttt{CAN-03}).
+        \item Điểm cuối \texttt{/h2-console/**} vẫn tồn tại trong danh sách cho phép công khai tại lớp cấu hình an ninh \texttt{SecurityConfig.java}.
+        \item Lịch sử commit Git trước đây từng chứa mật khẩu kết nối cơ sở dữ liệu cũ, đòi hỏi phải tiến hành thu hồi và đổi khóa triệt để trên dịch vụ Supabase (mã \texttt{X-03}).
+        \item Điểm kiểm tra sức khỏe công khai \texttt{/api/health} khi gặp sự cố mất kết nối cơ sở dữ liệu sẽ trả về trực tiếp thông điệp lỗi nội bộ (\texttt{e.getMessage()}), tiềm ẩn nguy cơ lộ thông tin hạ tầng hệ thống.
+        \item Mã xác thực phiên làm việc (Access Token) phía máy khách hiện đang được lưu trữ tại \texttt{localStorage} của trình duyệt, tiềm ẩn nguy cơ bị đánh cắp nếu xảy ra tấn công Cross-Site Scripting (XSS).
+    \end{itemize}
+    
+    \item \textbf{Độ chi tiết của chính sách hủy chưa tối ưu:} Biểu phí hủy đơn hiện tại chỉ được cấu hình theo chi nhánh và bậc thời gian, chưa hỗ trợ phân loại chi tiết theo từng loại không gian cụ thể (ví dụ: chỗ ngồi làm việc linh hoạt có chính sách hủy khác phòng họp hoặc hội trường sự kiện) và chưa có trường thời hạn hiệu lực của chính sách (mã \texttt{CAN-02}).
+    
+    \item \textbf{Ràng buộc kiến trúc đơn phiên bản (Single-Instance):} Các tác vụ định kỳ (\texttt{@Scheduled}) của \texttt{BookingExpiryScheduler} và \texttt{BookingLifecycleScheduler} cùng bộ nhớ đệm ứng dụng (\texttt{ConcurrentHashMap}) hiện đang hoạt động trực tiếp trong tiến trình bộ nhớ của máy chủ Spring Boot. Thiết kế này chỉ hoạt động chính xác khi triển khai một phiên bản máy chủ duy nhất; nếu nhân rộng theo chiều ngang (Scale-out) thành nhiều máy chủ sẽ xảy ra xung đột thực thi tác vụ nền và phân mảnh bộ nhớ đệm.
+    
+    \item \textbf{Tồn dư trong cấu trúc dữ liệu và tệp di trú Flyway:} Bảng \texttt{payment\_events} và \texttt{auth\_accounts} đã được tạo trong lược đồ nhưng mã nguồn nghiệp vụ chưa sử dụng đến; cột \texttt{users.password\_hash} không dùng do cơ chế xác thực riêng biệt; cột \texttt{users.branch\_id} thiếu ràng buộc khóa ngoại tới bảng \texttt{branches}. Đặc biệt, tệp di trú nền tảng \texttt{V1\_\_baseline.sql} của Flyway bị khuyết hai cột mà thực thể \texttt{Floor} đang ánh xạ (\texttt{svg\_content} và \texttt{layout\_json}), khiến việc khởi tạo cơ sở dữ liệu trống hoàn toàn từ đầu gặp lỗi nếu không can thiệp thủ công.
+    
+    \item \textbf{Lạc hậu phiên bản khung ứng dụng nền tảng:} Phiên bản Spring Boot 3.1.12 hiện tại đã chính thức hết hạn hỗ trợ bảo mật mã nguồn mở (End of Open-Source Support vào tháng 05/2024), đòi hỏi dự án phải nâng cấp lên phiên bản Spring Boot 3.2 hoặc 3.3 để tiếp tục nhận các bản vá an ninh định kỳ.
+    
+    \item \textbf{Giới hạn về nền tảng người dùng và thiết bị ngoại vi:} Hệ thống hiện mới chỉ phát triển trên nền tảng Web tương thích màn hình di động (Responsive Web), chưa phát triển ứng dụng di động chuyên biệt (Mobile App) để khai thác tính năng thông báo đẩy (Push Notification) và quét thẻ thông minh; đồng thời chưa có sự tích hợp vật lý với hệ thống khóa cửa thông minh (Smart Door Locks) tại các cơ sở.
+\end{enumerate}
+
+\section{Bài học kinh nghiệm}
+\label{sec:kl_baihoc}
+
+Quá trình nghiên cứu, xây dựng và hoàn thiện đề tài đã mang lại cho nhóm nghiên cứu nhiều bài học kỹ thuật và thực tiễn sâu sắc:
+
+\begin{enumerate}
+    \item \textbf{Giới hạn của kiểm thử đơn vị độc lập và giá trị của kiểm thử tích hợp giao dịch:} Đợt rà soát logic chuyên sâu đã chỉ ra rằng mặc dù bộ kiểm thử tự động đã đạt tới hàng trăm ca kiểm thử với tỷ lệ vượt qua 100\%, hệ thống vẫn tiềm ẩn các khiếm khuyết nghiêm trọng về quản lý giao dịch và tương tranh. Việc kiểm thử bằng các đối tượng giả lập (Mocking) chỉ chứng minh được tính đúng đắn về mặt logic nội bộ của từng hàm, nhưng hoàn toàn bất lực trong việc phát hiện các xung đột khóa và hành vi của Spring AOP proxy (điển hình như lỗi gọi phương thức gắn nhãn \texttt{@Transactional} từ nội bộ cùng một lớp dịch vụ khiến giao dịch bị bỏ qua hoàn toàn).
+    
+    \item \textbf{Nguyên tắc ``Một nguồn sự thật duy nhất'' (Single Source of Truth) giữa tài liệu và mã nguồn:} Thực tế cho thấy tài liệu thiết kế ban đầu và mã nguồn hiện thực đã phát sinh sự lệch pha ở 19 điểm mấu chốt (như quy ước trả tiền mặt, thời điểm hết hạn giữ chỗ hay chính sách hoàn tiền khi đơn bắt đầu). Bài học rút ra là mọi quy tắc nghiệp vụ phải được quy định tập trung tại một nguồn sự thật duy nhất, các quyết định điều chỉnh của ban quản lý phải được văn bản hóa chính thức trước khi sửa mã, và cần định kỳ áp dụng các công cụ tự động đối chiếu giữa tài liệu và mã nguồn.
+    
+    \item \textbf{Kỷ luật quản lý bí mật an ninh ngay từ giai đoạn khởi đầu dự án:} Việc vô tình đưa các chuỗi kết nối cơ sở dữ liệu nhạy cảm hoặc khóa bí mật vào lịch sử phiên bản của hệ thống quản lý mã nguồn (Git) đã để lại bài học đắt giá rằng: việc xóa bỏ thông tin nhạy cảm trong các commit tiếp theo hoàn toàn không có tác dụng bảo vệ an ninh. Toàn bộ các thông tin xác thực bắt buộc phải được quản lý bằng biến môi trường (Environment Variables), áp dụng công cụ quét bí mật tự động (Secret Scanner) tại pre-commit hook, và bắt buộc phải thu hồi và cấp phát lại khóa (Key Rotation) ngay khi phát hiện rò rỉ.
+    
+    \item \textbf{Tầm quan trọng của công cụ di trú cơ sở dữ liệu tự động:} Việc duy trì đồng thời hai chuỗi tệp SQL thủ công và tệp di trú Flyway không đồng bộ trong giai đoạn đầu phát triển đã gây ra nhiều khó khăn khi dựng lại môi trường kiểm thử. Bài học thực tiễn là phải đưa lược đồ cơ sở dữ liệu vào một công cụ di trú phiên bản duy nhất (Flyway hoặc Liquibase) ngay từ những ngày đầu triển khai dự án, và mọi thay đổi về cấu trúc bảng bắt buộc phải được kiểm thử tự động trên cơ sở dữ liệu trống trong quy trình CI/CD.
+\end{enumerate}
+
+\section{Hướng phát triển tiếp theo}
+\label{sec:kl_huongphattrien}
+
+Dựa trên các kết quả đã đạt được cùng những hạn chế đã thẳng thắn nhận diện, nhóm tác giả đề xuất lộ trình phát triển hệ thống CoSpace theo hai nhóm nhiệm vụ ưu tiên:
+
+\subsection{Nhóm hoàn thiện kỹ thuật ngắn hạn (Short-term Horizon)}
+\begin{enumerate}
+    \item \textbf{Xây dựng bộ kiểm thử tích hợp và kiểm thử đầu-cuối (E2E):} Ứng dụng công nghệ Testcontainers để khởi tạo các vùng chứa Docker chạy PostgreSQL thật có kích hoạt tiện ích \texttt{btree\_gist} trong quá trình kiểm thử, phục vụ việc kiểm chứng tự động cơ chế khóa tư vấn \texttt{pg\_advisory\_xact\_lock} và ràng buộc \texttt{EXCLUDE}. Đồng thời, xây dựng bộ kiểm thử giao diện tự động bằng Playwright để kiểm thử toàn diện quy trình đặt chỗ và thanh toán trên môi trường trình duyệt thật.
+    
+    \item \textbf{Đóng các lỗ hổng bảo mật và hoàn thiện các mục mở của đợt rà soát:} 
+    \begin{itemize}
+        \item Chuyển toàn bộ thông tin khóa MoMo sang biến môi trường bí mật trên Render (\texttt{PAY-01}).
+        \item Bổ sung trường loại không gian và thời hạn hiệu lực cho chính sách hủy đơn (\texttt{CAN-02}).
+        \item Siết chặt quyền hạn cấu hình chính sách hủy, chỉ cho phép Quản lý chi nhánh cấu hình trong biên độ trần được Quản trị viên hệ thống phê duyệt (\texttt{CAN-03}).
+        \item Loại bỏ hoàn toàn đường dẫn \texttt{/h2-console/**} khỏi cấu hình an ninh trên môi trường thành phẩm.
+        \item Cải tiến điểm kiểm tra sức khỏe \texttt{/api/health}, ẩn các thông điệp lỗi nội bộ và chỉ trả về mã trạng thái HTTP tiêu chuẩn.
+        \item Chuyển cơ chế lưu trữ JWT token từ \texttt{localStorage} sang Cookie với cờ \texttt{HttpOnly} và \texttt{SameSite=Strict} để phòng chống tấn công XSS.
+    \end{itemize}
+    
+    \item \textbf{Triển khai cơ chế giới hạn tần suất (Rate Limiting) tầng biên:} Tích hợp bộ thư viện Bucket4j hoặc giải pháp Redis Token Bucket để giới hạn tần suất gọi API đối với các điểm cuối nhạy cảm bao gồm đăng nhập, đăng ký tài khoản và gửi yêu cầu tới Trợ lý ảo AI, ngăn ngừa nguy cơ bị tấn công từ chối dịch vụ (DoS) hoặc lạm dụng hạn ngạch API.
+    
+    \item \textbf{Nâng cấp khung ứng dụng và quản trị dịch vụ:} Tiến hành nâng cấp phiên bản Spring Boot lên 3.3.x LTS; hợp nhất hai bộ xử lý ngoại lệ toàn cục \texttt{GlobalExceptionHandler} và \texttt{RestExceptionHandler} thành một lớp quản lý duy nhất; tích hợp thư viện Spring Boot Actuator kết hợp với Prometheus và Grafana để giám sát các chỉ số thời gian thực (CPU, RAM, số kết nối HikariCP, thời gian phản hồi API).
+    
+    \item \textbf{Hỗ trợ kiến trúc đa phiên bản (Scale-out):} Tích hợp dịch vụ Redis phân tán làm bộ lưu trữ bộ nhớ đệm tập trung và áp dụng cơ chế khóa phân tán (ShedLock hoặc Redisson) cho các tác vụ định kỳ (\texttt{BookingExpiryScheduler} và \texttt{BookingLifecycleScheduler}), cho phép nhân rộng hệ thống Back-end thành nhiều bản sao hoạt động song song mà không lo xung đột dữ liệu.
+\end{enumerate}
+
+\subsection{Nhóm mở rộng sản phẩm và quy mô kinh doanh dài hạn (Long-term Horizon)}
+\begin{enumerate}
+    \item \textbf{Tự động hóa hoàn toàn quy trình chi trả hoàn tiền (Automated Refund Disbursement):} Tích hợp các API chi hộ của PayOS và MoMo để tự động chuyển tiền hoàn về tài khoản của khách hàng ngay khi Quản lý chi nhánh phê duyệt yêu cầu hoàn tiền trên hệ thống, loại bỏ hoàn toàn việc chuyển khoản thủ công bằng tay.
+    
+    \item \textbf{Phát triển ứng dụng di động bản địa (Native Mobile App):} Xây dựng ứng dụng di động dành cho khách hàng trên nền tảng React Native hoặc Flutter, hỗ trợ tính năng nhận thông báo đẩy (Push Notifications) về lịch đặt chỗ sắp diễn ra trước 1 giờ, thông báo duyệt hoàn tiền và các bài viết mới trên diễn đàn cộng đồng.
+    
+    \item \textbf{Tích hợp phần cứng IoT và khóa cửa thông minh (Smart Lock Integration):} Kết nối hệ thống CoSpace với các giải pháp khóa cửa thông minh (qua chuẩn kết nối MQTT hoặc HTTP Webhook). Khi đơn đặt chỗ chuyển sang trạng thái đã thanh toán (\texttt{PAID}), hệ thống tự động cấp phát mã số mở cửa tạm thời (PIN Code) hoặc thẻ từ số hóa có thời hạn hiệu lực đúng bằng khung giờ đặt chỗ của khách hàng, cho phép tự động hóa hoàn toàn khâu tiếp đón mà không cần nhân viên trực quầy.
+    
+    \item \textbf{Chuyển đổi sang mô hình kiến trúc đa bên thuê (Multi-Tenancy SaaS):} Mở rộng thiết kế cơ sở dữ liệu và phân quyền để hỗ trợ mô hình Multi-Tenancy (phân tách theo lược đồ Schema hoặc định danh Tenant ID). Mô hình này cho phép CoSpace đóng vai trò là một nền tảng phần mềm dịch vụ (SaaS) phục vụ đồng thời nhiều doanh nghiệp kinh doanh văn phòng chia sẻ khác nhau trên cùng một hạ tầng triển khai.
+    
+    \item \textbf{Cải tiến giải thuật mai mối đối tác bằng mô hình học máy nhúng vector (Vector Embeddings):} Ứng dụng kỹ thuật nhúng văn bản (Text Embeddings với mô hình sentence-transformers hoặc OpenAI Embeddings) kết hợp tiện ích mở rộng \texttt{pgvector} của PostgreSQL để phân tích ngữ nghĩa chuyên sâu các bài viết, dự án và nhu cầu tìm kiếm cộng sự, nâng cao độ chính xác của tính năng gợi ý đối tác trong cộng đồng doanh nghiệp.
+\end{enumerate}
+
+\section{Lời kết}
+\label{sec:kl_loiket}
+
+Đề tài \textbf{``Xây dựng hệ thống quản lý văn phòng chia sẻ và kết nối cộng đồng CoSpace''} đã hoàn thành xuất sắc các mục tiêu nghiên cứu và phát triển được đề ra. Dự án không chỉ dừng lại ở việc tạo ra một phần mềm quản lý đặt chỗ thông thường, mà đã giải quyết thấu đáo nhiều bài toán kỹ thuật phức tạp trong kỹ nghệ phần mềm hiện đại: từ kiểm soát tương tranh dữ liệu không gian--thời gian hai lớp, xử lý thanh toán bất biến an toàn lỗi, phân quyền dữ liệu đa chi nhánh cô lập tuyệt đối, đến việc tích hợp trí tuệ nhân tạo có rào chắn xác thực an toàn.
+
+Quá trình xây dựng hệ thống từ giai đoạn khảo sát, thiết kế mô hình, hiện thực mã nguồn đến quy trình rà soát logic nghiêm ngặt và đóng gói triển khai đám mây đã giúp nhóm tác giả tích lũy được nền tảng kiến thức thực tiễn vững chắc về kiến trúc hệ thống phân tầng, bảo mật thông tin và kỷ luật kỹ thuật công nghiệp. Nhóm tác giả hy vọng rằng hệ thống CoSpace cùng những phương pháp luận kỹ thuật được đúc kết và trình bày chi tiết trong luận văn này sẽ trở thành tài liệu tham khảo hữu ích cho các nghiên cứu và dự án phát triển phần mềm quản lý tài nguyên chia sẻ trong tương lai.
+
+Nhóm tác giả xin trân trọng bày tỏ lòng biết ơn sâu sắc đến Thạc sĩ Trương Quỳnh Chi, các thầy cô giáo trong Khoa Khoa học và Kỹ thuật Máy tính, Trường Đại học Bách khoa -- ĐHQG-HCM, cùng gia đình và bạn bè đã tận tình hướng dẫn, hỗ trợ và đồng hành trong suốt quá trình hoàn thành luận văn tốt nghiệp này.

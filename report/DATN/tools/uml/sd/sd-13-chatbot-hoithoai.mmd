@@ -1,0 +1,33 @@
+sequenceDiagram
+  autonumber
+  actor C as Khách hàng
+  participant FE as ChatWidget React
+  participant CB as ChatbotService
+  participant DB as PostgreSQL
+  participant GC as GeminiClient
+  participant GM as Google Gemini API
+  C->>FE: Nhắn yêu cầu bằng ngôn ngữ tự nhiên
+  FE->>CB: POST /api/chatbot/message (luồng SSE)
+  CB-->>FE: Sự kiện progress Đang đọc yêu cầu của bạn
+  loop Tối đa 6 vòng gọi công cụ
+    CB->>GC: generateContent(systemPrompt, contents, tools)
+    GC->>GM: POST models/gemini-3.5-flash:generateContent
+    opt Mô hình chính bị từ chối hoặc quá tải
+      GC->>GM: Chuyển sang mô hình dự phòng gemini-3.7-flash
+    end
+    GM-->>GC: candidates gồm text hoặc functionCall
+    GC-->>CB: JsonNode
+    alt Không có functionCall
+      CB-->>FE: Sự kiện result với câu trả lời
+      FE-->>C: Hiển thị câu trả lời
+    else Có công cụ ghi (propose_create_booking, propose_cancel_booking, propose_add_extra_service)
+      CB->>CB: buildPendingAction, chỉ tạo bản tóm tắt, chưa thực hiện gì
+      CB-->>FE: Sự kiện result kèm pendingAction
+      FE-->>C: Hiển thị thẻ xác nhận với nút Xác nhận và Hủy
+    else Chỉ có công cụ chỉ đọc (list_branches, find_workspaces, get_booking...)
+      CB-->>FE: Sự kiện progress mô tả bước đang chạy
+      CB->>DB: executeReadOnlyTool truy vấn dữ liệu thật
+      DB-->>CB: Kết quả
+      CB->>CB: Ghép functionResponse vào hội thoại rồi lặp lại
+    end
+  end

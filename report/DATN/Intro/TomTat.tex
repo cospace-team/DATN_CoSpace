@@ -2,10 +2,28 @@
 \addcontentsline{toc}{chapter}{Tóm tắt đề tài}
 \markboth{TÓM TẮT ĐỀ TÀI}{}
 
-\ghichu{Viết 3--5 đoạn (khoảng 1 trang) theo mạch: (1) Bối cảnh và vấn đề của mô hình văn phòng chia sẻ đa chi nhánh; (2) Đề tài giải quyết gì --- nền tảng quản lý tập trung gồm quản lý không gian phân cấp, sơ đồ mặt bằng SVG tương tác, đặt chỗ chống xung đột, đa cổng thanh toán, hủy--hoàn tiền tự động, check-in/check-out, kết nối cộng đồng và trợ lý ảo AI; (3) Phương pháp và công nghệ --- Spring Boot 3, React 18/TypeScript, PostgreSQL/Supabase, Docker, triển khai đám mây; (4) Kết quả đạt được, có số liệu cụ thể (số bảng CSDL, số API, số ca kiểm thử, hiệu năng); (5) Hướng phát triển.}
-\nguon{docs/SYSTEM_SPEC.md \S1 --- report/Intro/TomTat.tex (bản Đồ án chuyên ngành)}
+Sự bùng nổ của mô hình làm việc kết hợp (hybrid working), phong trào khởi nghiệp công nghệ và lực lượng lao động tự do tại Việt Nam đã thúc đẩy sự tăng trưởng nhanh chóng của các chuỗi không gian làm việc chia sẻ (Co-working Space). Tuy nhiên, hầu hết các đơn vị vận hành hiện nay vẫn quản lý thủ công qua bảng tính, tin nhắn hoặc sử dụng các phần mềm nước ngoài có chi phí bản quyền đắt đỏ nhưng không hỗ trợ các phương thức thanh toán nội địa và thiếu khả năng tùy biến quy trình. Thực trạng này dẫn đến nhiều điểm nghẽn nghiêm trọng: xung đột trùng lịch khi nhiều khách hàng cùng đặt một vị trí, sai sót trong đối soát tài chính, chính sách hủy và hoàn tiền thiếu nhất quán, quy trình check-in kéo dài và bỏ ngỏ giá trị cốt lõi về kết nối cộng đồng giữa các thành viên.
 
-\vspace{0.6cm}
-\noindent\textbf{Từ khóa:} co-working space, đặt chỗ trực tuyến, chống xung đột đồng thời, advisory lock, tích hợp thanh toán, gợi ý đối tác, trợ lý ảo AI.
+Đề tài \textbf{``Xây dựng hệ thống quản lý văn phòng chia sẻ (CoSpace)''} được nghiên cứu và phát triển nhằm cung cấp một nền tảng chuyển đổi số toàn diện cho chuỗi không gian làm việc chia sẻ đa chi nhánh, phục vụ bốn nhóm tác nhân: Khách hàng, Nhân viên quầy, Quản lý chi nhánh và Quản trị viên hệ thống. Hệ thống số hóa trọn vẹn vòng đời dịch vụ: từ trực quan hóa không gian trên sơ đồ mặt bằng tương tác (SVG Floorplan Canvas), tìm kiếm và đặt chỗ thời gian thực, tích hợp đa cổng thanh toán tự động (VietQR PayOS, MoMo Sandbox và tiền mặt tại quầy), tự động hóa chính sách hủy theo bậc thời gian, quản lý lượt check-in/check-out linh hoạt, đến tính năng gợi ý đối tác kinh doanh thông minh dựa trên độ tương đồng hồ sơ và trợ lý ảo thông minh ứng dụng mô hình ngôn ngữ lớn (Google Gemini AI) hỗ trợ người dùng có kiểm soát an toàn.
 
-\ghichu{Nếu hội đồng yêu cầu, bổ sung bản tóm tắt tiếng Anh (Abstract) với nội dung tương đương ngay sau phần này.}
+Về mặt công nghệ, hệ thống áp dụng kiến trúc phân tầng chuẩn mực với Back-end xây dựng trên nền tảng Spring Boot 3.1.12 (Java 17, môi trường chạy JRE 21), Front-end xây dựng bằng React 18.3 kết hợp TypeScript 5.6 và Tailwind CSS, cùng cơ sở dữ liệu quan hệ PostgreSQL trên nền tảng Supabase được quản lý di trú lược đồ bằng Flyway. Để giải quyết triệt để bài toán tương tranh tài nguyên trong môi trường nhiều người dùng truy cập đồng thời, hệ thống triển khai cơ chế bảo vệ hai lớp độc đáo kết hợp giữa khóa tư vấn ở mức giao dịch (\texttt{pg\_advisory\_xact\_lock}) tại tầng ứng dụng và ràng buộc loại trừ theo khoảng thời gian (\texttt{EXCLUDE USING gist}) tại tầng cơ sở dữ liệu. Đồng thời, kiến trúc xử lý webhook thanh toán được thiết kế bất biến (Idempotent) thông qua trạng thái giao dịch và khóa dòng dữ liệu bi quan, đảm bảo tính toàn vẹn tuyệt đối cho dòng tiền.
+
+Sản phẩm đạt được quy mô kỹ thuật gồm: \textbf{30 bảng cơ sở dữ liệu}, \textbf{26 lớp điều khiển} với \textbf{133 điểm cuối API}, \textbf{33 trang giao diện người dùng} được định tuyến phân quyền chặt chẽ, bộ kiểm thử tự động gồm \textbf{273 ca kiểm thử} phía máy chủ không có lỗi, và hoàn tất xử lý 55 phát hiện từ đợt rà soát logic độc lập. Hệ thống đã được đóng gói container tối ưu bằng Docker đa giai đoạn và triển khai thực tế trên hạ tầng đám mây (Render, Vercel và Supabase).
+
+\vspace{0.4cm}
+\noindent\textbf{Từ khóa:} Co-working Space, đặt chỗ trực tuyến, kiểm soát tương tranh, khóa tư vấn, ràng buộc loại trừ, VietQR, webhook bất biến, gợi ý đối tác, Jaccard, trợ lý ảo Gemini, Spring Boot, React.
+
+\vspace{1cm}
+\begin{center}
+\textbf{\LARGE Thesis Abstract}
+\end{center}
+\vspace{0.3cm}
+
+The rapid expansion of hybrid work models, tech startups, and freelancers in Vietnam has driven substantial growth in the co-working space industry. However, existing operators frequently encounter critical bottlenecks including concurrent double-booking conflicts, error-prone manual financial reconciliation, inflexible cancellation policies, inefficient front-desk check-in, and the underutilization of networking opportunities among community members. 
+
+This graduation thesis presents \textbf{CoSpace}, a comprehensive, enterprise-grade multi-branch co-working management platform serving four core roles: Customers, Front-desk Staff, Branch Admins, and Super Admins. The system fully digitalizes the workspace booking lifecycle via interactive SVG floor plans, real-time schedule conflict prevention, automated domestic payment integration (VietQR PayOS, MoMo Sandbox, and counter cash), rule-based tiered cancellation and refund management, barcode-driven check-in/out workflows, weighted multi-factor partner matching (Jaccard similarity), and a function-calling AI conversational assistant (Google Gemini) with strict user confirmation barriers for write operations.
+
+The technology stack employs a decoupled client-server architecture built on Spring Boot 3.1.12 (Java 17/JRE 21), React 18.3 with TypeScript 5.6 and Tailwind CSS, and managed PostgreSQL on Supabase governed by Flyway schema migrations. Concurrency integrity is guaranteed through a dual-defense mechanism: application-tier transaction advisory locks (\texttt{pg\_advisory\_xact\_lock}) combined with database-tier range exclusion constraints (\texttt{EXCLUDE USING gist}). Payment webhooks enforce idempotency through transactional state management and row-level pessimistic locks. The delivered solution comprises 30 database tables, 26 controllers with 133 RESTful API endpoints, 33 front-end views, and 273 automated server-side test cases with zero failures. The entire application is containerized via Docker multi-stage builds and successfully deployed across Render, Vercel, and Supabase cloud infrastructures.
+
+\vspace{0.4cm}
+\noindent\textbf{Keywords:} Co-working Space, Online Booking, Concurrency Control, Advisory Lock, Exclusion Constraint, VietQR, Webhook Idempotency, Partner Matching, Jaccard Similarity, Gemini AI, Spring Boot, React.

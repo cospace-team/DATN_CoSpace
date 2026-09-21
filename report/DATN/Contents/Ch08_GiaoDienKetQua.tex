@@ -1,0 +1,337 @@
+\chapter{Giao diện và kết quả đạt được}
+\label{ch:giaodien}
+
+Chương này trình bày sản phẩm phần mềm dưới góc nhìn tương tác của người dùng cuối: những gì mỗi vai trò quan sát được và những nghiệp vụ có thể thực thi trên giao diện. Toàn bộ giao diện được xây dựng theo hệ thống thiết kế hiện đại với Tailwind CSS, hỗ trợ hoàn chỉnh hai chế độ hiển thị Sáng và Tối (Light/Dark Mode), tối ưu hóa trải nghiệm trên các thiết bị từ máy tính để bàn tới điện thoại thông minh.
+
+\section{Tổng quan kết quả hiện thực}
+\label{sec:gd_tongquan}
+
+Hệ thống CoSpace hoàn thành xây dựng **33 trang giao diện người dùng** có đường dẫn độc lập, được phân chia thành bốn phân hệ chuyên biệt theo vai trò người dùng và hai trang công khai chung. Mỗi phân hệ sở hữu thanh điều hướng bên (Sidebar Navigation) riêng biệt, tích hợp chuông thông báo thời gian thực và khung đàm thoại Trợ lý ảo AI tiện lợi. Bảng \ref{tab:gd_thongke} tổng hợp số lượng trang và nhóm chức năng chính theo từng vai trò.
+
+\begin{table}[H]
+\centering
+\caption{Các trang giao diện theo vai trò trong hệ thống CoSpace}
+\label{tab:gd_thongke}
+\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{|p{3.0cm}|p{1.6cm}|p{9.2cm}|}
+\hline
+\textbf{Vai trò} & \textbf{Số trang} & \textbf{Nhóm chức năng chính} \\
+\hline
+Công khai & 2 & Trang chủ giới thiệu chi nhánh; Đăng nhập và đăng ký (email hoặc Google SSO) \\
+\hline
+Khách hàng & 6 & Khám phá không gian trên sơ đồ SVG, xác nhận đặt chỗ, thanh toán VietQR động, lịch sử và hủy đơn, bảng tin cộng đồng, hồ sơ và gợi ý đối tác \\
+\hline
+Nhân viên & 4 & Bảng điều khiển trực ban, tạo đơn đặt chỗ tại quầy, check-in và check-out, quản lý bảo trì \\
+\hline
+Quản lý chi nhánh & 8 & Tổng quan và báo cáo, không gian và sơ đồ mặt bằng, bảng giá riêng, chính sách hủy riêng, nhân sự, bảo trì, dịch vụ thêm, hàng chờ hoàn tiền \\
+\hline
+Quản trị hệ thống & 13 & Tổng quan toàn chuỗi, chi nhánh, không gian, bảng giá toàn cục, người dùng, chính sách hủy, dịch vụ thêm, tiện ích, khuyến mãi, hạng thành viên, hoàn tiền, nhật ký kiểm toán, báo cáo \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Danh mục màn hình}
+\label{sec:gd_danhmuc}
+
+Bảng \ref{tab:gd_danhmuc} liệt kê danh mục chi tiết toàn bộ các đường dẫn (Routes) và tên các mô-đun thành phần trang tương ứng trong mã nguồn Front-end.
+
+{\footnotesize
+\begin{longtable}{|p{2.6cm}|p{5.4cm}|p{5.4cm}|}
+\caption{Đường dẫn và mô-đun trang giao diện theo vai trò}\label{tab:gd_danhmuc}\\
+\hline
+\textbf{Vai trò} & \textbf{Đường dẫn (Route Path)} & \textbf{Thành phần trang (Page Component)} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Vai trò} & \textbf{Đường dẫn (Route Path)} & \textbf{Thành phần trang (Page Component)} \\
+\hline
+\endhead
+Công khai & \texttt{/}, \texttt{/locations} & \texttt{LandingPage} \\
+\hline
+Công khai & \texttt{/login} & \texttt{LoginPage} \\
+\hline
+Khách hàng & \texttt{/customer/explore} & \texttt{ExplorePage} \\
+\hline
+Khách hàng & \texttt{/customer/checkout} & \texttt{BookingCheckoutPage} \\
+\hline
+Khách hàng & \texttt{/customer/payment/vietqr} & \texttt{VietQrCheckoutPage} \\
+\hline
+Khách hàng & \texttt{/customer/history} & \texttt{BookingHistoryPage} \\
+\hline
+Khách hàng & \texttt{/customer/community} & \texttt{CommunityPage} \\
+\hline
+Khách hàng & \texttt{/customer/profile} & \texttt{ProfilePage} \\
+\hline
+Nhân viên & \texttt{/staff/dashboard} & \texttt{OperationsDashboardPage} \\
+\hline
+Nhân viên & \texttt{/staff/booking/new} & \texttt{WalkinBookingPage} \\
+\hline
+Nhân viên & \texttt{/staff/checkin} & \texttt{CheckInPage} \\
+\hline
+Nhân viên & \texttt{/staff/maintenance} & \texttt{MaintenancePage} \\
+\hline
+Quản lý chi nhánh & \texttt{/branch-admin/dashboard} & \texttt{BADashboardPage} \\
+\hline
+Quản lý chi nhánh & \texttt{/branch-admin/workspaces} & \texttt{BAWorkspacePage} \\
+\hline
+Quản lý chi nhánh & \texttt{/branch-admin/pricing} & \texttt{BAPricingPage} \\
+\hline
+Quản lý chi nhánh & \texttt{/branch-admin/policies} & \texttt{BAPoliciesPage} \\
+\hline
+Quản lý chi nhánh & \texttt{/branch-admin/staff} & \texttt{BAStaffPage} \\
+\hline
+Quản lý chi nhánh & \texttt{/branch-admin/maintenance} & \texttt{BAMaintenancePage} \\
+\hline
+Quản lý chi nhánh & \texttt{/branch-admin/services} & \texttt{BAServicesPage} \\
+\hline
+Quản lý chi nhánh & \texttt{/branch-admin/refunds} & \texttt{RefundsPage} (phạm vi chi nhánh) \\
+\hline
+Quản trị hệ thống & \texttt{/admin/dashboard} & \texttt{AdminDashboardPage} \\
+\hline
+Quản trị hệ thống & \texttt{/admin/branches} & \texttt{BranchManagementPage} \\
+\hline
+Quản trị hệ thống & \texttt{/admin/workspaces} & \texttt{AdminWorkspacePage} \\
+\hline
+Quản trị hệ thống & \texttt{/admin/pricing} & \texttt{PricingPage} \\
+\hline
+Quản trị hệ thống & \texttt{/admin/users} & \texttt{UserManagementPage} \\
+\hline
+Quản trị hệ thống & \texttt{/admin/cancellation} & \texttt{CancellationPoliciesPage} \\
+\hline
+Quản trị hệ thống & \texttt{/admin/services} & \texttt{ExtraServicesPage} \\
+\hline
+Quản trị hệ thống & \texttt{/admin/amenities} & \texttt{AmenitiesPage} \\
+\hline
+Quản trị hệ thống & \texttt{/admin/promotions} & \texttt{PromotionsPage} \\
+\hline
+Quản trị hệ thống & \texttt{/admin/membership} & \texttt{MembershipTiersPage} \\
+\hline
+Quản trị hệ thống & \texttt{/admin/refunds} & \texttt{RefundsPage} (toàn hệ thống) \\
+\hline
+Quản trị hệ thống & \texttt{/admin/audit} & \texttt{AuditLogPage} \\
+\hline
+Quản trị hệ thống & \texttt{/admin/reports} & \texttt{ReportsPage} \\
+\hline
+\end{longtable}
+}
+
+\section{Giao diện xác thực và trang công khai}
+\label{sec:gd_congkhai}
+
+\subsection{Trang chủ giới thiệu hệ thống (LandingPage)}
+Trang chủ đóng vai trò là cổng chào đón khách hàng, cung cấp các thông tin tổng quan:
+\begin{itemize}
+    \item Thanh tiêu đề với logo thương hiệu CoSpace, nút chuyển đổi giao diện Sáng/Tối, nút chuyển ngôn ngữ và nút điều hướng Đăng nhập.
+    \item Phần Banner chính (Hero Section) với thông điệp định vị giá trị và nút kêu gọi hành động ``Khám phá không gian ngay''.
+    \item Danh mục thẻ giới thiệu các chi nhánh với hình ảnh thực tế, địa chỉ, giờ mở cửa và các tiện ích nổi bật.
+    \item Giới thiệu các loại hình chỗ ngồi (Hot desk, Dedicated desk, Meeting room, Private office) và lời chứng thực từ khách hàng.
+\end{itemize}
+
+\hinhcho{0.9}{Trang chủ giới thiệu hệ thống CoSpace (đường dẫn \texttt{/})}{fig:gd_landing}
+
+\subsection{Trang đăng nhập và tạo tài khoản (LoginPage)}
+Giao diện đăng nhập hỗ trợ chuyển đổi mượt mà giữa hai biểu mẫu Đăng nhập và Đăng ký:
+\begin{itemize}
+    \item Đăng nhập truyền thống bằng Email và Mật khẩu: hỗ trợ ẩn/hiện mật khẩu, kiểm tra hợp lệ định dạng tức thời.
+    \item Nút đăng nhập một chạm với Google SSO thông qua Supabase Auth.
+    \item Sau khi đăng nhập thành công, hệ thống tự động kiểm tra vai trò người dùng trong cơ sở dữ liệu và chuyển hướng chính xác đến trang chủ của vai trò đó (Khách hàng vào \texttt{/customer/explore}, Nhân viên vào \texttt{/staff/dashboard}, Quản lý chi nhánh vào \texttt{/branch-admin/dashboard}, Quản trị viên vào \texttt{/admin/dashboard}).
+\end{itemize}
+
+\hinhcho{0.9}{Trang đăng nhập và tạo tài khoản (đường dẫn \texttt{/login})}{fig:gd_login}
+
+\section{Phân hệ khách hàng}
+\label{sec:gd_khachhang}
+
+\subsection{Khám phá không gian và đặt chỗ (ExplorePage)}
+\label{ssec:gd_explore}
+Trang \texttt{ExplorePage} là màn hình tương tác cốt lõi của khách hàng, tích hợp bốn chế độ xem dữ liệu linh hoạt:
+\begin{itemize}
+    \item \textbf{Chế độ Sơ đồ mặt bằng 2D (Floorplan View):} Hiển thị bản vẽ vector SVG của từng tầng. Mỗi vị trí bàn làm việc được tô màu trực quan theo trạng thái khả dụng thời gian thực (Xanh lá: đang trống, Vàng: có người giữ chỗ 15 phút, Đỏ: đã xác nhận, Xám: đang bảo trì). Khách hàng nhấp chuột vào bàn trống để chọn vị trí.
+    \item \textbf{Bảng tóm tắt đặt chỗ (Booking Drawer):} Nằm ở góc phải màn hình, tự động cập nhật đơn giá tức thời từ API báo giá (\texttt{/api/bookings/quote}), hiển thị tạm tính và nút ``Xác nhận đặt chỗ''.
+    \item \textbf{Các chế độ xem Lịch ngày, Lưới và Danh sách:} Cho phép xem tình trạng lấp đầy theo trục thời gian trong ngày.
+\end{itemize}
+
+\hinhcho{0.95}{Trang khám phá không gian ở chế độ sơ đồ 2D, có bảng đặt chỗ bên phải}{fig:gd_explore_2d}
+\hinhcho{0.95}{Trang khám phá không gian ở chế độ lịch ngày}{fig:gd_explore_lich}
+
+\subsection{Xác nhận đặt chỗ và thanh toán VietQR (BookingCheckoutPage \& VietQrCheckoutPage)}
+\begin{itemize}
+    \item \textbf{Trang xác nhận đặt chỗ (\texttt{BookingCheckoutPage}):} Tóm tắt chi tiết đơn thuê, cho phép tích chọn các dịch vụ bổ sung (nước uống, máy in), nhập mã khuyến mãi, hiển thị mức giảm giá theo hạng hội viên và tổng tiền thanh toán. Đồng hồ đếm ngược 15 phút hiển thị nổi bật nhắc nhở khách hàng hoàn tất thủ tục. Khách hàng chỉ có thể lựa chọn thanh toán PayOS (VietQR) hoặc MoMo (không có lựa chọn tiền mặt trên Web).
+    \item \textbf{Trang thanh toán VietQR (\texttt{VietQrCheckoutPage}):} Hiển thị mã QR ngân hàng chuẩn VietQR Napas 24/7, tên tài khoản nhận, số tiền chính xác đến từng đồng và nội dung chuyển khoản. Trình duyệt tự động thăm dò (polling) trạng thái thanh toán mỗi 2.5 giây; ngay khi tiền vào tài khoản, màn hình tự động chuyển sang thông báo thanh toán thành công kèm mã vé điện tử.
+\end{itemize}
+
+\hinhcho{0.9}{Trang xác nhận đặt chỗ với mã khuyến mãi, dịch vụ thêm và phương thức thanh toán}{fig:gd_checkout}
+\hinhcho{0.9}{Trang thanh toán VietQR với đồng hồ đếm ngược}{fig:gd_vietqr}
+
+\subsection{Lịch sử đặt chỗ và Hộp thoại hủy đơn (BookingHistoryPage)}
+Giao diện phân chia đơn đặt chỗ thành ba tab: \textbf{Sắp tới}, \textbf{Đã hoàn thành} và \textbf{Đã hủy}.
+\begin{itemize}
+    \item Đơn \texttt{CONFIRMED} có nút ``Mã QR Pass'' (dùng để quét khi đến quầy check-in) và nút ``Hủy đặt chỗ''.
+    \item Hộp thoại hủy đơn hiển thị cảnh báo quy định hủy và yêu cầu nhập lý do. Lưu ý: giao diện không tự tính trước số tiền hoàn mà gửi yêu cầu về máy chủ; sau khi máy chủ đối chiếu chính sách hủy theo phút, thông báo kết quả tỷ lệ hoàn (\%) và số tiền hoàn chính xác sẽ được hiển thị cho khách hàng.
+\end{itemize}
+
+\hinhcho{0.9}{Lịch sử đặt chỗ của khách hàng}{fig:gd_history}
+\hinhcho{0.9}{Hộp thoại xác nhận hủy đặt chỗ kèm giải thích chính sách hoàn tiền}{fig:gd_cancel}
+
+\subsection{Hồ sơ năng lực, Gợi ý đối tác và Diễn đàn cộng đồng}
+\begin{itemize}
+    \item \textbf{Trang Hồ sơ cá nhân (\texttt{ProfilePage}):} Cho phép cập nhật tiểu sử, chọn các thẻ kỹ năng chuyên môn từ danh mục gợi ý kèm đánh giá mức độ thành thạo, chọn sở thích và liên kết mạng xã hội. Thẻ ``Gợi ý đối tác'' hiển thị danh sách các thành viên phù hợp nhất kèm theo phần trăm tương đồng và lý do gợi ý (ví dụ: ``Cùng kỹ năng React và cùng làm việc tại Chi nhánh Quận 1'').
+    \item \textbf{Bảng tin cộng đồng (\texttt{CommunityPage}):} Nơi các thành viên đăng tải bài viết thuộc 4 chủ đề: Chia sẻ kinh nghiệm, Tìm cộng sự dự án, Hỏi đáp và Sự kiện.
+\end{itemize}
+
+\hinhcho{0.9}{Trang hồ sơ và kết nối đối tác}{fig:gd_profile}
+\hinhcho{0.9}{Bảng tin cộng đồng}{fig:gd_community}
+
+\subsection{Trợ lý ảo AI đàm thoại và Thông báo}
+Khung trò chuyện Trợ lý ảo Google Gemini nằm ở góc phải màn hình dưới dạng ngăn kéo (Drawer). Các câu trả lời được hiển thị mượt mà theo luồng ký tự Server-Sent Events (SSE). Khi khách hàng yêu cầu đặt chỗ, AI hiển thị **Thẻ đề xuất giao dịch** kèm hai nút ``Xác nhận'' và ``Hủy bỏ'', đảm bảo khách hàng có toàn quyền quyết định trước khi hệ thống ghi dữ liệu. Chuông thông báo hiển thị danh sách các sự kiện nhạy cảm (thanh toán thành công, hoàn tiền được duyệt, đơn bị hủy do bảo trì).
+
+\hinhcho{0.9}{Trợ lý ảo đề xuất đặt chỗ và chờ khách xác nhận}{fig:gd_chat}
+
+\section{Phân hệ nhân viên}
+\label{sec:gd_nhanvien}
+
+Phân hệ nhân viên được thiết kế tinh gọn phục vụ công tác trực ban tại quầy:
+\begin{itemize}
+    \item \textbf{Bảng điều khiển trực ban (\texttt{OperationsDashboardPage}):} Thống kê trực quan số lượng khách dự kiến đến trong ngày, số chỗ đang có khách ngồi và danh sách đơn cần tiếp đón.
+    \item \textbf{Tạo đơn tại quầy (\texttt{WalkinBookingPage}):} Nhân viên tạo nhanh đơn cho khách vãng lai, chọn không gian trên sơ đồ và bấm xác nhận thu tiền mặt tại quầy để kích hoạt đơn ngay.
+    \item \textbf{Check-in và Check-out (\texttt{CheckInPage}):} Quét mã QR Pass từ màn hình khách hàng hoặc nhập mã đơn để check-in trong khung thời gian hợp lệ; hỗ trợ ghi nhận các món nước/dịch vụ phát sinh và thu tiền trước khi hoàn tất check-out.
+    \item \textbf{Quản lý bảo trì (\texttt{MaintenancePage}):} Báo hỏng thiết bị, đặt lịch bảo trì và kiểm tra các đơn bị ảnh hưởng.
+\end{itemize}
+
+\hinhcho{0.9}{Bảng điều khiển trực ban của nhân viên}{fig:gd_staff_dashboard}
+\hinhcho{0.9}{Đặt chỗ tại quầy cho khách vãng lai}{fig:gd_staff_walkin}
+\hinhcho{0.9}{Check-in và check-out tại quầy, có dịch vụ gọi thêm}{fig:gd_staff_checkin}
+\hinhcho{0.9}{Quản lý bảo trì không gian của nhân viên}{fig:gd_staff_maint}
+
+\section{Phân hệ quản lý chi nhánh}
+\label{sec:gd_quanlychinhanh}
+
+\begin{itemize}
+    \item \textbf{Tổng quan và Báo cáo (\texttt{BADashboardPage}):} Theo dõi biểu đồ doanh thu thực tế (theo định nghĩa đơn đã dùng) theo tuần, tháng; xem tỷ lệ lấp đầy và xuất dữ liệu báo cáo chi tiết ra tệp CSV.
+    \item \textbf{Quản lý không gian và Sơ đồ SVG (\texttt{BAWorkspacePage}):} Danh sách phòng/bàn theo tầng và bộ soạn thảo sơ đồ mặt bằng SVG kéo thả trực quan.
+    \item \textbf{Cấu hình giá và Chính sách hủy riêng (\texttt{BAPricingPage}, \texttt{BAPoliciesPage}):} Thiết lập bảng giá theo giờ/ngày và các mốc thời gian hoàn tiền riêng của chi nhánh, ghi đè chính sách toàn cục.
+    \item \textbf{Hàng chờ duyệt hoàn tiền (\texttt{RefundsPage}):} Nơi duy nhất Quản lý chi nhánh đánh dấu đã hoàn tiền cho khách hoặc từ chối kèm lý do bắt buộc.
+\end{itemize}
+
+\hinhcho{0.9}{Tổng quan và báo cáo của chi nhánh}{fig:gd_ba_dashboard}
+\hinhcho{0.95}{Bộ soạn thảo sơ đồ mặt bằng của quản lý chi nhánh}{fig:gd_ba_workspace}
+\hinhcho{0.9}{Bảng giá và chính sách hủy riêng của chi nhánh}{fig:gd_ba_pricing}
+\hinhcho{0.9}{Hàng chờ hoàn tiền của chi nhánh}{fig:gd_ba_refunds}
+
+\section{Phân hệ quản trị hệ thống}
+\label{sec:gd_quantri}
+
+Cung cấp trạm chỉ huy trung tâm cho Quản trị viên tối cao:
+\begin{itemize}
+    \item Quản lý mạng lưới chi nhánh toàn quốc, tạo mới cơ sở và cấu hình giờ đóng/mở cửa (\texttt{BranchManagementPage}).
+    \item Quản trị danh mục dùng chung: loại không gian, tiện ích văn phòng, bảng giá chuẩn và chính sách hủy mặc định.
+    \item Quản lý người dùng, phân quyền vai trò và gán chi nhánh công tác cho nhân sự (\texttt{UserManagementPage}).
+    \item Quản trị chương trình khuyến mãi (mã giảm giá, giới hạn số lượt) và cấu hình ngưỡng nâng hạng thành viên (\texttt{PromotionsPage}, \texttt{MembershipTiersPage}).
+    \item Báo cáo tài chính hợp nhất đối chiếu giữa các cơ sở (\texttt{ReportsPage}) và tra cứu chi tiết Nhật ký kiểm toán an ninh toàn hệ thống (\texttt{AuditLogPage}).
+\end{itemize}
+
+\hinhcho{0.9}{Tổng quan doanh thu toàn hệ thống}{fig:gd_ad_dashboard}
+\hinhcho{0.9}{Quản lý người dùng, phân quyền và gán chi nhánh}{fig:gd_ad_users}
+\hinhcho{0.9}{Quản lý khuyến mãi và hạng thành viên}{fig:gd_ad_promo}
+\hinhcho{0.9}{Nhật ký kiểm toán có bộ lọc}{fig:gd_ad_audit}
+\hinhcho{0.9}{Báo cáo phân tích và so sánh chi nhánh}{fig:gd_ad_reports}
+
+\section{Trải nghiệm trên nhiều thiết bị}
+\label{sec:gd_thietbi}
+
+Hệ thống được thiết kế theo tư duy Responsive Design với hệ thống điểm ngắt (Breakpoints) của Tailwind CSS (\texttt{sm: 640px}, \texttt{md: 768px}, \texttt{lg: 1024px}, \texttt{xl: 1280px}). Trên thiết bị di động thông minh (chiều rộng khoảng 375--420px):
+\begin{itemize}
+    \item Thanh điều hướng bên (Sidebar) tự động thu gọn thành thanh công cụ đáy (Bottom Navigation Bar) hoặc menu ngăn kéo (Drawer).
+    \item Sơ đồ mặt bằng SVG tự động bật chế độ thu phóng cảm ứng (Touch Pinch-to-zoom) và trượt ngang (Pan).
+    \item Trang thanh toán VietQR hiển thị nút ``Lưu mã QR'' hoặc nút ``Mở ứng dụng ngân hàng'' giúp khách hàng thanh toán thuận tiện.
+    \item Trình quét mã QR check-in tích hợp trực tiếp camera điện thoại thông qua thư viện \texttt{html5-qrcode}.
+\end{itemize}
+
+\hinhcho{0.6}{Trang thanh toán trên màn hình điện thoại}{fig:gd_mobile}
+
+\section{Đối chiếu kết quả với yêu cầu chức năng}
+\label{sec:gd_doichieu}
+
+Bảng \ref{tab:gd_doichieu} đối chiếu toàn diện 34 yêu cầu chức năng (FR) đã đặt ra ở Chương \ref{ch:yeucau} với kết quả hiện thực thực tế trong hệ thống, chỉ rõ các mô-đun màn hình, điểm cuối API và ca kiểm thử tự động tương ứng.
+
+\begin{table}[H]
+\centering
+\caption{Đối chiếu yêu cầu chức năng với kết quả hiện thực và kiểm thử}
+\label{tab:gd_doichieu}
+\scriptsize
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|p{1.0cm}|p{3.8cm}|p{2.6cm}|p{2.8cm}|p{2.6cm}|c|}
+\hline
+\textbf{Mã FR} & \textbf{Tên chức năng} & \textbf{Màn hình FE} & \textbf{Điểm cuối API (BE)} & \textbf{Lớp kiểm thử tự động} & \textbf{Kết quả} \\
+\hline
+FR-01 & Đăng ký / Đăng nhập & \texttt{LoginPage} & \texttt{/api/auth/**} & \texttt{AuthServiceTest} (19) & Đạt \\
+\hline
+FR-02 & Quản lý hồ sơ năng lực & \texttt{ProfilePage} & \texttt{/api/customer/profile} & \texttt{SecurityConfigTest} & Đạt \\
+\hline
+FR-03 & Tra cứu chi nhánh \& mặt bằng & \texttt{ExplorePage} & \texttt{/api/spaces/floors/**} & \texttt{BookingServiceTest} & Đạt \\
+\hline
+FR-04 & Tìm kiếm \& lọc không gian & \texttt{ExplorePage} & \texttt{/api/spaces/search} & \texttt{BookingServiceTest} & Đạt \\
+\hline
+FR-05 & Đặt chỗ & \texttt{ExplorePage} & \texttt{/api/bookings} & \texttt{BookingServiceTest} (28) & Đạt \\
+\hline
+FR-06 & Thanh toán VietQR / MoMo & \texttt{VietQrCheckoutPage} & \texttt{/api/payments/**} & \texttt{PaymentServiceTest} (34) & Đạt \\
+\hline
+FR-07 & Dịch vụ thêm \& Khuyến mãi & \texttt{BookingCheckoutPage} & \texttt{/api/addons}, \texttt{promotions} & \texttt{BookingAddonTest} (11) & Đạt \\
+\hline
+FR-08 & Lịch sử đặt chỗ \& QR Pass & \texttt{BookingHistoryPage} & \texttt{/api/bookings/my} & \texttt{BookingServiceTest} & Đạt \\
+\hline
+FR-09 & Hủy đặt chỗ \& tính hoàn tiền & \texttt{BookingHistoryPage} & \texttt{/api/bookings/cancel} & \texttt{CancellationTest} (25) & Đạt \\
+\hline
+FR-10 & Gợi ý đối tác thông minh & \texttt{ProfilePage} & \texttt{/api/matching/partners} & \texttt{ReportServiceTest} & Đạt \\
+\hline
+FR-11 & Bảng tin cộng đồng & \texttt{CommunityPage} & \texttt{/api/community/posts} & \texttt{SecurityConfigTest} & Đạt \\
+\hline
+FR-12 & Trợ lý ảo AI đàm thoại & \texttt{ChatbotDrawer} & \texttt{/api/chatbot/stream} & \texttt{SecurityConfigTest} & Đạt \\
+\hline
+FR-13 & Bảng điều khiển trực ban & \texttt{OperationsDashboard} & \texttt{/api/staff/today} & \texttt{BranchAccessGuardTest} & Đạt \\
+\hline
+FR-14 & Tạo đơn đặt chỗ tại quầy & \texttt{WalkinBookingPage} & \texttt{/api/staff/bookings} & \texttt{BookingServiceTest} & Đạt \\
+\hline
+FR-15 & Xác nhận thu tiền mặt & \texttt{WalkinBookingPage} & \texttt{/api/staff/payments/cash} & \texttt{PaymentServiceTest} & Đạt \\
+\hline
+FR-16 & Check-in bằng mã QR / code & \texttt{CheckInPage} & \texttt{/api/checkins} & \texttt{CheckinServiceTest} (13) & Đạt \\
+\hline
+FR-17 & Check-out \& chặn nợ dịch vụ & \texttt{CheckInPage} & \texttt{/api/checkins/checkout} & \texttt{CheckinServiceTest} & Đạt \\
+\hline
+FR-18 & Ghi nhận dịch vụ gọi thêm & \texttt{CheckInPage} & \texttt{/api/addons/running-tab} & \texttt{BookingAddonTest} & Đạt \\
+\hline
+FR-19 & Quản lý lịch bảo trì & \texttt{MaintenancePage} & \texttt{/api/staff/maintenance} & \texttt{CancellationTest} & Đạt \\
+\hline
+FR-20 & Nhân viên hủy thay khách & \texttt{OperationsDashboard} & \texttt{/api/staff/bookings/cancel} & \texttt{CancellationTest} & Đạt \\
+\hline
+FR-21 & Quản trị tầng và không gian & \texttt{BAWorkspacePage} & \texttt{/api/branch-admin/spaces} & \texttt{BranchAccessGuardTest} & Đạt \\
+\hline
+FR-22 & Soạn thảo sơ đồ mặt bằng SVG & \texttt{BAWorkspacePage} & \texttt{/api/branch-admin/floors} & \texttt{BranchAccessGuardTest} & Đạt \\
+\hline
+FR-23 & Bảng giá riêng chi nhánh & \texttt{BAPricingPage} & \texttt{/api/branch-admin/pricing} & \texttt{PricingServiceTest} (8) & Đạt \\
+\hline
+FR-24 & Chính sách hủy riêng chi nhánh & \texttt{BAPoliciesPage} & \texttt{/api/branch-admin/policies} & \texttt{CancellationTest} & Đạt \\
+\hline
+FR-25 & Quản lý nhân viên cơ sở & \texttt{BAStaffPage} & \texttt{/api/branch-admin/staff} & \texttt{BranchAccessGuardTest} & Đạt \\
+\hline
+FR-26 & Duyệt hàng chờ hoàn tiền & \texttt{RefundsPage} & \texttt{/api/refunds/**} & \texttt{RefundServiceTest} (7) & Đạt \\
+\hline
+FR-27 & Báo cáo tài chính chi nhánh & \texttt{BADashboardPage} & \texttt{/api/reports/branch} & \texttt{ReportServiceTest} (2) & Đạt \\
+\hline
+FR-28 & Quản lý chuỗi chi nhánh & \texttt{BranchManagementPage} & \texttt{/api/admin/branches} & \texttt{SecurityConfigTest} & Đạt \\
+\hline
+FR-29 & Quản trị danh mục dùng chung & \texttt{AdminWorkspacePage} & \texttt{/api/admin/amenities} & \texttt{SecurityConfigTest} & Đạt \\
+\hline
+FR-30 & Quản lý người dùng \& vai trò & \texttt{UserManagementPage} & \texttt{/api/admin/users} & \texttt{SupabaseConverterTest} & Đạt \\
+\hline
+FR-31 & Bảng giá \& chính sách chuẩn & \texttt{PricingPage}, \texttt{Cancellation} & \texttt{/api/admin/pricing} & \texttt{PricingServiceTest} & Đạt \\
+\hline
+FR-32 & Quản trị khuyến mãi \& hội viên & \texttt{PromotionsPage}, \texttt{Tiers} & \texttt{/api/admin/promotions} & \texttt{LoyaltyRulesTest} (12) & Đạt \\
+\hline
+FR-33 & Báo cáo tài chính hợp nhất & \texttt{ReportsPage} & \texttt{/api/reports/overview} & \texttt{ReportServiceTest} & Đạt \\
+\hline
+FR-34 & Nhật ký kiểm toán an ninh & \texttt{AuditLogPage} & \texttt{/api/admin/audit} & \texttt{SecurityConfigTest} & Đạt \\
+\hline
+\end{tabular}
+\end{table}

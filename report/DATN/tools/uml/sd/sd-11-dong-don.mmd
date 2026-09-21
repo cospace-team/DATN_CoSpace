@@ -1,0 +1,26 @@
+sequenceDiagram
+  autonumber
+  participant S2 as BookingLifecycleScheduler
+  participant LC as BookingLifecycleService
+  participant DB as PostgreSQL
+  participant NS as NotificationService
+  loop Mỗi 5 phút
+    S2->>DB: findIdsByStatusAndEndAtBefore(CHECKED_IN, now trừ thời gian ân hạn)
+    loop Mỗi đơn khách quá giờ mà chưa check-out
+      S2->>LC: autoCheckoutOverdue(bookingId, now)
+      LC->>DB: findByIdWithLock, đóng checkin_logs (checkout_at = end_at)
+      LC->>DB: BookingStateMachine chuyển sang COMPLETED
+      LC->>NS: Thông báo tự động check-out, nhắc khoản dịch vụ chưa trả
+    end
+    S2->>DB: findIdsByStatusAndEndAtBefore(CONFIRMED, now)
+    loop Mỗi đơn đã hết giờ sử dụng
+      S2->>LC: closeEndedBooking(bookingId, now)
+      LC->>DB: findByIdWithLock, existsByBookingId(checkin_logs)
+      alt Đã từng check-in (kể cả gói nhiều ngày)
+        LC->>DB: Chuyển sang COMPLETED
+      else Chưa từng check-in
+        LC->>DB: Chuyển sang NO_SHOW, hủy dịch vụ chưa trả, giữ nguyên tiền đã thanh toán
+        LC->>NS: Thông báo Bạn đã bỏ lỡ lượt đặt chỗ
+      end
+    end
+  end

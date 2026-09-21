@@ -1,0 +1,511 @@
+\chapter{Hiện thực hệ thống}
+\label{ch:hienthuc}
+
+\ghichu{Chương này cho thấy thiết kế ở Chương \ref{ch:thietke} được biến thành mã như thế nào và những kỹ thuật nào bảo đảm các yêu cầu khó nhất: đúng đắn khi tương tranh, an toàn tiền, bảo mật. Không dán mã dài. Mỗi thành phần gồm trách nhiệm, bảng đặc tả phương thức và các bước thuật toán; đoạn mã chỉ dùng cho hai hoặc ba kỹ thuật then chốt, mỗi đoạn tối đa 12 dòng. Dung lượng đề xuất 22--30 trang. Các số liệu trong chương được đo ngày 21/09/2026 trên nhánh \texttt{feat/architecture-optimization-and-fixes}; nếu mã thay đổi thì đo lại.}
+
+\section{Môi trường phát triển và công cụ}
+\label{sec:ht_moitruong}
+
+\subsection{Công nghệ và phiên bản sử dụng}
+\label{ssec:ht_congnghe}
+\ghichu{Chỉ ghi phiên bản có thật trong tệp cấu hình, không ghi theo trí nhớ. Các điểm dễ sai: mã được biên dịch ở mức Java 17 nhưng ảnh Docker chạy trên JRE 21; \texttt{pom.xml} khai báo Spring Boot 3.1.12 ở phần \texttt{parent} (thuộc tính \texttt{spring.boot.version} 3.1.6 chỉ dùng cho plugin đóng gói); bản Đồ án chuyên ngành ghi Spring Boot 3.2 và PostgreSQL 15, hãy sửa theo bảng dưới; phiên bản PostgreSQL thực tế lấy từ bảng điều khiển Supabase. Các lệnh dựng và kiểm thử đã chạy được trên JDK 21.0.6, Node.js 22.17 và npm 10.9.}
+\nguon{BE/pom.xml, FE/package.json, BE/Dockerfile}
+
+\begin{table}[H]
+\centering
+\caption{Công nghệ và phiên bản thực tế của hệ thống CoSpace}
+\label{tab:ht_congnghe}
+\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{|p{2.2cm}|p{4.3cm}|p{2.7cm}|p{4.5cm}|}
+\hline
+\textbf{Lớp} & \textbf{Thành phần} & \textbf{Phiên bản} & \textbf{Vai trò trong hệ thống} \\
+\hline
+Máy chủ & Java & biên dịch mức 17, chạy trên JRE 21 & Ngôn ngữ và môi trường chạy \\
+\hline
+Máy chủ & Spring Boot & 3.1.12 & Khung ứng dụng: web, security, data-jpa, validation, cache \\
+\hline
+Máy chủ & Spring Security, OAuth2 Resource Server & theo Spring Boot & Xác thực JWT kép, phân quyền theo vai trò \\
+\hline
+Máy chủ & JJWT & 0.12.3 & Ký và kiểm tra JWT nội bộ (HS384) \\
+\hline
+Máy chủ & Hibernate, hypersistence-utils & theo Spring Boot, 3.7.0 & ORM; ánh xạ các cột JSON của PostgreSQL \\
+\hline
+Máy chủ & Flyway & 9.16.3 & Quản lý di trú lược đồ \\
+\hline
+Máy chủ & Caffeine & theo Spring Boot & Bộ nhớ đệm trong tiến trình \\
+\hline
+Máy chủ & JUnit 5, Mockito, Spring MockMvc & theo Spring Boot & Kiểm thử tự động \\
+\hline
+Giao diện & React & 18.3 & Thư viện giao diện \\
+\hline
+Giao diện & TypeScript, Vite & 5.6, 5.4 & Kiểu tĩnh, công cụ đóng gói \\
+\hline
+Giao diện & Tailwind CSS & 3.4 & Tạo kiểu giao diện \\
+\hline
+Giao diện & react-router-dom & 7.14 & Định tuyến theo vai trò \\
+\hline
+Giao diện & @supabase/supabase-js & 2.57 & Đăng nhập Google qua Supabase Auth \\
+\hline
+Giao diện & recharts, framer-motion, html5-qrcode, DOMPurify & 2.8, 11, 2.3, 3.4 & Biểu đồ, hiệu ứng, quét mã QR, làm sạch HTML \\
+\hline
+Dữ liệu & PostgreSQL trên Supabase & theo Supabase & CSDL; phần mở rộng \texttt{uuid-ossp}, \texttt{citext}, \texttt{btree\_gist} \\
+\hline
+Dịch vụ ngoài & PayOS, MoMo, Google Gemini & --- & Thanh toán VietQR, ví MoMo (sandbox), trợ lý ảo \\
+\hline
+Hạ tầng & Docker, Vercel, Render, GitHub Actions & --- & Đóng gói, phân phối giao diện, chạy máy chủ, giữ máy chủ hoạt động \\
+\hline
+\end{tabular}
+\ghichu{Phiên bản phía giao diện ghi theo khai báo trong \texttt{package.json} (dấu mũ nghĩa là cho phép bản vá và bản nhỏ hơn); nếu cần độ chính xác tuyệt đối, dùng phiên bản trong \texttt{package-lock.json}.}
+\end{table}
+
+\subsection{Cấu trúc mã nguồn và quy mô}
+\label{ssec:ht_cautruc}
+\ghichu{Giới thiệu kho mã đơn (monorepo) gồm máy chủ, giao diện, cơ sở dữ liệu, tài liệu và báo cáo. Một số thư mục phía giao diện (\texttt{features}, \texttt{layouts}, \texttt{store}, \texttt{routes}) hiện chỉ có tệp giữ chỗ hoặc rỗng: đừng mô tả như thể đã có mã. Gói \texttt{scheduler} không tồn tại, hai bộ lập lịch nằm trong gói \texttt{service}.}
+\nguon{README.md, task.md}
+
+\begin{verbatim}
+DATN_CoSpace/
+|-- BE/            Spring Boot 3.1 (Maven, Dockerfile)
+|   |-- src/main/java/com/cospace/app/
+|   |     config, controller, dto, entity, exception,
+|   |     repository, security, service, util
+|   |-- src/main/resources/
+|   |     application.yml, application-prod.yml, data.sql,
+|   |     db/migration/V1__baseline.sql, V2__constraints.sql
+|   `-- src/test/java/com/cospace/app/   (config, security, service, util)
+|-- FE/            React 18 + Vite + TypeScript (vercel.json)
+|   `-- src/       api, components, config, context, data,
+|                  hooks, lib, pages, types, utils
+|-- database/      seeds, test workflows, archive/migrations-legacy
+|-- docs/          SYSTEM_SPEC, use_cases, api-contracts, plans
+|-- report/        LaTeX report (DATN/), LOGIC_AUDIT.md
+`-- .github/workflows/keep-alive.yml
+\end{verbatim}
+
+\begin{table}[H]
+\centering
+\caption{Quy mô mã nguồn (đo ngày 21/09/2026)}
+\label{tab:ht_quymo}
+\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{|p{6.2cm}|p{7.6cm}|}
+\hline
+\textbf{Hạng mục} & \textbf{Số liệu} \\
+\hline
+Mã Java phía máy chủ & 173 tệp, khoảng 16,5 nghìn dòng \\
+\hline
+Lớp điều khiển (controller) & 26 lớp với 133 phương thức xử lý yêu cầu; 2 bộ xử lý ngoại lệ \\
+\hline
+Lớp nghiệp vụ (gói \texttt{service}) & 32 tệp, trong đó 23 tệp dùng \texttt{@Transactional} \\
+\hline
+Lớp truy cập dữ liệu (repository) & 29 giao diện \\
+\hline
+Thực thể (entity) & 29 lớp \texttt{@Entity} và 5 kiểu liệt kê \\
+\hline
+Đối tượng truyền dữ liệu (DTO) & 42 tệp \\
+\hline
+Kiểm thử phía máy chủ & 20 tệp, khoảng 4,4 nghìn dòng, 273 ca kiểm thử \\
+\hline
+Mã TypeScript phía giao diện & 106 tệp, khoảng 31,1 nghìn dòng \\
+\hline
+Trang giao diện (tải lười) & 34 mô-đun trang, 33 trang có đường dẫn \\
+\hline
+Bảng cơ sở dữ liệu & 30 bảng; hai tệp Flyway (\texttt{V1} 779 dòng, \texttt{V2} 169 dòng) \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Hiện thực phía máy chủ}
+\label{sec:ht_be}
+
+\subsection{Tổ chức mã và quy ước}
+\label{ssec:ht_be_tochuc}
+\ghichu{Nêu quy ước đã áp dụng thật: controller chỉ nhận yêu cầu, kiểm tra quyền và gọi service; mọi quy tắc và ranh giới giao dịch nằm ở service; entity dùng khóa ngoại UUID thuần. Nhấn mạnh hai quy ước có giá trị kỹ thuật: (1) mọi thay đổi trạng thái đơn đặt chỗ đi qua \texttt{BookingStateMachine.transition}, chuyển trạng thái sai ném ngoại lệ thay vì âm thầm ghi dữ liệu sai; (2) luồng ghi quan trọng đều đọc lại đơn bằng \texttt{findByIdWithLock} (khóa dòng) rồi mới kiểm tra và ghi. Nói thật hiện trạng: có hai bộ xử lý ngoại lệ song song (\texttt{ApiExceptionHandler} và \texttt{GlobalExceptionHandler}), nên gộp lại là việc nên làm.}
+\nguon{BE/src/main/java/com/cospace/app/service/BookingStateMachine.java}
+
+\subsection{Xác thực và phân quyền}
+\label{ssec:ht_be_xacthuc}
+\ghichu{Trình bày theo thứ tự một yêu cầu đi qua hệ thống: (1) \texttt{JwtDecoder} tự chọn bộ giải mã theo nhà phát hành ghi trong token, token Supabase được kiểm bằng khóa công khai ECC P-256 lấy từ JWKS, token nội bộ được kiểm bằng khóa đối xứng HS384; (2) bộ kiểm tra riêng từ chối token làm mới (\texttt{token\_use}) khi dùng làm token truy cập, vì token làm mới sống 30 ngày ký cùng khóa; (3) \texttt{SupabaseJwtAuthenticationConverter} đọc lại vai trò và trạng thái khóa tài khoản từ cơ sở dữ liệu ở mỗi yêu cầu, không tin vai trò do người dùng tự khai trong \texttt{user\_metadata}; (4) quy tắc theo đường dẫn ở bảng dưới; (5) \texttt{BranchAccessGuard} cô lập dữ liệu giữa các chi nhánh; (6) mật khẩu băm BCrypt. Phản hồi 401 và 403 dùng cùng một định dạng JSON. CORS dùng mẫu nguồn gốc (để chấp nhận địa chỉ xem trước của Vercel), không cho gửi thông tin xác thực kèm cookie. Dẫn lại Hình \ref{fig:sd_xacthuc_api} ở Chương \ref{ch:usecase}, không vẽ lại.}
+\nguon{BE/src/main/java/com/cospace/app/config/SecurityConfig.java, SupabaseJwtAuthenticationConverter.java, security/BranchAccessGuard.java}
+
+\begin{table}[H]
+\centering
+\caption{Quy tắc truy cập theo nhóm đường dẫn của \texttt{SecurityConfig}}
+\label{tab:ht_route_quyen}
+\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{|p{8.2cm}|p{5.6cm}|}
+\hline
+\textbf{Nhóm đường dẫn} & \textbf{Vai trò được phép} \\
+\hline
+\texttt{/api/health}, \texttt{/api/auth/register}, \texttt{/api/auth/login}, \texttt{/api/auth/refresh}, hai đường dẫn tra cứu chi nhánh và bảng giá công khai, các điểm nhận webhook và trả về của PayOS và MoMo, \texttt{/api/payments/payos/status/**} & Không cần đăng nhập (webhook được bảo vệ bằng chữ ký) \\
+\hline
+\texttt{/api/staff/**}, \texttt{/api/checkins/**}, \texttt{/api/bookings/branch-today}, \texttt{/api/bookings/code/**} & Nhân viên, quản lý chi nhánh, quản trị hệ thống \\
+\hline
+\texttt{/api/branch-admin/**}, \texttt{/api/refunds/**}, \texttt{/api/reports/**} & Quản lý chi nhánh, quản trị hệ thống \\
+\hline
+\texttt{/api/admin/**} & Quản trị hệ thống \\
+\hline
+Mọi đường dẫn còn lại & Người dùng đã đăng nhập; ràng buộc mịn hơn bằng \texttt{@PreAuthorize} (21 chỗ) và \texttt{BranchAccessGuard} \\
+\hline
+\end{tabular}
+\ghichu{Vai trò cũ \texttt{admin} vẫn được chấp nhận song song với \texttt{super\_admin} để tương thích ngược. Hạn chế cần nêu ở Chương \ref{ch:ketluan}: \texttt{/h2-console/**} vẫn ở danh sách công khai dù dự án không dùng H2 (có một ca kiểm thử bị tắt để nhắc việc này).}
+\end{table}
+
+\subsection{Đặt chỗ và chống trùng lịch}
+\label{ssec:ht_be_datcho}
+\ghichu{Đây là mục quan trọng nhất của chương. Viết theo thứ tự thực thi của \texttt{BookingService.createBooking} trong một giao dịch: kiểm tra đầu vào; khóa tư vấn theo người dùng (\texttt{rate\_limit:\{userId\}}) rồi đếm đơn \texttt{PENDING\_PAYMENT}, từ 3 đơn trở lên thì từ chối; suy ra chi nhánh từ không gian qua tầng (không tin \texttt{branchId} do máy khách gửi); kiểm tra lịch (giờ mở cửa, không đặt vào quá khứ, chi nhánh còn hoạt động, thời lượng tối đa 24 giờ, 30 ngày, 52 tuần hoặc 12 tháng); khóa tư vấn theo không gian (\texttt{booking:\{workspaceId\}}); tìm đơn chồng lấn ở ba trạng thái còn giữ chỗ, đơn giữ chỗ đã quá 15 phút được giải phóng ngay thay vì chờ tác vụ nền; kiểm tra lịch bảo trì; tính giá; lưu đơn. Ràng buộc \texttt{EXCLUDE} là chốt chặn cuối nếu khóa tư vấn bị bỏ sót. Giải thích vì sao khóa tư vấn theo giao dịch tự nhả khi commit hoặc rollback. Dẫn lại Hình \ref{fig:sd_datcho_1} và \ref{fig:sd_datcho_2} ở Chương \ref{ch:usecase}, không vẽ lại.}
+\nguon{BE/src/main/java/com/cospace/app/service/BookingService.java, BE/src/main/resources/db/migration/V1\_\_baseline.sql}
+
+\begin{lstlisting}[language=Java, caption={Hai khóa tư vấn trong \texttt{BookingService} (rút gọn)}, label={lst:ht_khoa}]
+// 1. per-user lock: serialises the "at most 3 unpaid bookings" check
+entityManager.createNativeQuery("SELECT pg_advisory_xact_lock(hashtext(:key))")
+        .setParameter("key", "rate_limit:" + userId)
+        .getSingleResult();
+// ... resolve branch, validate schedule ...
+// 2. per-workspace lock: serialises overlap check + insert
+entityManager.createNativeQuery("SELECT pg_advisory_xact_lock(hashtext(:key))")
+        .setParameter("key", "booking:" + req.getWorkspaceId())
+        .getSingleResult();
+\end{lstlisting}
+
+\begin{lstlisting}[language=SQL, caption={Ràng buộc loại trừ chống đặt chồng lịch (lớp bảo vệ thứ hai)}, label={lst:ht_exclude}]
+ALTER TABLE bookings
+ADD CONSTRAINT bookings_workspace_id_start_at_end_at_excl EXCLUDE USING gist (
+    workspace_id WITH =,
+    tstzrange(start_at, end_at) WITH &&
+)
+WHERE (status IN ('PENDING_PAYMENT', 'CONFIRMED', 'CHECKED_IN', 'pending_payment', 'confirmed', 'checked_in'));
+\end{lstlisting}
+
+\ghichu{Sau hai đoạn mã, giải thích ngắn: khóa tư vấn làm hai giao dịch đặt cùng một chỗ phải xếp hàng nên người đến sau thấy đơn của người đến trước và bị từ chối bằng thông báo rõ ràng; ràng buộc loại trừ chỉ để đề phòng, khi vi phạm nó trả lỗi \texttt{23P01}. Dẫn lại Hình \ref{fig:race_condition} ở Chương \ref{ch:nentang}. Lưu ý điều kiện \texttt{WHERE} liệt kê cả trạng thái chữ hoa và chữ thường vì dữ liệu cũ còn hai dạng.}
+
+\begin{table}[H]
+\centering
+\caption{Đặc tả các phương thức chính của \texttt{BookingService}}
+\label{tab:ht_spec_booking}
+\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{|p{4.0cm}|p{3.0cm}|p{2.9cm}|p{3.9cm}|}
+\hline
+\textbf{Phương thức} & \textbf{Tham số} & \textbf{Kết quả} & \textbf{Chức năng} \\
+\hline
+\texttt{createBooking} & \texttt{userId}, \texttt{BookingCreate\allowbreak Request} & \texttt{BookingDto} & Tạo đơn của khách trong một giao dịch, trạng thái \texttt{PENDING\_PAYMENT} với hạn thanh toán 15 phút (đơn có tổng bằng 0 được xác nhận ngay) \\
+\hline
+\texttt{createWalkinBooking} & \texttt{staffId}, \texttt{customerId}, \texttt{BookingCreate\allowbreak Request} & \texttt{BookingDto} & Tạo đơn tại quầy, dùng chung luồng trên, nguồn đơn là \texttt{counter} \\
+\hline
+\texttt{quote} & \texttt{userId}, \texttt{QuoteRequest} & \texttt{QuoteResponse} & Tính thử giá và giảm giá mà không lưu đơn, giao diện dùng để hiển thị tổng tiền \\
+\hline
+\texttt{computeUnitCount} & \texttt{DurationUnit}, thời điểm đầu và cuối & \texttt{int} & Suy ra số đơn vị tính tiền từ khoảng thời gian, không tin số liệu từ máy khách \\
+\hline
+\texttt{resolveBranchId\allowbreak ForWorkspace} & \texttt{workspaceId} & \texttt{UUID} & Suy ra chi nhánh của không gian qua tầng \\
+\hline
+\texttt{getBookingByCode} & \texttt{code}, \texttt{branchId} & \texttt{BookingWith\allowbreak DetailsDto} & Nhân viên tra đơn theo mã trong phạm vi chi nhánh \\
+\hline
+\texttt{getBranchTodayBookings} & \texttt{branchId} & danh sách \texttt{BookingDto} & Danh sách đơn trong ngày của chi nhánh \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Tính giá, khuyến mãi và hạng thành viên}
+\label{ssec:ht_be_gia}
+\ghichu{Trình bày công thức tổng tiền: tạm tính bằng đơn giá nhân số đơn vị; giảm giá theo hạng thành viên áp dụng trước, mã khuyến mãi áp dụng sau trên phần còn lại; tổng tiền bằng giá trị lớn hơn giữa 0 và (tạm tính trừ giảm giá), cộng dịch vụ thêm. Đơn giá lấy theo chi nhánh trước, toàn cục sau (\texttt{PricingService.getUnitPriceVnd}). Đơn theo tuần hoặc tháng là hợp đồng. Hạng thành viên đạt khi tổng chi tiêu lớn hơn hoặc bằng ngưỡng chi tiêu HOẶC số đơn lớn hơn hoặc bằng ngưỡng số đơn (ngưỡng bằng 0 bị bỏ qua), lấy hạng cao nhất; chỉ tính đơn \texttt{COMPLETED} và \texttt{NO\_SHOW}, trừ các khoản hoàn tiền đã xử lý, để khách không thể đặt lớn, lên hạng rồi hủy. Mã khuyến mãi có kiểu phần trăm hoặc số tiền cố định, mức giảm tối đa, giá trị đơn tối thiểu, giới hạn lượt dùng tổng và theo người, phạm vi chi nhánh hoặc loại không gian, hạng tối thiểu. Lượt dùng mã được đếm từ các đơn còn giữ mã (truy vấn \texttt{PROMOTION\_STILL\_REDEEMED} ở \texttt{BookingRepository}): đơn hết hạn chưa thanh toán không còn chiếm lượt, còn đơn đã thanh toán rồi hủy vẫn chiếm lượt, để một mã dùng một lần không thể bị đặt rồi hủy lặp lại.}
+\nguon{BE/src/main/java/com/cospace/app/service/PricingService.java, PromotionService.java, MembershipService.java, repository/BookingRepository.java, BE/src/main/resources/db/migration/V1\_\_baseline.sql}
+
+\begin{table}[H]
+\centering
+\caption{Bốn hạng thành viên mặc định trong lược đồ}
+\label{tab:ht_hang}
+\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{|p{2.6cm}|p{3.8cm}|p{3.4cm}|p{3.0cm}|}
+\hline
+\textbf{Hạng} & \textbf{Chi tiêu tối thiểu} & \textbf{Số đơn tối thiểu} & \textbf{Giảm giá} \\
+\hline
+Bronze & 0 đ & 0 & 0\% \\
+\hline
+Silver & 2.000.000 đ & 3 & 3\% \\
+\hline
+Gold & 5.000.000 đ & 10 & 5\% \\
+\hline
+Platinum & 15.000.000 đ & 20 & 10\% \\
+\hline
+\end{tabular}
+\ghichu{Quản trị viên chỉnh được các ngưỡng và tỉ lệ này ở trang quản lý hạng thành viên; bảng trên là dữ liệu khởi tạo trong \texttt{V1\_\_baseline.sql}. Nếu muốn nêu số liệu đang chạy, đọc từ cơ sở dữ liệu thật.}
+\end{table}
+
+\subsection{Thanh toán và xử lý webhook}
+\label{ssec:ht_be_thanhtoan}
+\ghichu{Trình bày ba phương thức: PayOS VietQR, MoMo (môi trường thử) và tiền mặt tại quầy chỉ dành cho nhân viên hoặc quản lý chi nhánh (khách hàng không chọn được tiền mặt). Mỗi giao dịch có \texttt{orderId} riêng (ví dụ \texttt{PAYOS-\{orderCode\}}); nếu yêu cầu tạo thanh toán kèm tiêu đề \texttt{Idempotency-Key} và đơn đã có giao dịch \texttt{INITIATED} hoặc \texttt{PENDING} thì trả lại giao dịch cũ. Webhook PayOS: kiểm chữ ký, tìm giao dịch theo \texttt{orderId}, bỏ qua nếu đã \texttt{PAID}, mã \texttt{00} thì chuyển \texttt{PAID} rồi xác nhận đơn dưới khóa dòng; đơn đã hết hạn hoặc đã hủy (thanh toán về muộn) hoặc đã có giao dịch khác thanh toán rồi (trả trùng) thì tạo yêu cầu hoàn tiền \texttt{pending} với lý do \texttt{LATE\_PAYMENT} hoặc \texttt{DUPLICATE\_PAYMENT}; mã khác thì \texttt{FAILED}. Điểm trả về của trình duyệt không tin tham số truy vấn mà hỏi lại PayOS trạng thái và số tiền. Nêu đúng hiện trạng: chống lặp webhook dựa vào trạng thái \texttt{PAID} của giao dịch, bảng \texttt{payment\_events} chưa được ghi. Dẫn lại Hình \ref{fig:sd_thanhtoan}, \ref{fig:sd_webhook} và \ref{fig:state_payment}, không vẽ lại.}
+\nguon{BE/src/main/java/com/cospace/app/service/PaymentService.java, PayosService.java, MomoService.java}
+
+\begin{table}[H]
+\centering
+\caption{Đặc tả các phương thức chính của \texttt{PaymentService} và \texttt{PayosService}}
+\label{tab:ht_spec_payment}
+\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{|p{3.7cm}|p{3.3cm}|p{2.2cm}|p{4.6cm}|}
+\hline
+\textbf{Phương thức} & \textbf{Tham số} & \textbf{Kết quả} & \textbf{Chức năng} \\
+\hline
+\texttt{createPayosPayment} & \texttt{userId}, \texttt{bookingId}, \texttt{idempotencyKey} & phản hồi có liên kết và mã QR & Tạo giao dịch, gọi PayOS lấy liên kết VietQR; lỗi thì đặt \texttt{FAILED} \\
+\hline
+\texttt{createMomoPayment} & như trên & phản hồi có địa chỉ thanh toán & Tương tự với cổng MoMo thử nghiệm \\
+\hline
+\texttt{createCashPayment} & \texttt{staffId}, \texttt{bookingId} & phản hồi thanh toán tiền mặt & Nhân viên ghi nhận đã thu tiền mặt: khóa dòng đơn, ghi giao dịch \texttt{PAID}, xác nhận đơn \\
+\hline
+\texttt{handlePayosWebhook} & \texttt{PayosWebhookDto} & \texttt{void} & Xử lý thông báo từ PayOS như mô tả ở trên \\
+\hline
+\texttt{handleMomoCallback} & bảng tham số & \texttt{void} & Xử lý thông báo từ MoMo, luôn từ chối chữ ký sai \\
+\hline
+\texttt{handlePayosReturn} & bảng tham số & \texttt{boolean} & Xác nhận khi PayOS báo \texttt{PAID} và đủ tiền \\
+\hline
+\texttt{simulatePayosPayment} & \texttt{callerId}, \texttt{orderCode} & \texttt{void} & Chỉ chạy khi PayOS ở chế độ demo, chỉ chủ giao dịch được gọi \\
+\hline
+\texttt{verifyWebhookSignature} & dữ liệu, chữ ký (\texttt{PayosService}) & \texttt{boolean} & Kiểm chữ ký; chế độ demo từ chối mọi webhook \\
+\hline
+\end{tabular}
+\end{table}
+
+\ghichu{Nêu rõ cơ chế trình diễn và chốt chặn: khi thiếu thông tin PayOS, máy chủ chạy chế độ demo và mở đường mô phỏng thanh toán (yêu cầu đăng nhập và đúng chủ giao dịch) để chạy thử cục bộ. Ở môi trường thật, tệp cấu hình \texttt{prod} không có giá trị mặc định và \texttt{PayosProductionGuard} từ chối khởi động nếu PayOS vẫn ở chế độ demo, vì khi đó khách có thể tự xác nhận đơn mà không trả tiền.}
+
+\subsection{Hủy đặt chỗ và hoàn tiền}
+\label{ssec:ht_be_huy}
+\ghichu{Trình bày theo các quy tắc đã được chủ dự án chốt sau đợt rà soát: (1) không hủy được khi đã đến giờ bắt đầu, khách vắng mặt trở thành \texttt{NO\_SHOW} và mất phí; (2) đơn đang sử dụng (\texttt{CHECKED\_IN}) không hủy được, khách check-out thay vì hủy; (3) nhân viên được hủy thay khách với lý do bắt buộc, có nhật ký kiểm toán và tùy chọn miễn phạt; (4) chọn chính sách của chi nhánh trước, không khớp mới dùng chính sách toàn cục, so khớp theo phút trên khoảng nửa mở \texttt{[min, max)}, không khớp thì hoàn 0\%; (5) số tiền hoàn bằng giá trị nhỏ hơn giữa (tiền thuê nhân tỉ lệ hoàn, cộng dịch vụ đã trả) và số đã thu, còn phí phạt bằng tổng tiền trừ số hoàn. Yêu cầu hoàn tiền không tự chi trả: nằm trong hàng chờ để quản lý chi nhánh hoặc quản trị viên đánh dấu đã xử lý hoặc từ chối (bắt buộc ghi lý do), có ràng buộc duy nhất \texttt{(payment\_id, reason\_type)} và tổng hoàn không vượt số đã thu. Ghi chú: bản rà soát (quyết định Q4) ghi hàng chờ do ``staff hoặc branch admin'' duyệt, nhưng mã hiện chỉ cho quản lý chi nhánh và quản trị hệ thống (\texttt{@PreAuthorize} trên \texttt{RefundController}); hãy viết theo mã và nêu đây là điểm cần thống nhất. Dẫn lại Hình \ref{fig:sd_huy}, \ref{fig:sd_duyet_hoantien} và \ref{fig:act_cancel}, không vẽ lại.}
+\nguon{BE/src/main/java/com/cospace/app/service/CancellationService.java, RefundService.java, controller/RefundController.java, BE/src/main/resources/data.sql}
+
+\begin{table}[H]
+\centering
+\caption{Đặc tả các phương thức chính của \texttt{CancellationService} và \texttt{RefundService}}
+\label{tab:ht_spec_cancel}
+\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{|p{3.5cm}|p{3.3cm}|p{3.2cm}|p{3.8cm}|}
+\hline
+\textbf{Phương thức} & \textbf{Tham số} & \textbf{Kết quả} & \textbf{Chức năng} \\
+\hline
+\texttt{cancelBooking} & \texttt{userId}, \texttt{bookingId}, \texttt{reason} & \texttt{BookingCancellation} & Khách hủy đơn của mình, tính hoàn tiền theo chính sách \\
+\hline
+\texttt{cancelByStaff} & \texttt{staffId}, \texttt{bookingId}, \texttt{reason}, \texttt{waivePenalty} & \texttt{BookingCancellation} & Nhân viên hủy thay khách, lý do bắt buộc, có thể miễn phạt \\
+\hline
+\texttt{cancelForMaintenance} & \texttt{booking}, \texttt{reason} & \texttt{void} & Hủy đơn chưa dùng do bảo trì phủ trọn, hoàn toàn bộ số đã thanh toán \\
+\hline
+\texttt{refundableAmount} & \texttt{bookingId} & \texttt{long} & Số đã thu trừ phần đã hoàn hoặc đang chờ hoàn \\
+\hline
+\texttt{requestRefund} & \texttt{booking}, \texttt{paymentId}, \texttt{amount}, \texttt{reasonType}, \texttt{reason} & \texttt{Refund} & Nơi duy nhất tạo yêu cầu hoàn tiền (\texttt{pending}) \\
+\hline
+\texttt{markProcessed}, \texttt{reject} & \texttt{refundId}, \texttt{actorId}, \texttt{note} & \texttt{Refund} & Duyệt hoặc từ chối yêu cầu, đồng bộ bản ghi hủy, thông báo cho khách \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Check-in, check-out và các tác vụ nền}
+\label{ssec:ht_be_vongdoi}
+\ghichu{Check-in được phép từ 30 phút trước giờ bắt đầu đến hết \texttt{end\_at} (cửa sổ kết thúc ở \texttt{end\_at}, không kéo dài thêm 30 phút như tài liệu đặc tả cũ); mỗi đơn chỉ có một lượt check-in đang mở, được bảo đảm bằng chỉ mục duy nhất \texttt{uq\_checkin\_open}. Gói nhiều ngày check-out giữa kỳ thì đơn quay lại \texttt{CONFIRMED} chờ ngày sau, hết kỳ mới \texttt{COMPLETED}. Không cho check-out khi khách còn nợ dịch vụ gọi thêm; check-out sớm thì \texttt{end\_at} được rút về hiện tại để giải phóng chỗ. Hai tác vụ nền ở bảng dưới; nhấn mạnh chúng tách thành hai bean (bộ lập lịch chỉ tìm ứng viên, xử lý từng đơn ở service riêng dưới khóa dòng) vì lời gọi \texttt{@Transactional} trong cùng một lớp không tạo giao dịch, đây là nguyên nhân lỗi mất cập nhật giữa tác vụ hết hạn và webhook đã được phát hiện ở đợt rà soát. Dẫn lại Hình \ref{fig:sd_checkin}, \ref{fig:sd_hethan}, \ref{fig:sd_dongdon} và \ref{fig:act_checkin}, không vẽ lại.}
+\nguon{BE/src/main/java/com/cospace/app/service/CheckinService.java, BookingLifecycleService.java, BookingExpiryScheduler.java, BookingLifecycleScheduler.java}
+
+\begin{table}[H]
+\centering
+\caption{Các tác vụ định kỳ của máy chủ}
+\label{tab:ht_lapkich}
+\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{|p{3.4cm}|p{2.6cm}|p{3.6cm}|p{4.2cm}|}
+\hline
+\textbf{Bộ lập lịch} & \textbf{Chu kỳ} & \textbf{Điều kiện chọn đơn} & \textbf{Hành động} \\
+\hline
+\texttt{BookingExpiry\allowbreak Scheduler} & 30 giây (\texttt{fixedRate}) & \texttt{PENDING\_PAYMENT} quá hạn thanh toán & Chuyển \texttt{EXPIRED} dưới khóa dòng, hủy dịch vụ chưa trả, đặt giao dịch chờ thành \texttt{EXPIRED}; đơn đã được webhook xác nhận trước đó thì giữ nguyên \\
+\hline
+\texttt{BookingLifecycle\allowbreak Scheduler} & 5 phút (\texttt{fixedDelay}), trễ 60 giây khi khởi động & \texttt{CHECKED\_IN} quá \texttt{end\_at} cộng thời gian ân hạn (mặc định 15 phút); \texttt{CONFIRMED} đã quá \texttt{end\_at} & Tự check-out; đơn đã từng check-in thành \texttt{COMPLETED}, chưa từng thành \texttt{NO\_SHOW} (giữ tiền đã thanh toán) \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Bảo trì không gian}
+\label{ssec:ht_be_baotri}
+\ghichu{Tạo lịch bảo trì dùng chung khóa tư vấn \texttt{booking:\{workspaceId\}} với đặt chỗ nên hai luồng không lọt qua nhau. Từ chối lịch bảo trì bắt đầu ở quá khứ hoặc trùng lịch bảo trì khác. Với mỗi đơn bị ảnh hưởng, đọc lại đơn dưới khóa dòng rồi xử lý ba trường hợp: bảo trì không phủ hết thời gian của đơn thì đơn vẫn giữ chỗ và chỉ hoàn theo tỉ lệ phần thời gian giao nhau; phủ hết và khách đang sử dụng thì check-out tại chỗ, kết thúc đơn sớm và hoàn phần thời gian mất; phủ hết và chưa sử dụng thì hủy đơn và hoàn toàn bộ. Lịch bảo trì chưa đến giờ có trạng thái \texttt{scheduled}, đã đến giờ là \texttt{active}, để sơ đồ mặt bằng không hiện chỗ đang sửa quá sớm. Dẫn lại Hình \ref{fig:sd_baotri} và \ref{fig:act_maintenance}, không vẽ lại.}
+\nguon{BE/src/main/java/com/cospace/app/service/StaffMaintenanceService.java}
+
+\subsection{Báo cáo, gợi ý đối tác, cộng đồng và trợ lý ảo}
+\label{ssec:ht_be_khac}
+\ghichu{Báo cáo: doanh thu là tổng tiền các đơn thực sự đã dùng (\texttt{COMPLETED} và \texttt{NO\_SHOW}) nhóm theo \texttt{end\_at}, trừ khoản hoàn tiền đã xử lý và dịch vụ gọi thêm chưa thu; đơn tương lai và đơn đã hủy (kể cả phí phạt giữ lại) không tính; kết quả tổng quan được lưu đệm 2 phút; xuất CSV có dấu BOM UTF-8 để Excel hiển thị đúng tiếng Việt. Gợi ý đối tác: điểm bằng tổng có trọng số của ba tín hiệu (độ tương đồng Jaccard của kỹ năng với trọng số 0,5, của sở thích với trọng số 0,2, độ trùng chủ đề từ bài viết đã đăng với trọng số 0,2) chuẩn hóa trên các tín hiệu mà cả hai bên đều có, cộng 0,15 nếu cùng chi nhánh, tối đa 1,0; chỉ gợi ý khách hàng đang hoạt động, không gợi ý chính mình hay khách vãng lai, không có ngưỡng điểm tối thiểu để hiển thị. Gemini (khi có khóa) viết câu ``vì sao nên kết nối'' cho mỗi gợi ý và gợi ý thẻ cho bài viết; thiếu khóa hoặc lỗi thì quay về lý do dựa trên thẻ chung và so khớp từ khóa. Trợ lý ảo: xem tiếp ở mục sau. Lưu ý: bản Đồ án chuyên ngành ghi trọng số sở thích 0,35 và ngưỡng hiển thị 0,20, không còn đúng với mã hiện tại.}
+\nguon{BE/src/main/java/com/cospace/app/service/ReportService.java, PartnerMatchingService.java, CommunityPostService.java}
+
+Gọi $s_i$ là độ tương đồng của tín hiệu thứ $i$ (giá trị từ 0 đến 1) và $w_i$ là trọng số của nó. Điểm gợi ý giữa hai thành viên được tính bằng
+\begin{equation}
+\text{điểm} = \min\Bigg(1,\ \frac{\sum_{i \in \mathcal{A}} w_i\, s_i}{\sum_{i \in \mathcal{A}} w_i} + b\Bigg),
+\label{eq:ht_matching}
+\end{equation}
+trong đó $\mathcal{A}$ là tập các tín hiệu mà cả hai bên đều có dữ liệu và $b = 0{,}15$ nếu hai người cùng chi nhánh chính, ngược lại $b = 0$. Các tín hiệu được nêu ở Bảng \ref{tab:ht_matching}.
+
+\begin{table}[H]
+\centering
+\caption{Các tín hiệu trong công thức gợi ý đối tác}
+\label{tab:ht_matching}
+\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{|p{2.8cm}|p{6.2cm}|p{1.6cm}|p{3.2cm}|}
+\hline
+\textbf{Tín hiệu} & \textbf{Cách tính $s_i$} & \textbf{Trọng số $w_i$} & \textbf{Điều kiện đưa vào $\mathcal{A}$} \\
+\hline
+Kỹ năng & Hệ số Jaccard giữa hai tập thẻ kỹ năng & 0,5 & Cả hai đều có ít nhất một kỹ năng \\
+\hline
+Sở thích & Hệ số Jaccard giữa hai tập thẻ sở thích & 0,2 & Cả hai đều có ít nhất một sở thích \\
+\hline
+Chủ đề bài viết & Số thẻ chung giữa thẻ bài viết của ứng viên và tập (kỹ năng, sở thích, thẻ bài viết) của mình, chia cho kích thước tập nhỏ hơn & 0,2 & Cả hai đều có chủ đề \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Trợ lý ảo}
+\label{sssec:ht_chatbot}
+\ghichu{Điểm cuối \texttt{POST /api/chatbot/message} trả kết quả theo luồng SSE (sự kiện \texttt{progress} rồi \texttt{result}). Máy chủ lặp tối đa 6 vòng gọi mô hình; mô hình có 9 công cụ: 6 công cụ chỉ đọc (\texttt{list\_branches}, \texttt{find\_workspaces}, \texttt{list\_my\_bookings}, \texttt{get\_booking}, \texttt{get\_cancellation\_policy}, \texttt{list\_extra\_services}) chạy ngay trên máy chủ và bị giới hạn theo \texttt{userId} lấy từ JWT, và 3 công cụ ghi (\texttt{propose\_create\_booking}, \texttt{propose\_cancel\_booking}, \texttt{propose\_add\_extra\_service}) chỉ tạo bản tóm tắt chờ khách bấm xác nhận. Xác nhận đi qua \texttt{POST /api/chatbot/actions/confirm} và gọi lại đúng các service thông thường nên dùng chung khóa và kiểm tra. Mô hình chính \texttt{gemini-3.5-flash}, mô hình dự phòng \texttt{gemini-3.7-flash} khi gặp mã 429, 500, 502, 503 hoặc 504. Đây là thiết kế đáng nhấn mạnh: mô hình ngôn ngữ không được tự ghi dữ liệu. Dẫn lại Hình \ref{fig:sd_chatbot_1} và \ref{fig:sd_chatbot_2}, không vẽ lại.}
+\nguon{BE/src/main/java/com/cospace/app/service/ChatbotService.java, GeminiClient.java}
+
+\subsection{Thông báo, nhật ký kiểm toán và bộ nhớ đệm}
+\label{ssec:ht_be_phutro}
+\ghichu{Thông báo trong ứng dụng do \texttt{NotificationService} tạo (giao diện hỏi lại mỗi 30 giây). Nhật ký kiểm toán lưu người thực hiện, hành động, đối tượng, giá trị cũ và mới, địa chỉ IP và trình duyệt; ghi trong giao dịch riêng (\texttt{REQUIRES\_NEW}) để lỗi ghi nhật ký không làm hỏng thao tác chính. Bộ nhớ đệm Caffeine có 11 vùng, mỗi vùng tối đa 500 phần tử và hết hạn sau khi ghi; controller xóa vùng liên quan khi ghi để quản trị viên không thấy dữ liệu cũ. Nêu giới hạn: đệm và bộ lập lịch nằm trong bộ nhớ tiến trình nên chỉ đúng khi chạy một bản sao máy chủ.}
+\nguon{BE/src/main/java/com/cospace/app/config/CacheConfig.java, service/AuditLogService.java, service/NotificationService.java}
+
+\begin{table}[H]
+\centering
+\caption{Các vùng bộ nhớ đệm và thời gian sống}
+\label{tab:ht_cache}
+\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|p{5.6cm}|p{2.6cm}|p{5.4cm}|}
+\hline
+\textbf{Vùng đệm} & \textbf{Thời gian sống} & \textbf{Lý do} \\
+\hline
+\texttt{adminBranches}, \texttt{adminWorkspaceTypes}, \texttt{adminPricePolicies}, \texttt{amenities}, \texttt{workspaceTypeAmenities}, \texttt{membershipTiers} & 10 phút & Cấu hình ít thay đổi, được đọc rất nhiều \\
+\hline
+\texttt{extraServices}, \texttt{cancellationPolicies} & 5 phút & Cấu hình có thể chỉnh trong ngày \\
+\hline
+\texttt{reportsOverview} & 2 phút & Truy vấn tổng hợp nặng \\
+\hline
+\texttt{adminUsers}, \texttt{auditLogs} & 1 phút & Cần thấy thay đổi gần như ngay \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Hiện thực phía giao diện}
+\label{sec:ht_fe}
+
+\subsection{Định tuyến theo vai trò và tổ chức trang}
+\label{ssec:ht_fe_route}
+\ghichu{Giải thích cách \texttt{App.tsx} dựng bảng định tuyến theo vai trò: mỗi vai trò chỉ đăng ký các đường dẫn của mình nên khách hàng không thể mở trang quản trị bằng cách gõ địa chỉ (phía máy chủ vẫn kiểm tra lại). Có 34 mô-đun trang, tất cả đều được tải lười bằng \texttt{React.lazy} kèm \texttt{Suspense}; 33 trang có đường dẫn, mô-đun \texttt{LocationPage} được khai báo nhưng chưa dùng (đường dẫn \texttt{/locations} hiện hiển thị trang chủ). Mỗi vai trò có thanh điều hướng riêng: khách hàng 4 mục, nhân viên 4 mục, quản lý chi nhánh 8 mục, quản trị hệ thống 13 mục. Có \texttt{ErrorBoundary}, trang 404, giao diện sáng tối, chuông thông báo và trợ lý ảo. Bảng danh mục màn hình ở Chương \ref{ch:giaodien} liệt kê đường dẫn và trang của từng vai trò.}
+\nguon{FE/src/App.tsx}
+
+\subsection{Xác thực phía giao diện}
+\label{ssec:ht_fe_auth}
+\ghichu{\texttt{AuthContext} xử lý hai đường: (1) email và mật khẩu gọi \texttt{/api/auth/register} hoặc \texttt{/api/auth/login} rồi lưu token; (2) Google qua \texttt{supabase.auth.signInWithOAuth}, khi Supabase báo có phiên thì gọi \texttt{/api/auth/sync} kèm token Supabase để máy chủ tạo hoặc liên kết tài khoản. Token truy cập và làm mới lưu trong \texttt{localStorage}; tên khóa còn mang tiền tố \texttt{workhub\_} của tên gọi cũ. Đây là một đánh đổi cần nêu: \texttt{localStorage} đọc được bởi mã chạy trong trang, nên giao diện bù lại bằng chính sách CSP và Trusted Types (mục sau); cách khác là cookie \texttt{HttpOnly}, sẽ đòi hỏi bật CORS có thông tin xác thực. Token truy cập được làm mới bằng \texttt{/api/auth/refresh}.}
+\nguon{FE/src/context/AuthContext.tsx, FE/src/lib/supabase.ts}
+
+\subsection{Lớp truy cập API}
+\label{ssec:ht_fe_api}
+\ghichu{Địa chỉ máy chủ nằm ở một nơi duy nhất, \texttt{config/api.ts}, đọc từ biến \texttt{VITE\_API\_BASE\_URL} (mặc định \texttt{http://localhost:8080}); trước đây địa chỉ này bị lặp cứng ở nhiều tệp và làm hỏng trang hồ sơ trên môi trường thật, nay đã gom về một chỗ. Các mô-đun truy cập API theo miền: \texttt{bookingApi}, \texttt{spaceApi}, \texttt{communityApi}, \texttt{chatbotApi}, \texttt{startPayment} trong \texttt{lib/} và \texttt{adminApi}, \texttt{staffApi}, \texttt{loyaltyApi}, \texttt{refundApi}, \texttt{addonApi} trong \texttt{api/}.}
+\nguon{FE/src/config/api.ts, FE/src/lib/, FE/src/api/}
+
+\subsection{Sơ đồ mặt bằng tương tác}
+\label{ssec:ht_fe_matbang}
+\ghichu{Bảng tầng (\texttt{floors}) lưu sơ đồ mặt bằng theo hai cách: nội dung SVG đầy đủ ở cột \texttt{svg\_content} (kiểu \texttt{TEXT}, để hiển thị trực tiếp) và bố cục có cấu trúc do bộ soạn thảo kéo thả tạo ra ở cột \texttt{layout\_json} (kiểu \texttt{JSONB}); cột \texttt{svg\_url} là di sản, mã hiện ghi chuỗi rỗng. Mỗi không gian liên kết tới một phần tử SVG qua \texttt{svg\_element\_id}, duy nhất trong tầng. Bộ xem (\texttt{FloorPlanViewer}) tô màu phần tử theo trạng thái trống, đã đặt hoặc đang bảo trì; bộ soạn thảo dành cho quản lý chi nhánh (\texttt{FloorPlanEditor}) gồm khung vẽ, thư viện phần tử, bảng thuộc tính, tay nắm chọn và thanh công cụ, dựa trên danh mục phần tử \texttt{data/elementCatalog.ts} và hook \texttt{useFloorPlanEditor}. Hệ thống không dùng Supabase Storage cho ảnh mặt bằng. Ảnh chụp bộ xem và bộ soạn thảo đặt ở Chương \ref{ch:giaodien}.}
+\nguon{FE/src/components/floor-plan/, FE/src/data/elementCatalog.ts, FE/src/types/floorPlan.ts}
+
+\subsection{Thanh toán, thông báo và cập nhật gần thời gian thực}
+\label{ssec:ht_fe_thoigianthuc}
+\ghichu{Hệ thống không dùng WebSocket; các cập nhật gần thời gian thực đều dựa trên hỏi lại định kỳ và luồng SSE. Trang trả tiền VietQR (\texttt{VietQrCheckoutPage}) hỏi \texttt{GET /api/payments/payos/status/\{orderCode\}} mỗi 2,5 giây cho đến khi nhận \texttt{PAID}, kèm đồng hồ đếm ngược đến hạn thanh toán; trang xác nhận đặt chỗ đếm ngược theo giây; chuông thông báo hỏi mỗi 30 giây; bảng điều khiển check-in làm mới mỗi 60 giây; trợ lý ảo đọc luồng SSE bằng \texttt{fetch} và bộ đọc luồng của trình duyệt. Trang trả tiền có phím tắt trình diễn gọi đường mô phỏng thanh toán; nêu rõ đây là công cụ trình diễn, chỉ hoạt động khi máy chủ ở chế độ demo và bị chặn ở môi trường thật.}
+\nguon{FE/src/pages/customer/VietQrCheckoutPage.tsx, FE/src/components/notifications/NotificationBell.tsx, FE/src/lib/chatbotApi.ts}
+
+\subsection{Bảo mật và tối ưu tải phía giao diện}
+\label{ssec:ht_fe_baomat}
+\ghichu{Bảo mật: \texttt{vercel.json} đặt chính sách CSP chặt (chỉ cho nạp mã và kết nối tới chính nó, máy chủ CoSpace và Supabase, cấm nhúng khung, cấm đối tượng), \texttt{require-trusted-types-for 'script'} cùng chính sách Trusted Types \texttt{default} làm sạch HTML bằng DOMPurify (\texttt{lib/trustedTypesPolicy.ts}), và các tiêu đề \texttt{X-Content-Type-Options}, \texttt{X-Frame-Options: DENY}, \texttt{Referrer-Policy}, \texttt{Permissions-Policy}, \texttt{Cross-Origin-Opener-Policy}. Tối ưu tải: \texttt{vite.config.ts} tách gói theo nhà cung cấp (\texttt{vendor-react}, \texttt{vendor-icons}, \texttt{vendor-motion}, \texttt{vendor-supabase}), trang tải lười, thư viện biểu đồ và quét mã QR chỉ nạp ở trang cần đến; tệp tài nguyên có tiêu đề \texttt{Cache-Control} bất biến một năm. Số liệu kích thước đo được ở Chương \ref{ch:kiemthu}.}
+\nguon{FE/vercel.json, FE/vite.config.ts, FE/src/lib/trustedTypesPolicy.ts}
+
+\section{Hiện thực cơ sở dữ liệu và dữ liệu mẫu}
+\label{sec:ht_csdl}
+\ghichu{Trình bày cách lược đồ được quản lý: Flyway sở hữu lược đồ, \texttt{V1\_\_baseline.sql} là lược đồ đang chạy, \texttt{V2\_\_constraints.sql} bổ sung các ràng buộc còn thiếu và \texttt{ON UPDATE CASCADE} cho mọi khóa ngoại trỏ tới \texttt{users} và \texttt{profiles} (cần cho việc liên kết tài khoản Google đổi khóa chính). Cơ sở dữ liệu đã có dữ liệu được đánh dấu ở mốc \texttt{V1} (\texttt{baseline-on-migrate}) thay vì chạy lại; các ràng buộc kiểm tra thêm ở dạng \texttt{NOT VALID} để dữ liệu cũ không chặn việc khởi động, sau khi dọn dữ liệu thì chạy \texttt{VALIDATE} từng cái. Dữ liệu mẫu: \texttt{data.sql} chỉ chạy ở môi trường phát triển (môi trường thật đặt \texttt{spring.sql.init.mode: never}), cùng các tệp \texttt{seed\_3\_branches\_9\_floors.sql} (3 chi nhánh, 9 tầng) và \texttt{seed\_demo\_data.sql}. Các tệp di trú cũ đã chuyển vào \texttt{database/archive/migrations-legacy}. Theo bản rà soát ngày 20/09/2026, Flyway chưa được thử trên một PostgreSQL trống thật. Khi đối chiếu 300 cột do các entity ánh xạ với \texttt{V1} và \texttt{V2}, chỉ thiếu hai cột: \texttt{floors.svg\_content} và \texttt{floors.layout\_json} (được thêm ở tệp di trú cũ đã lưu trữ). Cơ sở dữ liệu thật có sẵn hai cột này nên không lỗi, nhưng một cơ sở dữ liệu trống dựng bằng Flyway sẽ lỗi khi đọc bảng tầng; cần thêm một tệp \texttt{V3} dùng \texttt{ADD COLUMN IF NOT EXISTS} rồi chạy thử trên cơ sở dữ liệu trống trước khi nói Flyway dựng được lược đồ từ đầu.}
+\nguon{BE/src/main/resources/db/migration/, BE/src/main/resources/application.yml, BE/src/main/resources/data.sql, database/}
+
+\begin{table}[H]
+\centering
+\caption{Các ràng buộc toàn vẹn quan trọng trong lược đồ}
+\label{tab:ht_rangbuoc}
+\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{|p{4.8cm}|p{3.0cm}|p{6.0cm}|}
+\hline
+\textbf{Ràng buộc} & \textbf{Bảng} & \textbf{Nội dung bảo vệ} \\
+\hline
+\mt{bookings\_workspace\_id\_start\_at\_end\_at\_excl} & \texttt{bookings} & Không có hai đơn còn giữ chỗ chồng lấn thời gian trên cùng một không gian (\texttt{EXCLUDE USING gist}) \\
+\hline
+\mt{no\_overlapping\_maintenance} & \mt{workspace\_maintenance} & Không có hai lịch bảo trì đang hiệu lực chồng lấn trên cùng một không gian \\
+\hline
+\texttt{uq\_checkin\_open} & \texttt{checkin\_logs} & Mỗi đơn chỉ có một lượt check-in chưa check-out \\
+\hline
+\texttt{check\_branch\_by\_role} & \texttt{users} & Quản trị hệ thống và khách hàng không thuộc chi nhánh; quản lý chi nhánh và nhân viên bắt buộc có chi nhánh \\
+\hline
+\texttt{check\_booking\_amounts} & \texttt{bookings} & Các khoản tiền của đơn nhất quán với công thức tổng tiền \\
+\hline
+\texttt{check\_payment\_deadline} & \texttt{bookings} & Đơn chờ thanh toán bắt buộc có hạn thanh toán \\
+\hline
+\mt{check\_policy\_percent}, \mt{check\_policy\_range} & \mt{cancellation\_policies} & Tỉ lệ hoàn hợp lệ, khoảng thời gian hợp lệ \\
+\hline
+\end{tabular}
+\ghichu{Các ràng buộc từ \texttt{V2} đang ở dạng \texttt{NOT VALID}: chỉ áp dụng cho dòng ghi mới. Nêu đúng điều này thay vì nói dữ liệu cũ đã được kiểm tra.}
+\end{table}
+
+\section{Tích hợp dịch vụ bên thứ ba}
+\label{sec:ht_tichhop}
+\ghichu{Với mỗi dịch vụ: mục đích, cơ chế tích hợp, chế độ dùng trong đề tài và thông tin cấu hình. Nêu thẳng những gì hệ thống không dùng: không có Supabase Storage, không WebSocket, không thông báo đẩy. Về MoMo: thông tin sandbox công khai của MoMo hiện được ghi thẳng trong \texttt{application.yml}; bản rà soát ghi nhận đây là rủi ro còn mở (mã PAY-01), nên trình bày như một hạn chế chứ không giấu.}
+\nguon{BE/src/main/resources/application.yml, docs/api-contracts/payments.md}
+
+\begin{table}[H]
+\centering
+\caption{Các dịch vụ bên thứ ba được tích hợp}
+\label{tab:ht_tichhop}
+\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{|p{2.4cm}|p{4.6cm}|p{3.4cm}|p{3.4cm}|}
+\hline
+\textbf{Dịch vụ} & \textbf{Mục đích và cơ chế} & \textbf{Chế độ trong đề tài} & \textbf{Cấu hình} \\
+\hline
+Supabase Auth & Đăng nhập Google (OAuth); máy chủ kiểm token bằng JWKS & Dự án Supabase thật & \texttt{SUPABASE\_JWT\_ISSUER}, \texttt{VITE\_SUPABASE\_URL} \\
+\hline
+PayOS & Tạo liên kết và mã VietQR, hỏi trạng thái, nhận webhook có chữ ký & Demo cục bộ; thật ở môi trường \texttt{prod} & \texttt{PAYOS\_CLIENT\_ID}, \texttt{PAYOS\_API\_KEY}, \texttt{PAYOS\_CHECKSUM\_KEY} \\
+\hline
+MoMo & Tạo yêu cầu thanh toán ví, nhận IPN có chữ ký & Cổng thử nghiệm (sandbox) & Khối \texttt{momo} trong \texttt{application.yml} \\
+\hline
+Google Gemini & Trợ lý ảo có gọi công cụ, câu giải thích gợi ý đối tác, gợi ý thẻ bài viết & Có khóa thì dùng, thiếu khóa thì tắt êm & \mt{GEMINI\_API\_KEY}, \mt{GEMINI\_MODEL}, \mt{GEMINI\_FALLBACK\_MODEL} \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Khó khăn kỹ thuật và cách giải quyết}
+\label{sec:ht_khokhan}
+\ghichu{Chọn 4--6 vấn đề thật gặp phải, mỗi vấn đề một dòng bảng: hiện tượng, nguyên nhân gốc, cách giải quyết, cách kiểm chứng. Tất cả các dòng dưới đây đều có dấu vết trong mã hoặc trong bản rà soát; giữ ngắn gọn và trung thực.}
+\nguon{report/LOGIC\_AUDIT.md, BE/src/main/resources/application.yml}
+
+\begin{table}[H]
+\centering
+\caption{Một số khó khăn kỹ thuật đã gặp}
+\label{tab:ht_khokhan}
+\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{|p{2.8cm}|p{3.9cm}|p{3.6cm}|p{3.5cm}|}
+\hline
+\textbf{Hiện tượng} & \textbf{Nguyên nhân gốc} & \textbf{Cách giải quyết} & \textbf{Kiểm chứng} \\
+\hline
+Khách đã trả tiền nhưng đơn thành \texttt{EXPIRED}, không có hoàn tiền & Tác vụ hết hạn đọc đơn không khóa rồi ghi đè kết quả của webhook; \texttt{@Transactional} gọi trong cùng lớp không tạo giao dịch & Tách \texttt{BookingExpiryService}, đọc lại đơn bằng \texttt{findByIdWithLock} trước khi hết hạn & \texttt{BookingExpiry\allowbreak ServiceTest}, \texttt{BookingExpiry\allowbreak SchedulerTest} \\
+\hline
+Lỗi ``could not determine data type of parameter'' ở trang quản trị & Điều kiện lọc tùy chọn \texttt{(:x IS NULL OR ...)} trên cột kiểu \texttt{uuid} hoặc kiểu liệt kê & Đặt \texttt{preferQuery\allowbreak Mode: simple} cho bộ kết nối & Chạy các trang quản trị không kèm bộ lọc \\
+\hline
+Máy chủ không khởi động vì phụ thuộc vòng giữa Flyway và JPA & Cấu hình khởi tạo dữ liệu làm \texttt{entityManagerFactory} thành bộ khởi tạo & Bỏ \texttt{defer-\allowbreak datasource-\allowbreak initialization}; Flyway sở hữu lược đồ & Khởi động máy chủ trên cơ sở dữ liệu thật \\
+\hline
+Liên kết tài khoản Google vào tài khoản email có thể bị lợi dụng & Liên kết theo email mà không kiểm tra nguồn token & Chỉ liên kết khi token do Google cấp và tài khoản đích là khách hàng & 4 ca mới trong \texttt{AuthServiceTest} \\
+\hline
+Bảo trì ngắn làm hủy cả hợp đồng dài hạn & Mọi đơn giao với lịch bảo trì đều bị hủy & Chỉ hủy khi bảo trì phủ trọn đơn, còn lại hoàn theo phần thời gian giao nhau & Phần hoàn tiền có ca kiểm thử trong \texttt{Cancellation\allowbreak ServiceTest}; luồng tạo bảo trì chưa có (Chương \ref{ch:kiemthu}) \\
+\hline
+\end{tabular}
+\end{table}

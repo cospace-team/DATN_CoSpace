@@ -1,0 +1,38 @@
+sequenceDiagram
+  autonumber
+  actor U as Khách hàng hoặc<br/>Nhân viên
+  participant FE as Frontend React
+  participant PS as PaymentService
+  participant GW as PayosService<br/>MomoService
+  participant EX as PayOS hoặc MoMo
+  participant DB as PostgreSQL
+  alt Khách thanh toán trực tuyến (PayOS VietQR hoặc MoMo)
+    U->>FE: Bấm Thanh toán
+    FE->>PS: POST /api/payments/payos/create (hoặc /momo/create)
+    PS->>DB: Tìm payment INITIATED hoặc PENDING của đơn
+    opt Đã có giao dịch đang xử lý (idempotency)
+      PS-->>FE: Trả lại giao dịch cũ, không tạo mới
+    end
+    PS->>DB: getMyBooking, requirePayable
+    Note over PS,DB: Chỉ nhận khi đơn PENDING_PAYMENT, chưa quá hạn, số tiền lớn hơn 0
+    PS->>DB: INSERT payment (INITIATED, provider payos hoặc momo)
+    PS->>GW: createPaymentLink(orderCode, amount, deadline)
+    GW->>EX: Gọi API tạo liên kết thanh toán
+    EX-->>GW: checkoutUrl, qrCode
+    alt Tạo liên kết thất bại
+      PS->>DB: payment.status = FAILED
+      PS-->>FE: Lỗi IllegalStateException
+    else Thành công
+      PS->>DB: payment.status = PENDING, lưu payUrl
+      PS-->>FE: checkoutUrl, qrCode
+      FE-->>U: Hiển thị mã QR VietQR hoặc chuyển sang MoMo
+    end
+  else Thu tiền mặt tại quầy (nhân viên hoặc quản lý chi nhánh)
+    U->>FE: Bấm Xác nhận đã thu tiền mặt
+    FE->>PS: POST /api/payments/cash/create
+    Note over FE,PS: PreAuthorize staff hoặc branch_admin, BranchAccessGuard
+    PS->>DB: findByIdWithLock(booking), requirePayable
+    PS->>DB: INSERT payment (provider cash, status PAID)
+    PS->>DB: confirmBooking, đơn chuyển sang CONFIRMED
+    PS-->>FE: CashCreatePaymentResponse
+  end

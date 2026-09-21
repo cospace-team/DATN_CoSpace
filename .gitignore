@@ -46,21 +46,21 @@ Thumbs.db
 **/pnpm-debug.log*
 
 # LaTeX temporary files
-report/*.aux
-report/*.fdb_latexmk
-report/*.fls
-report/*.lof
-report/*.lot
-report/*.out
-report/*.toc
-report/*.synctex.gz
-report/*.pdfsync
-report/*.alg
-report/*.acr
-report/*.acn
-report/*.glg
-report/*.glo
-report/*.ist
+**/*.aux
+**/*.fdb_latexmk
+**/*.fls
+**/*.lof
+**/*.lot
+**/*.out
+**/*.toc
+**/*.synctex.gz
+**/*.pdfsync
+**/*.alg
+**/*.acr
+**/*.acn
+**/*.glg
+**/*.glo
+**/*.ist
 
 # Local Claude Code agent tooling (skills, settings) - not part of the project
 .claude/

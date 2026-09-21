@@ -1,0 +1,226 @@
+\chapter{Triển khai và vận hành}
+\label{ch:trienkhai}
+
+Chương này mô tả chi tiết phương thức đóng gói, quy trình triển khai tự động và các giải pháp vận hành bảo đảm độ sẵn sàng cao của hệ thống CoSpace trên môi trường đám mây thực tế.
+
+\section{Mô hình triển khai}
+\label{sec:tk_mohinh}
+
+Hệ thống CoSpace áp dụng mô hình kiến trúc triển khai phân tán không máy chủ kết hợp thùng chứa (Containerized Multi-Cloud Architecture), tận dụng thế mạnh chuyên biệt của các nhà cung cấp dịch vụ đám mây hàng đầu (Hình \ref{fig:trienkhai}). Bảng \ref{tab:tk_thanhphan} liệt kê các thành phần triển khai, nền tảng lưu trữ và vai trò vận hành.
+
+\begin{table}[H]
+\centering
+\caption{Các thành phần trong mô hình triển khai của CoSpace}
+\label{tab:tk_thanhphan}
+\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{|p{2.5cm}|p{3.0cm}|p{4.4cm}|p{3.9cm}|}
+\hline
+\textbf{Thành phần} & \textbf{Nền tảng lưu trữ} & \textbf{Vai trò trong kiến trúc} & \textbf{Cấu hình \& Ghi chú} \\
+\hline
+Giao diện (Front-end) & Vercel Edge Network & Phân phối tài nguyên tệp tĩnh (HTML, JS, CSS, SVG) toàn cầu; chuyển hướng SPA & Cấu hình qua \texttt{vercel.json}; chứng chỉ SSL tự động \\
+\hline
+Máy chủ ứng dụng (Back-end) & Render Cloud Platform & Thực thi ứng dụng Spring Boot đóng gói Docker container; xử lý API & Tên miền: \texttt{datn-cospace.\allowbreak onrender.com}; cổng lắng nghe tiêm qua \texttt{\$PORT} \\
+\hline
+Cơ sở dữ liệu \& Auth & Supabase Cloud & Lưu trữ PostgreSQL qua bể kết nối cổng 6543 (SSL); Supabase Auth cho Google SSO & Vùng địa lý \texttt{ap-south-1}; quản lý di trú tự động bằng Flyway \\
+\hline
+Giữ máy chủ hoạt động & GitHub Actions & Bộ lập lịch tác vụ tự động gọi điểm kiểm tra sức khỏe mỗi 10 phút & Tránh hiện tượng máy chủ ngủ đông (Cold Start) sau thời gian nhàn rỗi \\
+\hline
+\end{tabular}
+\end{table}
+
+\noindent\textbf{Luồng truyền thông tin khi người dùng tương tác:}
+\begin{enumerate}
+    \item Trình duyệt của người dùng gửi yêu cầu tải giao diện tĩnh từ máy chủ biên Vercel Edge CDN qua kết nối mã hóa HTTPS.
+    \item Ứng dụng React thực thi trên trình duyệt, gửi các yêu cầu gọi API RESTful tới máy chủ ứng dụng Spring Boot chạy trên Render thông qua giao thức HTTPS.
+    \item Máy chủ Spring Boot kết nối trực tiếp đến cơ sở dữ liệu PostgreSQL trên Supabase qua bể kết nối HikariCP với chuẩn mã hóa SSL bắt buộc (\texttt{sslmode=require}).
+    \item Khi người dùng chọn đăng nhập Google, trình duyệt giao tiếp trực tiếp với dịch vụ Supabase Auth, sau đó gửi Supabase JWT về máy chủ CoSpace để đồng bộ hóa phiên làm việc.
+\end{enumerate}
+
+\section{Đóng gói máy chủ bằng Docker}
+\label{sec:tk_docker}
+
+Ứng dụng Spring Boot được đóng gói thành ảnh container độc lập thông qua tệp \texttt{Dockerfile} sử dụng kỹ thuật xây dựng đa giai đoạn (Multi-stage Build) \cite{docker_docs}. Kỹ thuật này giúp tách biệt hoàn toàn giữa môi trường biên dịch mã nguồn và môi trường chạy thành phẩm, loại bỏ toàn bộ công cụ phát triển thừa và mã nguồn gốc khỏi ảnh phân phối cuối cùng.
+
+\begin{table}[H]
+\centering
+\caption{Các giai đoạn của Dockerfile máy chủ CoSpace}
+\label{tab:tk_docker}
+\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{|p{2.6cm}|p{3.8cm}|p{7.4cm}|}
+\hline
+\textbf{Giai đoạn} & \textbf{Ảnh nền sử dụng} & \textbf{Chỉ thị chính và ý nghĩa kỹ thuật} \\
+\hline
+Giai đoạn Dựng (\texttt{build stage}) & \texttt{maven:3.9.9-\allowbreak eclipse-temurin-21} & Sao chép \texttt{pom.xml}, chạy \texttt{dependency:go-offline} để lưu đệm các thư viện; sao chép toàn bộ mã nguồn \texttt{src/} và biên dịch gói thành phẩm \texttt{clean package -DskipTests}. Sử dụng ảnh Maven chính thức để việc dựng không phụ thuộc tải mã nguồn ngoài mạng \\
+\hline
+Giai đoạn Chạy (\texttt{runtime stage}) & \texttt{eclipse-temurin:21-\allowbreak jre-alpine} & Sử dụng ảnh hệ điều hành Alpine siêu nhẹ chỉ chứa JRE 21; tạo tài khoản người dùng không đặc quyền \texttt{app} để nâng cao an ninh; chỉ sao chép duy nhất tệp \texttt{app.jar} thành phẩm từ giai đoạn dựng \\
+\hline
+Tham số JVM môi trường chạy & --- & \texttt{-XX:MaxRAMPercentage=70}, \texttt{-XX:+UseSerialGC}, \texttt{-Djava.security.egd=file:/dev/./urandom}; lệnh khởi động dùng \texttt{exec java \$JAVA\_OPTS -jar app.jar} để JVM nhận trực tiếp tín hiệu dừng (\texttt{SIGTERM}) từ hệ điều hành \\
+\hline
+\end{tabular}
+\end{table}
+
+Việc áp dụng chỉ thị \texttt{exec} kết hợp với cấu hình tắt máy chủ êm dịu (\texttt{server.shutdown: graceful}) cho phép máy chủ Spring Boot hoàn tất việc xử lý các yêu cầu HTTP và các giao dịch đang dở dang trước khi container bị dừng hoàn toàn.
+
+\section{Triển khai giao diện trên Vercel}
+\label{sec:tk_vercel}
+
+Mã nguồn Front-end được phát hành trên mạng lưới máy chủ biên Vercel thông qua tệp cấu hình \texttt{vercel.json} với các đặc tính tối ưu:
+\begin{itemize}
+    \item \textbf{Cơ chế viết lại đường dẫn (SPA Rewrites):} Cấu hình chuyển hướng toàn bộ các đường dẫn ảo (ví dụ: \texttt{/customer/explore}, \texttt{/branch-admin/workspaces}) về tệp gốc \texttt{index.html}, cho phép thư viện React Router DOM xử lý việc định tuyến phía máy khách mà không gặp lỗi \texttt{404 Not Found}.
+    \item \textbf{Chiến lược lưu đệm tệp tĩnh bất biến (Immutable Asset Caching):} Toàn bộ các tệp JavaScript, CSS và hình ảnh trong thư mục \texttt{/assets} được gắn tiêu đề HTTP \texttt{Cache-Control: public, max-age=31536000, immutable}. Vì công cụ Vite tự động gắn mã băm nội dung (Content Hash) vào tên tệp khi đóng gói, việc lưu đệm 1 năm là an toàn tuyệt đối và giúp người dùng tải lại trang gần như tức thời.
+    \item \textbf{Thiết lập tiêu đề bảo mật nghiêm ngặt:} Bổ sung các tiêu đề \texttt{X-Frame-Options: DENY}, \texttt{X-Content-Type-Options: nosniff}, \texttt{Referrer-Policy: strict-origin-when-cross-origin} và chính sách bảo mật nội dung CSP (Content Security Policy) giới hạn kết nối chỉ tới tên miền API của Render và Supabase.
+\end{itemize}
+
+\section{Cấu hình và biến môi trường}
+\label{sec:tk_env}
+
+Để bảo đảm nguyên tắc bảo mật phần mềm hiện đại \cite{owasp_top10}, toàn bộ các thông tin nhạy cảm và thông số cấu hình hạ tầng đều được tách rời khỏi mã nguồn và nạp động thông qua các biến môi trường của nền tảng lưu trữ (Bảng \ref{tab:tk_env}).
+
+\begin{table}[H]
+\centering
+\caption{Danh mục biến môi trường của hệ thống CoSpace}
+\label{tab:tk_env}
+\footnotesize
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|p{4.9cm}|p{1.7cm}|p{1.9cm}|p{5.3cm}|}
+\hline
+\textbf{Tên biến môi trường} & \textbf{Nơi cấu hình} & \textbf{Mức bắt buộc} & \textbf{Ý nghĩa và mục đích sử dụng} \\
+\hline
+\texttt{SPRING\_PROFILES\_ACTIVE} & Render & Bắt buộc (\texttt{prod}) & Kích hoạt tệp cấu hình môi trường thật \texttt{application-prod.yml} \\
+\hline
+\texttt{PORT} & Render & Nền tảng tiêm & Cổng lắng nghe của máy chủ, mặc định 8080 \\
+\hline
+\texttt{SUPABASE\_DB\_URL} & Render & Có giá trị mặc định & Địa chỉ kết nối JDBC tới PostgreSQL trên Supabase \\
+\hline
+\texttt{SUPABASE\_DB\_USERNAME} & Render & Có giá trị mặc định & Tài khoản kết nối cơ sở dữ liệu \\
+\hline
+\texttt{SUPABASE\_DB\_PASSWORD} & Render & Bắt buộc bí mật & Mật khẩu cơ sở dữ liệu (không có mặc định) \\
+\hline
+\texttt{SUPABASE\_DB\_SSL\_MODE} & Render & Tùy chọn (\texttt{require}) & Chế độ mã hóa kênh truyền SSL với cơ sở dữ liệu \\
+\hline
+\texttt{DB\_POOL\_SIZE} & Render & Tùy chọn (10) & Số lượng kết nối tối đa trong bể kết nối HikariCP \\
+\hline
+\texttt{APP\_JWT\_SECRET} & Render & Bắt buộc bí mật & Khóa đối xứng ký token nội bộ (tối thiểu 48 bytes) \\
+\hline
+\texttt{APP\_CORS\_ALLOWED\_ORIGINS} & Render & Khuyến nghị & Danh sách các nguồn gốc Front-end được phép gọi API \\
+\hline
+\texttt{PAYOS\_CLIENT\_ID}, \texttt{API\_KEY}, \texttt{CHECKSUM\_KEY} & Render & Bắt buộc ở Prod & Bộ thông tin xác thực bảo mật của cổng PayOS VietQR \\
+\hline
+\mt{GEMINI\_API\_KEY} & Render & Tùy chọn & Khóa kết nối Google Gemini AI API \\
+\hline
+\texttt{VITE\_API\_BASE\_URL} & Vercel & Bắt buộc & Địa chỉ máy chủ Back-end trên Render \\
+\hline
+\texttt{VITE\_SUPABASE\_URL}, \texttt{ANON\_KEY} & Vercel & Bắt buộc & Thông tin kết nối dịch vụ Supabase Auth từ Front-end \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Khác biệt giữa môi trường phát triển và môi trường thật}
+\label{sec:tk_matran}
+
+Hệ thống thiết lập sự phân tách rõ rệt giữa cấu hình môi trường phát triển cục bộ (\texttt{application.yml}) và cấu hình môi trường phát hành sản phẩm (\texttt{application-prod.yml}) nhằm bảo đảm an toàn dữ liệu và tối ưu hóa hiệu năng (Bảng \ref{tab:tk_matran}).
+
+\begin{table}[H]
+\centering
+\caption{Đối chiếu cấu hình giữa môi trường phát triển và môi trường thật}
+\label{tab:tk_matran}
+\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{|p{3.4cm}|p{4.6cm}|p{5.8cm}|}
+\hline
+\textbf{Hạng mục cấu hình} & \textbf{Môi trường phát triển (Local)} & \textbf{Môi trường thật (Production)} \\
+\hline
+Dữ liệu mẫu (\texttt{data.sql}) & Tự động nạp dữ liệu mẫu khi khởi động & Vô hiệu hóa hoàn toàn (\texttt{mode: never}) \\
+\hline
+Ghi nhật ký câu lệnh SQL & Bật (\texttt{show-sql: true}) & Tắt nhằm tiết kiệm tài nguyên CPU và RAM \\
+\hline
+Mức độ ghi nhật ký & \texttt{DEBUG} chi tiết từng luồng & \texttt{INFO} chỉ ghi nhận sự kiện quan trọng \\
+\hline
+Cổng thanh toán PayOS & Chạy chế độ demo giả lập & Bắt buộc thông tin thật; \texttt{PayosProductionGuard} chặn khởi động nếu demo \\
+\hline
+Thông tin lỗi trả về máy khách & Chi tiết mã lỗi và thông điệp ngoại lệ & Lọc thông tin, không để lộ ngăn xếp vết (Stack Trace) \\
+\hline
+Bể kết nối HikariCP & Kích thước mặc định của Spring Boot & Giới hạn tối đa 10 kết nối, thời gian chờ tối đa 10 giây \\
+\hline
+Cơ chế tắt máy chủ & Tắt tức thời & Tắt êm dịu (\texttt{shutdown: graceful}) chờ hoàn tất đơn \\
+\hline
+Nguồn lưu trữ bí mật & Đọc từ tệp \texttt{BE/.env} qua \texttt{spring-dotenv} & Đọc trực tiếp từ biến môi trường máy chủ Render \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Quản lý lược đồ cơ sở dữ liệu khi triển khai}
+\label{sec:tk_flyway}
+
+Quá trình thay đổi cấu trúc cơ sở dữ liệu khi triển khai được quản lý hoàn toàn tự động bằng công cụ **Flyway Migration** \cite{flyway_docs}. 
+
+Quy tắc di trú được thiết lập nghiêm ngặt:
+\begin{itemize}
+    \item Mỗi thay đổi lược đồ được viết thành một tệp kịch bản SQL mới đặt trong thư mục \texttt{BE/src/main/resources/db/migration/} tuân thủ quy ước đặt tên \texttt{V\{version\}\_\_\{description\}.sql}. Tuyệt đối không chỉnh sửa các tệp di trú đã được phát hành lên môi trường thật.
+    \item Khi máy chủ ứng dụng khởi động, Flyway tự động đọc bảng lịch sử di trú \texttt{flyway\_schema\_history} trên PostgreSQL và chỉ thực thi tuần tự các tệp kịch bản có phiên bản mới hơn.
+    \item Đối với cơ sở dữ liệu đã có dữ liệu từ trước, hệ thống bật tùy chọn \texttt{baseline-on-migrate: true} với mốc nền tảng \texttt{baseline-version: 1} để bỏ qua tệp \texttt{V1} và chỉ chạy các tệp bổ sung từ \texttt{V2}.
+    \item Toàn bộ các ràng buộc toàn vẹn mới thêm vào trong \texttt{V2} đều được khai báo ở dạng \texttt{NOT VALID} nhằm tránh làm gián đoạn hoặc treo quá trình khởi động máy chủ khi dữ liệu cũ chưa được dọn dẹp xong.
+\end{itemize}
+
+\section{Vận hành và giám sát hệ thống}
+\label{sec:tk_vanhanh}
+
+\subsection{Điểm kiểm tra sức khỏe hệ thống (/api/health)}
+Máy chủ cung cấp điểm cuối \texttt{GET /api/health} cho phép các công cụ giám sát kiểm tra tình trạng sống của ứng dụng. Khi nhận yêu cầu, bộ điều khiển thực hiện một câu lệnh truy vấn kiểm tra siêu nhẹ (\texttt{SELECT 1}) vào cơ sở dữ liệu PostgreSQL. Nếu kết nối CSDL thành công, máy chủ trả về mã \texttt{200 OK} kèm dữ liệu JSON:
+\begin{lstlisting}
+{
+  "status": "UP",
+  "database": "UP",
+  "timestamp": "2026-09-21T10:30:00Z"
+}
+\end{lstlisting}
+Nếu kết nối CSDL bị đứt, điểm cuối trả về mã lỗi \texttt{503 Service Unavailable} kèm thông báo sự cố.
+
+\subsection{Quy trình giữ máy chủ hoạt động liên tục (Keep-alive Workflow)}
+Do sử dụng gói dịch vụ lưu trữ miễn phí của Render, máy chủ sẽ tự động chuyển sang chế độ ngủ đông sau 15 phút không nhận được lưu lượng truy cập, khiến lần truy cập tiếp theo bị chậm từ 30 đến 50 giây (hiện tượng Cold Start). Để khắc phục triệt để vấn đề này, nhóm đã thiết lập một quy trình làm việc tự động trên GitHub Actions (\texttt{.github/workflows/keep-alive.yml}) kích hoạt đều đặn mỗi 10 phút để gửi một yêu cầu HTTP gọi điểm \texttt{/api/health}, bảo đảm máy chủ luôn ở trạng thái nóng sẵn sàng phục vụ tức thời.
+
+\section{Quy trình phát hành và kiểm tra sau triển khai}
+\label{sec:tk_cicd}
+
+Quy trình phát hành phiên bản mới của CoSpace được chuẩn hóa thành chuỗi các bước kiểm soát chất lượng nghiêm ngặt trước và sau khi triển khai lên môi trường đám mây (Bảng \ref{tab:tk_phathanh}).
+
+\begin{table}[H]
+\centering
+\caption{Quy trình phát hành và danh sách kiểm tra sau triển khai (Smoke Test)}
+\label{tab:tk_phathanh}
+\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{|p{1.2cm}|p{3.4cm}|p{5.4cm}|p{3.8cm}|}
+\hline
+\textbf{Bước} & \textbf{Hoạt động thực hiện} & \textbf{Chi tiết kỹ thuật \& Lệnh thực thi} & \textbf{Tiêu chí nghiệm thu} \\
+\hline
+1 & Kiểm tra kiểm thử tự động & Chạy bộ kiểm thử máy chủ cục bộ trước khi tạo Pull Request: \texttt{./mvnw test} & $100\%$ đạt (273 ca kiểm thử không lỗi) \\
+\hline
+2 & Kiểm tra biên dịch Front-end & Kiểm tra kiểu tĩnh và đóng gói thử nghiệm: \texttt{npx tsc} và \texttt{npm run build} & Không có lỗi kiểu dữ liệu; tạo thư mục \texttt{dist/} \\
+\hline
+3 & Triển khai tự động & Hợp nhất mã nguồn vào nhánh \texttt{main}; GitHub kích hoạt Webhook triển khai & Vercel và Render cập nhật bản dựng mới \\
+\hline
+4 & Kiểm tra sức khỏe & Gửi yêu cầu kiểm tra tới máy chủ: \texttt{curl https://datn-cospace.onrender.com/api/health} & Nhận phản hồi \texttt{200 OK} và \texttt{status: UP} \\
+\hline
+5 & Kiểm tra luồng xác thực & Thử nghiệm đăng nhập ở cả 4 vai trò người dùng (Customer, Staff, BA, Super Admin) & Chuyển hướng đúng trang chủ theo vai trò \\
+\hline
+6 & Kiểm tra luồng đặt chỗ & Tạo một đơn đặt chỗ mới trên sơ đồ SVG và tạo thanh toán VietQR & Mã VietQR hiển thị đúng số tiền và nội dung \\
+\hline
+7 & Kiểm tra luồng Check-in & Nhân viên quầy nhập mã đơn để check-in và check-out & Trạng thái chuyển \texttt{CHECKED\_IN} và \texttt{COMPLETED} \\
+\hline
+8 & Kiểm tra báo cáo & Quản lý chi nhánh truy cập trang báo cáo và xuất tệp CSV & Tệp CSV tải về hiển thị đúng tiếng Việt UTF-8 \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Bảo mật vận hành, sao lưu và phục hồi}
+\label{sec:tk_baomat}
+
+\begin{itemize}
+    \item \textbf{Nguyên tắc bảo vệ thông tin mật:} Không lưu trữ bất kỳ mật khẩu hoặc khóa bí mật nào trong mã nguồn hoặc ảnh Docker. Tệp \texttt{.dockerignore} được cấu hình loại trừ tuyệt đối các tệp môi trường \texttt{.env}.
+    \item \textbf{Chính sách nguồn gốc giao diện (CORS):} Máy chủ Production giới hạn quyền gọi API chỉ từ các tên miền hợp lệ của dự án trên Vercel (\texttt{cospace-*.vercel.app}) thông qua biến \texttt{APP\_CORS\_ALLOWED\_ORIGINS}.
+    \item \textbf{Sao lưu dữ liệu tự động (Database Backup):} Dữ liệu trên Supabase được cấu hình tự động sao lưu định kỳ hàng ngày (Daily Automated Backups).
+    \item \textbf{Phương án khắc phục sự cố (Disaster Recovery):} Khi xảy ra sự cố phần mềm nghiêm trọng trên môi trường thật, quản trị viên có thể kích hoạt tính năng khôi phục phiên bản trước (Rollback) chỉ với một thao tác trên bảng điều khiển của Vercel (đối với giao diện) và Render (đối với dịch vụ máy chủ), đưa hệ thống trở lại trạng thái ổn định chỉ trong vòng chưa đầy 2 phút.
+\end{itemize}

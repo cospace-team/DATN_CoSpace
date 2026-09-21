@@ -4,14 +4,34 @@ name: Keep backend alive
 # inactivity; the next request then pays a 30-50s cold-start penalty
 # (and can time out entirely under load, e.g. Lighthouse audits).
 # Pinging the health endpoint periodically keeps the instance warm.
+#
+# GitHub's cron is best-effort: on this repo scheduled runs have been
+# firing every ~2h instead of every 10 minutes, so the backend is usually
+# already asleep when a run starts. The ping below therefore treats a cold
+# start as normal and only fails the job if the backend is still
+# unreachable after several minutes of retries, i.e. it is really down.
 on:
   schedule:
-    - cron: "*/10 * * * *"
+    # Avoid :00 - GitHub delays/drops scheduled runs most at the top of the hour.
+    - cron: "4,14,24,34,44,54 * * * *"
   workflow_dispatch: {}
 
 jobs:
   ping:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - name: Ping health endpoint
-        run: curl -fsS --max-time 60 https://datn-cospace.onrender.com/api/health
+      - name: Ping health endpoint (wakes it if asleep)
+        run: |
+          url=https://datn-cospace.onrender.com/api/health
+          for attempt in 1 2 3 4 5 6; do
+            code=$(curl -s -o health.json -w '%{http_code}' --max-time 60 "$url" || true)
+            echo "attempt $attempt: HTTP $code"
+            if [ "$code" = "200" ]; then
+              cat health.json
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "::error::Backend still unreachable after ~7 minutes (last HTTP $code)"
+          exit 1
