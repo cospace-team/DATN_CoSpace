@@ -1,0 +1,24 @@
+sequenceDiagram
+  autonumber
+  participant FE as Frontend React
+  participant SF as Spring Security<br/>JwtDecoder
+  participant SB as Supabase Auth
+  participant CV as SupabaseJwtAuthentication<br/>Converter
+  participant DB as PostgreSQL
+  participant CT as Controller
+  FE->>SF: Yêu cầu API kèm Authorization Bearer token
+  SF->>SF: Đọc payload, xem issuer của token
+  alt Issuer là Supabase
+    SF->>SB: Lấy khóa công khai (JWKS), kiểm tra chữ ký
+  else Token do CoSpace cấp
+    SF->>SF: Kiểm tra chữ ký HS384, từ chối refresh token
+  end
+  SF->>CV: convert(jwt)
+  CV->>DB: findById(sub) lấy role, branchId, status mới nhất
+  alt Tài khoản bị khóa (suspended)
+    CV-->>FE: 401 InvalidBearerTokenException
+  else Hợp lệ
+    CV-->>SF: Authentication kèm ROLE và branchId
+    SF->>CT: PreAuthorize theo vai trò, BranchAccessGuard cô lập chi nhánh
+    CT-->>FE: Kết quả xử lý nghiệp vụ
+  end

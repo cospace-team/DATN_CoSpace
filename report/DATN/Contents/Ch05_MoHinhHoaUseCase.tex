@@ -1,148 +1,533 @@
 \chapter{Mô hình hóa và đặc tả use-case}
 \label{ch:usecase}
 
-\ghichu{Chương này là phần dài nhất của báo cáo phân tích. Mỗi phân hệ gồm: sơ đồ use-case, bảng danh sách use-case, và đặc tả chi tiết cho các use-case quan trọng. Các use-case đơn giản (xem danh sách, xem chi tiết) có thể gom vào một bảng tóm tắt thay vì đặc tả đầy đủ. Dung lượng đề xuất 25--35 trang.}
-
 \section{Quy ước đặc tả use-case}
 \label{sec:quyuoc_uc}
-\ghichu{Nêu khuôn đặc tả áp dụng thống nhất cho toàn chương: mã use-case, tên, tác nhân, mô tả, điều kiện kích hoạt, tiền điều kiện, hậu điều kiện, luồng sự kiện chính, các luồng thay thế, luồng ngoại lệ, quy tắc nghiệp vụ liên quan. Đưa một bảng mẫu ngay tại đây để người đọc nắm cấu trúc trước khi đọc hàng chục bảng phía sau.}
-\nguon{report/Contents/DacTaUseCase.tex (ban Do an chuyen nganh), docs/use\_cases/}
-\bangcho{Khuôn mẫu đặc tả chi tiết một use-case}{tab:uc_template}
+
+Để bảo đảm tính chuẩn xác và đồng nhất trong toàn bộ tài liệu đặc tả, mỗi ca sử dụng (Use-case) quan trọng trong hệ thống CoSpace được trình bày theo một biểu mẫu chuẩn mực gồm 10 trường thông tin được mô tả tại Bảng \ref{tab:uc_template}.
+
+\begin{table}[H]
+\centering
+\caption{Khuôn mẫu đặc tả chi tiết một use-case trong hệ thống CoSpace}
+\label{tab:uc_template}
+\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{|p{3.8cm}|p{10.2cm}|}
+\hline
+\textbf{Mục thông tin} & \textbf{Ý nghĩa và nội dung đặc tả} \\
+\hline
+Mã và Tên Use-case & Mã định danh duy nhất (\texttt{UC-xx}) và tên phản ánh hành vi chính \\
+\hline
+Tác nhân chính (Actors) & Nhóm người dùng trực tiếp kích hoạt hoặc hưởng lợi từ ca sử dụng \\
+\hline
+Mục tiêu nghiệp vụ & Kết quả mong đợi sau khi ca sử dụng hoàn thành \\
+\hline
+Điều kiện kích hoạt & Sự kiện hoặc hành động thúc đẩy tác nhân bắt đầu use-case \\
+\hline
+Tiền điều kiện (Pre-conditions) & Các điều kiện hệ thống bắt buộc phải thỏa mãn trước khi use-case diễn ra \\
+\hline
+Hậu điều kiện (Post-conditions) & Trạng thái mới của hệ thống và dữ liệu sau khi use-case kết thúc thành công \\
+\hline
+Luồng sự kiện chính (Main Flow) & Trình tự các bước tương tác chuẩn từ lúc bắt đầu đến khi hoàn thành \\
+\hline
+Các luồng thay thế (Alternative) & Các nhánh rẽ xử lý khác khi người dùng lựa chọn phương án thay thế \\
+\hline
+Các luồng ngoại lệ (Exceptions) & Các tình huống lỗi phát sinh (dữ liệu sai, xung đột, lỗi kết nối) và cách xử lý \\
+\hline
+Quy tắc nghiệp vụ liên quan & Các quy tắc cốt lõi (\texttt{Rule xx}) chi phối tính đúng đắn của use-case \\
+\hline
+\end{tabular}
+\end{table}
 
 \section{Phân hệ khách hàng}
 \label{sec:uc_customer}
+
+Phân hệ khách hàng phục vụ toàn bộ các nhu cầu tự phục vụ (Self-service) của người thuê không gian làm việc. Sơ đồ các use-case thuộc phân hệ khách hàng được mô tả tại Hình \ref{fig:uc_customer}.
+
 \begin{figure}[H]
   \centering
-  \includegraphics[height=0.82\textheight,keepaspectratio]{Images/Chuong5/uc-khachhang.png}
+  \includegraphics[width=\linewidth,height=0.70\textheight,keepaspectratio]{Chuong5/uc-khachhang.png}
   \caption{Sơ đồ use-case phân hệ khách hàng}
   \label{fig:uc_customer}
 \end{figure}
-\ghichu{Đặc tả các use-case sau, mỗi use-case một bảng: đăng ký tài khoản; đăng nhập; cập nhật hồ sơ cá nhân và hồ sơ năng lực; tra cứu chi nhánh và sơ đồ mặt bằng; tìm kiếm và đặt chỗ; thanh toán đơn đặt chỗ; chọn dịch vụ bổ sung; xem lịch sử đặt chỗ; gửi yêu cầu hủy; xem gợi ý đối tác; tương tác bảng tin cộng đồng; tra cứu điểm tích lũy; đặt chỗ qua trợ lý ảo.}
 
 \subsection{Danh sách use-case của phân hệ}
-\subsection{Đặc tả use-case Đăng ký tài khoản}
-\subsection{Đặc tả use-case Đăng nhập}
-\subsection{Đặc tả use-case Tìm kiếm và đặt chỗ}
-\subsection{Đặc tả use-case Thanh toán đơn đặt chỗ}
-\subsection{Đặc tả use-case Hủy đặt chỗ và nhận hoàn tiền}
-\subsection{Đặc tả use-case Xem gợi ý kết nối đối tác}
-\subsection{Đặc tả use-case Đặt chỗ thông qua trợ lý ảo}
+Phân hệ Khách hàng bao gồm 7 ca sử dụng trọng tâm:
+\begin{itemize}
+    \item \textbf{UC-01:} Đăng ký tài khoản mới bằng email.
+    \item \textbf{UC-02:} Đăng nhập hệ thống (hỗ trợ Email/Mật khẩu và Google SSO).
+    \item \textbf{UC-03:} Tìm kiếm không gian và đặt chỗ trên sơ đồ mặt bằng SVG.
+    \item \textbf{UC-04:} Thanh toán đơn đặt chỗ (cổng PayOS VietQR và MoMo).
+    \item \textbf{UC-05:} Hủy đặt chỗ và nhận hoàn tiền theo bậc thời gian.
+    \item \textbf{UC-06:} Xem gợi ý kết nối đối tác tiềm năng (Smart Matching).
+    \item \textbf{UC-07:} Đặt chỗ và giải đáp thắc mắc qua Trợ lý ảo AI Google Gemini.
+\end{itemize}
+
+\subsection{Đặc tả use-case Đăng ký tài khoản (UC-01)}
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|p{3.6cm}|p{10.4cm}|}
+\hline
+\textbf{Mã và Tên Use-case} & \textbf{UC-01: Đăng ký tài khoản} \\ \hline
+\textbf{Tác nhân chính} & Khách hàng (chưa có tài khoản) \\ \hline
+\textbf{Mục tiêu} & Khởi tạo một tài khoản mới hợp lệ trên hệ thống CoSpace \\ \hline
+\textbf{Tiền điều kiện} & Khách hàng truy cập vào trang \texttt{/login} và chọn tab ``Đăng ký'' \\ \hline
+\textbf{Hậu điều kiện} & Tài khoản mới được ghi nhận trong bảng \texttt{users} với vai trò \texttt{customer}; mật khẩu được băm BCrypt \\ \hline
+\textbf{Luồng sự kiện chính} & 
+1. Khách hàng nhập họ tên, địa chỉ email, số điện thoại và mật khẩu. \newline
+2. Khách hàng nhấn nút ``Tạo tài khoản''. \newline
+3. Hệ thống kiểm tra định dạng email và độ mạnh mật khẩu ($\ge 8$ ký tự). \newline
+4. Hệ thống kiểm tra tính duy nhất của email trong bảng \texttt{users}. \newline
+5. Hệ thống băm mật khẩu bằng BCrypt, lưu tài khoản mới với trạng thái \texttt{ACTIVE}. \newline
+6. Hệ thống tự động tạo mã token và chuyển hướng khách hàng vào trang Khám phá. \\ \hline
+\textbf{Luồng ngoại lệ} & 
+4a. Email đã tồn tại $\rightarrow$ Hệ thống thông báo lỗi ``Email đã được đăng ký''. \newline
+3a. Mật khẩu không đủ độ dài $\rightarrow$ Báo lỗi ``Mật khẩu phải có ít nhất 8 ký tự''. \\ \hline
+\textbf{Quy tắc liên quan} & Tài khoản tự đăng ký luôn có vai trò \texttt{customer} và \texttt{branch\_id IS NULL}. \\ \hline
+\end{tabular}
+\caption{Đặc tả chi tiết Use-case Đăng ký tài khoản}
+\label{tab:uc_spec_01}
+\end{table}
+
+\subsection{Đặc tả use-case Đăng nhập (UC-02)}
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|p{3.6cm}|p{10.4cm}|}
+\hline
+\textbf{Mã và Tên Use-case} & \textbf{UC-02: Đăng nhập} \\ \hline
+\textbf{Tác nhân chính} & Mọi người dùng (Khách hàng, Nhân viên, Quản lý chi nhánh, Quản trị viên) \\ \hline
+\textbf{Mục tiêu} & Xác thực danh tính và cấp quyền truy cập hệ thống theo đúng vai trò \\ \hline
+\textbf{Tiền điều kiện} & Người dùng có tài khoản đã đăng ký hoặc có tài khoản Google \\ \hline
+\textbf{Hậu điều kiện} & Người dùng nhận cặp token JWT (Access Token và Refresh Token) và được định tuyến đến trang chủ tương ứng với vai trò \\ \hline
+\textbf{Luồng sự kiện chính} & 
+1. Người dùng nhập email và mật khẩu rồi bấm ``Đăng nhập''. \newline
+2. Máy chủ tìm người dùng theo email và đối chiếu mật khẩu với hàm băm BCrypt. \newline
+3. Kiểm tra trạng thái tài khoản; nếu \texttt{status == 'ACTIVE'}, hệ thống phát hành JWT ký HS384. \newline
+4. Front-end lưu token vào bộ nhớ cục bộ, thiết lập tiêu đề Authorization và chuyển hướng người dùng theo vai trò. \\ \hline
+\textbf{Luồng thay thế} & 
+1a. Người dùng chọn ``Đăng nhập bằng Google'': \newline
+-- Trình duyệt chuyển hướng xác thực OAuth2 qua Supabase Auth. \newline
+-- Nhận Supabase JWT; máy chủ tự động liên kết với tài khoản khách hàng cùng email nếu có; phát hành phiên đăng nhập hợp lệ. \\ \hline
+\textbf{Luồng ngoại lệ} & 
+2a. Sai mật khẩu hoặc không tìm thấy email $\rightarrow$ Báo lỗi ``Email hoặc mật khẩu không chính xác''. \newline
+3a. Tài khoản bị khóa (\texttt{SUSPENDED}) $\rightarrow$ Báo lỗi ``Tài khoản đã bị tạm khóa''. \\ \hline
+\end{tabular}
+\caption{Đặc tả chi tiết Use-case Đăng nhập}
+\label{tab:uc_spec_02}
+\end{table}
+
+\subsection{Đặc tả use-case Tìm kiếm và đặt chỗ (UC-03)}
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|p{3.6cm}|p{10.4cm}|}
+\hline
+\textbf{Mã và Tên Use-case} & \textbf{UC-03: Tìm kiếm và đặt chỗ} \\ \hline
+\textbf{Tác nhân chính} & Khách hàng đã đăng nhập \\ \hline
+\textbf{Mục tiêu} & Tạo thành công một đơn đặt chỗ mới với trạng thái giữ chỗ \texttt{PENDING\_PAYMENT} \\ \hline
+\textbf{Tiền điều kiện} & Khách hàng chưa vượt quá hạn mức 3 đơn chờ thanh toán; không gian làm việc đang mở \\ \hline
+\textbf{Hậu điều kiện} & Bản ghi đơn đặt chỗ được tạo trong bảng \texttt{bookings} với hạn thanh toán 15 phút \\ \hline
+\textbf{Luồng sự kiện chính} & 
+1. Khách hàng chọn chi nhánh, tầng, loại không gian và thời gian dự kiến (ngày, giờ bắt đầu, giờ kết thúc). \newline
+2. Hệ thống hiển thị sơ đồ mặt bằng SVG trực quan; các chỗ trống hiển thị màu xanh lá. \newline
+3. Khách hàng nhấn chọn vị trí chỗ ngồi mong muốn; bảng tóm tắt bên phải hiển thị đơn giá. \newline
+4. Khách hàng nhấn ``Tiến hành đặt chỗ''. \newline
+5. Hệ thống thực thi giao dịch tạo đơn: \newline
+-- Lấy khóa tư vấn người dùng, kiểm tra số lượng đơn chờ thanh toán ($< 3$). \newline
+-- Kiểm tra giờ mở cửa của chi nhánh và thời gian bắt đầu ($start\_at > now$). \newline
+-- Lấy khóa tư vấn không gian, kiểm tra trùng lịch đặt chỗ và lịch bảo trì. \newline
+-- Tính toán đơn giá tại máy chủ và lưu đơn với trạng thái \texttt{PENDING\_PAYMENT}. \newline
+6. Hệ thống chuyển hướng khách hàng sang trang Xác nhận thanh toán kèm đồng hồ đếm ngược 15 phút. \\ \hline
+\textbf{Luồng ngoại lệ} & 
+5a. Người dùng đã có 3 đơn chờ $\rightarrow$ Báo lỗi ``Bạn có quá nhiều đơn chưa thanh toán''. \newline
+5b. Chỗ đã bị người khác đặt hoặc đang bảo trì $\rightarrow$ Báo lỗi ``Không gian đã có người giữ chỗ''. \newline
+5c. Đặt ngoài giờ mở cửa $\rightarrow$ Báo lỗi ``Thời gian đặt ngoài giờ mở cửa của chi nhánh''. \\ \hline
+\textbf{Quy tắc liên quan} & Rule 01, Rule 02, Rule 03, Rule 04, Rule 15, Rule 17, Rule 43. \\ \hline
+\end{tabular}
+\caption{Đặc tả chi tiết Use-case Tìm kiếm và đặt chỗ}
+\label{tab:uc_spec_03}
+\end{table}
+
+\subsection{Đặc tả use-case Thanh toán đơn đặt chỗ (UC-04)}
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|p{3.6cm}|p{10.4cm}|}
+\hline
+\textbf{Mã và Tên Use-case} & \textbf{UC-04: Thanh toán đơn đặt chỗ} \\ \hline
+\textbf{Tác nhân chính} & Khách hàng \\ \hline
+\textbf{Mục tiêu} & Hoàn tất thanh toán trực tuyến và chuyển đơn đặt chỗ sang trạng thái xác nhận \texttt{CONFIRMED} \\ \hline
+\textbf{Tiền điều kiện} & Đơn đặt chỗ ở trạng thái \texttt{PENDING\_PAYMENT} và còn trong thời hạn 15 phút \\ \hline
+\textbf{Hậu điều kiện} & Giao dịch thanh toán được ghi nhận \texttt{PAID}; đơn đặt chỗ chuyển sang \texttt{CONFIRMED} \\ \hline
+\textbf{Luồng sự kiện chính} & 
+1. Tại trang Checkout, khách hàng chọn phương thức thanh toán VietQR (PayOS). \newline
+2. Khách hàng nhấn ``Xác nhận thanh toán''. \newline
+3. Hệ thống gọi cổng PayOS tạo liên kết thanh toán và hiển thị mã VietQR động cùng đồng hồ đếm ngược. \newline
+4. Khách hàng mở ứng dụng ngân hàng quét mã QR và thực hiện chuyển khoản. \newline
+5. PayOS tiếp nhận tiền và bắn tín hiệu Webhook có chữ ký điện tử về máy chủ CoSpace. \newline
+6. Máy chủ CoSpace kiểm tra chữ ký HMAC, khóa bản ghi giao dịch, cập nhật trạng thái đơn thành \texttt{CONFIRMED} và gửi thông báo cho khách. \newline
+7. Giao diện khách hàng tự động nhận diện thanh toán thành công và chuyển sang màn hình vé điện tử kèm mã QR check-in. \\ \hline
+\textbf{Luồng thay thế} & 
+1a. Khách hàng chọn thanh toán qua Ví MoMo $\rightarrow$ Hệ thống chuyển hướng sang cổng MoMo và nhận kết quả qua IPN Webhook. \\ \hline
+\textbf{Luồng ngoại lệ} & 
+6a. Thanh toán về muộn sau khi đơn đã bị hủy do quá 15 phút $\rightarrow$ Hệ thống tự động tạo yêu cầu hoàn tiền $100\%$ vào hàng chờ hoàn tiền (Rule 12). \newline
+5a. Webhook bị gửi lặp lại $\rightarrow$ Hệ thống nhận diện trạng thái \texttt{PAID} và bỏ qua an toàn. \\ \hline
+\end{tabular}
+\caption{Đặc tả chi tiết Use-case Thanh toán đơn đặt chỗ}
+\label{tab:uc_spec_04}
+\end{table}
+
+\subsection{Đặc tả use-case Hủy đặt chỗ và nhận hoàn tiền (UC-05)}
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|p{3.6cm}|p{10.4cm}|}
+\hline
+\textbf{Mã và Tên Use-case} & \textbf{UC-05: Hủy đặt chỗ và nhận hoàn tiền} \\ \hline
+\textbf{Tác nhân chính} & Khách hàng \\ \hline
+\textbf{Mục tiêu} & Hủy đơn đặt chỗ đã xác nhận và tính toán số tiền hoàn dựa trên chính sách thời gian \\ \hline
+\textbf{Tiền điều kiện} & Đơn ở trạng thái \texttt{CONFIRMED} và thời điểm hiện tại chưa đến giờ bắt đầu ($now < start\_at$) \\ \hline
+\textbf{Hậu điều kiện} & Đơn chuyển sang trạng thái \texttt{CANCELLED}; yêu cầu hoàn tiền được ghi nhận vào hàng chờ hoàn tiền \\ \hline
+\textbf{Luồng sự kiện chính} & 
+1. Khách hàng vào mục Lịch sử đặt chỗ, chọn đơn cần hủy và nhấn ``Hủy đặt chỗ''. \newline
+2. Hộp thoại xác nhận hiển thị tóm tắt quy định hủy và cảnh báo số tiền phạt. \newline
+3. Khách hàng nhập lý do hủy và bấm ``Xác nhận hủy''. \newline
+4. Hệ thống kiểm tra: thời điểm hiện tại phải trước giờ bắt đầu ($now < start\_at$). \newline
+5. Hệ thống tìm chính sách hủy: ưu tiên chính sách của chi nhánh, sau đó đến chính sách toàn cục. \newline
+6. Tính khoảng thời gian còn lại (tính bằng phút) và so khớp bậc chính sách tương ứng: tính số tiền hoàn và phí phạt. \newline
+7. Cập nhật đơn thành \texttt{CANCELLED}, lưu bản ghi hủy vào \texttt{booking\_cancellations}, giải phóng chỗ trống và tạo bản ghi \texttt{refund\_requests}. \newline
+8. Thông báo kết quả hủy thành công, hiển thị tỷ lệ hoàn và số tiền hoàn dự kiến. \\ \hline
+\textbf{Luồng ngoại lệ} & 
+4a. Khách bấm hủy sau khi đã đến giờ bắt đầu ($now \ge start\_at$) $\rightarrow$ Hệ thống từ chối với thông báo ``Không thể hủy đơn đặt chỗ đã đến giờ bắt đầu'' (Rule 05). \\ \hline
+\end{tabular}
+\caption{Đặc tả chi tiết Use-case Hủy đặt chỗ và nhận hoàn tiền}
+\label{tab:uc_spec_05}
+\end{table}
+
+\subsection{Đặc tả use-case Xem gợi ý kết nối đối tác (UC-06)}
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|p{3.6cm}|p{10.4cm}|}
+\hline
+\textbf{Mã và Tên Use-case} & \textbf{UC-06: Xem gợi ý kết nối đối tác} \\ \hline
+\textbf{Tác nhân chính} & Khách hàng đã cập nhật hồ sơ năng lực \\ \hline
+\textbf{Mục tiêu} & Tìm kiếm và kết nối với các thành viên có sự tương đồng cao về kỹ năng và sở thích \\ \hline
+\textbf{Tiền điều kiện} & Người dùng có hồ sơ năng lực (chứa ít nhất một kỹ năng hoặc sở thích) \\ \hline
+\textbf{Hậu điều kiện} & Danh sách gợi ý đối tác cùng điểm phần trăm tương đồng và lý do được hiển thị \\ \hline
+\textbf{Luồng sự kiện chính} & 
+1. Khách hàng truy cập trang ``Cộng đồng'' $\rightarrow$ chọn mục ``Gợi ý đối tác''. \newline
+2. Hệ thống truy vấn danh sách hồ sơ năng lực của các khách hàng khác trong hệ thống. \newline
+3. Áp dụng thuật toán tính điểm tương đồng Jaccard đa yếu tố: kỹ năng (trọng số 0.5), lĩnh vực (0.2), sở thích (0.2) và chi nhánh làm việc chung (0.15). \newline
+4. Sắp xếp danh sách theo điểm tương đồng giảm dần. \newline
+5. Hiển thị thẻ thông tin đối tác gồm ảnh đại diện, chức danh, phần trăm phù hợp và các kỹ năng chung. \newline
+6. Khách hàng có thể nhấn vào liên kết mạng xã hội của đối tác để chủ động kết nối. \\ \hline
+\end{tabular}
+\caption{Đặc tả chi tiết Use-case Xem gợi ý kết nối đối tác}
+\label{tab:uc_spec_06}
+\end{table}
+
+\subsection{Đặc tả use-case Đặt chỗ thông qua trợ lý ảo (UC-07)}
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|p{3.6cm}|p{10.4cm}|}
+\hline
+\textbf{Mã và Tên Use-case} & \textbf{UC-07: Đặt chỗ thông qua trợ lý ảo} \\ \hline
+\textbf{Tác nhân chính} & Khách hàng \\ \hline
+\textbf{Mục tiêu} & Tìm kiếm không gian và tạo đơn đặt chỗ tự động thông qua giao tiếp hội thoại tự nhiên \\ \hline
+\textbf{Tiền điều kiện} & Khách hàng mở khung chat trợ lý ảo AI trên giao diện \\ \hline
+\textbf{Hậu điều kiện} & Đơn đặt chỗ được khởi tạo an toàn sau khi khách hàng bấm nút xác nhận đề xuất \\ \hline
+\textbf{Luồng sự kiện chính} & 
+1. Khách hàng nhắn tin: ``Tìm giúp tôi phòng họp 4 người tại chi nhánh Quận 1 sáng mai''. \newline
+2. Trợ lý ảo AI gọi công cụ đọc dữ liệu \texttt{search\_spaces}, tìm các phòng họp phù hợp. \newline
+3. AI phản hồi thông tin các phòng kèm giá thuê. \newline
+4. Khách hàng yêu cầu: ``Đặt phòng họp A1 từ 9h đến 11h giúp tôi''. \newline
+5. AI nhận diện yêu cầu ghi dữ liệu và kích hoạt công cụ \texttt{propose\_booking}. \newline
+6. Hệ thống hiển thị một **Thẻ đề xuất đặt chỗ (Action Card)** trực tiếp trong khung chat với đầy đủ chi tiết: tên phòng, thời gian, giá tiền, kèm 2 nút ``Xác nhận'' và ``Hủy bỏ''. \newline
+7. Khách hàng nhấn nút ``Xác nhận''. \newline
+8. Máy chủ thực thi luồng tạo đơn đặt chỗ chuẩn (\texttt{BookingService.createBooking}) với đầy đủ kiểm tra khóa và xung đột. \newline
+9. Đơn được tạo thành công, giao diện chuyển hướng khách hàng sang trang thanh toán. \\ \hline
+\textbf{Luồng thay thế} & 
+7a. Khách hàng nhấn ``Hủy bỏ'' $\rightarrow$ Thẻ đề xuất đóng lại, không có dữ liệu nào bị thay đổi. \\ \hline
+\end{tabular}
+\caption{Đặc tả chi tiết Use-case Đặt chỗ thông qua trợ lý ảo}
+\label{tab:uc_spec_07}
+\end{table}
 
 \section{Phân hệ nhân viên}
 \label{sec:uc_staff}
+
+Phân hệ nhân viên phục vụ toàn bộ các tác vụ vận hành tại chỗ ở quầy lễ tân chi nhánh. Sơ đồ các use-case phân hệ nhân viên được trình bày tại Hình \ref{fig:uc_staff}.
+
 \begin{figure}[H]
   \centering
-  \includegraphics[height=0.80\textheight,keepaspectratio]{Images/Chuong5/uc-nhanvien.png}
+  \includegraphics[width=\linewidth,height=0.70\textheight,keepaspectratio]{Chuong5/uc-nhanvien.png}
   \caption{Sơ đồ use-case phân hệ nhân viên vận hành}
   \label{fig:uc_staff}
 \end{figure}
 
 \subsection{Danh sách use-case của phân hệ}
-\subsection{Đặc tả use-case Tạo đơn đặt chỗ tại quầy}
-\subsection{Đặc tả use-case Xác nhận thanh toán tiền mặt}
-\subsection{Đặc tả use-case Check-in và check-out cho khách}
-\subsection{Đặc tả use-case Ghi nhận dịch vụ gọi thêm}
-\subsection{Đặc tả use-case Quản lý lịch bảo trì không gian}
+Phân hệ Nhân viên bao gồm 5 ca sử dụng cốt lõi:
+\begin{itemize}
+    \item \textbf{UC-08:} Tạo đơn đặt chỗ tại quầy cho khách vãng lai (Walk-in Booking).
+    \item \textbf{UC-09:} Xác nhận thanh toán tiền mặt tại quầy.
+    \item \textbf{UC-10:} Thực hiện Check-in và Check-out cho khách hàng.
+    \item \textbf{UC-11:} Ghi nhận dịch vụ gọi thêm (Running Tab).
+    \item \textbf{UC-12:} Quản lý lịch bảo trì không gian làm việc.
+\end{itemize}
+
+\subsection{Đặc tả các use-case trọng tâm của nhân viên}
+
+\subsubsection{Use-case Tạo đơn đặt chỗ tại quầy (UC-08)}
+Nhân viên chọn không gian làm việc trên sơ đồ, nhập thông tin khách hàng vãng lai (hoặc chọn khách hàng có sẵn qua số điện thoại/email), thiết lập thời gian sử dụng. Hệ thống tự động tạo đơn với nguồn là \texttt{COUNTER}. Đơn tạo tại quầy vẫn giữ nguyên hạn thanh toán 15 phút, buộc nhân viên thu tiền ngay để hoàn tất thủ tục.
+
+\subsubsection{Use-case Xác nhận thanh toán tiền mặt (UC-09)}
+Sau khi thu tiền mặt trực tiếp từ khách hàng tại quầy, nhân viên nhấn nút ``Xác nhận thanh toán tiền mặt''. Hệ thống ghi nhận một giao dịch thanh toán thành công với phương thức \texttt{CASH}, chuyển trạng thái đơn sang \texttt{CONFIRMED} và sinh mã QR Pass cho khách.
+
+\subsubsection{Use-case Check-in và Check-out (UC-10)}
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|p{3.6cm}|p{10.4cm}|}
+\hline
+\textbf{Mã và Tên Use-case} & \textbf{UC-10: Check-in và Check-out} \\ \hline
+\textbf{Tác nhân chính} & Nhân viên vận hành quầy \\ \hline
+\textbf{Mục tiêu} & Xác nhận khách có mặt sử dụng không gian và hoàn tất ca làm việc an toàn \\ \hline
+\textbf{Tiền điều kiện} & Đơn thuộc chi nhánh của nhân viên; đang ở trạng thái \texttt{CONFIRMED} (check-in) hoặc \texttt{CHECKED\_IN} (check-out) \\ \hline
+\textbf{Luồng Check-in} & 
+1. Nhân viên quét mã QR từ điện thoại của khách hoặc nhập mã đặt chỗ (\texttt{booking\_code}). \newline
+2. Hệ thống kiểm tra: đơn phải thuộc chi nhánh của nhân viên. \newline
+3. Kiểm tra cửa sổ thời gian: $start\_at - 30m \le now \le end\_at$. \newline
+4. Hệ thống tạo bản ghi trong bảng \texttt{booking\_checkins} với thời điểm \texttt{checkin\_at = now}; cập nhật trạng thái đơn thành \texttt{CHECKED\_IN}. \newline
+5. Bàn làm việc trên sơ đồ chuyển sang màu cam biểu thị đang có khách sử dụng. \\ \hline
+\textbf{Luồng Check-out} & 
+1. Khi khách rời đi, nhân viên tìm đơn và bấm ``Check-out''. \newline
+2. Hệ thống kiểm tra: đơn có dịch vụ gọi thêm chưa thanh toán hay không (Rule 21). \newline
+3. Nếu không nợ dịch vụ: cập nhật \texttt{checkout\_at = now}. \newline
+4. Nếu là đơn 1 ngày: chuyển trạng thái đơn thành \texttt{COMPLETED}. \newline
+5. Nếu là gói nhiều ngày: chuyển trạng thái đơn quay về \texttt{CONFIRMED} để sẵn sàng cho ngày hôm sau. \\ \hline
+\textbf{Luồng ngoại lệ} & 
+Check-in quá sớm ($now < start\_at - 30m$) $\rightarrow$ Báo lỗi ``Chưa đến khung giờ check-in hợp lệ''. \newline
+Check-out khi còn nợ dịch vụ $\rightarrow$ Báo lỗi ``Đơn còn nợ dịch vụ phát sinh chưa thanh toán''. \\ \hline
+\end{tabular}
+\caption{Đặc tả chi tiết Use-case Check-in và Check-out}
+\label{tab:uc_spec_10}
+\end{table}
 
 \section{Phân hệ quản lý chi nhánh}
 \label{sec:uc_branchadmin}
+
+Sơ đồ use-case của phân hệ Quản lý chi nhánh được trình bày tại Hình \ref{fig:uc_branchadmin}.
+
 \begin{figure}[H]
   \centering
-  \includegraphics[height=0.80\textheight,keepaspectratio]{Images/Chuong5/uc-quanlychinhanh.png}
+  \includegraphics[width=\linewidth,height=0.70\textheight,keepaspectratio]{Chuong5/uc-quanlychinhanh.png}
   \caption{Sơ đồ use-case phân hệ quản lý chi nhánh}
   \label{fig:uc_branchadmin}
 \end{figure}
 
 \subsection{Danh sách use-case của phân hệ}
-\subsection{Đặc tả use-case Cấu hình không gian và sơ đồ mặt bằng}
-\subsection{Đặc tả use-case Thiết lập bảng giá và biểu phí hủy}
-\subsection{Đặc tả use-case Quản lý tài khoản nhân viên}
-\subsection{Đặc tả use-case Xem báo cáo và xuất dữ liệu}
+Phân hệ Quản lý chi nhánh bao gồm 4 ca sử dụng quản trị cơ sở:
+\begin{itemize}
+    \item \textbf{UC-13:} Cấu hình không gian làm việc và sơ đồ mặt bằng SVG.
+    \item \textbf{UC-14:} Thiết lập bảng giá và biểu phí phạt hủy riêng của chi nhánh.
+    \item \textbf{UC-15:} Quản lý tài khoản nhân viên cơ sở.
+    \item \textbf{UC-16:} Duyệt hoàn tiền và xem báo cáo tài chính chi nhánh.
+\end{itemize}
+
+\subsection{Đặc tả các use-case trọng tâm của quản lý chi nhánh}
+
+\subsubsection{Use-case Cấu hình không gian và sơ đồ mặt bằng (UC-13)}
+Quản lý chi nhánh tạo mới các tầng, tải lên tệp sơ đồ đồ họa vector SVG của từng tầng và sử dụng trình chỉnh sửa tương tác trên web để gán từng khối hình bàn ghế với mã không gian tương ứng. Dữ liệu SVG được lưu bền vững vào cột \texttt{floors.svg\_content}.
+
+\subsubsection{Use-case Duyệt hoàn tiền và Báo cáo (UC-16)}
+Quản lý chi nhánh truy cập vào Hàng chờ hoàn tiền (Refund Queue) để xem các đơn khách đã hủy tại cơ sở. Sau khi thực hiện chuyển khoản hoặc hoàn tiền mặt ngoài đời thực cho khách, Quản lý chi nhánh bấm nút ``Đã hoàn tiền'' (\texttt{APPROVED}) kèm ghi chú kiểm toán; hoặc bấm ``Từ chối'' (\texttt{REJECTED}) kèm lý do giải trình. Đồng thời, Quản lý chi nhánh theo dõi biểu đồ doanh thu thực tế (theo nguyên tắc đơn đã dùng) và xuất báo cáo CSV.
 
 \section{Phân hệ quản trị hệ thống}
 \label{sec:uc_admin}
+
+Sơ đồ use-case phân hệ Quản trị hệ thống toàn chuỗi được trình bày tại Hình \ref{fig:uc_admin}.
+
 \begin{figure}[H]
   \centering
-  \includegraphics[height=0.80\textheight,keepaspectratio]{Images/Chuong5/uc-quantrihethong.png}
+  \includegraphics[width=\linewidth,height=0.70\textheight,keepaspectratio]{Chuong5/uc-quantrihethong.png}
   \caption{Sơ đồ use-case phân hệ quản trị hệ thống}
   \label{fig:uc_admin}
 \end{figure}
 
 \subsection{Danh sách use-case của phân hệ}
-\subsection{Đặc tả use-case Quản lý chi nhánh và danh mục dùng chung}
-\subsection{Đặc tả use-case Quản lý người dùng và phân quyền}
-\subsection{Đặc tả use-case Thiết lập chính sách mặc định toàn hệ thống}
-\subsection{Đặc tả use-case Tra cứu nhật ký kiểm toán}
+\begin{itemize}
+    \item \textbf{UC-17:} Quản lý danh mục chi nhánh và danh mục dùng chung (loại không gian, tiện ích).
+    \item \textbf{UC-18:} Quản lý người dùng, phân quyền vai trò và điều chuyển chi nhánh.
+    \item \textbf{UC-19:} Thiết lập chính sách mặc định và chương trình khuyến mãi toàn hệ thống.
+    \item \textbf{UC-20:} Tra cứu và kiểm toán an ninh hệ thống (Audit Log).
+\end{itemize}
 
+\clearpage
 \section{Mô hình hóa quy trình nghiệp vụ}
 \label{sec:activity}
-\ghichu{Vẽ sơ đồ hoạt động cho các quy trình có nhiều nhánh rẽ và nhiều tác nhân tham gia. Mỗi sơ đồ kèm một đoạn diễn giải các nhánh quan trọng, đặc biệt là nhánh lỗi.}
+
+Để làm rõ sự phối hợp giữa các tác nhân và các nhánh rẽ nghiệp vụ, năm quy trình cốt lõi được mô hình hóa chi tiết bằng sơ đồ hoạt động (Activity Diagrams).
 
 \subsection{Quy trình đặt chỗ và thanh toán trực tuyến}
-\hinhcho{0.8}{Sơ đồ hoạt động quy trình đặt chỗ và thanh toán trực tuyến}{fig:act_booking}
+Quy trình thể hiện luồng tương tác từ lúc khách hàng duyệt mặt bằng, chọn không gian, khóa giữ chỗ 15 phút, quét mã VietQR và nhận kết quả xác nhận đơn bất đồng bộ từ Webhook PayOS.
+
+\hinhdo{Chuong5/act-1-datcho-online}{Sơ đồ hoạt động quy trình đặt chỗ và thanh toán trực tuyến}{fig:act_booking}
 
 \subsection{Quy trình đặt chỗ tại quầy và thanh toán tiền mặt}
-\hinhcho{0.8}{Sơ đồ hoạt động quy trình đặt chỗ tại quầy}{fig:act_counter}
+Quy trình mô tả chuỗi thao tác của nhân viên lễ tân khi đón tiếp khách vãng lai, tạo đơn đặt chỗ tại chỗ, thu tiền mặt, in mã QR và kích hoạt đơn sang trạng thái sẵn sàng sử dụng.
+
+\hinhdo{Chuong5/act-2-datcho-quay}{Sơ đồ hoạt động quy trình đặt chỗ tại quầy và thanh toán tiền mặt}{fig:act_counter}
 
 \subsection{Quy trình check-in và check-out}
-\hinhcho{0.8}{Sơ đồ hoạt động quy trình check-in và check-out}{fig:act_checkin}
+Quy trình phân định rõ nhánh kiểm tra khung giờ hợp lệ khi khách đến check-in (cửa sổ dung sai 30 phút), phân biệt đơn trong ngày và đơn dài hạn nhiều ngày, cùng cơ chế chặn check-out nếu khách chưa thanh toán nợ dịch vụ phát sinh.
+
+\hinhdo{Chuong5/act-3-checkin}{Sơ đồ hoạt động quy trình check-in và check-out}{fig:act_checkin}
 
 \subsection{Quy trình hủy đặt chỗ và hoàn tiền tự động}
-\hinhcho{0.8}{Sơ đồ hoạt động quy trình hủy và hoàn tiền}{fig:act_cancel}
+Quy trình minh họa việc kiểm tra điều kiện hủy trực tuyến ($now < start\_at$), thuật toán phân bậc tính tiền hoàn theo chính sách chi nhánh/toàn cục, việc giải phóng chỗ trống tức thời và ghi nhận khoản hoàn tiền vào hàng chờ phê duyệt.
+
+\hinhdo{Chuong5/act-4-huy-hoantien}{Sơ đồ hoạt động quy trình hủy đặt chỗ và hoàn tiền}{fig:act_cancel}
 
 \subsection{Quy trình bảo trì không gian và xử lý đơn bị ảnh hưởng}
-\hinhcho{0.8}{Sơ đồ hoạt động quy trình bảo trì không gian}{fig:act_maintenance}
+Quy trình thể hiện việc khóa tư vấn tương tranh khi nhân viên tạo lịch bảo trì, quét các đơn đặt chỗ giao nhau trong tương lai và xử lý hoàn tiền một phần hoặc hủy đơn hoàn tiền toàn bộ cho khách hàng bị ảnh hưởng.
 
+\hinhdo{Chuong5/act-5-baotri}{Sơ đồ hoạt động quy trình bảo trì không gian và xử lý đơn bị ảnh hưởng}{fig:act_maintenance}
+
+\clearpage
 \section{Mô hình hóa tương tác giữa các thành phần}
 \label{sec:sequence}
-\ghichu{Mỗi sơ đồ tuần tự dưới đây thể hiện một luồng kỹ thuật cần trình bày thứ tự thời gian và ranh giới giao dịch. Các sơ đồ dùng đúng tên lớp và phương thức trong mã nguồn Backend, các thông điệp được đánh số để khi viết lời giải thích có thể trích dẫn ``bước 5'', ``bước 12''. Với mỗi sơ đồ, viết một đoạn dẫn nhập (luồng này phục vụ use-case nào), một đoạn diễn giải các bước chính theo số thứ tự, và một đoạn nêu các nhánh lỗi hoặc điểm bảo đảm tính đúng đắn.}
-\nguon{report/DATN/Images/Chuong6/cospace-sequence.drawio (14 trang, mở bằng draw.io để chỉnh sửa)}
+
+Hệ thống sử dụng 14 sơ đồ tuần tự (Sequence Diagrams) để chi tiết hóa thứ tự thời gian của các thông điệp, ranh giới giao dịch và cơ chế đồng bộ hóa giữa các lớp Java Backend, cơ sở dữ liệu và dịch vụ bên thứ ba.
 
 \subsection{Xác thực và phân quyền}
 \label{ssec:seq_xacthuc}
-\ghichu{Nêu rõ mô hình xác thực kép: đăng nhập bằng email và mật khẩu do Backend tự phát token (access token 1 giờ, refresh token 30 ngày, ký HS384), đăng nhập bằng Google do Supabase phát token. Ở mỗi yêu cầu API, bộ giải mã phân biệt hai loại token theo issuer, từ chối refresh token dùng làm bearer, rồi bộ chuyển đổi đọc lại vai trò, chi nhánh và trạng thái tài khoản từ CSDL nên một tài khoản bị khóa mất hiệu lực ngay lập tức. Với đăng nhập Google, nhấn mạnh chốt an toàn khi liên kết tài khoản: chỉ tự liên kết vào tài khoản khách hàng đã có cùng email khi token do chính Google cấp (chỉ tin \texttt{app\_metadata}, không tin \texttt{user\_metadata} vì người dùng tự sửa được), còn tài khoản nhân viên và quản trị không bao giờ được liên kết tự động. Lưu ý: cần viết theo đúng mã nguồn, mật khẩu được mã hóa BCrypt và lưu trong bảng \texttt{users}, khác với mô tả cũ trong tài liệu đặc tả.}
+Mô hình xác thực kép được thể hiện chi tiết qua hai sơ đồ:
+\begin{enumerate}
+    \item \textbf{Đăng nhập và làm mới phiên (Hình \ref{fig:sd_dangnhap}):} Người dùng gửi thông tin đăng nhập tới \texttt{AuthController}. Với email/mật khẩu, \texttt{AuthService} kiểm tra mật khẩu đã băm bằng BCrypt trong bảng \texttt{users}, sau đó gọi \texttt{JwtUtil} phát hành Access Token (1 giờ) và Refresh Token (30 ngày) ký HS384. Với đăng nhập Google, token do Supabase phát hành được kiểm tra qua JWKS công khai.
+    \item \textbf{Xác thực và phân quyền mỗi yêu cầu API (Hình \ref{fig:sd_xacthuc_api}):} Mỗi yêu cầu HTTP đi qua \texttt{SecurityFilterChain}. Bộ giải mã \texttt{JwtDecoder} tự động chọn thuật toán giải mã dựa trên nhà phát hành ghi trong Header của token. Sau đó, \texttt{SupabaseJwtAuthenticationConverter} truy vấn lại bảng \texttt{users} để nạp vai trò thực tế và kiểm tra trạng thái khóa tài khoản. Bộ bảo vệ \texttt{BranchAccessGuard} kiểm tra định danh chi nhánh trước khi cho phép yêu cầu đi vào tầng điều khiển.
+\end{enumerate}
+
 \hinhuml{sd-01-dangnhap}{Sơ đồ tuần tự đăng nhập bằng email hoặc Google và làm mới phiên}{fig:sd_dangnhap}
 \hinhuml{sd-02-xacthuc-api}{Sơ đồ tuần tự xác thực và phân quyền mỗi yêu cầu API}{fig:sd_xacthuc_api}
 
 \subsection{Đặt chỗ và khóa chống tương tranh}
 \label{ssec:seq_datcho}
-\ghichu{Đây là luồng quan trọng nhất của hệ thống. Diễn giải hai khóa tư vấn \texttt{pg\_advisory\_xact\_lock}: khóa theo người dùng để giới hạn tối đa 3 đơn chờ thanh toán mà không bị vượt qua khi gửi yêu cầu đồng thời, và khóa theo không gian để hai người không thể cùng đặt một chỗ. Giải thích vì sao cần khóa tư vấn (chưa có dòng nào để khóa khi chỗ còn trống), việc giải phóng ngay đơn giữ chỗ quá hạn thay vì chờ tác vụ định kỳ, kiểm tra trùng lịch bảo trì, và nguyên tắc số lượng đơn vị được tính từ khoảng thời gian chứ không tin dữ liệu từ máy khách.}
+Luồng đặt chỗ là luồng kỹ thuật phức tạp nhất của hệ thống, được chia thành hai giai đoạn logic:
+\begin{enumerate}
+    \item \textbf{Giai đoạn 1: Kiểm tra hạn mức và khóa chống trùng lịch (Hình \ref{fig:sd_datcho_1}):} Khách hàng gửi yêu cầu tới \texttt{BookingController.createBooking}. Trong cùng một giao dịch CSDL, \texttt{BookingService} gọi hàm khóa tư vấn theo người dùng \texttt{pg\_advisory\_xact\_lock(hashtext('rate\_limit:' || userId))} để tuần tự hóa việc kiểm tra điều kiện tối đa 3 đơn chờ thanh toán. Sau khi kiểm tra giờ mở cửa của chi nhánh và khoảng thời gian hợp lệ, hệ thống lấy tiếp khóa tư vấn theo không gian \texttt{pg\_advisory\_xact\_lock(hashtext('booking:' || workspaceId))}. Dưới sự bảo vệ của khóa, hệ thống kiểm tra các đơn trùng lịch còn hiệu lực và lịch bảo trì. Mọi đơn giữ chỗ quá hạn 15 phút được giải phóng ngay lập tức tại chỗ.
+    \item \textbf{Giai đoạn 2: Tính giá và lưu đơn (Hình \ref{fig:sd_datcho_2}):} Sau khi vượt qua kiểm tra xung đột, \texttt{BookingService} gọi \texttt{PricingService} để tính đơn giá chuẩn xác ở máy chủ, trừ đi giảm giá từ mã khuyến mãi hoặc hạng thành viên (\texttt{LoyaltyService}), sau đó lưu đơn đặt chỗ với trạng thái \texttt{PENDING\_PAYMENT} và hạn thanh toán 15 phút.
+\end{enumerate}
+
 \hinhuml{sd-03-datcho-kiemtra}{Sơ đồ tuần tự tạo đơn đặt chỗ (1/2): kiểm tra giới hạn và khóa chống trùng lịch}{fig:sd_datcho_1}
 \hinhuml{sd-04-datcho-luu}{Sơ đồ tuần tự tạo đơn đặt chỗ (2/2): tính giá và lưu đơn}{fig:sd_datcho_2}
 
 \subsection{Thanh toán và xử lý kết quả thanh toán}
 \label{ssec:seq_thanhtoan}
-\ghichu{Trình bày ba phương thức thanh toán (PayOS VietQR, MoMo, tiền mặt tại quầy chỉ dành cho nhân viên và quản lý chi nhánh) và cơ chế chống tạo trùng giao dịch. Với webhook, giải thích: kiểm tra chữ ký trước khi xử lý, bỏ qua giao dịch đã \texttt{PAID} để chống gọi lặp, khóa dòng đơn bằng \texttt{SELECT FOR UPDATE} để tuần tự hóa với tác vụ hết hạn và hủy đơn, và xử lý thanh toán về muộn hoặc trả trùng bằng cách tạo yêu cầu hoàn tiền thay vì bỏ mất tiền. Lưu ý: mã nguồn chống lặp bằng trạng thái của giao dịch chứ không dùng khóa \texttt{idempotency\_key} của bảng \texttt{payment\_events} như tài liệu đặc tả mô tả.}
+\begin{enumerate}
+    \item \textbf{Khởi tạo thanh toán (Hình \ref{fig:sd_thanhtoan}):} Khách hàng gửi yêu cầu thanh toán kèm tiêu đề \texttt{Idempotency-Key}. \texttt{PaymentService} kiểm tra nếu đã có giao dịch chờ cho đơn này thì trả về liên kết cũ; nếu chưa, gọi \texttt{PayosService} tạo liên kết thanh toán VietQR và trả về mã QR động.
+    \item \textbf{Xử lý Webhook PayOS (Hình \ref{fig:sd_webhook}):} Cổng PayOS gửi Webhook thông báo kết quả. \texttt{PaymentWebhookController} kiểm tra chữ ký HMAC-SHA256. \texttt{PaymentService} mở giao dịch mới, đọc đơn đặt chỗ bằng câu lệnh khóa dòng \texttt{SELECT FOR UPDATE}. Nếu giao dịch đã ở trạng thái \texttt{PAID}, hệ thống bỏ qua an toàn (chống gọi lặp). Nếu đơn đặt chỗ đã bị hủy do thanh toán muộn, hệ thống ghi nhận tiền và tự động tạo một yêu cầu hoàn tiền $100\%$ vào bảng \texttt{refund\_requests}. Nếu đơn vẫn ở \texttt{PENDING\_PAYMENT}, chuyển đơn sang \texttt{CONFIRMED} và kích hoạt tích điểm chi tiêu.
+\end{enumerate}
+
 \hinhuml{sd-05-thanhtoan}{Sơ đồ tuần tự khởi tạo thanh toán}{fig:sd_thanhtoan}
 \hinhuml{sd-06-webhook}{Sơ đồ tuần tự xử lý webhook thanh toán PayOS}{fig:sd_webhook}
 
 \subsection{Hủy đặt chỗ và hoàn tiền}
 \label{ssec:seq_huy}
-\ghichu{Giải thích cách chọn chính sách hủy: ưu tiên chính sách của chi nhánh rồi mới đến chính sách toàn cục, sắp theo độ ưu tiên giảm dần, so khớp theo phút trên khoảng nửa mở, không khớp thì hoàn 0 phần trăm. Nêu bất biến \texttt{refund + penalty = total}, quy tắc khách không thể hủy trực tuyến khi đơn đã đến giờ bắt đầu, và quy trình hoàn tiền do nhân viên hoặc quản lý chi nhánh duyệt (hệ thống chỉ ghi nhận, không tự chi trả).}
+\begin{enumerate}
+    \item \textbf{Hủy đặt chỗ và tính tiền hoàn (Hình \ref{fig:sd_huy}):} \texttt{CancellationService} kiểm tra thời gian $now < start\_at$. Hệ thống đọc danh sách chính sách hủy của chi nhánh và toàn cục, so khớp bậc thời gian theo phút trên khoảng nửa mở $[min, max)$, tính số tiền hoàn và phí phạt theo đúng bất biến tổng tiền, cập nhật trạng thái đơn sang \texttt{CANCELLED} qua \texttt{BookingStateMachine} và tạo bản ghi yêu cầu hoàn tiền.
+    \item \textbf{Duyệt hoàn tiền (Hình \ref{fig:sd_duyet_hoantien}):} Quản lý chi nhánh truy cập danh sách yêu cầu hoàn tiền, sau khi thực hiện chi trả thủ công ngoài đời thực, gửi yêu cầu duyệt tới \texttt{RefundController}. Hệ thống cập nhật trạng thái yêu cầu sang \texttt{APPROVED} và ghi nhật ký kiểm toán.
+\end{enumerate}
+
 \hinhuml{sd-07-huy}{Sơ đồ tuần tự hủy đặt chỗ và tính hoàn tiền}{fig:sd_huy}
 \hinhuml{sd-08-duyet-hoantien}{Sơ đồ tuần tự duyệt hoặc từ chối yêu cầu hoàn tiền}{fig:sd_duyet_hoantien}
 
 \subsection{Check-in, check-out và các tác vụ tự động}
 \label{ssec:seq_vandanh}
-\ghichu{Trình bày các điều kiện check-in (đúng chi nhánh, đúng trạng thái, chưa có lượt check-in mở, không sớm hơn 30 phút so với giờ bắt đầu, không quá giờ kết thúc), cách xử lý gói nhiều ngày (mỗi ngày vẫn check-in và check-out, sau check-out đơn quay về \texttt{CONFIRMED}), và điều kiện chặn check-out khi còn nợ dịch vụ gọi thêm. Hai tác vụ định kỳ: giải phóng chỗ giữ quá 15 phút (quét mỗi 30 giây) và đóng đơn đã hết giờ (quét mỗi 5 phút), trong đó đơn không từng check-in chuyển sang \texttt{NO\_SHOW} và giữ nguyên tiền đã thanh toán.}
+\begin{enumerate}
+    \item \textbf{Check-in và Check-out (Hình \ref{fig:sd_checkin}):} Nhân viên gọi \texttt{CheckinService}. Hệ thống kiểm tra dung sai 30 phút, tạo lượt check-in mở và chuyển đơn sang \texttt{CHECKED\_IN}. Khi check-out, hệ thống kiểm tra số dư dịch vụ gọi thêm, cập nhật giờ trả phòng và chuyển trạng thái đơn.
+    \item \textbf{Tác vụ hết hạn giữ chỗ (Hình \ref{fig:sd_hethan}):} \texttt{BookingExpiryScheduler} chạy mỗi 30 giây, tìm các đơn \texttt{PENDING\_PAYMENT} quá hạn 15 phút, dùng khóa dòng \texttt{SELECT FOR UPDATE} để hủy đơn sang \texttt{EXPIRED} mà không gây tranh chấp với Webhook thanh toán đang đến.
+    \item \textbf{Tác vụ đóng đơn hết giờ (Hình \ref{fig:sd_dongdon}):} \texttt{BookingLifecycleScheduler} chạy mỗi 5 phút, quét các đơn đã qua giờ kết thúc. Các đơn khách không đến nhận phòng được chuyển sang trạng thái \texttt{NO\_SHOW} và bảo toàn doanh thu; các đơn khách quên check-out được tự động đóng sang \texttt{COMPLETED}.
+\end{enumerate}
+
 \hinhuml{sd-09-checkin-checkout}{Sơ đồ tuần tự check-in và check-out}{fig:sd_checkin}
 \hinhuml{sd-10-hethan-giucho}{Sơ đồ tuần tự tự động giải phóng chỗ giữ quá 15 phút}{fig:sd_hethan}
 \hinhuml{sd-11-dong-don}{Sơ đồ tuần tự tự động đóng đơn hết giờ: check-out quá hạn và không đến}{fig:sd_dongdon}
 
-\subsection{Bảo trì không gian và xử lý đơn bị ảnh hưởng}
+\subsection{Bảo trì không gian}
 \label{ssec:seq_baotri}
-\ghichu{Nhấn mạnh việc tạo lịch bảo trì dùng chung khóa tư vấn với tạo đơn đặt chỗ nên hai luồng không thể lọt qua nhau. Phân biệt ba trường hợp: bảo trì chỉ chạm một phần thời gian thì đơn giữ chỗ và được hoàn phần thời gian bị mất, bảo trì phủ hết đơn đang sử dụng thì check-out sớm và hoàn phần chưa dùng, bảo trì phủ hết đơn chưa sử dụng thì hủy và hoàn toàn bộ.}
+Nhân viên tạo lịch bảo trì qua \texttt{StaffMaintenanceService}. Hệ thống sử dụng chung khóa tư vấn không gian với dịch vụ đặt chỗ. Hệ thống quét các đơn bị ảnh hưởng trong tương lai: hoàn tiền phần thời gian giao nhau nếu chỉ chạm một phần, hoặc hủy đơn hoàn tiền $100\%$ nếu bảo trì phủ trọn thời gian của đơn.
+
 \hinhuml{sd-12-baotri}{Sơ đồ tuần tự tạo lịch bảo trì và xử lý đơn bị ảnh hưởng}{fig:sd_baotri}
 
-\subsection{Trợ lý ảo có bước xác nhận trước khi thực hiện}
+\subsection{Trợ lý ảo thông minh Google Gemini}
 \label{ssec:seq_chatbot}
-\ghichu{Trợ lý ảo dùng cơ chế gọi hàm của mô hình ngôn ngữ. Điểm thiết kế cần nhấn mạnh: các công cụ chỉ đọc (liệt kê chi nhánh, tìm chỗ trống, xem chính sách) được thực thi ngay, còn các công cụ có ghi dữ liệu (đề xuất tạo đơn, hủy đơn, thêm dịch vụ) chỉ tạo bản tóm tắt chờ khách hàng bấm xác nhận, và khi xác nhận đi qua đúng các dịch vụ nghiệp vụ như thao tác thông thường nên vẫn chịu cùng khóa và kiểm tra. Nêu thêm giới hạn 6 vòng gọi công cụ, kênh SSE báo tiến trình và cơ chế chuyển sang mô hình dự phòng.}
+\begin{enumerate}
+    \item \textbf{Hội thoại và gọi công cụ (Hình \ref{fig:sd_chatbot_1}):} Khách hàng gửi câu hỏi qua luồng SSE. \texttt{ChatbotService} chuyển tiếp tới Gemini API. Mô hình gọi các công cụ chỉ đọc (\texttt{search\_spaces}, \texttt{get\_policies}) và trả lời mượt mà cho khách hàng.
+    \item \textbf{Đề xuất và xác nhận hành động (Hình \ref{fig:sd_chatbot_2}):} Khi người dùng muốn đặt chỗ, AI kích hoạt công cụ ghi dữ liệu, tạo bản đề xuất hiển thị trên giao diện. Khách hàng nhấn nút ``Xác nhận'', hệ thống mới chính thức gọi \texttt{BookingService.createBooking} để tạo đơn vào CSDL.
+\end{enumerate}
+
 \hinhuml{sd-13-chatbot-hoithoai}{Sơ đồ tuần tự trợ lý ảo: hội thoại và gọi công cụ}{fig:sd_chatbot_1}
 \hinhuml{sd-14-chatbot-xacnhan}{Sơ đồ tuần tự trợ lý ảo: xác nhận và thực hiện hành động}{fig:sd_chatbot_2}
 
+\clearpage
 \section{Mô hình trạng thái}
 \label{sec:statechart}
-\ghichu{Vẽ sơ đồ trạng thái cho đơn đặt chỗ và cho giao dịch thanh toán, kèm bảng liệt kê điều kiện chuyển trạng thái và tác nhân gây ra chuyển trạng thái. Đây là căn cứ để kiểm thử máy trạng thái ở Chương \ref{ch:kiemthu}.}
-\nguon{docs/SYSTEM\_SPEC.md muc 3.3 va 3.4}
-\hinhcho{0.8}{Sơ đồ trạng thái của đơn đặt chỗ}{fig:state_booking}
-\hinhcho{0.8}{Sơ đồ trạng thái của giao dịch thanh toán}{fig:state_payment}
+
+Hệ thống CoSpace quản lý vòng đời của hai thực thể dữ liệu quan trọng nhất thông qua mô hình máy trạng thái hữu hạn nghiêm ngặt.
+
+\subsection{Máy trạng thái đơn đặt chỗ (BookingStateMachine)}
+Vòng đời của đơn đặt chỗ gồm 8 trạng thái được điều phối tập trung duy nhất qua lớp Java \texttt{BookingStateMachine}. Mọi nỗ lực chuyển đổi trạng thái sai quy tắc đều ném ngoại lệ \texttt{IllegalStateException}, ngăn chặn tuyệt đối việc phát sinh dữ liệu rác.
+
+\hinhdo{Chuong5/st-1-dondatcho}{Sơ đồ trạng thái của đơn đặt chỗ (BookingStateMachine)}{fig:state_booking}
+
+\begin{table}[H]
+\centering
+\caption{Ma trận chuyển trạng thái của đơn đặt chỗ trong CoSpace}
+\label{tab:state_booking_matrix}
+\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|p{3.2cm}|p{3.2cm}|p{4.2cm}|p{3.4cm}|}
+\hline
+\textbf{Trạng thái ban đầu} & \textbf{Sự kiện kích hoạt} & \textbf{Điều kiện chuyển đổi} & \textbf{Trạng thái đích} \\
+\hline
+(Khởi tạo mới) & Tạo đơn đặt chỗ & Hợp lệ đầu vào, không xung đột & \texttt{PENDING\_PAYMENT} \\
+\hline
+\texttt{PENDING\_PAYMENT} & Webhook PayOS/MoMo & Thanh toán thành công trong 15 phút & \texttt{CONFIRMED} \\
+\hline
+\texttt{PENDING\_PAYMENT} & Khách hủy đơn & Khách chủ động hủy khi chưa trả tiền & \texttt{CANCELLED} \\
+\hline
+\texttt{PENDING\_PAYMENT} & Tác vụ nền quét & Quá 15 phút không thanh toán & \texttt{EXPIRED} \\
+\hline
+\texttt{CONFIRMED} & Khách hủy đơn & Hủy trước giờ bắt đầu ($now < start\_at$) & \texttt{CANCELLED} \\
+\hline
+\texttt{CONFIRMED} & Lễ tân Check-in & Đến trong khung giờ hợp lệ & \texttt{CHECKED\_IN} \\
+\hline
+\texttt{CONFIRMED} & Tác vụ nền quét & Hết giờ mà khách không đến & \texttt{NO\_SHOW} \\
+\hline
+\texttt{CONFIRMED} & Tạo lịch bảo trì & Lịch bảo trì phủ trọn thời gian đơn & \texttt{MAINTENANCE\_CANCELLED} \\
+\hline
+\texttt{CHECKED\_IN} & Lễ tân Check-out & Đơn 1 ngày và không còn nợ dịch vụ & \texttt{COMPLETED} \\
+\hline
+\texttt{CHECKED\_IN} & Lễ tân Check-out & Đơn nhiều ngày; hết ca trong ngày & \texttt{CONFIRMED} \\
+\hline
+\texttt{CHECKED\_IN} & Tác vụ nền quét & Tự động đóng đơn quá hạn & \texttt{COMPLETED} \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Máy trạng thái giao dịch thanh toán}
+Mỗi giao dịch thanh toán gắn với đơn đặt chỗ trải qua các trạng thái: \texttt{PENDING} (chờ thanh toán), \texttt{PAID} (thanh toán thành công), \texttt{FAILED} (giao dịch thất bại) hoặc \texttt{CANCELLED} (khách hủy thanh toán). Trạng thái \texttt{PAID} là trạng thái kết thúc bất biến, không thể bị chuyển đổi sang bất kỳ trạng thái nào khác.
+
+\hinhdo{Chuong5/st-2-thanhtoan}{Sơ đồ trạng thái của giao dịch thanh toán}{fig:state_payment}

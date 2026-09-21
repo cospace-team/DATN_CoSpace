@@ -1,0 +1,36 @@
+sequenceDiagram
+  autonumber
+  actor S as Nhân viên
+  participant MS as StaffMaintenanceService
+  participant DB as PostgreSQL
+  participant CS as CancellationService
+  participant RS as RefundService
+  participant NS as NotificationService
+  S->>MS: POST /api/staff/workspaces/{id}/maintenance (thời gian, lý do)
+  MS->>MS: Kiểm tra end_at sau start_at và start_at không ở quá khứ
+  MS->>DB: pg_advisory_xact_lock('booking:' + workspaceId)
+  Note over MS,DB: Dùng chung khóa với tạo đơn nên hai luồng không lọt qua nhau
+  MS->>DB: findOverlappingMaintenances (scheduled, active)
+  opt Trùng lịch bảo trì khác
+    MS-->>S: Lỗi IllegalArgumentException
+  end
+  MS->>DB: findOverlappingBookings (PENDING_PAYMENT, CONFIRMED, CHECKED_IN)
+  loop Mỗi đơn bị ảnh hưởng
+    MS->>DB: findByIdWithLock(booking) đọc lại trạng thái mới nhất
+    alt Bảo trì không phủ hết thời gian của đơn
+      MS->>CS: refundTimeLostToMaintenance(booking, start, end, reason)
+      CS->>RS: requestRefund theo phần thời gian bị mất
+      MS->>NS: Thông báo đơn vẫn giữ chỗ và phần được hoàn
+    else Phủ hết đơn và khách đang sử dụng (CHECKED_IN)
+      MS->>CS: refundTimeLostToMaintenance(booking, start, end, reason)
+      MS->>DB: end_at = now, chuyển COMPLETED, đóng checkin_logs
+      MS->>NS: Thông báo Kết thúc sớm do bảo trì
+    else Phủ hết đơn và chưa sử dụng
+      MS->>CS: cancelForMaintenance(booking, reason)
+      CS->>DB: Chuyển CANCELLED, INSERT booking_cancellations (hoàn 100 phần trăm)
+      CS->>RS: requestRefund(booking, null, refundAmount, MAINTENANCE)
+      CS->>NS: Thông báo Đơn đặt chỗ bị hủy do bảo trì
+    end
+  end
+  MS->>DB: INSERT workspace_maintenance (scheduled nếu chưa đến giờ, ngược lại active)
+  MS-->>S: MaintenanceResponseDto kèm số đơn bị ảnh hưởng

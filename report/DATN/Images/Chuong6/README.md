@@ -1,12 +1,15 @@
-# Sơ đồ lớp (class) và sơ đồ tuần tự (sequence) của CoSpace
+# Sơ đồ lớp, tuần tự, kiến trúc và ERD của CoSpace
 
-Tất cả sơ đồ được dựng từ mã nguồn Backend (`BE/src/main/java/com/cospace/app/`), không phải từ tài liệu đặc tả.
+Tất cả sơ đồ được dựng từ mã nguồn (Backend `BE/src/main/java/com/cospace/app/` và lược đồ Flyway), không phải từ tài liệu đặc tả.
 Mỗi file PNG (xuất tỉ lệ 2x) **nhúng sẵn XML của sơ đồ**: mở trực tiếp PNG bằng draw.io vẫn sửa được.
+Cách sinh lại toàn bộ: xem `../../tools/uml/README.md`.
 
 | File nguồn | Số trang | Nội dung |
 |---|---|---|
 | `cospace-class.drawio` | 11 | Sơ đồ lớp: 6 trang miền dữ liệu, 5 trang tầng nghiệp vụ |
 | `cospace-sequence.drawio` | 14 | Sơ đồ tuần tự các luồng nghiệp vụ chính |
+| `cospace-architecture.drawio` | 4 | Kiến trúc phân tầng, tổng thể, giao diện và triển khai |
+| `cospace-erd.drawio` | 7 | Sơ đồ quan hệ thực thể: bản đồ module và 6 nhóm bảng |
 
 ## Sơ đồ lớp
 
@@ -66,3 +69,32 @@ Sơ đồ vẽ theo mã nguồn; những điểm sau lệch so với tài liệu
 - `BookingStatus` trong mã viết hoa (`CANCELLED`, không phải `canceled`) và có 8 giá trị, thêm `CHECKED_OUT` (trạng thái cũ, chỉ còn được
   đóng thành `COMPLETED`) và `NO_SHOW`; đặc tả chỉ liệt kê 6 giá trị viết thường.
 - Liên kết đăng nhập Google vào tài khoản email đã có chỉ được phép với tài khoản khách hàng và token do Google cấp.
+
+## Sơ đồ kiến trúc
+
+Nguồn: `cospace-architecture.drawio` (4 trang; trang `arch-phantang` có PNG nằm ở `../Chuong3/`).
+
+| PNG | Nhãn LaTeX | Nội dung |
+|---|---|---|
+| `arch-tongthe` | `fig:kientruc_tongthe` | Kiến trúc tổng thể: trình duyệt, máy chủ Spring Boot, Supabase, dịch vụ bên thứ ba |
+| `arch-frontend` | `fig:kientruc_frontend` | Các tầng của ứng dụng React (xoay ngang) |
+| `arch-trienkhai` | `fig:trienkhai` | Triển khai: Vercel, Render (Docker), Supabase, GitHub Actions giữ máy chủ thức |
+
+## Sơ đồ quan hệ thực thể (ERD)
+
+Nguồn: `cospace-erd.drawio` (7 trang). Sinh tự động từ `BE/src/main/resources/db/migration/V1__baseline.sql`,
+nên khi lược đồ đổi chỉ cần chạy lại `python build_erd.py` trong `../../tools/uml`.
+
+| PNG | Nhãn LaTeX | Nội dung |
+|---|---|---|
+| `erd-00-tongquan` | `fig:erd` | Bản đồ 7 module của 30 bảng, không vẽ quan hệ tới `users` và `branches` |
+| `erd-01-dinhdanh` | `fig:erd_dinhdanh` | `users`, `auth_accounts`, `profiles`, `tags`, kỹ năng, sở thích, điểm tương đồng |
+| `erd-02-khonggian` | `fig:erd_khonggian` | Chi nhánh, tầng, không gian, loại, tiện ích, bảo trì |
+| `erd-03-gia` | `fig:erd_gia` | Bảng giá, dịch vụ bổ sung, chính sách hủy, khuyến mãi, hạng thành viên |
+| `erd-04-datcho` | `fig:erd_datcho` | Đơn đặt chỗ, dịch vụ gọi thêm, check-in, bản ghi hủy |
+| `erd-05-thanhtoan` | `fig:erd_thanhtoan` | Thanh toán, sự kiện thanh toán, hoàn tiền |
+| `erd-06-congdong` | `fig:erd_congdong` | Bài viết, thẻ, thông báo, nhật ký kiểm toán |
+
+Ký hiệu: `PK`, `FK`, `UQ` ghi ngay sau kiểu cột; đầu chân chim ở bảng con; đầu "không hoặc một" ở bảng cha nghĩa là khóa ngoại cho phép NULL;
+các cột `created_at`, `updated_at` được lược bớt. Ghi chú `EXCLUDE` trên `bookings` và `workspace_maintenance` là ràng buộc loại trừ
+theo khoảng thời gian (lớp bảo vệ thứ hai chống đặt chồng lịch, bên cạnh khóa tư vấn ở ứng dụng).

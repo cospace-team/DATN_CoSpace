@@ -1,0 +1,23 @@
+sequenceDiagram
+  autonumber
+  participant BS as BookingService
+  participant PR as PricingService
+  participant DS as MembershipService<br/>PromotionService
+  participant BA as BookingAddonService
+  participant DB as PostgreSQL
+  Note over BS,DB: Tiếp nối giao dịch ở phần trước, các khóa tư vấn vẫn đang được giữ
+  BS->>PR: getUnitPriceVnd(branchId, workspaceTypeId, unit)
+  PR-->>BS: Đơn giá (bảng giá chi nhánh trước, toàn cục sau)
+  BS->>BS: unit_count tính từ khoảng thời gian, không tin dữ liệu từ client
+  BS->>DS: Giảm giá hạng thành viên, sau đó mã khuyến mãi
+  DS-->>BS: DiscountBreakdown
+  BS->>BA: priceLines(branchId, addons)
+  BA-->>BS: Các dòng dịch vụ đã tính giá theo danh mục
+  BS->>BS: total = max(0, subtotal - discount) + addon
+  BS->>DB: INSERT booking (PENDING_PAYMENT, hạn thanh toán = now + 15 phút)
+  Note over BS,DB: Ràng buộc EXCLUDE (gist) trên bookings là chốt chặn cuối nếu khóa tư vấn bị bỏ sót
+  opt total bằng 0
+    Note over BS,DB: Xác nhận CONFIRMED ngay, không cần thanh toán
+  end
+  BS->>BA: attachToNewBooking(booking, lines)
+  Note over BS,DB: Trả BookingDto về BookingController rồi commit, khóa tư vấn tự nhả

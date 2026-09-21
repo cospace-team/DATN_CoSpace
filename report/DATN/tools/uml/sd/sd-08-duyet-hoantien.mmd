@@ -1,0 +1,22 @@
+sequenceDiagram
+  autonumber
+  actor S as Quản lý chi nhánh hoặc<br/>quản trị viên
+  participant RC as RefundController
+  participant RS as RefundService
+  participant DB as PostgreSQL
+  participant NS as NotificationService
+  S->>RC: GET /api/refunds (danh sách yêu cầu chờ xử lý của chi nhánh)
+  RC-->>S: Danh sách yêu cầu hoàn tiền
+  alt Chấp nhận (sau khi đã hoàn tiền trực tiếp cho khách)
+    S->>RC: POST /api/refunds/{id}/process
+    RC->>RS: markProcessed(refundId, actorId, note)
+    RS->>DB: refund PROCESSED, payment REFUNDED
+    RS->>DB: Đồng bộ trạng thái booking_cancellations
+    RS->>NS: Thông báo Hoàn tiền thành công
+  else Từ chối (bắt buộc ghi lý do)
+    S->>RC: POST /api/refunds/{id}/reject
+    RC->>RS: reject(refundId, actorId, note)
+    RS->>DB: refund REJECTED, đồng bộ booking_cancellations
+    RS->>NS: Thông báo Yêu cầu hoàn tiền bị từ chối
+  end
+  Note over RS,DB: Hệ thống chỉ ghi nhận, không tự động chi trả qua cổng thanh toán

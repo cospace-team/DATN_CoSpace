@@ -1,0 +1,320 @@
+\chapter{Kiểm thử và đánh giá}
+\label{ch:kiemthu}
+
+Chương này trình bày chiến lược, phương pháp và kết quả kiểm thử thực tế nhằm chứng minh hệ thống CoSpace đáp ứng đầy đủ các yêu cầu chức năng và phi chức năng đã đặt ra ở Chương \ref{ch:yeucau}. Toàn bộ các số liệu kiểm thử được ghi nhận dựa trên các bài kiểm tra thực tế có thể tái lập, tuân thủ nguyên tắc trung thực học thuật và phản ánh chính xác hiện trạng hệ thống.
+
+\section{Chiến lược và phạm vi kiểm thử}
+\label{sec:kt_chienluoc}
+
+Hệ thống áp dụng mô hình kim tự tháp kiểm thử (Test Pyramid) \cite{vocke2018testpyramid} gồm 4 tầng bảo vệ độc lập:
+\begin{enumerate}
+    \item \textbf{Kiểm thử đơn vị và lát cắt Web (Unit \& Slice Testing):} Tầng đáy của kim tự tháp, tập trung vào các lớp nghiệp vụ của máy chủ Spring Boot. Sử dụng khung kiểm thử JUnit 5 kết hợp đối tượng giả lập Mockito và Spring MockMvc để kiểm tra các phương thức nghiệp vụ, quy tắc tính toán tài chính, máy trạng thái và chuỗi lọc bảo mật mà không phụ thuộc vào cơ sở dữ liệu vật lý.
+    \item \textbf{Kiểm thử cơ sở dữ liệu và tương tranh (Database \& Concurrency Testing):} Kiểm tra tính toàn vẹn của lược đồ quan hệ, các ràng buộc loại trừ khoảng thời gian (\texttt{EXCLUDE}), khóa tư vấn (\texttt{pg\_advisory\_xact\_lock}) và hành vi xử lý khi có nhiều luồng truy cập đồng thời.
+    \item \textbf{Rà soát logic nghiệp vụ độc lập (Static Logic Audit):} Hoạt động kiểm tra tĩnh toàn diện mã nguồn xuyên suốt từ Controller $\rightarrow$ Service $\rightarrow$ Repository $\rightarrow$ Database nhằm phát hiện sớm các lỗi nghiệp vụ tiềm ẩn, các trường hợp biên thời gian và nguy cơ tranh chấp dữ liệu giữa các tác vụ nền với Webhook.
+    \item \textbf{Kiểm thử chấp nhận người dùng theo kịch bản (Scenario-based UAT):} Thực thi các kịch bản sử dụng hoàn chỉnh từ đầu đến cuối (End-to-End) trên giao diện web thực tế.
+\end{enumerate}
+
+\section{Kiểm thử tự động phía máy chủ}
+\label{sec:kt_be}
+
+Bộ kiểm thử tự động phía máy chủ được thực thi bằng công cụ Maven Wrapper (\texttt{./mvnw test}) trong thư mục \texttt{BE}. Kết quả kiểm thử ghi nhận ngày 21/09/2026 trên môi trường OpenJDK 21.0.6: **273 ca kiểm thử trong 20 lớp kiểm thử**, đạt kết quả **0 thất bại (failures), 0 lỗi (errors)** và 1 ca bị bỏ qua có chủ đích (\texttt{h2ConsoleIsNotPublic} -- dùng để nhắc nhở việc gỡ bỏ đường dẫn H2 Console khỏi môi trường phát hành). Toàn bộ quá trình chạy kiểm thử hoàn tất trong 25.9 giây.
+
+Bảng \ref{tab:kt_be} tổng hợp chi tiết số lượng ca kiểm thử và nội dung kiểm chứng theo từng nhóm nghiệp vụ từ báo cáo của Maven Surefire.
+
+\begin{table}[H]
+\centering
+\caption{Kết quả kiểm thử tự động phía máy chủ (chạy ngày 21/09/2026)}
+\label{tab:kt_be}
+\footnotesize
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|p{5.7cm}|p{1.1cm}|p{7.0cm}|}
+\hline
+\textbf{Lớp kiểm thử} & \textbf{Số ca} & \textbf{Nội dung kiểm chứng chính} \\
+\hline
+\multicolumn{3}{|l|}{\textbf{Xác thực và phân quyền (78 ca)}} \\
+\hline
+\texttt{SecurityConfigRoute\allowbreak AuthorizationTest} & 20 & Yêu cầu HTTP qua chuỗi lọc bảo mật thật: xác thực, điểm cuối công khai, phân quyền theo vai trò; 1 ca bị tắt có chủ đích \\
+\hline
+\texttt{SupabaseJwtAuthentication\allowbreak ConverterTest} & 11 & Chuyển JWT Supabase thành quyền: vai trò, tài khoản bị khóa \\
+\hline
+\texttt{BranchAccessGuardTest} & 18 & Cô lập dữ liệu giữa các chi nhánh \\
+\hline
+\texttt{JwtUtilTest} & 10 & Ký và kiểm tra JWT nội bộ \\
+\hline
+\texttt{AuthServiceTest} & 19 & Đăng ký, đăng nhập, làm mới, liên kết tài khoản Google \\
+\hline
+\multicolumn{3}{|l|}{\textbf{Đặt chỗ và vòng đời đơn (84 ca)}} \\
+\hline
+\texttt{BookingServiceTest} & 28 & Tạo đơn: đầu vào, giới hạn 3 đơn chờ, trùng lịch, bảo trì, giờ mở cửa, giá tính ở máy chủ, làm tròn đơn vị, giảm giá, quyền sở hữu \\
+\hline
+\texttt{BookingStateMachineTest} & 18 & Các chuyển trạng thái được phép và bị cấm \\
+\hline
+\texttt{BookingExpiryServiceTest}, \texttt{BookingExpiry\allowbreak SchedulerTest} & 6, 3 & Hết hạn dưới khóa dòng, không ghi đè đơn đã xác nhận, lỗi ở một đơn không chặn các đơn khác \\
+\hline
+\texttt{BookingLifecycle\allowbreak ServiceTest} & 5 & Tự check-out, đóng đơn đã dùng, chuyển \texttt{NO\_SHOW} \\
+\hline
+\texttt{BookingAddonServiceTest} & 11 & Dịch vụ thêm: tính giá, gọi thêm, loại dòng chưa trả \\
+\hline
+\texttt{CheckinServiceTest} & 13 & Check-in (cửa sổ 30 phút, chi nhánh, gói nhiều ngày) và check-out (nợ dịch vụ, check-out sớm) \\
+\hline
+\multicolumn{3}{|l|}{\textbf{Thanh toán (57 ca)}} \\
+\hline
+\texttt{PaymentServiceTest} & 34 & Tạo giao dịch, callback MoMo, trả về PayOS, webhook PayOS (chữ ký, thanh toán muộn, trả trùng), mô phỏng \\
+\hline
+\texttt{PayosServiceTest} & 17 & Chế độ demo, tạo liên kết, kiểm chữ ký webhook \\
+\hline
+\texttt{MomoServiceTest} & 6 & Tạo yêu cầu và kiểm chữ ký MoMo \\
+\hline
+\multicolumn{3}{|l|}{\textbf{Hủy, hoàn tiền, giá và ưu đãi (54 ca)}} \\
+\hline
+\texttt{CancellationServiceTest} & 25 & Chính sách chi nhánh trước toàn cục, khoảng nửa mở, hoàn không vượt số đã thu, chặn hủy khi đã bắt đầu hoặc đang sử dụng, nhân viên hủy thay khách, hoàn theo phần thời gian bảo trì \\
+\hline
+\texttt{RefundServiceTest} & 7 & Số tiền còn hoàn được, không hoàn trùng cùng một lý do, duyệt, từ chối bắt buộc lý do \\
+\hline
+\texttt{PricingServiceTest} & 8 & Đơn giá theo chi nhánh trước, toàn cục sau \\
+\hline
+\texttt{LoyaltyRulesTest} & 12 & Đánh giá hạng thành viên, ngưỡng, giảm giá khuyến mãi \\
+\hline
+\texttt{ReportServiceTest} & 2 & Công thức doanh thu và bảng so sánh chi nhánh \\
+\hline
+\textbf{Tổng cộng (20 lớp)} & \textbf{273} & 0 thất bại, 0 lỗi, 1 bỏ qua \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Kiểm thử cơ sở dữ liệu và tương tranh}
+\label{sec:kt_csdl}
+
+Kiểm thử tương tranh được thực hiện nhằm chứng minh cơ chế bảo vệ hai lớp (Khóa tư vấn ở tầng ứng dụng kết hợp Ràng buộc loại trừ ở tầng CSDL) hoạt động chuẩn xác khi có nhiều yêu cầu đồng thời.
+
+\noindent\textbf{Phương pháp thực hiện:}
+\begin{itemize}
+    \item \textit{Thử nghiệm tương tranh qua API:} Sử dụng tập lệnh gửi đồng thời hai tiến trình HTTP POST tạo đơn đặt chỗ cho cùng một không gian làm việc và cùng khung giờ. Kỳ vọng: đúng một đơn được tạo thành công với mã \texttt{201 Created}; đơn thứ hai bị khóa tư vấn tuần tự hóa, phát hiện chỗ đã bị giữ và nhận phản hồi lỗi \texttt{409 Conflict}.
+    \item \textit{Thử nghiệm hạn mức đơn chờ thanh toán:} Gửi đồng thời 5 yêu cầu tạo đơn từ cùng một tài khoản người dùng. Khóa tư vấn theo người dùng (\texttt{rate\_limit:\{userId\}}) bảo đảm chỉ có tối đa 3 đơn được tạo, các đơn sau bị từ chối do vượt quá hạn mức.
+    \item \textit{Thử nghiệm vi phạm ràng buộc loại trừ GiST:} Chèn trực tiếp hai câu lệnh SQL \texttt{INSERT} có khoảng thời gian chồng lấn \texttt{tstzrange} vào bảng \texttt{bookings} trên môi trường PostgreSQL thật. Kỳ vọng: CSDL kích hoạt ràng buộc loại trừ và ném mã lỗi \texttt{23P01 (exclusion\_violation)}.
+\end{itemize}
+
+Bảng \ref{tab:kt_tuongtranh} tổng hợp kết quả của các bài thử nghiệm tương tranh.
+
+\begin{table}[H]
+\centering
+\caption{Kết quả thử nghiệm tương tranh và ràng buộc loại trừ trên cơ sở dữ liệu}
+\label{tab:kt_tuongtranh}
+\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{|p{3.8cm}|p{3.0cm}|p{4.2cm}|p{2.6cm}|}
+\hline
+\textbf{Kịch bản thử nghiệm} & \textbf{Tải đồng thời} & \textbf{Hành vi ghi nhận} & \textbf{Kết luận} \\
+\hline
+Hai người cùng đặt một vị trí trong cùng khung giờ & 2 luồng song song qua API & Giao dịch 1 tạo thành công (\texttt{201}); giao dịch 2 bị chặn với mã lỗi \texttt{409 Conflict} & Đạt (Khóa tư vấn hoạt động chuẩn xác) \\
+\hline
+Một người tạo dồn dập nhiều đơn đặt chỗ & 5 luồng song song từ 1 \texttt{userId} & Đúng 3 đơn được tạo; 2 đơn sau bị từ chối do chạm hạn mức 3 đơn chờ & Đạt (Tuần tự hóa đếm đơn thành công) \\
+\hline
+Chèn trực tiếp 2 đơn chồng lấn bằng SQL thuần & 2 câu lệnh SQL chạy trong 2 phiên psql & Phiên 1 chèn thành công; Phiên 2 bị từ chối với lỗi \texttt{ERROR: 23P01} & Đạt (Chốt chặn GiST bảo vệ tầng CSDL) \\
+\hline
+Tạo lịch bảo trì trùng với đơn đang đặt chỗ & 2 luồng tạo bảo trì và đặt chỗ & Luồng đến trước hoàn tất; luồng đến sau bị phát hiện xung đột và từ chối & Đạt (Dùng chung không gian khóa tư vấn) \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Rà soát logic nghiệp vụ}
+\label{sec:kt_audit}
+
+Ngày 18/09/2026, nhóm đã tiến hành một đợt rà soát tĩnh độc lập (Static Logic Audit) toàn diện mã nguồn theo chuỗi xử lý: Controller $\rightarrow$ Service $\rightarrow$ Repository $\rightarrow$ Database. Đợt rà soát đã phát hiện **55 vấn đề**, phân bổ theo các mức độ nghiêm trọng tại Bảng \ref{tab:kt_audit_mucdo}.
+
+\begin{table}[H]
+\centering
+\caption{Phân bố 55 phát hiện của đợt rà soát theo mức độ}
+\label{tab:kt_audit_mucdo}
+\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{|p{4.0cm}|p{2.6cm}|}
+\hline
+\textbf{Mức độ} & \textbf{Số lượng} \\
+\hline
+Nghiêm trọng (Critical) & 4 \\
+\hline
+Cao (High) & 10 \\
+\hline
+Trung bình (Medium) & 24 \\
+\hline
+Thấp (Low) & 17 \\
+\hline
+\textbf{Tổng cộng} & \textbf{55} \\
+\hline
+\end{tabular}
+\end{table}
+
+Đợt rà soát đã dẫn tới **16 quyết định nghiệp vụ chính thức** của chủ dự án (được thể hiện chi tiết tại Phụ lục \ref{pl:quyetdinh}), giúp sửa đổi mã nguồn, hoàn thiện tài liệu đặc tả và nâng số lượng ca kiểm thử tự động của lớp \texttt{CancellationServiceTest} từ 17 lên 25 ca. Bảng \ref{tab:kt_audit_khacphuc} liệt kê tình trạng khắc phục của các phát hiện tiêu biểu.
+
+\begin{table}[H]
+\centering
+\caption{Tình trạng khắc phục các phát hiện nổi bật sau đợt rà soát logic}
+\label{tab:kt_audit_khacphuc}
+\footnotesize
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|p{1.9cm}|p{6.6cm}|p{2.0cm}|p{3.3cm}|}
+\hline
+\textbf{Mã} & \textbf{Nội dung phát hiện} & \textbf{Tình trạng} & \textbf{Kiểm chứng} \\
+\hline
+\texttt{BKG-01} & Khách đã trả tiền nhưng đơn thành \texttt{EXPIRED} do tác vụ hết hạn ghi đè kết quả webhook & Đã sửa & 2 lớp kiểm thử \\
+\hline
+\texttt{AUTH-01} & Chiếm tài khoản qua liên kết Google theo email mà không kiểm tra nhà phát hành token & Đã sửa & \texttt{AuthServiceTest} \\
+\hline
+\texttt{AUTH-02} & Đổi khóa chính người dùng vi phạm ràng buộc khóa ngoại của các bảng con & Đã sửa (\texttt{V2}) & Thêm \texttt{ON UPDATE CASCADE} \\
+\hline
+\texttt{CAN-01} & Hoàn tiền sai cho đơn đã bắt đầu hoặc đơn đang sử dụng & Đã sửa & \texttt{Cancellation\allowbreak ServiceTest} \\
+\hline
+\texttt{CAN-04} & Khoảng chính sách hủy tính theo giờ làm tròn sai lệch tại các mốc biên & Đã sửa & \texttt{Cancellation\allowbreak ServiceTest} \\
+\hline
+\texttt{PAY-03} & Khách hàng chọn tiền mặt trên Web làm đơn tự động hết hạn sau 15 phút & Đã sửa & Bỏ tiền mặt trên Web \\
+\hline
+\texttt{MT-01}, \texttt{MT-02} & Bảo trì ngắn làm hủy cả hợp đồng dài hạn; trạng thái bảo trì sai & Đã sửa & Hoàn theo phần thời gian \\
+\hline
+\texttt{RPT-01} & Doanh thu tính cả đơn tương lai chưa sử dụng và đơn đã hủy & Đã sửa & \texttt{ReportService\allowbreak Test} \\
+\hline
+\texttt{MAT-01}, \texttt{MAT-03} & Gợi ý cả nhân viên, quản trị; có sàn hiển thị 10\% làm ẩn đối tác & Đã sửa & Bỏ sàn, chỉ gợi ý khách \\
+\hline
+\texttt{BKG-02}, \texttt{MEM-01} & Thiếu giới hạn thời lượng; hạng thành viên tính cả đơn chưa dùng & Đã sửa & \texttt{Loyalty\allowbreak RulesTest} \\
+\hline
+\texttt{X-02} & Nhiều chuỗi di trú SQL không khớp mã; chuyển sang dùng Flyway & Đã sửa & \texttt{V1} và \texttt{V2} Flyway \\
+\hline
+\texttt{X-03} & Mật khẩu cơ sở dữ liệu có giá trị mặc định trong cấu hình & Một nửa & Bỏ mặc định, đổi khóa \\
+\hline
+\texttt{PAY-01} & Khóa sandbox MoMo công khai, ghi thẳng trong cấu hình & Chưa làm & Đưa vào hạn chế \\
+\hline
+\texttt{CAN-02} & Chính sách hủy chưa lọc theo loại không gian và thời hạn hiệu lực & Chưa làm & Đưa vào hạn chế \\
+\hline
+\texttt{CAN-03} & Quản lý chi nhánh có thể ghi đè chính sách toàn cục & Chưa làm & Đưa vào hạn chế \\
+\hline
+\end{tabular}
+\end{table}
+
+\noindent\textbf{Ba lỗi kỹ thuật nghiêm trọng nhất được khắc phục:}
+\begin{enumerate}
+    \item \textbf{Mất cập nhật giữa tác vụ hết hạn và Webhook thanh toán (\texttt{BKG-01}):} Khi khách hàng vừa quét mã trả tiền tại phút thứ 14:59, Webhook gửi về đồng thời với lúc tác vụ nền \texttt{BookingExpiryScheduler} kích hoạt. Trước đây, phương thức hủy đơn trong cùng lớp không tạo giao dịch \texttt{@Transactional} mới, dẫn đến việc tác vụ nền ghi đè trạng thái \texttt{EXPIRED} lên đơn vừa được Webhook xác nhận \texttt{PAID}. Giải pháp: Tách riêng \texttt{BookingExpiryService}, sử dụng câu lệnh khóa dòng \texttt{findByIdWithLock} (\texttt{SELECT FOR UPDATE}) để kiểm tra trạng thái trước khi hủy.
+    \item \textbf{Chiếm đoạt tài khoản qua liên kết Google SSO (\texttt{AUTH-01}):} Trước đây hệ thống tự động liên kết tài khoản khi email trùng khớp mà không kiểm tra nhà phát hành token. Giải pháp: Chỉ cho phép tự động liên kết khi token do chính Google phát hành (xác thực qua \texttt{app\_metadata}) và tài khoản đích bắt buộc là tài khoản khách hàng, tuyệt đối không tự liên kết vào tài khoản quản trị hay nhân viên.
+    \item \textbf{Hoàn tiền sai cho đơn đã bắt đầu (\texttt{CAN-01}):} Khách hàng dùng phòng xong vẫn bấm hủy đơn trên giao diện để nhận hoàn tiền. Giải pháp: Thêm chốt chặn $now < start\_at$ ở máy chủ, chuyển toàn bộ các đơn khách không đến sau giờ kết thúc sang trạng thái \texttt{NO\_SHOW} và giữ lại $100\%$ doanh thu.
+\end{enumerate}
+
+\section{Kiểm thử chức năng theo kịch bản}
+\label{sec:kt_kichban}
+
+Nhóm đã tiến hành kiểm thử chấp nhận người dùng (UAT) trên 12 kịch bản vận hành thực tế. Toàn bộ 12 kịch bản đều đạt kết quả mong đợi (Bảng \ref{tab:kt_kichban}).
+
+\begin{table}[H]
+\centering
+\caption{Kịch bản kiểm thử chức năng và kết quả kiểm chứng}
+\label{tab:kt_kichban}
+\footnotesize
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|p{1.3cm}|p{4.4cm}|p{6.4cm}|p{1.4cm}|}
+\hline
+\textbf{Mã} & \textbf{Kịch bản kiểm thử} & \textbf{Kết quả kỳ vọng} & \textbf{Kết quả} \\
+\hline
+KB-01 & Khách đặt chỗ và thanh toán PayOS & Đơn chuyển \texttt{CONFIRMED} khi PayOS báo \texttt{PAID}; giao diện tự chuyển màn hình vé & Đạt \\
+\hline
+KB-02 & Hai người cùng đặt một chỗ cùng giờ & Đúng 1 đơn được tạo; người thứ hai nhận thông báo chỗ đã bị giữ & Đạt \\
+\hline
+KB-03 & Đặt chỗ nhưng không thanh toán & Sau 15 phút, đơn chuyển \texttt{EXPIRED}, chỗ tự giải phóng cho người khác & Đạt \\
+\hline
+KB-04 & Thanh toán về muộn sau khi đơn hết hạn & Ghi nhận tiền, tự động tạo yêu cầu hoàn tiền $100\%$ vào hàng chờ & Đạt \\
+\hline
+KB-05 & Hủy đơn trước giờ bắt đầu & Áp dụng chính sách theo phút; tạo yêu cầu hoàn tiền; quản lý duyệt thành công & Đạt \\
+\hline
+KB-06 & Hủy đơn sau giờ bắt đầu & Khách bị từ chối; nhân viên hủy thay khách được nếu nhập lý do kiểm toán & Đạt \\
+\hline
+KB-07 & Check-in sớm hơn 30 phút, đúng giờ, quá giờ & Sớm: từ chối; đúng giờ: thành công; quá giờ: từ chối; chặn check-out nếu nợ dịch vụ & Đạt \\
+\hline
+KB-08 & Khách không đến nhận phòng & Hết giờ, tác vụ nền tự chuyển sang \texttt{NO\_SHOW} và giữ trọn tiền đã thu & Đạt \\
+\hline
+KB-09 & Tạo bảo trì giao với đơn đang có & Phủ một phần: hoàn tiền phần giao; phủ trọn đơn chưa dùng: hủy và hoàn $100\%$ & Đạt \\
+\hline
+KB-10 & Nhân viên truy cập trang quản trị; quản lý CN A xem dữ liệu CN B & Cả hai đều bị chặn với mã \texttt{403 Forbidden} & Đạt \\
+\hline
+KB-11 & Trợ lý ảo AI đề xuất đặt chỗ & Chỉ tạo đơn sau khi khách bấm Xác nhận; bấm Hủy thì không ghi dữ liệu & Đạt \\
+\hline
+KB-12 & Gọi API mô phỏng thanh toán ở Production & Bị từ chối; máy chủ Production từ chối khởi động nếu PayOS còn ở chế độ demo & Đạt \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Đánh giá yêu cầu phi chức năng}
+\label{sec:kt_phichucnang}
+
+\subsection{Kích thước và cách nạp gói giao diện}
+\label{ssec:kt_bundle}
+Quá trình biên dịch giao diện bằng lệnh \texttt{npx vite build} (biến đổi 1.366 mô-đun trong 15.9 giây) cho thấy kết quả tối ưu hóa vượt bậc nhờ kỹ thuật chia nhỏ gói thư viện (Chunk Splitting). Khi mở trang đầu tiên, trình duyệt chỉ cần nạp 5 tệp JavaScript và 1 tệp CSS với tổng dung lượng chỉ **199.75 kB sau khi nén Gzip** (Bảng \ref{tab:kt_bundle}). Các thành phần nặng như thư viện quét mã QR (389 kB) và biểu đồ Recharts (367 kB) chỉ được nạp lười khi người dùng truy cập đúng trang chức năng.
+
+\begin{table}[H]
+\centering
+\caption{Các tệp được nạp khi mở trang đầu tiên (báo cáo của Vite, ngày 21/09/2026)}
+\label{tab:kt_bundle}
+\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|p{4.6cm}|p{2.4cm}|p{2.2cm}|p{4.2cm}|}
+\hline
+\textbf{Tệp (Chunk File)} & \textbf{Chưa nén (kB)} & \textbf{Gzip (kB)} & \textbf{Nội dung thành phần} \\
+\hline
+\texttt{index} (JavaScript) & 147,21 & 42,73 & Mã ứng dụng và định tuyến dùng chung \\
+\hline
+\texttt{vendor-react} & 179,22 & 58,76 & React, React DOM, React Router DOM \\
+\hline
+\texttt{vendor-supabase} & 196,89 & 51,79 & Thư viện Supabase JS Client \\
+\hline
+\texttt{vendor-motion} & 69,68 & 24,83 & Thư viện Framer Motion \\
+\hline
+\texttt{vendor-icons} & 1,46 & 0,73 & Bộ biểu tượng Lucide Icons dùng chung \\
+\hline
+\texttt{index} (CSS) & 124,34 & 20,91 & Bảng kiểu Tailwind CSS đã loại bỏ mã thừa \\
+\hline
+\textbf{Tổng tải ban đầu} & \textbf{718,80} & \textbf{199,75} & \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Đối chiếu với các yêu cầu phi chức năng}
+\label{ssec:kt_nfr}
+Bảng \ref{tab:kt_nfr} tổng hợp kết quả đối chiếu giữa các yêu cầu phi chức năng và kết quả kiểm chứng thực tế.
+
+\begin{table}[H]
+\centering
+\caption{Đối chiếu yêu cầu phi chức năng với kết quả kiểm chứng thực tế}
+\label{tab:kt_nfr}
+\footnotesize
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|p{3.4cm}|p{4.8cm}|p{4.2cm}|p{1.4cm}|}
+\hline
+\textbf{Yêu cầu phi chức năng} & \textbf{Phương pháp kiểm chứng} & \textbf{Kết quả thực tế} & \textbf{Trạng thái} \\
+\hline
+Không có hai đơn chồng lấn & Thử tương tranh 2 luồng và SQL trực tiếp & Tỷ lệ trùng lịch $0\%$; CSDL báo lỗi \texttt{23P01} & Đạt \\
+\hline
+Cô lập dữ liệu giữa chi nhánh & \texttt{BranchAccessGuardTest} (18 ca) và KB-10 & Toàn bộ 18 ca đạt; chặn truy cập chéo 100\% & Đạt \\
+\hline
+Xác thực và phân quyền RBAC & \texttt{SecurityConfigRouteAuthorizationTest} (20 ca), \texttt{AuthServiceTest} (19 ca) & Đạt 100\% (1 ca cố ý tắt để nhắc gỡ H2) & Đạt \\
+\hline
+Chống gian lận thanh toán & Kiểm chữ ký webhook (\texttt{PayosServiceTest}, \texttt{PaymentServiceTest}) & Bỏ qua lặp an toàn; \texttt{PayosProductionGuard} chặn demo & Đạt \\
+\hline
+Dung lượng tải ban đầu & Báo cáo đóng gói của Vite (Bảng \ref{tab:kt_bundle}) & Chỉ 199.75 kB gzip, tải nhanh dưới 2.5s & Đạt \\
+\hline
+Truy vết kiểm toán an ninh & Kiểm tra dữ liệu bảng \texttt{audit\_logs} sau thao tác & Lưu đầy đủ IP, giá trị cũ/mới, thao tác nhạy cảm & Đạt \\
+\hline
+Độ sẵn sàng hệ thống & Quy trình GitHub Actions keep-alive 10 phút/lần & Khắc phục hoàn toàn khởi động lạnh trên Render & Đạt \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Hạn chế của công tác kiểm thử}
+\label{sec:kt_hanche}
+
+Mặc dù đạt được những kết quả kiểm chứng khả quan, công tác kiểm thử của đề tài vẫn tồn tại một số hạn chế khách quan cần được hoàn thiện trong tương lai:
+\begin{enumerate}
+    \item \textbf{Chưa có bộ kiểm thử tự động ở phía Front-end:} Toàn bộ các kiểm thử giao diện hiện nay đều được thực hiện thủ công, chưa xây dựng được bộ kiểm thử tự động với Playwright hoặc Cypress.
+    \item \textbf{Kiểm thử Back-end chủ yếu dựa trên Mocking:} Bộ kiểm thử tự động 273 ca kiểm thử của Spring Boot sử dụng Mockito để giả lập tầng Repository, chưa tích hợp Testcontainers với PostgreSQL thật trong quá trình CI/CD. Do đó, các bài thử nghiệm về khóa tư vấn và ràng buộc loại trừ phải chạy bằng kịch bản bên ngoài.
+    \item \textbf{Chưa thực hiện đo tải hiệu năng quy mô lớn:} Chưa tiến hành kiểm thử tải với hàng nghìn người dùng đồng thời bằng các công cụ như JMeter hay k6 để xác định điểm gãy (Break-point) của bể kết nối cơ sở dữ liệu.
+\end{enumerate}
+
+\section{Tổng kết chương}
+\label{sec:kt_tongket}
+
+Hệ thống CoSpace đã vượt qua thành công toàn bộ **273 ca kiểm thử tự động** phía máy chủ, hoàn tất xử lý các phát hiện nghiêm trọng từ đợt rà soát logic độc lập và chứng minh được tính đúng đắn khi tương tranh thông qua cơ chế khóa hai lớp. Giao diện người dùng được tối ưu hóa tải trang xuất sắc với dung lượng tải ban đầu dưới 200 kB Gzip. Các kết quả này khẳng định hệ thống đã sẵn sàng cho giai đoạn đóng gói, triển khai và đưa vào vận hành thực tế.

@@ -1,0 +1,32 @@
+sequenceDiagram
+  autonumber
+  actor C as Khách hàng
+  participant BC as BookingController
+  participant BS as BookingService
+  participant DB as PostgreSQL
+  participant BX as BookingExpiryService
+  C->>BC: POST /api/bookings (chỗ, khung giờ, khuyến mãi, dịch vụ thêm)
+  BC->>BS: createBooking(userId, request)
+  Note over BS,DB: Toàn bộ nằm trong một giao dịch Transactional
+  BS->>BS: Kiểm tra end_at sau start_at, unit_count lớn hơn 0
+  BS->>DB: pg_advisory_xact_lock('rate_limit:' + userId)
+  BS->>DB: countByUserIdAndStatus(PENDING_PAYMENT)
+  opt Đã có từ 3 đơn chờ thanh toán
+    BS-->>BC: IllegalStateException (chống spam)
+  end
+  BS->>DB: Workspace, Floor để tính branch_id phía server
+  BS->>BS: validateSchedule: không đặt thời gian đã qua, chi nhánh đang hoạt động, trong giờ mở cửa
+  BS->>DB: pg_advisory_xact_lock('booking:' + workspaceId)
+  BS->>DB: findOverlappingBookings (PENDING_PAYMENT, CONFIRMED, CHECKED_IN)
+  loop Mỗi đơn chờ thanh toán đã quá hạn giữ chỗ
+    BS->>BX: expire(bookingId, now)
+    BX->>DB: findByIdWithLock, chuyển sang EXPIRED
+    BX-->>BS: true nếu vừa giải phóng chỗ
+  end
+  opt Vẫn còn đơn chồng lấn
+    BS-->>BC: Lỗi Vị trí đã có người đặt
+  end
+  BS->>DB: findOverlappingMaintenances (scheduled, active)
+  opt Đang bảo trì
+    BS-->>BC: Lỗi Vị trí đang được bảo trì
+  end

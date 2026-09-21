@@ -1,0 +1,37 @@
+sequenceDiagram
+  autonumber
+  actor S as Nhân viên
+  participant FE as Frontend React
+  participant CI as CheckinService
+  participant BA as BookingAddonService
+  participant DB as PostgreSQL
+  Note over S,DB: Giai đoạn 1 - Check-in
+  S->>FE: Nhập hoặc quét mã đặt chỗ
+  FE->>CI: POST /api/checkins/booking/{bookingId}
+  CI->>DB: findByIdWithLock(booking)
+  CI->>CI: Xác định gói nhiều ngày (hợp đồng, tuần, tháng, ngày lớn hơn 1)
+  CI->>DB: existsByBookingIdAndCheckoutAtIsNull
+  opt Sai chi nhánh, sai trạng thái, đã check-in, sớm hơn 30 phút hoặc quá giờ kết thúc
+    CI-->>FE: Lỗi kèm lý do cụ thể
+  end
+  CI->>DB: INSERT checkin_logs (checkin_at = now)
+  CI->>DB: BookingStateMachine: CONFIRMED thành CHECKED_IN
+  CI-->>FE: CheckinLogDto
+  Note over S,DB: Khách làm việc, nhân viên có thể ghi nhận dịch vụ gọi thêm vào đơn
+  Note over S,DB: Giai đoạn 2 - Check-out
+  S->>FE: Bấm Check-out
+  FE->>CI: POST /api/checkins/{id}/checkout
+  CI->>BA: unpaidAmount(bookingId)
+  opt Còn nợ dịch vụ gọi thêm
+    CI-->>FE: Lỗi phải thu tiền trước khi check-out
+  end
+  CI->>DB: checkin_logs.checkout_at = now, findByIdWithLock(booking)
+  alt Gói nhiều ngày còn thời hạn
+    CI->>DB: CHECKED_IN thành CONFIRMED (chờ ngày kế tiếp)
+  else Đơn thường hoặc gói đã hết hạn
+    CI->>DB: Chuyển COMPLETED
+    opt Check-out sớm hơn giờ kết thúc
+      CI->>DB: end_at = now để giải phóng chỗ ngay
+    end
+  end
+  CI-->>FE: CheckinLogDto

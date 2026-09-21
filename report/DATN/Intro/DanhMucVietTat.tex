@@ -2,29 +2,53 @@
 \addcontentsline{toc}{chapter}{Danh mục từ viết tắt và thuật ngữ}
 \markboth{DANH MỤC TỪ VIẾT TẮT}{}
 
-\ghichu{Liệt kê các từ viết tắt và thuật ngữ xuất hiện trong báo cáo, sắp xếp theo bảng chữ cái. Bảng dưới đây đã điền sẵn các mục chắc chắn dùng đến; bổ sung thêm khi viết các chương sau.}
-\nguon{docs/glossary.md}
-
-\begin{longtable}{|p{3cm}|p{5cm}|p{6.5cm}|}
+\begin{longtable}{|p{2.8cm}|p{5.5cm}|p{6.7cm}|}
 \hline
-\textbf{Viết tắt} & \textbf{Thuật ngữ đầy đủ} & \textbf{Giải thích} \
+\textbf{Viết tắt} & \textbf{Thuật ngữ đầy đủ} & \textbf{Giải thích} \\
 \hline
 \endfirsthead
 \hline
-\textbf{Viết tắt} & \textbf{Thuật ngữ đầy đủ} & \textbf{Giải thích} \
+\textbf{Viết tắt} & \textbf{Thuật ngữ đầy đủ} & \textbf{Giải thích} \\
 \hline
 \endhead
-API & Application Programming Interface & Giao diện lập trình ứng dụng \ \hline
-CSDL & Cơ sở dữ liệu & Nơi lưu trữ dữ liệu có cấu trúc của hệ thống \ \hline
-ERD & Entity Relationship Diagram & Sơ đồ quan hệ thực thể \ \hline
-JWT & JSON Web Token & Chuẩn token dùng để xác thực người dùng \ \hline
-RBAC & Role-Based Access Control & Kiểm soát truy cập theo vai trò \ \hline
-REST & Representational State Transfer & Kiểu kiến trúc thiết kế dịch vụ web \ \hline
-SPA & Single Page Application & Ứng dụng web một trang \ \hline
-SSO & Single Sign-On & Đăng nhập một lần qua nhà cung cấp danh tính \ \hline
-SVG & Scalable Vector Graphics & Định dạng ảnh vector dùng vẽ sơ đồ mặt bằng \ \hline
-UAT & User Acceptance Testing & Kiểm thử chấp nhận người dùng \ \hline
-\ldots & \ldots & \ldots \ \hline
+ACID & Atomicity, Consistency, Isolation, Durability & Bốn thuộc tính cốt lõi đảm bảo độ tin cậy của giao dịch cơ sở dữ liệu \\ \hline
+API & Application Programming Interface & Giao diện lập trình ứng dụng cho phép các hệ thống giao tiếp với nhau \\ \hline
+CDN & Content Delivery Network & Mạng lưới phân phối nội dung tĩnh tới người dùng gần nhất \\ \hline
+CI/CD & Continuous Integration / Continuous Deployment & Quy trình tích hợp và triển khai mã nguồn liên tục, tự động \\ \hline
+CSP & Content Security Policy & Chính sách bảo mật nội dung ngăn chặn tấn công XSS và tiêm mã độc \\ \hline
+CSDL & Cơ sở dữ liệu & Nơi lưu trữ, quản lý dữ liệu có cấu trúc \\ \hline
+CSV & Comma-Separated Values & Định dạng tệp dữ liệu bảng phân tách bởi dấu phẩy \\ \hline
+DOM & Document Object Model & Giao diện mô hình đối tượng tài liệu dạng cây của trình duyệt web \\ \hline
+DTO & Data Transfer Object & Đối tượng đóng gói truyền dữ liệu giữa các tầng của ứng dụng \\ \hline
+ERD & Entity-Relationship Diagram & Sơ đồ biểu diễn thực thể và mối quan hệ trong cơ sở dữ liệu \\ \hline
+FK & Foreign Key & Khóa ngoại liên kết giữa các bảng trong cơ sở dữ liệu quan hệ \\ \hline
+FR & Functional Requirement & Yêu cầu chức năng của hệ thống phần mềm \\ \hline
+HMAC & Hash-based Message Authentication Code & Mã xác thực thông điệp dựa trên hàm băm mật mã và khóa bí mật \\ \hline
+HTTP & Hypertext Transfer Protocol & Giao thức truyền tải siêu văn bản trên mạng Internet \\ \hline
+HTTPS & Hypertext Transfer Protocol Secure & Giao thức HTTP được mã hóa bằng giao thức bảo mật TLS/SSL \\ \hline
+Jaccard & Jaccard Similarity Coefficient & Hệ số đo lường độ tương đồng giữa các tập hợp hữu hạn \\ \hline
+JDK & Java Development Kit & Bộ công cụ phát triển phần mềm cho ngôn ngữ Java \\ \hline
+JPA & Jakarta Persistence API & Chuẩn giao diện quản lý ánh xạ đối tượng sang quan hệ trong Java \\ \hline
+JRE & Java Runtime Environment & Môi trường chạy các ứng dụng được biên dịch bằng Java \\ \hline
+JSON & JavaScript Object Notation & Định dạng trao đổi dữ liệu dạng văn bản nhẹ \\ \hline
+JWT & JSON Web Token & Chuẩn mở định dạng token nhỏ gọn, an toàn dùng để xác thực \\ \hline
+LLM & Large Language Model & Mô hình ngôn ngữ lớn dựa trên kiến trúc học sâu \\ \hline
+MVC & Model-View-Controller & Mẫu kiến trúc phân tách thành ba phần: dữ liệu, hiển thị và điều khiển \\ \hline
+NFR & Non-Functional Requirement & Yêu cầu phi chức năng (hiệu năng, bảo mật, độ tin cậy) \\ \hline
+OAuth2 & Open Authorization 2.0 & Khung giao thức ủy quyền tiêu chuẩn ngành cho ứng dụng \\ \hline
+ORM & Object-Relational Mapping & Kỹ thuật ánh xạ cấu trúc bảng CSDL sang lớp đối tượng hướng đối tượng \\ \hline
+PK & Primary Key & Khóa chính định danh duy nhất một bản ghi trong bảng \\ \hline
+RBAC & Role-Based Access Control & Cơ chế kiểm soát truy cập và phân quyền dựa trên vai trò \\ \hline
+REST & Representational State Transfer & Kiểu kiến trúc dịch vụ mạng dựa trên tài nguyên và chuẩn HTTP \\ \hline
+SPA & Single Page Application & Ứng dụng web tải một trang duy nhất và cập nhật giao diện động \\ \hline
+SSE & Server-Sent Events & Chuẩn truyền dữ liệu một chiều theo thời gian thực từ máy chủ đến trình duyệt \\ \hline
+SSO & Single Sign-On & Cơ chế đăng nhập một lần thông qua nhà cung cấp danh tính tập trung \\ \hline
+SVG & Scalable Vector Graphics & Định dạng đồ họa vector dựa trên XML hiển thị sắc nét mọi độ phân giải \\ \hline
+UAT & User Acceptance Testing & Quy trình kiểm thử chấp nhận người dùng cuối \\ \hline
+UI/UX & User Interface / User Experience & Giao diện người dùng và Trải nghiệm người dùng \\ \hline
+UML & Unified Modeling Language & Ngôn ngữ mô hình hóa thống nhất trong kỹ nghệ phần mềm \\ \hline
+UUID & Universally Unique Identifier & Chuỗi định danh duy nhất toàn cầu 128-bit \\ \hline
+VietQR & Vietnam Quick Response & Tiêu chuẩn nhận diện thanh toán bằng mã QR ngân hàng tại Việt Nam \\ \hline
 \caption{Danh mục từ viết tắt sử dụng trong báo cáo}
 \label{tab:viettat}
 \end{longtable}

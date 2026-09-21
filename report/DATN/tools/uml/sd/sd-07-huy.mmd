@@ -1,0 +1,32 @@
+sequenceDiagram
+  autonumber
+  actor C as Khách hàng
+  participant CS as CancellationService
+  participant DB as PostgreSQL
+  participant RS as RefundService
+  participant NS as NotificationService
+  C->>CS: POST /api/bookings/{id}/cancel-v2 (lý do)
+  CS->>DB: findByIdWithLock(booking)
+  Note over CS,DB: Chỉ PENDING_PAYMENT hoặc CONFIRMED và chưa có bản ghi hủy
+  opt Không phải chủ đơn, hoặc đơn CONFIRMED đã đến giờ bắt đầu
+    CS-->>C: Từ chối (đã bắt đầu thì liên hệ quầy lễ tân)
+  end
+  alt Đơn CONFIRMED
+    CS->>DB: Chính sách của chi nhánh (priority giảm dần)
+    opt Không khớp chính sách nào của chi nhánh
+      CS->>DB: Chính sách toàn cục (priority giảm dần)
+    end
+    Note over CS,DB: So khớp theo phút, khoảng nửa mở min đến max. Không khớp thì hoàn 0 phần trăm
+  else Đơn PENDING_PAYMENT
+    Note over CS,DB: Chưa thanh toán nên không có tiền hoàn
+  end
+  CS->>CS: Loại dịch vụ thêm chưa trả (BookingAddonService.voidUnpaid)
+  CS->>RS: refundableAmount(bookingId)
+  RS-->>CS: Số tiền đã thu trừ phần đã hoàn
+  CS->>CS: refund = min(tiền thuê x phần trăm + dịch vụ đã trả, số đã thu), penalty = total - refund
+  CS->>DB: Chuyển CANCELLED, hủy payment đang chờ, INSERT booking_cancellations
+  CS->>RS: requestRefund(booking, null, refundAmount, CANCELLATION)
+  RS->>DB: INSERT refund (pending)
+  RS->>NS: Thông báo yêu cầu hoàn tiền đã được ghi nhận
+  CS->>NS: Thông báo hủy đặt chỗ thành công
+  CS-->>C: BookingCancellation (phần trăm hoàn, số tiền hoàn, phí phạt)

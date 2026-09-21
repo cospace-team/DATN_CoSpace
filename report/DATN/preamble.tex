@@ -12,6 +12,7 @@
 \geometry{a4paper, left=30mm, right=20mm, top=25mm, bottom=25mm}
 \usepackage{setspace}
 \onehalfspacing                % Giãn dòng 1.5 theo quy định báo cáo
+\setlength{\emergencystretch}{2em}   % cho phép giãn thêm để tránh dòng tràn lề khi có tên dài không co giãn được (\texttt)
 \setlength{\parindent}{1cm}
 \usepackage{indentfirst}
 \usepackage{lastpage}
@@ -81,7 +82,7 @@
     \put(0,-8){\includegraphics[width=10mm, height=10mm]{hcmut.png}}
    \end{picture}&
 	\begin{tabular}{l}
-		\textbf{\small Trường Đại học Bách khoa -- Đại học Quốc gia TP.HCM}\
+		\textbf{\small Trường Đại học Bách khoa -- Đại học Quốc gia TP.HCM}\\
 		\textbf{\small Khoa Khoa học \& Kỹ thuật Máy tính}
 	\end{tabular}
  \end{tabular}%
@@ -96,7 +97,7 @@
     \begin{tabular}{rl}
       \begin{picture}(25,15)(0,0)\put(0,-8){\includegraphics[width=10mm, height=10mm]{hcmut.png}}\end{picture}&
       \begin{tabular}{l}
-        \textbf{\small Trường Đại học Bách khoa -- Đại học Quốc gia TP.HCM}\
+        \textbf{\small Trường Đại học Bách khoa -- Đại học Quốc gia TP.HCM}\\
         \textbf{\small Khoa Khoa học \& Kỹ thuật Máy tính}
       \end{tabular}
     \end{tabular}%
@@ -146,12 +147,24 @@
   \fi
 }
 
+% \mt{ten\_dinh\_danh} : như \texttt nhưng cho phép ngắt dòng sau dấu gạch dưới, dùng cho tên dài trong cột hẹp của bảng
+\newcommand{\mtund}{\textunderscore\allowbreak}
+\newcommand{\mt}[1]{{\let\_\mtund\texttt{#1}}}
+
+% Cho phép ngắt dòng sau mỗi dấu / trong \nguon (đường dẫn dài không có khoảng trắng để ngắt)
+\makeatletter
+\def\nguon@bs#1/#2\nguon@stop{%
+  #1%
+  \ifx\relax#2\relax\else /\allowbreak\nguon@bs#2\nguon@stop\fi}
+\newcommand{\nguon@brk}[1]{\nguon@bs#1/\nguon@stop}
+
 % \nguon{...} : chỉ ra tài liệu/mã nguồn trong repo dùng làm dữ liệu viết mục này
 \newcommand{\nguon}[1]{%
   \ifhienghichu
-    \par\noindent{\footnotesize\color{blue!45!black}\textbf{Nguồn dữ liệu:} \texttt{#1}}\par\vspace{4pt}
+    \par\noindent{\raggedright\footnotesize\color{blue!45!black}\textbf{Nguồn dữ liệu:} \texttt{\let\_\mtund\nguon@brk{#1}}\par}\vspace{4pt}
   \fi
 }
+\makeatother
 
 % \hinhcho{tỉ lệ bề rộng}{chú thích}{nhãn} : chỗ trống chờ chèn hình
 \newcommand{\hinhcho}[3]{%
@@ -189,6 +202,27 @@
     \caption{#2}
     \label{#3}
   \end{figure}%
+}
+
+% \hinhdo{Chuong5/tên-tệp}{chú thích}{nhãn} : như \hinhuml nhưng nhận đường dẫn tính từ thư mục Images (không đuôi .png),
+% dùng cho hình nằm ngoài Images/Chuong6 (sơ đồ hoạt động, trạng thái, kiến trúc, tương tranh)
+\newcommand{\hinhdo}[3]{%
+  \begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth,height=0.86\textheight,keepaspectratio]{Images/#1.png}
+    \caption{#2}
+    \label{#3}
+  \end{figure}%
+}
+
+% \hinhdongang{Chuong3/tên-tệp}{...}{...} : bản xoay ngang của \hinhdo
+\newcommand{\hinhdongang}[3]{%
+  \begin{sidewaysfigure}
+    \centering
+    \includegraphics[width=0.95\textheight,height=0.70\textwidth,keepaspectratio]{Images/#1.png}
+    \caption{#2}
+    \label{#3}
+  \end{sidewaysfigure}%
 }
 
 % \hinhumlngang{...}{...}{...} : như trên nhưng xoay trang ngang, dùng cho sơ đồ rộng (chiều ngang lớn hơn nhiều chiều cao)

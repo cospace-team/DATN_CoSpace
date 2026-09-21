@@ -1,0 +1,21 @@
+sequenceDiagram
+  autonumber
+  actor C as Khách hàng
+  participant FE as ChatWidget React
+  participant CB as ChatbotService
+  participant SV as BookingService<br/>CancellationService<br/>BookingAddonService
+  participant DB as PostgreSQL
+  C->>FE: Bấm Xác nhận trên thẻ đề xuất
+  FE->>CB: POST /api/chatbot/actions/confirm (type, args)
+  alt create_booking
+    CB->>SV: BookingService.createBooking(userId, dto)
+    Note over CB,DB: Đi qua cùng khóa tư vấn và kiểm tra như đặt chỗ thông thường
+  else cancel_booking
+    CB->>SV: CancellationService.cancelBooking(userId, bookingId, reason)
+  else add_extra_service
+    CB->>SV: getMyBooking (kiểm tra chủ đơn) rồi addServiceToBooking
+  end
+  SV->>DB: Thực hiện nghiệp vụ trong giao dịch
+  SV-->>CB: Kết quả nghiệp vụ
+  CB-->>FE: ChatActionResult (reply, booking)
+  FE-->>C: Thông báo kết quả thực hiện

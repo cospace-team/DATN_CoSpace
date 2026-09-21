@@ -1,0 +1,32 @@
+sequenceDiagram
+  autonumber
+  participant A as Giao dịch A<br/>(khách A)
+  participant B as Giao dịch B<br/>(khách B)
+  participant DB as PostgreSQL
+  alt Không có cơ chế bảo vệ (tình huống minh họa)
+    A->>DB: Kiểm tra chồng lấn của chỗ X, 09:00 đến 11:00
+    DB-->>A: Không có đơn nào
+    B->>DB: Kiểm tra chồng lấn của chỗ X, 09:00 đến 11:00
+    DB-->>B: Không có đơn nào (A chưa ghi)
+    A->>DB: INSERT đơn A
+    B->>DB: INSERT đơn B
+    Note over A,DB: Hai đơn cùng giữ một chỗ trong cùng khung giờ (đặt trùng)
+  else Chỉ có ràng buộc EXCLUDE ở cơ sở dữ liệu
+    A->>DB: Kiểm tra chồng lấn: không có
+    B->>DB: Kiểm tra chồng lấn: không có (A chưa ghi)
+    A->>DB: INSERT đơn A và COMMIT thành công
+    B->>DB: INSERT đơn B
+    DB-->>B: Lỗi vi phạm EXCLUDE, giao dịch B bị hủy
+    Note over B,DB: Dữ liệu vẫn đúng nhưng khách B nhận lỗi kỹ thuật thay vì thông báo rõ ràng
+  else Khóa tư vấn kết hợp EXCLUDE (cách hệ thống áp dụng)
+    A->>DB: pg_advisory_xact_lock('booking:' + workspaceId)
+    DB-->>A: Nhận khóa
+    B->>DB: pg_advisory_xact_lock('booking:' + workspaceId)
+    Note over B,DB: B phải chờ đến khi A kết thúc giao dịch
+    A->>DB: Kiểm tra chồng lấn: không có
+    A->>DB: INSERT đơn A và COMMIT, nhả khóa
+    DB-->>B: Nhận khóa sau khi A nhả
+    B->>DB: Kiểm tra chồng lấn: thấy đơn A
+    B->>B: Từ chối bằng thông báo Vị trí đã có người đặt
+    Note over A,DB: EXCLUDE (gist) là chốt chặn cuối nếu khóa tư vấn bị bỏ sót
+  end

@@ -1,0 +1,99 @@
+\chapter{Hướng dẫn cài đặt và chạy hệ thống}
+\label{pl:caidat}
+
+\ghichu{Hướng dẫn để người chấm hoặc người kế tiếp chạy được hệ thống trên máy của mình. Các bước dưới đây lấy từ \texttt{README.md} và \texttt{.env.example}; hãy chạy thử lại từ máy sạch và sửa nếu có bước nào không còn đúng. Không ghi giá trị bí mật thật vào báo cáo.}
+\nguon{README.md, BE/.env.example}
+
+\section{Yêu cầu}
+Cần JDK 17 trở lên (đã chạy thử với JDK 21), Node.js và npm (đã chạy thử với Node.js 22.17), một dự án Supabase có PostgreSQL và Auth bật đăng nhập Google, và tùy chọn thông tin PayOS và khóa Google Gemini. Không cần cài Maven vì kho mã có sẵn Maven Wrapper.
+
+\section{Chạy máy chủ}
+Tạo tệp \texttt{BE/.env} từ mẫu \texttt{BE/.env.example}. Hai biến bắt buộc, thiếu là máy chủ không khởi động: \texttt{SUPABASE\_DB\_PASSWORD} và \texttt{APP\_JWT\_SECRET} (tối thiểu 48 byte, có thể sinh bằng \texttt{openssl rand -base64 48}). Sau đó chạy:
+
+\begin{lstlisting}[language=bash]
+cd BE
+./mvnw spring-boot:run
+\end{lstlisting}
+
+Máy chủ lắng nghe ở \texttt{http://localhost:8080}. Khi khởi động, Flyway tự áp dụng các tệp trong \nolinkurl{BE/src/main/resources/db/migration}: cơ sở dữ liệu trống được tạo toàn bộ từ \texttt{V1\_\_baseline.sql}, cơ sở dữ liệu đã có dữ liệu được đánh dấu ở mốc \texttt{V1} và chỉ chạy các tệp mới hơn. Ở chế độ phát triển, \texttt{data.sql} nạp dữ liệu mẫu. Nếu không đặt thông tin PayOS, máy chủ chạy chế độ demo.
+
+\section{Chạy giao diện}
+Tạo tệp \texttt{FE/.env} với ba biến \texttt{VITE\_API\_BASE\_URL}, \texttt{VITE\_SUPABASE\_URL} và \texttt{VITE\_SUPABASE\_ANON\_KEY}, rồi chạy:
+
+\begin{lstlisting}[language=bash]
+cd FE
+npm install
+npm run dev
+\end{lstlisting}
+
+Giao diện chạy ở \texttt{http://localhost:5173}. Để dựng bản phát hành dùng \texttt{npm run build} (kiểm tra kiểu bằng \texttt{tsc} rồi đóng gói bằng Vite, kết quả ở thư mục \texttt{dist}).
+
+\section{Chạy kiểm thử}
+\begin{lstlisting}[language=bash]
+cd BE
+./mvnw test
+\end{lstlisting}
+
+Bộ kiểm thử không cần cơ sở dữ liệu; báo cáo chi tiết nằm ở \texttt{BE/target/surefire-reports}.
+
+\chapter{Danh mục điểm cuối API}
+\label{pl:api}
+
+\ghichu{Bảng dưới được sinh tự động từ các lớp điều khiển bằng \texttt{report/DATN/tools/gen\_api\_appendix.py} (chạy lại lệnh này sau khi thêm hoặc đổi điểm cuối). Cột vai trò được phép gọi không sinh tự động vì phụ thuộc cả quy tắc theo đường dẫn ở \texttt{SecurityConfig} lẫn \texttt{@PreAuthorize}; xem Bảng \ref{tab:ht_route_quyen} ở Chương \ref{ch:hienthuc}. Nếu hội đồng cần, bổ sung cột này cho các nhóm chính.}
+
+Bảng \ref{tab:pl_api} liệt kê toàn bộ điểm cuối của máy chủ.
+
+\input{Outro/BangAPI}
+
+\chapter{Các quyết định nghiệp vụ đã chốt sau đợt rà soát}
+\label{pl:quyetdinh}
+
+\ghichu{Bảng này tóm tắt mục 5.1 của bản rà soát ngày 18/09/2026, các quyết định được chủ dự án chốt ngày 20/09/2026. Giữ nguyên mã Q để đối chiếu với tài liệu gốc. Có thể dẫn bảng này từ mục quy tắc nghiệp vụ ở Chương \ref{ch:yeucau}. Lưu ý Q4: bản rà soát ghi hàng chờ hoàn tiền do ``staff hoặc branch admin'' duyệt, nhưng \texttt{RefundController} chỉ cho quản lý chi nhánh và quản trị hệ thống (\texttt{@PreAuthorize}); hãy thống nhất lại câu chữ.}
+\nguon{report/LOGIC\_AUDIT.md (muc 5.1)}
+
+\begin{table}[H]
+\centering
+\caption{Các quyết định nghiệp vụ đã chốt ngày 20/09/2026}
+\label{tab:pl_quyetdinh}
+\footnotesize
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|p{1.1cm}|p{7.6cm}|p{5.1cm}|}
+\hline
+\textbf{Mã} & \textbf{Quyết định} & \textbf{Ảnh hưởng} \\
+\hline
+Q1 & Chặn hủy sau giờ bắt đầu; khách không đến thành không đến (\texttt{NO\_SHOW}) và mất phí & Xử lý cùng lúc ba lỗi hoàn tiền sai của mã \texttt{CAN-01} \\
+\hline
+Q2 & Khoảng thời gian của chính sách hủy tính theo phút, nửa khoảng \texttt{[min, max)} & Hết chồng biên tại đúng 72 giờ (\texttt{CAN-04}) \\
+\hline
+Q3 & Không khớp chính sách chi nhánh thì rơi về chính sách toàn cục & Không sửa mã; ghi rõ vào tài liệu \\
+\hline
+Q4 & Giữ hàng chờ hoàn tiền do người có quyền duyệt xử lý, hệ thống không tự chi trả & Không sửa mã; sửa tài liệu \\
+\hline
+Q5 & Bỏ tùy chọn tiền mặt ở giao diện khách hàng; chỉ nhân viên tạo đơn thu tiền mặt & Sửa trang xác nhận đặt chỗ (\texttt{PAY-03}) \\
+\hline
+Q5b & Đơn tạo tại quầy giữ hạn thanh toán 15 phút như đơn trực tuyến & Không sửa mã (\texttt{BKG-03}) \\
+\hline
+Q6 & Bảo trì chỉ hoàn phần thời gian giao nhau, không hủy cả hợp đồng; chặn bảo trì bắt đầu ở quá khứ & Sửa \texttt{StaffMaintenanceService} (\texttt{MT-01}) \\
+\hline
+Q7 & Giữ trạng thái \texttt{NO\_SHOW} riêng, không gộp vào \texttt{COMPLETED} & Không sửa mã; sửa tài liệu \\
+\hline
+Q8 & Đơn đang sử dụng (\texttt{CHECKED\_IN}) không hủy được, khách muốn về sớm thì check-out & Không sửa mã; sửa tài liệu \\
+\hline
+Q9 & Đơn hết hạn thì trả lại lượt mã khuyến mãi, đơn đã thanh toán rồi hủy thì không & Sửa truy vấn đếm lượt dùng mã (\texttt{PRM-01}) \\
+\hline
+Q10 & Hạng thành viên tính theo chi tiêu của đơn đã dùng, trừ phần đã hoàn & Sửa \texttt{MembershipService} (\texttt{MEM-01}) \\
+\hline
+Q11 & Doanh thu là tổng tiền các đơn đã dùng (\texttt{COMPLETED}, \texttt{NO\_SHOW}) nhóm theo giờ kết thúc, trừ khoản đã hoàn và dịch vụ chưa thu & Sửa \texttt{ReportService} (\texttt{RPT-01}) \\
+\hline
+Q12 & Giữ công thức gợi ý đối tác trong mã (0,5; 0,2; 0,2; cộng 0,15 cùng chi nhánh), bỏ sàn hiển thị, chỉ gợi ý khách hàng & Sửa mã hai chỗ; sửa tài liệu (\texttt{MAT-01}, \texttt{MAT-03}) \\
+\hline
+Q13 & Nhân viên được hủy thay khách: bắt buộc lý do, có nhật ký kiểm toán, được miễn phạt cho ca ngoại lệ & Thêm điểm cuối hủy thay khách \\
+\hline
+Q14 & Cửa sổ check-in kết thúc ở giờ kết thúc của đơn & Không sửa mã; sửa tài liệu (\texttt{CHK-02}) \\
+\hline
+Q15 & Lấy lược đồ đang chạy làm nền, quản lý bằng Flyway; các tệp di trú cũ chuyển vào kho lưu trữ & Thêm Flyway, \texttt{V1} và \texttt{V2} (\texttt{X-02}) \\
+\hline
+Q16 & Giới hạn thời lượng đặt chỗ: 24 giờ, 30 ngày, 52 tuần, 12 tháng & Sửa \texttt{computeUnitCount} (\texttt{BKG-02}) \\
+\hline
+\end{tabular}
+\end{table}
