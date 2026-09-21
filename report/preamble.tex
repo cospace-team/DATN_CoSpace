@@ -1,0 +1,221 @@
+%=====================================================================
+%  preamble.tex — Cấu hình chuẩn cho Báo cáo Đồ án Tốt nghiệp Bách Khoa
+%  Biên dịch: pdflatex (chạy 2-3 lần để cập nhật mục lục / tham chiếu)
+%=====================================================================
+
+%---------------------- Ngôn ngữ & phông chữ -------------------------
+\usepackage[utf8]{vntex}
+\usepackage{mathptmx}          % Times New Roman cho cả văn bản và công thức
+
+%---------------------- Trình bày trang ------------------------------
+\usepackage{geometry}
+\geometry{a4paper, left=30mm, right=20mm, top=25mm, bottom=25mm}
+\usepackage{setspace}
+\onehalfspacing                % Giãn dòng 1.5 theo quy định báo cáo
+\setlength{\parindent}{1cm}
+\usepackage{indentfirst}
+\usepackage{lastpage}
+\usepackage{emptypage}
+
+%---------------------- Bảng biểu & hình ảnh -------------------------
+\usepackage{graphicx}
+\graphicspath{{Images/}{Images/Chuong2/}{Images/Chuong3/}{Images/Chuong4/}{Images/Chuong5/}{Images/Chuong6/}{Images/GiaoDien/}}
+\usepackage{array, multirow, multicol, longtable, tabularx, booktabs, hhline}
+\usepackage{float}
+\usepackage{caption, subcaption}
+\usepackage{rotating}
+\usepackage{diagbox}
+\usepackage{tikz}
+\usetikzlibrary{arrows, backgrounds, calc, positioning, shapes.geometric}
+
+%---------------------- Toán học & thuật toán ------------------------
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage[lined, boxed, commentsnumbered]{algorithm2e}
+
+%---------------------- Mã nguồn -------------------------------------
+\usepackage{xcolor}
+\usepackage{listings}
+\lstdefinestyle{cospace}{
+    basicstyle=\footnotesize\ttfamily,
+    keywordstyle=\color{blue!70!black}\bfseries,
+    commentstyle=\color{green!40!black}\itshape,
+    stringstyle=\color{red!60!black},
+    numbers=left, numberstyle=\tiny\color{gray}, numbersep=8pt,
+    frame=single, rulecolor=\color{gray!50},
+    backgroundcolor=\color{gray!5},
+    breaklines=true, breakatwhitespace=false,
+    showstringspaces=false, tabsize=2, captionpos=b,
+    extendedchars=true, literate={ă}{{\u a}}1 {â}{{\^a}}1 {đ}{{\dj}}1 {ê}{{\^e}}1 {ô}{{\^o}}1 {ơ}{{\ohorn}}1 {ư}{{\uhorn}}1
+}
+\lstset{style=cospace}
+
+%---------------------- Danh mục & liên kết --------------------------
+\usepackage[unicode]{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black, citecolor=black, urlcolor=blue,
+    pdftitle={Bao cao Do an Tot nghiep - He thong quan ly Co-working Space CoSpace},
+    pdfauthor={Vuong Song Toan - Le Dang Khoa}
+}
+\usepackage[nottoc]{tocbibind}   % đưa Tài liệu tham khảo vào mục lục
+
+%---------------------- Việt hóa tên mục ----------------------------
+\renewcommand{\chaptername}{Chương}
+\renewcommand{\contentsname}{Mục lục}
+\renewcommand{\listfigurename}{Danh sách hình vẽ}
+\renewcommand{\listtablename}{Danh sách bảng}
+\renewcommand{\bibname}{Tài liệu tham khảo}
+\renewcommand{\appendixname}{Phụ lục}
+\renewcommand{\figurename}{Hình}
+\renewcommand{\tablename}{Bảng}
+\renewcommand{\lstlistingname}{Đoạn mã}
+
+%---------------------- Đầu trang / chân trang -----------------------
+\usepackage{fancyhdr}
+\setlength{\headheight}{40pt}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{%
+ \begin{tabular}{rl}
+    \begin{picture}(25,15)(0,0)
+    \put(0,-8){\includegraphics[width=10mm, height=10mm]{hcmut.png}}
+   \end{picture}&
+	\begin{tabular}{l}
+		\textbf{\small Trường Đại học Bách khoa -- Đại học Quốc gia TP.HCM}\\
+		\textbf{\small Khoa Khoa học \& Kỹ thuật Máy tính}
+	\end{tabular}
+ \end{tabular}%
+}
+\fancyfoot[L]{\scriptsize Báo cáo Đồ án Tốt nghiệp -- Hệ thống quản lý văn phòng chia sẻ CoSpace}
+\fancyfoot[R]{\scriptsize Trang {\thepage}/\pageref{LastPage}}
+\renewcommand{\headrulewidth}{0.3pt}
+\renewcommand{\footrulewidth}{0.3pt}
+\fancypagestyle{plain}{%   % trang đầu mỗi chương vẫn giữ header/footer
+  \fancyhf{}
+  \fancyhead[L]{%
+    \begin{tabular}{rl}
+      \begin{picture}(25,15)(0,0)\put(0,-8){\includegraphics[width=10mm, height=10mm]{hcmut.png}}\end{picture}&
+      \begin{tabular}{l}
+        \textbf{\small Trường Đại học Bách khoa -- Đại học Quốc gia TP.HCM}\\
+        \textbf{\small Khoa Khoa học \& Kỹ thuật Máy tính}
+      \end{tabular}
+    \end{tabular}%
+  }
+  \fancyfoot[L]{\scriptsize Báo cáo Đồ án Tốt nghiệp -- Hệ thống quản lý văn phòng chia sẻ CoSpace}
+  \fancyfoot[R]{\scriptsize Trang {\thepage}/\pageref{LastPage}}
+}
+
+%---------------------- Cấp mục & đánh số ---------------------------
+\setcounter{secnumdepth}{4}
+\setcounter{tocdepth}{3}
+\makeatletter
+\newcounter{subsubsubsection}[subsubsection]
+\renewcommand\thesubsubsubsection{\thesubsubsection.\@alph\c@subsubsubsection}
+\newcommand\subsubsubsection{\@startsection{subsubsubsection}{4}{\z@}%
+    {-3.25ex\@plus -1ex \@minus -.2ex}{1.5ex \@plus .2ex}{\normalfont\normalsize\bfseries}}
+\newcommand*\l@subsubsubsection{\@dottedtocline{4}{10.0em}{4.1em}}
+\providecommand*{\toclevel@subsubsubsection}{4}
+\newcommand*{\subsubsubsectionmark}[1]{}
+\makeatother
+
+%---------------------- Định lý / định nghĩa -------------------------
+\newtheorem{definition}{\bf Định nghĩa}[chapter]
+\newtheorem{theorem}{\bf Định lý}[chapter]
+\newtheorem{property}{\bf Tính chất}[chapter]
+
+%=====================================================================
+%  CÁC LỆNH TIỆN ÍCH DÙNG TRONG BÁO CÁO
+%=====================================================================
+
+% Bật/tắt khung ghi chú (mặc định tắt khi hoàn thiện)
+\newif\ifhienghichu
+\hienghichufalse
+
+\newcommand{\ghichu}[1]{%
+  \ifhienghichu
+    \par\vspace{2pt}
+    \noindent\begin{tikzpicture}
+      \node[draw=gray!55, fill=gray!8, rounded corners=3pt, line width=0.4pt,
+            inner sep=7pt, text width=\dimexpr\linewidth-18pt\relax, align=justify]
+        {\small\itshape\color{black!72}\textbf{[Ghi chú]}~#1};
+    \end{tikzpicture}
+    \par\vspace{4pt}
+  \fi
+}
+
+\newcommand{\mtund}{\textunderscore\allowbreak}
+\newcommand{\mt}[1]{{\let\_\mtund\texttt{#1}}}
+
+\makeatletter
+\def\nguon@bs#1/#2\nguon@stop{%
+  #1%
+  \ifx\relax#2\relax\else /\allowbreak\nguon@bs#2\nguon@stop\fi}
+\newcommand{\nguon@brk}[1]{\nguon@bs#1/\nguon@stop}
+
+\newcommand{\nguon}[1]{%
+  \ifhienghichu
+    \par\noindent{\raggedright\footnotesize\color{blue!45!black}\textbf{Nguồn dữ liệu:} \texttt{\let\_\mtund\nguon@brk{#1}}\par}\vspace{4pt}
+  \fi
+}
+\makeatother
+
+% Chèn sơ đồ UML thẳng đứng
+\newcommand{\hinhuml}[3]{%
+  \begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth,height=0.72\textheight,keepaspectratio]{#1.png}
+    \caption{#2}
+    \label{#3}
+  \end{figure}
+}
+
+% Chèn sơ đồ UML xoay ngang trang (landscape) cho sơ đồ rộng
+\newcommand{\hinhumlngang}[3]{%
+  \begin{sidewaysfigure}
+    \centering
+    \includegraphics[width=\linewidth,height=0.72\textheight,keepaspectratio]{#1.png}
+    \caption{#2}
+    \label{#3}
+  \end{sidewaysfigure}
+}
+
+% \hinhui{tên_file_không_đuôi}{tiêu đề màn hình}{nhãn}
+% Tự động phát hiện ảnh chụp trong thư mục Images/GiaoDien/, nếu chưa có ảnh sẽ hiển thị hộp placeholder nhắc nhở tên file.
+\newcommand{\hinhui}[3]{%
+  \begin{figure}[H]
+    \centering
+    \IfFileExists{Images/GiaoDien/#1.png}{%
+      \includegraphics[width=0.92\linewidth,keepaspectratio]{Images/GiaoDien/#1.png}%
+    }{%
+      \begin{tikzpicture}
+        \node[draw=blue!60, dashed, fill=blue!5, rounded corners=4pt,
+              minimum height=4.2cm, text width=0.88\linewidth, align=center]
+          {\textbf{\color{blue!80!black}ẢNH GIAO DIỆN: #1.png}\\[0.25cm]
+           \small\color{gray!80}Vui lòng chụp màn hình và lưu vào: \texttt{report/Images/GiaoDien/#1.png}\\[0.15cm]
+           \textit{#2}};
+      \end{tikzpicture}%
+    }
+    \caption{#2}
+    \label{#3}
+  \end{figure}
+}
+
+% \hinhdo{ChuongX/ten_file_khong_duoi}{chú thích}{nhãn}
+\newcommand{\hinhdo}[3]{%
+  \begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth,height=0.86\textheight,keepaspectratio]{#1.png}
+    \caption{#2}
+    \label{#3}
+  \end{figure}%
+}
+
+% \hinhdongang{ChuongX/ten_file_khong_duoi}{chú thích}{nhãn}
+\newcommand{\hinhdongang}[3]{%
+  \begin{sidewaysfigure}
+    \centering
+    \includegraphics[width=0.95\textheight,height=0.70\textwidth,keepaspectratio]{#1.png}
+    \caption{#2}
+    \label{#3}
+  \end{sidewaysfigure}%
+}

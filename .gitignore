@@ -64,3 +64,6 @@ Thumbs.db
 
 # Local Claude Code agent tooling (skills, settings) - not part of the project
 .claude/
+
+# Local reference materials
+refer report&slide/

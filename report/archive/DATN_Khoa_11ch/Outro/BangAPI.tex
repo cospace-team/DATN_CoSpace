@@ -1,0 +1,332 @@
+% Sinh tu dong boi tools/gen_api_appendix.py - khong sua tay.
+{\footnotesize
+\begin{longtable}{|p{1.5cm}|p{7.3cm}|p{5.0cm}|}
+\caption{Danh mục 133 điểm cuối API, nhóm theo lớp điều khiển}\label{tab:pl_api}\\
+\hline
+\textbf{Phương thức} & \textbf{Đường dẫn} & \textbf{Hàm xử lý} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Phương thức} & \textbf{Đường dẫn} & \textbf{Hàm xử lý} \\
+\hline
+\endhead
+\multicolumn{3}{|l|}{\textbf{\texttt{AdminController} (12)}} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak admin/\allowbreak branches} & \texttt{listBranches} \\
+\hline
+POST & \texttt{/\allowbreak api/\allowbreak admin/\allowbreak branches} & \texttt{createBranch} \\
+\hline
+PUT & \texttt{/\allowbreak api/\allowbreak admin/\allowbreak branches/\allowbreak \{id\}} & \texttt{updateBranch} \\
+\hline
+DELETE & \texttt{/\allowbreak api/\allowbreak admin/\allowbreak branches/\allowbreak \{id\}} & \texttt{deactivateBranch} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak admin/\allowbreak workspace-types} & \texttt{listWorkspaceTypes} \\
+\hline
+POST & \texttt{/\allowbreak api/\allowbreak admin/\allowbreak workspace-types} & \texttt{createWorkspaceType} \\
+\hline
+PUT & \texttt{/\allowbreak api/\allowbreak admin/\allowbreak workspace-types/\allowbreak \{id\}} & \texttt{updateWorkspaceType} \\
+\hline
+DELETE & \texttt{/\allowbreak api/\allowbreak admin/\allowbreak workspace-types/\allowbreak \{id\}} & \texttt{deleteWorkspaceType} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak admin/\allowbreak price-policies} & \texttt{listPricePolicies} \\
+\hline
+POST & \texttt{/\allowbreak api/\allowbreak admin/\allowbreak price-policies} & \texttt{createPricePolicy} \\
+\hline
+PUT & \texttt{/\allowbreak api/\allowbreak admin/\allowbreak price-policies/\allowbreak \{id\}} & \texttt{updatePricePolicy} \\
+\hline
+DELETE & \texttt{/\allowbreak api/\allowbreak admin/\allowbreak price-policies/\allowbreak \{id\}} & \texttt{deletePricePolicy} \\
+\hline
+\multicolumn{3}{|l|}{\textbf{\texttt{AdminLoyaltyController} (15)}} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak admin/\allowbreak amenities} & \texttt{listAmenities} \\
+\hline
+POST & \texttt{/\allowbreak api/\allowbreak admin/\allowbreak amenities} & \texttt{createAmenity} \\
+\hline
+PUT & \texttt{/\allowbreak api/\allowbreak admin/\allowbreak amenities/\allowbreak \{id\}} & \texttt{updateAmenity} \\
+\hline
+DELETE & \texttt{/\allowbreak api/\allowbreak admin/\allowbreak amenities/\allowbreak \{id\}} & \texttt{deleteAmenity} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak admin/\allowbreak workspace-type-amenities} & \texttt{listWorkspaceTypeAmenities} \\
+\hline
+PUT & \texttt{/\allowbreak api/\allowbreak admin/\allowbreak workspace-types/\allowbreak \{id\}/\allowbreak amenities} & \texttt{assignAmenities} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak admin/\allowbreak membership-tiers} & \texttt{listTiers} \\
+\hline
+POST & \texttt{/\allowbreak api/\allowbreak admin/\allowbreak membership-tiers} & \texttt{createTier} \\
+\hline
+PUT & \texttt{/\allowbreak api/\allowbreak admin/\allowbreak membership-tiers/\allowbreak \{id\}} & \texttt{updateTier} \\
+\hline
+DELETE & \texttt{/\allowbreak api/\allowbreak admin/\allowbreak membership-tiers/\allowbreak \{id\}} & \texttt{deleteTier} \\
+\hline
+POST & \texttt{/\allowbreak api/\allowbreak admin/\allowbreak membership-tiers/\allowbreak recalculate} & \texttt{recalculateTiers} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak admin/\allowbreak promotions} & \texttt{listPromotions} \\
+\hline
+POST & \texttt{/\allowbreak api/\allowbreak admin/\allowbreak promotions} & \texttt{createPromotion} \\
+\hline
+PUT & \texttt{/\allowbreak api/\allowbreak admin/\allowbreak promotions/\allowbreak \{id\}} & \texttt{updatePromotion} \\
+\hline
+DELETE & \texttt{/\allowbreak api/\allowbreak admin/\allowbreak promotions/\allowbreak \{id\}} & \texttt{deletePromotion} \\
+\hline
+\multicolumn{3}{|l|}{\textbf{\texttt{ApiHealthController} (1)}} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak health} & \texttt{health} \\
+\hline
+\multicolumn{3}{|l|}{\textbf{\texttt{AuditLogController} (1)}} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak admin/\allowbreak audit-logs} & \texttt{getAuditLogs} \\
+\hline
+\multicolumn{3}{|l|}{\textbf{\texttt{AuthController} (4)}} \\
+\hline
+POST & \texttt{/\allowbreak api/\allowbreak auth/\allowbreak refresh} & \texttt{refresh} \\
+\hline
+POST & \texttt{/\allowbreak api/\allowbreak auth/\allowbreak register} & \texttt{register} \\
+\hline
+POST & \texttt{/\allowbreak api/\allowbreak auth/\allowbreak login} & \texttt{login} \\
+\hline
+POST & \texttt{/\allowbreak api/\allowbreak auth/\allowbreak sync} & \texttt{sync} \\
+\hline
+\multicolumn{3}{|l|}{\textbf{\texttt{BookingAddonController} (4)}} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak bookings/\allowbreak \{bookingId\}/\allowbreak addons} & \texttt{getTab} \\
+\hline
+POST & \texttt{/\allowbreak api/\allowbreak bookings/\allowbreak \{bookingId\}/\allowbreak addons} & \texttt{addService} \\
+\hline
+DELETE & \texttt{/\allowbreak api/\allowbreak bookings/\allowbreak \{bookingId\}/\allowbreak addons/\allowbreak \{itemId\}} & \texttt{voidItem} \\
+\hline
+POST & \texttt{/\allowbreak api/\allowbreak bookings/\allowbreak \{bookingId\}/\allowbreak addons/\allowbreak settle} & \texttt{settle} \\
+\hline
+\multicolumn{3}{|l|}{\textbf{\texttt{BookingController} (6)}} \\
+\hline
+POST & \texttt{/\allowbreak api/\allowbreak bookings} & \texttt{create} \\
+\hline
+POST & \texttt{/\allowbreak api/\allowbreak bookings/\allowbreak quote} & \texttt{quote} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak bookings/\allowbreak my} & \texttt{myBookings} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak bookings/\allowbreak \{id\}} & \texttt{getOne} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak bookings/\allowbreak code/\allowbreak \{code\}} & \texttt{getByCode} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak bookings/\allowbreak branch-today} & \texttt{getBranchTodayBookings} \\
+\hline
+\multicolumn{3}{|l|}{\textbf{\texttt{BranchAdminSpaceController} (18)}} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak branch-admin/\allowbreak branches/\allowbreak \{branchId\}/\allowbreak name} & \texttt{getBranchName} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak branch-admin/\allowbreak workspace-types} & \texttt{listWorkspaceTypes} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak branch-admin/\allowbreak floors} & \texttt{listFloors} \\
+\hline
+POST & \texttt{/\allowbreak api/\allowbreak branch-admin/\allowbreak floors} & \texttt{createFloor} \\
+\hline
+PUT & \texttt{/\allowbreak api/\allowbreak branch-admin/\allowbreak floors/\allowbreak \{id\}} & \texttt{updateFloor} \\
+\hline
+DELETE & \texttt{/\allowbreak api/\allowbreak branch-admin/\allowbreak floors/\allowbreak \{id\}} & \texttt{deleteFloor} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak branch-admin/\allowbreak floors/\allowbreak \{floorId\}/\allowbreak workspaces} & \texttt{listWorkspaces} \\
+\hline
+POST & \texttt{/\allowbreak api/\allowbreak branch-admin/\allowbreak workspaces} & \texttt{createWorkspace} \\
+\hline
+PUT & \texttt{/\allowbreak api/\allowbreak branch-admin/\allowbreak workspaces/\allowbreak \{id\}} & \texttt{updateWorkspace} \\
+\hline
+DELETE & \texttt{/\allowbreak api/\allowbreak branch-admin/\allowbreak workspaces/\allowbreak \{id\}} & \texttt{deleteWorkspace} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak branch-admin/\allowbreak staff} & \texttt{listStaff} \\
+\hline
+POST & \texttt{/\allowbreak api/\allowbreak branch-admin/\allowbreak staff} & \texttt{createStaff} \\
+\hline
+PUT & \texttt{/\allowbreak api/\allowbreak branch-admin/\allowbreak staff/\allowbreak \{staffId\}} & \texttt{updateStaff} \\
+\hline
+PUT & \texttt{/\allowbreak api/\allowbreak branch-admin/\allowbreak staff/\allowbreak \{staffId\}/\allowbreak status} & \texttt{updateStaffStatus} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak branch-admin/\allowbreak price-policies} & \texttt{listPricePolicies} \\
+\hline
+POST & \texttt{/\allowbreak api/\allowbreak branch-admin/\allowbreak price-policies} & \texttt{createPricePolicy} \\
+\hline
+PUT & \texttt{/\allowbreak api/\allowbreak branch-admin/\allowbreak price-policies/\allowbreak \{id\}} & \texttt{updatePricePolicy} \\
+\hline
+DELETE & \texttt{/\allowbreak api/\allowbreak branch-admin/\allowbreak price-policies/\allowbreak \{id\}} & \texttt{deletePricePolicy} \\
+\hline
+\multicolumn{3}{|l|}{\textbf{\texttt{CancellationPolicyController} (5)}} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak cancellation-policies} & \texttt{getPolicies} \\
+\hline
+POST & \texttt{/\allowbreak api/\allowbreak cancellation-policies} & \texttt{createPolicy} \\
+\hline
+PUT & \texttt{/\allowbreak api/\allowbreak cancellation-policies/\allowbreak \{id\}} & \texttt{updatePolicy} \\
+\hline
+DELETE & \texttt{/\allowbreak api/\allowbreak cancellation-policies/\allowbreak \{id\}} & \texttt{deletePolicy} \\
+\hline
+POST & \texttt{/\allowbreak api/\allowbreak bookings/\allowbreak \{bookingId\}/\allowbreak cancel-v2} & \texttt{cancelBookingWithRefund} \\
+\hline
+\multicolumn{3}{|l|}{\textbf{\texttt{ChatbotController} (2)}} \\
+\hline
+POST & \texttt{/\allowbreak api/\allowbreak chatbot/\allowbreak message} & \texttt{message} \\
+\hline
+POST & \texttt{/\allowbreak api/\allowbreak chatbot/\allowbreak actions/\allowbreak confirm} & \texttt{confirm} \\
+\hline
+\multicolumn{3}{|l|}{\textbf{\texttt{CheckinController} (3)}} \\
+\hline
+POST & \texttt{/\allowbreak api/\allowbreak checkins/\allowbreak booking/\allowbreak \{bookingId\}} & \texttt{checkin} \\
+\hline
+POST & \texttt{/\allowbreak api/\allowbreak checkins/\allowbreak \{id\}/\allowbreak checkout} & \texttt{checkout} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak checkins/\allowbreak active} & \texttt{getActiveCheckins} \\
+\hline
+\multicolumn{3}{|l|}{\textbf{\texttt{CommunityPostController} (4)}} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak community/\allowbreak posts} & \texttt{listFeed} \\
+\hline
+POST & \texttt{/\allowbreak api/\allowbreak community/\allowbreak posts} & \texttt{createPost} \\
+\hline
+DELETE & \texttt{/\allowbreak api/\allowbreak community/\allowbreak posts/\allowbreak \{postId\}} & \texttt{deletePost} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak community/\allowbreak tags} & \texttt{listTags} \\
+\hline
+\multicolumn{3}{|l|}{\textbf{\texttt{CustomerSpaceController} (6)}} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak customer/\allowbreak spaces/\allowbreak branches} & \texttt{listActiveBranches} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak customer/\allowbreak spaces/\allowbreak branches/\allowbreak \{branchId\}/\allowbreak prices} & \texttt{listPrices} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak customer/\allowbreak spaces/\allowbreak pricing-summary} & \texttt{pricingSummary} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak customer/\allowbreak spaces/\allowbreak branches/\allowbreak \{branchId\}/\allowbreak floors} & \texttt{listFloors} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak customer/\allowbreak spaces/\allowbreak branches/\allowbreak \{branchId\}/\allowbreak floors/\allowbreak \{floorId\}/\allowbreak workspaces} & \texttt{listWorkspaces} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak customer/\allowbreak spaces/\allowbreak branches/\allowbreak \{branchId\}/\allowbreak booking-status} & \texttt{getBookingStatus} \\
+\hline
+\multicolumn{3}{|l|}{\textbf{\texttt{ExtraServiceController} (5)}} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak extra-services} & \texttt{getAvailableServices} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak extra-services/\allowbreak all} & \texttt{getAllServices} \\
+\hline
+POST & \texttt{/\allowbreak api/\allowbreak extra-services} & \texttt{createService} \\
+\hline
+PUT & \texttt{/\allowbreak api/\allowbreak extra-services/\allowbreak \{id\}} & \texttt{updateService} \\
+\hline
+DELETE & \texttt{/\allowbreak api/\allowbreak extra-services/\allowbreak \{id\}} & \texttt{deleteService} \\
+\hline
+\multicolumn{3}{|l|}{\textbf{\texttt{LoyaltyController} (4)}} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak customer/\allowbreak spaces/\allowbreak workspace-types} & \texttt{listWorkspaceTypesWithAmenities} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak membership/\allowbreak tiers} & \texttt{listTiers} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak membership/\allowbreak me} & \texttt{myMembership} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak promotions/\allowbreak available} & \texttt{availablePromotions} \\
+\hline
+\multicolumn{3}{|l|}{\textbf{\texttt{NotificationController} (4)}} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak notifications} & \texttt{getMyNotifications} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak notifications/\allowbreak unread-count} & \texttt{getUnreadCount} \\
+\hline
+PATCH & \texttt{/\allowbreak api/\allowbreak notifications/\allowbreak \{id\}/\allowbreak read} & \texttt{markAsRead} \\
+\hline
+PATCH & \texttt{/\allowbreak api/\allowbreak notifications/\allowbreak read-all} & \texttt{markAllAsRead} \\
+\hline
+\multicolumn{3}{|l|}{\textbf{\texttt{PartnerMatchingController} (3)}} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak matching/\allowbreak suggestions} & \texttt{getSuggestedPartners} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak profiles/\allowbreak me/\allowbreak networking} & \texttt{getMyNetworkingProfile} \\
+\hline
+PUT & \texttt{/\allowbreak api/\allowbreak profiles/\allowbreak me/\allowbreak networking} & \texttt{updateMyNetworkingProfile} \\
+\hline
+\multicolumn{3}{|l|}{\textbf{\texttt{PaymentController} (9)}} \\
+\hline
+POST & \texttt{/\allowbreak api/\allowbreak payments/\allowbreak momo/\allowbreak create} & \texttt{createMomoPayment} \\
+\hline
+POST & \texttt{/\allowbreak api/\allowbreak payments/\allowbreak payos/\allowbreak create} & \texttt{createPayosPayment} \\
+\hline
+POST & \texttt{/\allowbreak api/\allowbreak payments/\allowbreak cash/\allowbreak create} & \texttt{createCashPayment} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak payments/\allowbreak booking/\allowbreak \{bookingId\}} & \texttt{paymentsForBooking} \\
+\hline
+POST & \texttt{/\allowbreak api/\allowbreak payments/\allowbreak momo/\allowbreak notify} & \texttt{momoIpn} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak payments/\allowbreak momo/\allowbreak return} & \texttt{momoReturn} \\
+\hline
+POST & \texttt{/\allowbreak api/\allowbreak payments/\allowbreak payos/\allowbreak notify} & \texttt{payosWebhook} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak payments/\allowbreak payos/\allowbreak return} & \texttt{payosReturn} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak payments/\allowbreak payos/\allowbreak status/\allowbreak \{orderCode\}} & \texttt{getPayosPaymentStatus} \\
+\hline
+\multicolumn{3}{|l|}{\textbf{\texttt{PayosSimulationController} (1)}} \\
+\hline
+POST & \texttt{/\allowbreak api/\allowbreak payments/\allowbreak payos/\allowbreak simulate} & \texttt{simulatePayosPayment} \\
+\hline
+\multicolumn{3}{|l|}{\textbf{\texttt{RefundController} (3)}} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak refunds} & \texttt{list} \\
+\hline
+POST & \texttt{/\allowbreak api/\allowbreak refunds/\allowbreak \{id\}/\allowbreak process} & \texttt{process} \\
+\hline
+POST & \texttt{/\allowbreak api/\allowbreak refunds/\allowbreak \{id\}/\allowbreak reject} & \texttt{reject} \\
+\hline
+\multicolumn{3}{|l|}{\textbf{\texttt{ReportController} (2)}} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak reports/\allowbreak overview} & \texttt{getOverview} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak reports/\allowbreak export/\allowbreak csv} & \texttt{exportCsv} \\
+\hline
+\multicolumn{3}{|l|}{\textbf{\texttt{StaffBookingController} (3)}} \\
+\hline
+POST & \texttt{/\allowbreak api/\allowbreak staff/\allowbreak bookings/\allowbreak \{bookingId\}/\allowbreak cancel} & \texttt{cancelForCustomer} \\
+\hline
+POST & \texttt{/\allowbreak api/\allowbreak staff/\allowbreak bookings/\allowbreak walkin} & \texttt{createWalkinBooking} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak staff/\allowbreak bookings/\allowbreak branches/\allowbreak \{branchId\}/\allowbreak workspaces-booking-status} & \texttt{getWorkspaceBookingStatus} \\
+\hline
+\multicolumn{3}{|l|}{\textbf{\texttt{StaffDashboardController} (1)}} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak staff/\allowbreak dashboard/\allowbreak stats} & \texttt{getStats} \\
+\hline
+\multicolumn{3}{|l|}{\textbf{\texttt{StaffMaintenanceController} (5)}} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak staff/\allowbreak branches/\allowbreak \{branchId\}/\allowbreak maintenance} & \texttt{getAllMaintenanceForBranch} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak staff/\allowbreak branches/\allowbreak \{branchId\}/\allowbreak workspaces-maintenance} & \texttt{getWorkspaceMaintenanceStatus} \\
+\hline
+POST & \texttt{/\allowbreak api/\allowbreak staff/\allowbreak workspaces/\allowbreak \{workspaceId\}/\allowbreak maintenance} & \texttt{createMaintenance} \\
+\hline
+PUT & \texttt{/\allowbreak api/\allowbreak staff/\allowbreak maintenance/\allowbreak \{maintenanceId\}/\allowbreak complete} & \texttt{completeMaintenance} \\
+\hline
+DELETE & \texttt{/\allowbreak api/\allowbreak staff/\allowbreak maintenance/\allowbreak \{maintenanceId\}} & \texttt{deleteMaintenance} \\
+\hline
+\multicolumn{3}{|l|}{\textbf{\texttt{TagController} (4)}} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak tags} & \texttt{getTags} \\
+\hline
+POST & \texttt{/\allowbreak api/\allowbreak tags} & \texttt{createTag} \\
+\hline
+PUT & \texttt{/\allowbreak api/\allowbreak tags/\allowbreak \{id\}} & \texttt{updateTag} \\
+\hline
+DELETE & \texttt{/\allowbreak api/\allowbreak tags/\allowbreak \{id\}} & \texttt{deleteTag} \\
+\hline
+\multicolumn{3}{|l|}{\textbf{\texttt{UserController} (8)}} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak users/\allowbreak profile} & \texttt{getProfile} \\
+\hline
+PUT & \texttt{/\allowbreak api/\allowbreak users/\allowbreak profile} & \texttt{updateProfile} \\
+\hline
+PUT & \texttt{/\allowbreak api/\allowbreak users/\allowbreak change-password} & \texttt{changePassword} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak users/\allowbreak search} & \texttt{searchUsers} \\
+\hline
+GET & \texttt{/\allowbreak api/\allowbreak users} & \texttt{getUsers} \\
+\hline
+PUT & \texttt{/\allowbreak api/\allowbreak users/\allowbreak \{id\}/\allowbreak status} & \texttt{updateUserStatus} \\
+\hline
+PUT & \texttt{/\allowbreak api/\allowbreak users/\allowbreak \{id\}/\allowbreak role} & \texttt{updateUserRole} \\
+\hline
+POST & \texttt{/\allowbreak api/\allowbreak users/\allowbreak walkin} & \texttt{createWalkinUser} \\
+\hline
+\end{longtable}
+}

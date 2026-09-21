@@ -1,278 +1,88 @@
-\documentclass[a4paper]{article}
-\usepackage[utf8]{vntex}
-%\usepackage[english,vietnam]{babel}
-%\usepackage[utf8]{inputenc}
-\usepackage{mathptmx}[ptm]
-%\usepackage[utf8]{inputenc}
-%\usepackage[francais]{babel}
-\usepackage{a4wide,amssymb,epsfig,latexsym,array,hhline,fancyhdr}
-\usepackage[normalem]{ulem}
-%\usepackage{soul}
+%=====================================================================
+%  BÁO CÁO ĐỒ ÁN TỐT NGHIỆP (CO4337)
+%  Đề tài: Phát triển hệ thống quản lý văn phòng chia sẻ (CoSpace)
+%  Trường ĐH Bách khoa - ĐHQG TP.HCM, Khoa KH & KT Máy tính
+%  Hội đồng: Hội đồng 4L Khoa học Máy tính (Cơ sở 2)
+%  Thời gian bảo vệ: 13:30, Ngày 05 tháng 10 năm 2026
+%=====================================================================
+\documentclass[a4paper,13pt,oneside]{report}
+\input{preamble}
 
-\usepackage[makeroom]{cancel}
-\usepackage{amsmath}
-\usepackage{amsthm}
-\usepackage{multicol,longtable,amscd}
-\usepackage{diagbox}%Make diagonal lines in tables
-
-\ExplSyntaxOn
-\makeatletter
-\def\LT@output{%
-  \ifnum\outputpenalty <-\@Mi
-    \ifnum\outputpenalty > -\LT@end@pen
-      \LT@err{floats~ and~ marginpars~ not~ allowed~ in~ a~ longtable}\@ehc
-    \else
-      \setbox\z@\vbox{\unvbox\@cclv}%
-      \ifdim \ht\LT@lastfoot>\ht\LT@foot
-        \dimen@\pagegoal
-        \advance\dimen@\ht\LT@foot
-        \advance\dimen@-\ht\LT@lastfoot
-        \ifdim\dimen@<\ht\z@
-          \setbox\@cclv\vbox{\unvbox\z@\copy\LT@foot\vskip 0pt plus \maxdimen minus \normalbaselineskip}%
-          \@makecol
-          \@expl@@@mark@update@singlecol@structures@@
-          \@outputpage
-          \global\vsize\@colroom
-          \setbox\z@\vbox{\box\LT@head}%
-        \fi
-      \fi
-      \unvbox\z@\box\ifvoid\LT@lastfoot\LT@foot\else\LT@lastfoot\fi
-      \UseTaggingSocket{tbl/longtable/foot}%
-    \fi
-  \else
-    \setbox\@cclv\vbox{\unvbox\@cclv\copy\LT@foot\vskip 0pt plus \maxdimen minus \normalbaselineskip}%
-    \UseTaggingSocket{tbl/longtable/foot}%
-    \@makecol
-    \@expl@@@mark@update@singlecol@structures@@
-    \@outputpage
-    \global\vsize\@colroom
-    \copy\LT@head\nobreak
-  \fi}
-\makeatother
-\ExplSyntaxOff
-\usepackage{booktabs}
-\usepackage{alltt}
-\usepackage[framemethod=tikz]{mdframed}% For highlighting paragraph backgrounds
-\usepackage{caption,subcaption}
-\usepackage{float}
-
-\usepackage{lastpage}
-\usepackage[lined,boxed,commentsnumbered]{algorithm2e}
-\usepackage{enumerate}
-\usepackage{color}
-\usepackage{graphicx}							% Standard graphics package
-\usepackage{array}
-\usepackage{tabularx, caption}
-\usepackage{multirow}
-\usepackage{multicol}
-\usepackage{rotating}
-\usepackage{graphics}
-\usepackage{geometry}
-\usepackage{setspace}
-\usepackage{epsfig}
-\usepackage{tikz}
-
-\usetikzlibrary{arrows,arrows.meta,backgrounds,calc,positioning,shapes.geometric,fit}
-\usepackage[unicode]{hyperref}
-\hypersetup{urlcolor=blue,linkcolor=black,citecolor=black,colorlinks=true} 
-\usepackage{listings}
-
-%\usepackage{pstcol} 								% PSTricks with the standard color package
-
-\usepackage[normalem]{ulem}
-
-\newtheorem{theorem}{{\bf Định lý}}
-\newtheorem{property}{{\bf Tính chất}}
-\newtheorem{proposition}{{\bf Mệnh đề}}
-\newtheorem{corollary}[proposition]{{\bf Hệ quả}}
-\newtheorem{lemma}[proposition]{{\bf Bổ đề}}
-\theoremstyle{definition}
-\newtheorem{exer}{Bài toán}
-\addtocontents{toc}{\protect\thispagestyle{empty}}
-% Remove page number in contents page. 
-\addtocontents{lof}{\protect\thispagestyle{empty}}
-% Remove page number in list of figure page. 
-\addtocontents{lot}{\protect\thispagestyle{empty}}
-% Remove page number in list of table page. 
-\def\thesislayout{	% A4: 210 × 297
-	\geometry{
-		a4paper,
-		left=30mm,
-		right=20mm,
-		top=22mm,
-		bottom=20mm,
-	}
-}
-\def\thesisheadlayout{	% A4: 210 × 297
-	\geometry{
-		a4paper,
-		left=30mm,
-		right=20mm,
-		top=10mm,
-		bottom=20mm,
-	}
-}
-\thesislayout
-\lstset{
-language=R,
-basicstyle=\footnotesize\sffamily,
-commentstyle=\ttfamily\color{black},
-numbers=left,
-numberstyle=\ttfamily\color{black}\footnotesize,
-stepnumber=1,
-numbersep=5pt,
-backgroundcolor=\color{white},
-showspaces=false,
-showstringspaces=false,
-showtabs=false,
-frame=single,
-tabsize=2,
-captionpos=b,
-breaklines=true,
-breakatwhitespace=false,
-title=\lstname,
-escapeinside={},
-keywordstyle={},
-morekeywords={}
-}
-%\usepackage{fancyhdr}
-\setlength{\headheight}{40pt}
-\pagestyle{fancy}
-\fancyhead{} % clear all header fields
-\renewcommand{\footruleskip}{1mm}
-
-\fancyhead[L]{
- \begin{tabular}{rl}
-    \begin{picture}(25,15)(0,0)
-    \put(0,-8){\includegraphics[width=10mm, height=10mm]{Images/hcmut.png}}
-    %\put(0,-8){\epsfig{width=10mm,figure=hcmut.eps}}
-   \end{picture}&
-	%\includegraphics[width=8mm, height=8mm]{hcmut.png} & %
-	\begin{tabular}{l}
-		\textbf{  Trường Đại Học Bách Khoa - Đại học Quốc gia TP.HCM }\\
-		\textbf{  Khoa Khoa Học \& Kỹ Thuật Máy Tính}
-	\end{tabular} 	
- \end{tabular}
-}
-\fancyhead[R]{
-	\begin{tabular}{l}
-		\tiny \bf \\
-		\tiny \bf 
-	\end{tabular}  }
-\fancyfoot{} % clear all footer fields
-\fancyfoot[L]{\scriptsize  Báo cáo Đồ án tốt nghiệp (CO4337) - HK253 2025 - 2026}
-\fancyfoot[R]{\scriptsize  Trang {\thepage}/\pageref{LastPage}}
-
-\renewcommand{\headrulewidth}{0.3pt}
-\renewcommand{\footrulewidth}{0.3pt}
-
-%%%
-\setcounter{secnumdepth}{4}
-\setcounter{tocdepth}{3}
-\makeatletter
-\newcounter {subsubsubsection}[subsubsection]
-\renewcommand\thesubsubsubsection{\thesubsubsection .\@alph\c@subsubsubsection}
-\newcommand\subsubsubsection{\@startsection{subsubsubsection}{4}{\z@}%
-                                     {-3.25ex\@plus -1ex \@minus -.2ex}%
-                                     {1.5ex \@plus .2ex}%
-                                     {\normalfont\normalsize\bfseries}}
-\newcommand*\l@subsubsubsection{\@dottedtocline{4}{10.0em}{4.1em}}
-\providecommand*{\toclevel@subsubsubsection}{4}
-\newcommand*{\subsubsubsectionmark}[1]{}
-\makeatother
-
-\everymath{\color{black}}%make in-line maths symbols blue to read/check easily
-
-\hbadness=10000
-\hfuzz=100pt
-\emergencystretch=3em
-\captionsetup[figure]{labelfont={small,bf},textfont={small,it},belowskip=0pt,aboveskip=6pt}
-%space remove between caption, figure, and text
-\captionsetup[table]{labelfont={small,bf},textfont={small,it},belowskip=-1pt,aboveskip=7pt}
-\setlength{\floatsep}{5pt plus 2pt minus 2pt}
-\setlength{\textfloatsep}{5pt plus 2pt minus 2pt}
-\setlength{\intextsep}{10pt plus 2pt minus 2pt}
-
-\thesislayout
+%---------------------------------------------------------------------
+%  THÔNG TIN ĐỀ TÀI & HỘI ĐỒNG
+%---------------------------------------------------------------------
+\newcommand{\tendetai}{PHÁT TRIỂN HỆ THỐNG QUẢN LÝ VĂN PHÒNG CHIA SẺ}
+\newcommand{\tendetaiphu}{(CoSpace -- Co-working Space Management System)}
+\newcommand{\chuyennganh}{HỆ THỐNG THÔNG TIN VÀ BẢO MẬT}
+\newcommand{\nganh}{KHOA HỌC MÁY TÍNH}
+\newcommand{\madoan}{HK253-DATN-126}
+\newcommand{\hoidong}{Hội đồng 4L Khoa học Máy tính (Cơ sở 2)}
+\newcommand{\gvhd}{ThS. Trương Quỳnh Chi (CBGD: 002889)}
+\newcommand{\svmot}{Vương Song Toàn -- 2213544 (KHMT - CQ)}
+\newcommand{\svhai}{Lê Đăng Khoa -- 2211599 (KHMT - CQ)}
+\newcommand{\thoigian}{TP. HỒ CHÍ MINH, THÁNG 10/2026}
 
 \begin{document}
-\hypersetup{pageanchor=false}
 
+%=====================================================================
+%  TRANG BÌA 1: TRANG BÌA CHÍNH THỨC
+%=====================================================================
 \begin{titlepage}
-\begin{tikzpicture}[remember picture, overlay]
-  \draw[line width = 4pt] ($(current page.north west) + (0.4in,-0.5in)$) rectangle ($(current page.south east) + (-0.4in,0.5in)$);
-  \draw[line width=1.5pt]
-    ($ (current page.north west) + (0.45in,-0.55in) $)
-    rectangle
-    ($ (current page.south east) + (-0.45in,0.55in) $);
-\end{tikzpicture}
-
 \begin{center}
-\LARGE \textbf{ĐẠI HỌC QUỐC GIA THÀNH PHỐ HỒ CHÍ MINH} \\
-\vspace{0.2cm}
-\LARGE \textbf{TRƯỜNG ĐẠI HỌC BÁCH KHOA} \\
-\vspace{0.2cm}
-\LARGE \textbf{KHOA KHOA HỌC VÀ KĨ THUẬT MÁY TÍNH}
-\end{center}
+\textbf{\large ĐẠI HỌC QUỐC GIA THÀNH PHỐ HỒ CHÍ MINH} \\
+\textbf{\large TRƯỜNG ĐẠI HỌC BÁCH KHOA} \\
+\textbf{\large KHOA KHOA HỌC VÀ KỸ THUẬT MÁY TÍNH} \\
+\vspace{0.6cm}
+\begin{picture}(45,45)(0,0)
+    \put(-22,-8){\includegraphics[width=35mm, height=35mm]{hcmut.png}}
+\end{picture}
+\vspace{0.8cm}
 
-\vspace{0.3cm}
-
-\begin{figure}[h!]
-\begin{center}
-\includegraphics[width=4cm]{Images/hcmut.png}
-\end{center}
-\end{figure}
-
-\begin{center}
 \parbox{0.95\textwidth}{\centering
 \textbf{{\LARGE BÁO CÁO}}\\[0.2cm]
 \textbf{{\LARGE ĐỒ ÁN TỐT NGHIỆP}}\\[0.5cm]
-\textbf{\LARGE PHÁT TRIỂN HỆ THỐNG QUẢN LÝ VĂN PHÒNG CHIA SẺ}\\[0.4cm]
-{\large \textbf{CHUYÊN NGÀNH: HỆ THỐNG THÔNG TIN VÀ BẢO MẬT}}\\[0.2cm]
-{\Large NGÀNH: KHOA HỌC MÁY TÍNH}
+\textbf{\LARGE \tendetai}\\[0.3cm]
+{\large \textbf{\tendetaiphu}}\\[0.4cm]
+{\large \textbf{CHUYÊN NGÀNH: \chuyennganh}}\\[0.2cm]
+{\Large NGÀNH: \nganh}
 }
 \end{center}
+
 \vspace{0.4cm}
 \begin{table}[h]
 \begin{tabular}{rll}
-\hspace{4.2cm} &  \textbf{\large HỘI ĐỒNG:} & {\large Hội đồng 4L Khoa học Máy tính (Cơ sở 2)}
-\\
-\hspace{4.2cm} &  \textbf{\large MÃ ĐỒ ÁN:} & {\large HK253-DATN-126}
-\\
-\\
-\hspace{4.2cm} &   \textbf{\large GVHD:} & {\large ThS. Trương Quỳnh Chi (CBGD: 002889)}
-\\
-\\
-\hspace{4.2cm} &     \textbf{$\;$ $\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$$\;$ \Large ---o0o---} 
-\\
-\\
-\hspace{4.2cm} &   \textbf{\large SVTH 1:} & {\large Vương Song Toàn -- 2213544 (KHMT - CQ)}
-\\
-\hspace{4.2cm}&   \textbf{\large SVTH 2:}  & {\large Lê Đăng Khoa -- 2211599 (KHMT - CQ)}
-\\
+\hspace{3.8cm} & \textbf{\large HỘI ĐỒNG:} & {\large \hoidong} \\[0.25cm]
+\hspace{3.8cm} & \textbf{\large MÃ ĐỒ ÁN:} & {\large \madoan} \\[0.25cm]
+\hspace{3.8cm} & \textbf{\large GVHD:}     & {\large \gvhd} \\[0.25cm]
+\hspace{3.8cm} & \multicolumn{2}{l}{\hspace{2.2cm}\textbf{\Large ---o0o---}} \\[0.25cm]
+\hspace{3.8cm} & \textbf{\large SVTH 1:}   & {\large \svmot} \\[0.25cm]
+\hspace{3.8cm} & \textbf{\large SVTH 2:}   & {\large \svhai} \\[0.25cm]
 \end{tabular}
 \end{table}
+
 \vspace{0.4cm}
 \begin{center}
-{\Large TP. HỒ CHÍ MINH, THÁNG 10/2026 }
+{\Large \thoigian}
 \end{center}
 \end{titlepage}
 
-%%%%%%%%%%%%%%%%%TRANG THÔNG TIN HỘI ĐỒNG & CHỮ KÝ GVHD%%%%%%%%%%%%%%%%%
+%=====================================================================
+%  TRANG BÌA 2: TRANG THÔNG TIN HỘI ĐỒNG & CHỮ KÝ GVHD
+%=====================================================================
 \newpage
 \thispagestyle{empty}
 \begin{center}
-\textbf{\large TRƯỜNG ĐẠI HỌC BÁCH KHOA - ĐHQG-HCM} \\
+\textbf{\large TRƯỜNG ĐẠI HỌC BÁCH KHOA -- ĐHQG-HCM} \\
 \textbf{\large KHOA KHOA HỌC VÀ KỸ THUẬT MÁY TÍNH} \\
-\vspace{0.8cm}
+\vspace{0.6cm}
 \rule{12cm}{0.5pt} \\
-\vspace{0.5cm}
-{\Large \textbf{BÁO CÁO ĐỒ ÁN TỐT NGHIỆP}} \\[0.3cm]
-{\LARGE \textbf{PHÁT TRIỂN HỆ THỐNG QUẢN LÝ VĂN PHÒNG CHIA SẺ}} \\[0.3cm]
-\textbf{MÃ ĐỒ ÁN: HK253-DATN-126} \\[0.2cm]
-\textbf{Chuyên ngành: Hệ thống thông tin và Bảo mật -- Ngành: Khoa học Máy tính}
-\end{center}
 \vspace{0.4cm}
+{\Large \textbf{BÁO CÁO ĐỒ ÁN TỐT NGHIỆP}} \\[0.25cm]
+{\LARGE \textbf{\tendetai}} \\[0.25cm]
+\textbf{MÃ ĐỒ ÁN: \madoan} \\[0.2cm]
+\textbf{Chuyên ngành: \chuyennganh{} -- Ngành: \nganh}
+\end{center}
+\vspace{0.3cm}
 
 \noindent \textbf{HỘI ĐỒNG CHẤM ĐỒ ÁN TỐT NGHIỆP: HỘI ĐỒNG 4L}
 \begin{itemize}
@@ -284,6 +94,7 @@ morekeywords={}
 \noindent \textbf{DANH SÁCH THÀNH VIÊN HỘI ĐỒNG:}
 \begin{table}[h!]
 \centering
+\renewcommand{\arraystretch}{1.2}
 \begin{tabular}{|c|l|c|l|}
 \hline
 \textbf{STT} & \textbf{Họ và tên} & \textbf{Mã CBGD} & \textbf{Đơn vị công tác} \\
@@ -299,62 +110,75 @@ morekeywords={}
 \end{tabular}
 \end{table}
 
-\vspace{0.3cm}
+\vspace{0.2cm}
 \noindent \textbf{SINH VIÊN THỰC HIỆN:}
 \begin{itemize}
     \item Vương Song Toàn -- MSSV: 2213544 -- Hệ: Chính quy (KHMT - CQ)
     \item Lê Đăng Khoa -- MSSV: 2211599 -- Hệ: Chính quy (KHMT - CQ)
 \end{itemize}
 
-\vspace{1.5cm}
+\vspace{1.0cm}
 \begin{flushright}
 \begin{tabular}{c}
 \textit{TP. Hồ Chí Minh, ngày 05 tháng 10 năm 2026} \\
-\textbf{XÁC NHẬN CỦA GIẢNG VIÊN HƯỚNG DẪN} \\[2.2cm]
+\textbf{XÁC NHẬN CỦA GIẢNG VIÊN HƯỚNG DẪN} \\[2.0cm]
 \textbf{ThS. Trương Quỳnh Chi}
 \end{tabular}
 \end{flushright}
 
 \vfill
 \noindent \rule{\textwidth}{0.3pt} \\
-\scriptsize \textbf{Đồ án tốt nghiệp (CO4337) - HK253 2025 - 2026}
+\scriptsize \textbf{Đồ án tốt nghiệp (CO4337) -- HK253 2025 -- 2026}
 
-\pagenumbering{roman}
+%=====================================================================
+%  PHẦN ĐẦU (ĐÁNH SỐ LA MÃ)
+%=====================================================================
 \newpage
-%%%%%%%%%%%%%%%%%INTRO%%%%%%%%%%%%%%%%%%%
+\pagenumbering{roman}
 \input{Intro/LoiCamDoan}
+\newpage
 \input{Intro/LoiCamOn}
+\newpage
 \input{Intro/TomTat}
 \newpage
-\tableofcontents
-\newpage
-\listoffigures
-\newpage
-\listoftables
+\input{Intro/DanhMucVietTat}
+
+\newpage \tableofcontents
+\newpage \listoffigures
+\newpage \listoftables
+
+%=====================================================================
+%  PHẦN NỘI DUNG CHÍNH (8 CHƯƠNG - ĐÁNH SỐ Ả RẬP)
+%=====================================================================
 \newpage
 \hypersetup{pageanchor=true}
 \pagenumbering{arabic}
 
-%%%%%%%%%%%%%%%%%CONTENTS%%%%%%%%%%%%%%%%%%%
-\input{Contents/GioiThieu}
+\input{Contents/Ch01_TongQuan}
 \newpage
-\input{Contents/PhanTichTongQuan}
+\input{Contents/Ch02_KhaoSatHienTrang}
 \newpage
-\input{Contents/KienThucNenTang}
+\input{Contents/Ch03_CoSoLyThuyet}
 \newpage
-\input{Contents/PhanTichThietKeHeThong}
+\input{Contents/Ch04_PhanTichYeuCau}
 \newpage
-\input{Contents/HienThuc}
+\input{Contents/Ch05_ThietKeHeThong}
 \newpage
-\input{Contents/TrienKhai}
+\input{Contents/Ch06_HienThucVaGiaoDien}
 \newpage
-\input{Contents/KiemThuHeThong}
+\input{Contents/Ch07_KiemThuDanhGia}
 \newpage
-\input{Contents/TongKet}
-\newpage
-%%%%%%%%%%%%%%%%%OUTRO%%%%%%%%%%%%%%%%%%%
-\input{Outro/TaiLieuThamKhao}
-% \newpage
-% \input{Outro/PhuLuc}
-\end{document}
+\input{Contents/Ch08_TongKet}
 
+%=====================================================================
+%  PHẦN CUỐI & PHỤ LỤC
+%=====================================================================
+\newpage
+\input{Outro/TaiLieuThamKhao}
+\newpage
+\appendix
+\chapter{Danh mục 133 điểm cuối API RESTful}
+\label{ch:phu-luc-api}
+\input{Outro/BangAPI}
+
+\end{document}

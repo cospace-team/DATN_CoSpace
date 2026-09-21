@@ -1,0 +1,187 @@
+\chapter{Tổng quan đề tài}
+\label{ch:tongquan}
+
+\section{Bối cảnh và động lực thực hiện}
+\label{sec:boicanh}
+
+\subsection{Sự phát triển của mô hình văn phòng chia sẻ}
+Trong bối cảnh nền kinh tế số và làn sóng khởi nghiệp đổi mới sáng tạo đang phát triển mạnh mẽ tại Việt Nam, nhu cầu về một môi trường làm việc linh hoạt, hiện đại và tối ưu hóa chi phí ngày càng trở nên cấp thiết. Theo các báo cáo nghiên cứu thị trường bất động sản thương mại của CBRE và Savills \cite{fielding2000rest}, thị trường không gian làm việc chia sẻ (Co-working Space) tại các đô thị lớn như TP. Hồ Chí Minh và Hà Nội ghi nhận mức tăng trưởng bình quân trên 20\% mỗi năm trong giai đoạn hậu đại dịch. Sự dịch chuyển từ mô hình văn phòng truyền thống dài hạn sang không gian làm việc linh hoạt (Flexible Workspace) đã trở thành xu thế tất yếu của lực lượng lao động tri thức mới, bao gồm các lập trình viên làm việc tự do (Freelancers), các nhóm làm việc từ xa (Remote teams) và các doanh nghiệp vừa và nhỏ (SMEs).
+
+Mô hình văn phòng chia sẻ mang lại khả năng tối ưu hóa chi phí vận hành đáng kể khi người thuê không phải chịu gánh nặng chi phí đầu tư ban đầu về thiết kế mặt bằng, trang thiết bị văn phòng, mạng Internet hay dịch vụ lễ tân. Thay vì ký kết các hợp đồng thuê mặt bằng cố định kéo dài nhiều năm kèm khoản tiền đặt cọc lớn, doanh nghiệp và cá nhân có thể lựa chọn các gói thuê linh hoạt theo giờ, theo ngày, theo tuần hoặc theo tháng tùy theo nhu cầu sử dụng thực tế.
+
+\subsection{Thực trạng vận hành của các chuỗi văn phòng chia sẻ đa chi nhánh}
+Mặc dù nhu cầu thị trường rất lớn, phần lớn các đơn vị kinh doanh văn phòng chia sẻ tại Việt Nam hiện nay, đặc biệt là các chuỗi quy mô vừa và nhỏ (từ 2 đến 10 chi nhánh), vẫn đang vận hành dựa trên các phương thức bán thủ công hoặc chắp vá nhiều công cụ rời rạc. Qua khảo sát thực tế, các khó khăn vận hành điển hình bao gồm:
+\begin{itemize}
+    \item \textbf{Quản lý chỗ ngồi thủ công và thiếu sơ đồ trực quan:} Thông tin chỗ ngồi thường được theo dõi qua bảng tính (Excel/Google Sheets) hoặc ghi chép sổ sách. Khách hàng không thể nắm bắt được sơ đồ mặt bằng vật lý trực quan, vị trí không gian làm việc thực tế, khoảng cách đến các tiện ích (máy in, quầy cà phê, phòng họp) trước khi đến cơ sở.
+    \item \textbf{Xung đột lịch đặt chỗ (Double Booking):} Vào các khung giờ cao điểm, việc nhận đặt chỗ qua nhiều kênh không đồng bộ (tin nhắn Zalo, Fanpage, điện thoại và khách đến trực tiếp tại quầy) thường xuyên dẫn đến tình trạng hai khách hàng cùng đặt một vị trí trong cùng một khoảng thời gian, gây ảnh hưởng nghiêm trọng đến uy tín của thương hiệu.
+    \item \textbf{Đối soát thanh toán và quy trình hoàn tiền thủ công:} Việc thanh toán chủ yếu thông qua chuyển khoản ngân hàng truyền thống đòi hỏi nhân viên lễ tân phải đối soát sao kê ngân hàng thủ công, chụp ảnh màn hình và đối chiếu vào cuối ca làm việc. Khi khách hàng có nhu cầu hủy đơn, việc tính toán tiền phạt và hoàn tiền diễn ra chậm trễ, dễ xảy ra sai sót và nhầm lẫn dòng tiền.
+    \item \textbf{Chính sách hủy không nhất quán giữa các chi nhánh:} Mỗi chi nhánh tại các vị trí địa lý khác nhau có đặc thù vận hành và chi phí mặt bằng khác nhau, dẫn đến nhu cầu áp dụng biểu phí phạt hủy linh hoạt theo từng chi nhánh. Các công cụ quản lý thủ công hiện tại không thể hỗ trợ phân cấp chính sách theo bậc thời gian một cách tự động và minh bạch.
+    \item \textbf{Báo cáo kinh doanh phân mảnh:} Ban giám đốc và các nhà quản lý chi nhánh gặp nhiều khó khăn trong việc tổng hợp số liệu doanh thu thực tế, tính toán tỷ lệ lấp đầy (Occupancy Rate) theo thời gian thực để đưa ra các quyết định điều chỉnh giá hoặc tối ưu hóa diện tích mặt bằng kịp thời.
+\end{itemize}
+
+\subsection{Nhu cầu kết nối cộng đồng trong không gian làm việc chung}
+Điểm khác biệt cốt lõi tạo nên giá trị gia tăng của mô hình văn phòng chia sẻ so với văn phòng truyền thống chính là \textbf{tính cộng đồng (Community Networking)}. Các thành viên cùng làm việc dưới một mái nhà chung sở hữu những kỹ năng chuyên môn, lĩnh vực hoạt động và nhu cầu tìm kiếm đối tác đa dạng. Tuy nhiên, các hệ thống phần mềm quản lý hiện có trên thị trường hầu như chỉ tập trung vào nghiệp vụ cho thuê mặt bằng vật lý đơn thuần, hoàn toàn bỏ ngỏ bài toán kết nối các thành viên.
+
+Thực tế cho thấy việc giao lưu giữa các cá nhân chủ yếu diễn ra một cách tự phát hoặc thông qua các sự kiện sinh hoạt cộng đồng do ban quản lý tổ chức định kỳ. Nhu cầu xây dựng một nền tảng hỗ trợ thành viên chia sẻ hồ sơ năng lực (Profile), tìm kiếm cộng sự tiềm năng thông qua giải thuật so khớp độ tương đồng và trao đổi thông tin chuyên môn trên bảng tin nội bộ là một động lực then chốt để phát triển hệ thống CoSpace.
+
+\section{Phát biểu bài toán}
+\label{sec:baitoan}
+
+Từ những đòi hỏi thực tiễn nêu trên, bài toán đặt ra cho đề tài là: \textbf{Nghiên cứu, thiết kế và xây dựng một hệ thống phần mềm quản lý văn phòng chia sẻ tập trung (CoSpace)}, phục vụ đồng thời bốn nhóm tác nhân gồm: Khách hàng (Customer), Nhân viên vận hành quầy (Staff), Quản lý chi nhánh (Branch Admin) và Quản trị viên hệ thống (Super Admin). 
+
+Hệ thống phải số hóa toàn diện quy trình nghiệp vụ đặt chỗ từ khâu tra cứu trên sơ đồ mặt bằng SVG tương tác, thanh toán trực tuyến qua cổng thanh toán quốc gia VietQR Napas 24/7 và ví điện tử, quản lý nhận và trả phòng (Check-in/Check-out), tự động hóa chính sách hủy--hoàn tiền theo bậc thời gian, đến hỗ trợ kết nối mạng lưới cộng đồng thành viên và trợ lý ảo thông minh. Về mặt kỹ thuật, hệ thống phải giải quyết triệt để bài toán kiểm soát tương tranh dữ liệu tài nguyên hữu hạn (ngăn chặn hoàn toàn việc đặt trùng lịch khi nhiều người cùng thao tác), bảo đảm tính bất biến khi tiếp nhận webhook thanh toán, phân quyền bảo mật chặt chẽ theo vai trò (RBAC) và cô lập dữ liệu tuyệt đối giữa các chi nhánh.
+
+Bảng \ref{tab:vande_chucnang} tổng hợp mối liên kết giữa các vấn đề tồn tại trong thực tiễn vận hành và các giải pháp chức năng tương ứng được đề xuất trong hệ thống CoSpace.
+
+\begin{table}[H]
+\centering
+\caption{Ánh xạ từ vấn đề thực tiễn sang nhu cầu chức năng của hệ thống CoSpace}
+\label{tab:vande_chucnang}
+\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{|p{4.2cm}|p{5.2cm}|p{5.0cm}|}
+\hline
+\textbf{Vấn đề thực tiễn} & \textbf{Nhu cầu chức năng hệ thống} & \textbf{Giải pháp kỹ thuật CoSpace} \\
+\hline
+Khách không hình dung được vị trí chỗ ngồi thực tế & Sơ đồ mặt bằng tương tác theo thời gian thực & Kết xuất đồ họa vector SVG động, tích hợp bộ chọn không gian trực quan \\
+\hline
+Xung đột trùng lịch khi đặt chỗ đồng thời & Kiểm soát lịch khả dụng, chống đặt trùng lịch tuyệt đối & Khóa tư vấn \texttt{pg\_advisory\_xact\_lock} kết hợp ràng buộc \texttt{EXCLUDE USING gist} \\
+\hline
+Đối soát thanh toán thủ công, chuyển khoản chậm & Thanh toán tự động, tức thời qua mã QR ngân hàng và ví điện tử & Tích hợp cổng PayOS (chuẩn VietQR) và MoMo; xử lý Webhook bất biến (Idempotency) \\
+\hline
+Chính sách hủy đơn và hoàn tiền nhập nhằng, chậm trễ & Tự động tính toán mức phạt và hoàn tiền theo bậc thời gian & Thuật toán đối chiếu chính sách chi nhánh/toàn cục; hàng chờ duyệt hoàn tiền minh bạch \\
+\hline
+Thủ tục check-in tại quầy thủ công, mất thời gian & Check-in một chạm bằng mã định danh đặt chỗ hoặc mã QR & Trình quét mã QR trên nền Web, cửa sổ kiểm tra hợp lệ 30 phút, kiểm soát nợ dịch vụ \\
+\hline
+Các thành viên không có kênh kết nối hợp tác & Hồ sơ năng lực và gợi ý đối tác tiềm năng tự động & Thuật toán tính độ tương đồng Jaccard kết hợp trọng số kỹ năng và chi nhánh; bảng tin \\
+\hline
+Quản lý chi nhánh thiếu công cụ điều hành và giá & Phân cấp cấu hình bảng giá, dịch vụ thêm và báo cáo theo chi nhánh & Kiến trúc RBAC kết hợp bảo vệ truy cập tầng chi nhánh (\texttt{BranchAccessGuard}); xuất CSV \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Mục tiêu đề tài}
+\label{sec:muctieu}
+
+\subsection{Mục tiêu về nghiệp vụ}
+Đề tài hướng tới việc giải quyết trọn vẹn các bài toán vận hành thông qua các mục tiêu nghiệp vụ cụ thể:
+\begin{enumerate}
+    \item \textbf{Số hóa toàn diện vòng đời đặt chỗ:} Hỗ trợ khách hàng tìm kiếm, giữ chỗ tạm thời trong 15 phút, thanh toán trực tuyến tức thời và nhận mã QR xác nhận đơn hoàn toàn tự động trên nền tảng web.
+    \item \textbf{Quản lý tập trung chuỗi đa chi nhánh:} Cho phép doanh nghiệp mở rộng quy mô nhiều cơ sở, phân tầng quản lý theo Tòa nhà -- Tầng -- Không gian làm việc, hỗ trợ thiết lập bảng giá và dịch vụ gia tăng riêng biệt cho từng chi nhánh.
+    \item \textbf{Tự động hóa chính sách hủy và minh bạch hoàn tiền:} Cung cấp cơ chế tính toán phí phạt và số tiền hoàn tự động dựa trên mốc thời gian khách gửi yêu cầu hủy so với thời điểm bắt đầu đơn, giải phóng chỗ trống ngay lập tức cho khách hàng khác.
+    \item \textbf{Tối ưu hóa quy trình vận hành quầy:} Trang bị cho nhân viên lễ tân công cụ tạo đơn đặt chỗ tại quầy (Walk-in), thu tiền mặt, thực hiện check-in/check-out một chạm và ghi nhận các dịch vụ gọi thêm vào đơn đang hoạt động.
+    \item \textbf{Thúc đẩy gắn kết cộng đồng thành viên:} Cung cấp tính năng xây dựng hồ sơ năng lực cá nhân, thuật toán gợi ý đối tác kinh doanh phù hợp và diễn đàn nội bộ để chia sẻ thông tin, sự kiện và cơ hội hợp tác.
+    \item \textbf{Cung cấp hệ thống báo cáo quản trị trực quan:} Giúp ban điều hành nắm bắt doanh thu thực tế, tỷ lệ lấp đầy mặt bằng và so sánh hiệu quả kinh doanh giữa các chi nhánh theo thời gian thực.
+\end{enumerate}
+
+\subsection{Mục tiêu về kỹ thuật}
+Bên cạnh các yêu cầu nghiệp vụ, đề tài đặt ra các tiêu chuẩn khắt khe về kỹ thuật phần mềm:
+\begin{enumerate}
+    \item \textbf{Kiến trúc phân tầng và dễ bảo trì:} Xây dựng hệ thống theo mô hình khách--chủ ba tầng (Client--Server 3-Tier), tách bạch rõ ràng giữa tầng trình bày (React/TypeScript), tầng nghiệp vụ (Spring Boot 3) và tầng dữ liệu (PostgreSQL), tuân thủ nguyên lý kiến trúc sạch (Clean Architecture).
+    \item \textbf{Bảo đảm tính đúng đắn khi tương tranh cao:} Thiết kế cơ chế khóa hai lớp độc lập ở tầng ứng dụng và tầng cơ sở dữ liệu, cam kết không xảy ra tình trạng đặt trùng lịch (Overbooking) ngay cả khi hàng chục người dùng cùng nhấn nút thanh toán cho cùng một vị trí trong cùng một phần trăm giây.
+    \item \textbf{Xử lý Webhook thanh toán an toàn và bất biến:} Xây dựng cơ chế kiểm tra chữ ký điện tử mật mã và chống xử lý trùng lặp giao dịch (Idempotent Consumer), đảm bảo sự kiện thanh toán bị gọi lặp nhiều lần vẫn duy trì kết quả chính xác duy nhất.
+    \item \textbf{Bảo mật phân quyền chặt chẽ và cô lập dữ liệu:} Ứng dụng mô hình xác thực kép (Supabase JWT cho đăng nhập mạng xã hội và JWT nội bộ ký HS384), kiểm soát truy cập theo vai trò (RBAC) và cơ chế chốt chặn truy cập chi nhánh ngăn chặn rò rỉ dữ liệu chéo giữa các cơ sở.
+    \item \textbf{Tích hợp Trí tuệ nhân tạo có kiểm soát an toàn:} Hiện thực trợ lý ảo thông minh dựa trên mô hình ngôn ngữ lớn (Google Gemini Flash), hỗ trợ cơ chế gọi hàm (Function Calling) với rào chắn bắt buộc khách hàng xác nhận trước khi thực hiện các giao dịch làm thay đổi dữ liệu thật.
+    \item \textbf{Khả năng triển khai và vận hành đám mây:} Đóng gói ứng dụng thành các Docker container tinh gọn thông qua kỹ thuật Multi-stage build và tự động hóa quy trình phát hành lên các nền tảng đám mây hiện đại (Vercel, Render và Supabase).
+\end{enumerate}
+
+\section{Đối tượng và phạm vi đề tài}
+\label{sec:phamvi}
+
+\subsection{Đối tượng người dùng}
+Hệ thống CoSpace được thiết kế xoay quanh bốn nhóm tác nhân người dùng với các đặc thù phân quyền và phạm vi dữ liệu rõ ràng:
+\begin{itemize}
+    \item \textbf{Khách hàng (Customer):} Người thuê không gian làm việc. Khách hàng có thể đăng ký tài khoản tự do, xem sơ đồ mặt bằng, đặt chỗ ngắn hạn (theo giờ/ngày) hoặc dài hạn (theo tuần/tháng), thanh toán trực tuyến, check-in, hủy đơn, tham gia diễn đàn cộng đồng, tìm kiếm đối tác và tương tác với trợ lý ảo. Khách hàng không bị ràng buộc vào một chi nhánh cố định và có thể đặt chỗ tại bất kỳ chi nhánh nào trong hệ thống.
+    \item \textbf{Nhân viên vận hành quầy (Staff):} Nhân viên trực ban tại cơ sở. Nhân viên bắt buộc phải gắn với một chi nhánh cụ thể (\texttt{branch\_id}), chỉ có quyền xem và xử lý các đơn đặt chỗ thuộc chi nhánh của mình: tạo đơn tại quầy cho khách vãng lai, thu tiền mặt, thực hiện check-in/out, ghi nhận dịch vụ phát sinh và quản lý lịch bảo trì không gian tại chi nhánh.
+    \item \textbf{Quản lý chi nhánh (Branch Admin):} Người chịu trách nhiệm điều hành toàn diện một cơ sở. Quản lý chi nhánh cũng bắt buộc gắn với một \texttt{branch\_id}, có quyền cấu hình không gian làm việc, chỉnh sửa sơ đồ mặt bằng SVG, thiết lập bảng giá riêng, cấu hình biểu phí hủy riêng, quản lý tài khoản nhân viên của cơ sở, duyệt các yêu cầu hoàn tiền và xem báo cáo tài chính nội bộ của chi nhánh.
+    \item \textbf{Quản trị viên hệ thống (Super Admin):} Cán bộ quản trị cấp cao nhất của chuỗi. Super Admin không bị giới hạn theo chi nhánh, có quyền tạo mới chi nhánh, quản lý danh mục dùng chung (loại không gian, tiện ích), quản lý toàn bộ tài khoản nhân sự và phân quyền, thiết lập các chính sách toàn cục mặc định, xem báo cáo tổng hợp đối chiếu giữa các cơ sở và tra cứu nhật ký kiểm toán (Audit Log) toàn hệ thống.
+\end{itemize}
+
+\subsection{Phạm vi không gian và thời gian}
+\begin{itemize}
+    \item \textbf{Phạm vi địa lý và tiền tệ:} Hệ thống được thiết kế tối ưu cho các chuỗi văn phòng chia sẻ hoạt động trên lãnh thổ Việt Nam; múi giờ mặc định là Đông Dương (\texttt{Asia/Ho\_Chi\_Minh}, UTC+7); đơn vị tiền tệ giao dịch thống nhất là Việt Nam Đồng (VNĐ), được lưu trữ bằng kiểu dữ liệu có độ chính xác cao \texttt{numeric(12,2)} ở cơ sở dữ liệu và ánh xạ thành \texttt{BigDecimal} trong mã nguồn Java.
+    \item \textbf{Phạm vi nền tảng thiết bị:} Ứng dụng Web đáp ứng (Responsive Web Application), tương thích tốt trên các trình duyệt hiện đại (Google Chrome, Mozilla Firefox, Microsoft Edge, Safari) từ kích thước màn hình máy tính bàn, máy tính bảng đến điện thoại di động thông minh.
+    \item \textbf{Giới hạn nghiên cứu:} Trong khuôn khổ đồ án tốt nghiệp, hệ thống tập trung giải quyết trọn vẹn nghiệp vụ phần mềm Web và các cơ chế xử lý dữ liệu backend cốt lõi; các giải pháp phần cứng kết nối vật lý (như mạch điều khiển khóa cửa từ thông minh IoT tại phòng làm việc) và ứng dụng di động bản địa (Native Mobile Apps) được xác định là hướng mở rộng trong các giai đoạn tiếp theo.
+\end{itemize}
+
+\section{Phương pháp nghiên cứu và Kế hoạch thực hiện}
+\label{sec:phuongphap}
+
+\subsection{Phương pháp nghiên cứu}
+Đề tài kết hợp chặt chẽ giữa nghiên cứu lý thuyết, khảo sát thực nghiệm và quy trình kỹ nghệ phần mềm:
+\begin{itemize}
+    \item \textbf{Nghiên cứu tài liệu (Desk Research):} Tìm hiểu các đặc tả kỹ thuật quốc tế (RFC 7519 về JWT, OpenAPI 3.0 cho RESTful API), các tài liệu kiến trúc của Spring Framework, các bài nghiên cứu về thuật toán Jaccard Similarity, các giải pháp phòng chống lỗi tương tranh trong hệ quản trị cơ sở dữ liệu PostgreSQL.
+    \item \textbf{Khảo sát thực tiễn (Field Study):} Khảo sát trực tiếp và đóng vai người dùng trải nghiệm tại các chuỗi văn phòng chia sẻ nổi tiếng tại TP. Hồ Chí Minh (CirCO, Toong, Dreamplex, WeWork) để thu thập quy trình vận hành thực tế và phát hiện các điểm nghẽn nghiệp vụ.
+    \item \textbf{Phương pháp phát triển lặp (Agile/Scrum):} Quá trình phát triển được chia thành các vòng lặp (Sprint) định kỳ 2 tuần, liên tục tích hợp mã nguồn, kiểm thử tự động và rà soát lỗi logic cùng Giảng viên hướng dẫn.
+\end{itemize}
+
+\subsection{Kế hoạch và Phân công thực hiện}
+Đề tài được thực hiện trong thời gian 20 tuần bởi nhóm gồm hai sinh viên. Bảng \ref{tab:kehoach} tóm tắt tiến độ và phân công trách nhiệm chi tiết.
+
+\begin{table}[H]
+\centering
+\caption{Kế hoạch thực hiện và phân công công việc trong đề tài}
+\label{tab:kehoach}
+\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|p{1.8cm}|p{5.4cm}|p{3.6cm}|p{3.6cm}|}
+\hline
+\textbf{Giai đoạn} & \textbf{Nội dung công việc} & \textbf{Vương Song Toàn} & \textbf{Lê Đăng Khoa} \\
+\hline
+Tuần 1--2 & Khảo sát thực tế, nghiên cứu các hệ thống tương tự, lập tài liệu đặc tả yêu cầu hệ thống & Phân tích nghiệp vụ, kiến trúc hệ thống & Khảo sát thị trường, yêu cầu chức năng \\
+\hline
+Tuần 3--4 & Thiết kế CSDL quan hệ, thiết kế API RESTful và thiết lập hạ tầng dự án & Thiết kế CSDL, Flyway, cấu hình Security & Dựng khung Front-end, định tuyến và theme \\
+\hline
+Tuần 5--6 & Module xác thực người dùng (JWT kép), quản lý chi nhánh, tầng và không gian làm việc & Hiện thực dịch vụ Auth, Branch, Space (BE) & Giao diện Đăng nhập, Profile, Quản trị không gian (FE) \\
+\hline
+Tuần 7--8 & Trình hiển thị sơ đồ mặt bằng SVG; nghiệp vụ Đặt chỗ và 2 tầng khóa tương tranh & Hiện thực dịch vụ Booking, khóa tư vấn (BE) & Trình hiển thị sơ đồ SVG \texttt{FloorPlanViewer} (FE) \\
+\hline
+Tuần 9--10 & Tích hợp cổng thanh toán VietQR (PayOS), MoMo và Webhook bất biến; Scheduler hủy đơn & Tích hợp PayOS, MoMo, Scheduler hết hạn đơn & Giao diện Checkout, mã QR động, đếm ngược \\
+\hline
+Tuần 11--12 & Quy trình Hủy--Hoàn tiền theo bậc thời gian; Module vận hành Check-in/out và Bảo trì & Dịch vụ Hủy/Hoàn tiền, Check-in, Bảo trì (BE) & Giao diện Quầy Lễ tân, quét mã QR check-in (FE) \\
+\hline
+Tuần 13--14 & Module gợi ý đối tác (Jaccard) và Trợ lý ảo AI Google Gemini; Quản lý khuyến mãi & Dịch vụ Gemini AI, Matching, Loyalty (BE) & Giao diện Cộng đồng, Chatbot Drawer, Thẻ đối tác (FE) \\
+\hline
+Tuần 15--16 & Báo cáo doanh thu, tỷ lệ lấp đầy, xuất CSV; Nhật ký kiểm toán; Tối ưu Docker và Cloud & Dịch vụ Report, Audit Log, Dockerfile, Render & Giao diện Báo cáo, biểu đồ Recharts, Vercel \\
+\hline
+Tuần 17--18 & Rà soát logic toàn diện, xử lý các phát hiện nghiệp vụ, nâng suite test lên 273 ca & Rà soát BE, sửa lỗi tương tranh, nâng suite test & Rà soát luồng FE, tối ưu hóa bundle Vite, kiểm thử UAT \\
+\hline
+Tuần 19--20 & Hoàn thiện báo cáo Đồ án Tốt nghiệp LaTeX, chuẩn bị slide và bảo vệ trước Hội đồng & Hợp nhất nội dung kỹ thuật, Service Specs, Test & Hoàn thiện sơ đồ UML, sinh phụ lục API, đóng gói \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Ý nghĩa của đề tài}
+\label{sec:ynghia}
+
+\subsection{Ý nghĩa khoa học}
+Về mặt khoa học máy tính và kỹ thuật phần mềm, đề tài mang lại những giá trị nghiên cứu và thực nghiệm sâu sắc:
+\begin{itemize}
+    \item \textbf{Vận dụng cơ chế điều khiển tương tranh phân tán ở tầng dữ liệu:} Cung cấp mô hình thực nghiệm rõ ràng về việc kết hợp giữa khóa tư vấn ở cấp độ giao dịch (\texttt{pg\_advisory\_xact\_lock}) và ràng buộc loại trừ không gian--thời gian (\texttt{EXCLUDE USING gist}) trên PostgreSQL, giải quyết triệt để vấn đề xung đột tài nguyên hữu hạn mà không gây nghẽn cổ chai hay khóa chết (Deadlock).
+    \item \textbf{Mô hình hóa kiến trúc tích hợp thanh toán bất biến:} Đưa ra giải pháp chuẩn mực trong việc xử lý sự kiện bất đồng bộ từ các bên thứ ba (Webhooks), đảm bảo tính toàn vẹn dữ liệu tài chính trong môi trường mạng thiếu tin cậy có độ trễ cao hoặc xảy ra việc gửi lặp sự kiện.
+    \item \textbf{Kiểm soát mô hình ngôn ngữ lớn (LLM) trong hệ thống hướng trạng thái:} Vận dụng kỹ thuật Prompt Engineering và Function Calling kết hợp cơ chế kiểm soát giao dịch có rào chắn xác nhận từ người dùng (Confirmation Barrier), mở ra hướng tiếp cận an toàn khi ứng dụng Trí tuệ nhân tạo tạo sinh vào các hệ thống vận hành thực tế.
+\end{itemize}
+
+\subsection{Ý nghĩa thực tiễn}
+Về mặt ứng dụng kinh tế -- xã hội:
+\begin{itemize}
+    \item Cung cấp giải pháp chuyển đổi số toàn diện, sẵn sàng chuyển giao cho các doanh nghiệp vận hành văn phòng chia sẻ tại Việt Nam, giúp tiết kiệm tới 50\% thời gian bàn giấy của nhân viên lễ tân và loại trừ hoàn toàn các tổn thất doanh thu do lỗi đặt trùng phòng.
+    \item Đem lại trải nghiệm dịch vụ tiện nghi, hiện đại và minh bạch cho khách hàng thông qua sơ đồ trực quan và thanh toán không tiền mặt theo đúng chuẩn ngân hàng quốc gia VietQR Napas 24/7.
+    \item Xây dựng một không gian mở kết nối cộng đồng tri thức, hỗ trợ các cá nhân làm việc tự do và các nhóm khởi nghiệp tìm kiếm cơ hội hợp tác kinh doanh, đóng góp tích cực vào sự phát triển của hệ sinh thái khởi nghiệp sáng tạo Việt Nam.
+\end{itemize}
+
+\section{Bố cục báo cáo}
+\label{sec:cautruc}
+
+Bản báo cáo Đồ án Tốt nghiệp được tổ chức thành 8 chương nội dung chính cùng các phần phụ lục, trình bày một cách có hệ thống từ khâu khảo sát thực tế, phân tích, thiết kế, hiện thực đến đánh giá nghiệm thu:
+\begin{itemize}
+    \item \textbf{Chương \ref{ch:tongquan} -- Tổng quan đề tài:} Trình bày bối cảnh ra đời, thực trạng vận hành văn phòng chia sẻ, phát biểu bài toán, mục tiêu, đối tượng, phạm vi nghiên cứu, phương pháp thực hiện và phân công công việc.
+    \item \textbf{Chương \ref{ch:khaosat} -- Khảo sát hiện trạng và các hệ thống liên quan:} Khảo sát chi tiết các mô hình không gian làm việc chung, phân tích các hệ thống thực tế tiêu biểu (CirCO, Toong, Dreamplex, WeWork), lập ma trận so sánh tính năng và định vị giải pháp CoSpace.
+    \item \textbf{Chương \ref{ch:cosolythuyet} -- Cơ sở lý thuyết và công nghệ nền tảng:} Cung cấp cơ sở lý thuyết về kiến trúc phần mềm, cơ chế kiểm soát tương tranh PostgreSQL Advisory Locks, chuẩn thanh toán VietQR Napas 24/7, xác thực JWT kép, thuật toán Jaccard và mô hình AI Gemini; tổng hợp công nghệ Spring Boot 3, React 18 và cơ sở dữ liệu.
+    \item \textbf{Chương \ref{ch:yeucau} -- Phân tích yêu cầu hệ thống:} Phân tích 4 vai trò người dùng, User stories, danh mục 20 yêu cầu chức năng (FR) và yêu cầu phi chức năng (NFR), cùng hệ thống các sơ đồ Use-case tổng quát và phân hệ.
+    \item \textbf{Chương \ref{ch:thietke} -- Thiết kế hệ thống:} Trình bày kiến trúc tổng thể, 11 sơ đồ lớp Class Diagram (Domain và Service), 14 sơ đồ tuần tự Sequence Diagram chi tiết, sơ đồ hoạt động (Activity), máy trạng thái (Statechart) và thiết kế CSDL với 7 lược đồ ERD phân rã.
+    \item \textbf{Chương \ref{ch:hienthuc} -- Hiện thực hệ thống và Giao diện:} Đặc tả chi tiết các dịch vụ then chốt (Service Specifications với bảng Method Specs, Dependencies, 2-Tier Concurrency Algorithm), kiến trúc Container hóa Docker/Caddy, và kết quả hiện thực 12 màn hình giao diện tiêu biểu của 4 phân hệ.
+    \item \textbf{Chương \ref{ch:kiemthu} -- Kiểm thử và đánh giá:} Báo cáo chiến lược kiểm thử, kết quả thực thi 273 ca kiểm thử tự động phía máy chủ, kiểm thử xung đột lịch tương tranh (Race conditions) và kiểm thử chấp nhận người dùng (UAT).
+    \item \textbf{Chương \ref{ch:tongket} -- Tổng kết và hướng phát triển:} Tổng kết các kết quả đạt được, ưu điểm nổi bật, thẳng thắn đánh giá các hạn chế kỹ thuật còn tồn đọng và vạch ra định hướng phát triển tương lai.
+    \item \textbf{Phần Phụ lục:} Cung cấp bảng tra cứu toàn diện 26 Controllers và 133 điểm cuối API của hệ thống.
+\end{itemize}

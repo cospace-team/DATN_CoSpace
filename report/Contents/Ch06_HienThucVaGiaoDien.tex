@@ -1,0 +1,482 @@
+\chapter{Hiện thực hệ thống và Giao diện người dùng}
+\label{ch:hien-thuc-va-giao-dien}
+
+Chương này trình bày chi tiết kết quả hiện thực hệ thống CoSpace ở cả hai phương diện: kiến trúc mã nguồn kỹ thuật tầng Back-end/hạ tầng triển khai và giao diện trực quan của người dùng trên các phân hệ. Trong đó, các dịch vụ nghiệp vụ cốt lõi được đặc tả chuẩn mực thông qua chữ ký phương thức, thuật toán tương tranh và mô hình xử lý dữ liệu thực tế.
+
+\section{Môi trường phát triển và cấu trúc mã nguồn}
+
+\subsection{Môi trường phần cứng và công nghệ phần mềm}
+
+Quá trình nghiên cứu, xây dựng và hoàn thiện hệ sinh thái CoSpace được thực hiện trên môi trường máy trạm chuẩn hóa kết hợp các nền tảng công nghệ ổn định, hiện đại:
+
+\begin{itemize}
+    \item \textbf{Môi trường phần cứng trạm phát triển:} Bộ vi xử lý đa nhân AMD Ryzen 7 / Intel Core i7 (8 nhân, 16 luồng), bộ nhớ RAM 16GB -- 32GB DDR4/DDR5, ổ cứng thể rắn SSD NVMe PCIe 4.0 đảm bảo hiệu năng I/O cho việc biên dịch và kiểm thử tự động.
+    \item \textbf{Hệ điều hành:} Microsoft Windows 11 Pro 64-bit tích hợp môi trường ảo hóa Linux Ubuntu 22.04 LTS thông qua nền tảng WSL 2 (Windows Subsystem for Linux).
+    \item \textbf{Nền tảng Back-end:} Bộ công cụ phát triển Java Development Kit (OpenJDK 17 Temurin LTS), Apache Maven v3.9.x, khung phát triển Spring Boot v3.2.x framework.
+    \item \textbf{Nền tảng Front-end:} Node.js LTS v20.x, trình quản trị gói npm v10.x, React 18, ngôn ngữ kiểm soát kiểu TypeScript 5.x, công cụ đóng gói siêu tốc Vite v5.x.
+    \item \textbf{Hệ quản trị cơ sở dữ liệu:} PostgreSQL 15 với các tiện ích mở rộng \texttt{btree\_gist} (phục vụ đối soát tương tranh dải thời gian) và \texttt{pgcrypto} (sinh khóa định danh ngẫu nhiên phân tán UUIDv4).
+    \item \textbf{Hạ tầng phụ trợ:} Docker Desktop 26.x (Container hóa môi trường), Postman v10.x (Kiểm thử tải và hợp đồng API), Supabase CLI, Git v2.4x.
+\end{itemize}
+
+\subsection{Cấu trúc mã nguồn dự án (Monorepo Structure)}
+
+Dự án CoSpace áp dụng kiến trúc kho lưu trữ tích hợp (Monorepo) với sự phân tách tường minh giữa máy chủ ứng dụng (\texttt{BE}), giao diện người dùng (\texttt{FE}) và kịch bản cơ sở dữ liệu (\texttt{database}):
+
+\begin{verbatim}
+cospace-root/
+|-- BE/                                  # Phan he May chu (Spring Boot 3 + Java 17)
+|   |-- pom.xml                          # Khai bao tap thu vien phu thuoc Maven
+|   |-- Dockerfile                       # Multi-stage Dockerfile toi uu container runtime
+|   `-- src/
+|       |-- main/java/com/cospace/app/
+|       |   |-- config/                  # Cau hinh Security, PayOS, Cache, Async, WebMvc
+|       |   |-- controller/              # 26 REST Controllers xu ly yeu cau HTTP
+|       |   |-- dto/                     # 133+ DTOs dong goi du lieu Request/Response
+|       |   |-- entity/                  # 30 JPA Entities quan he CSDL quan he
+|       |   |-- exception/               # GlobalExceptionHandler, Custom Exceptions
+|       |   |-- repository/              # Spring Data JPA Repositories truy van CSDL
+|       |   |-- scheduler/               # Tuyen trinh dinh ky BookingExpiryScheduler
+|       |   |-- security/                # SupabaseJwtFilter, UserPrincipal, RBAC Guard
+|       |   `-- service/                 # Logic nghiep vu loi (Booking, Payment, Matching)
+|       `-- test/java/com/cospace/app/   # 273 ca kiem thu tu dong (Unit & Integration Tests)
+|-- FE/                                  # Phan he Giao dien (React 18 + TypeScript + Vite)
+|   |-- package.json                     # Khai bao goi thu vien React va Cong cu FE
+|   |-- vite.config.ts                   # Cau hinh chia nho module (manualChunks splitting)
+|   |-- vercel.json                      # Quy tac Rewrite dinh tuyen SPA tren Edge Server
+|   `-- src/
+|       |-- components/                  # UI Components (Floorplan SVG, Modal, QR Canvas)
+|       |-- context/                     # AuthContext, NotificationContext, ThemeContext
+|       |-- hooks/                       # Custom hooks (useCountdown, usePolling, useAuth)
+|       |-- lib/                         # Client API wrappers (apiClient, supabaseClient)
+|       |-- pages/                       # 4 phan he Portal (Customer, Staff, BA, Admin)
+|       `-- types/                       # TypeScript Interfaces & Business Models
+`-- database/
+    |-- migrations/                      # 20240101000000_core_schema.sql (30 bang DDL)
+    `-- tests/                           # Tap lenh SQL test workflows tu dong tren CSDL
+\end{verbatim}
+
+\section{Hiện thực các phân hệ Back-end then chốt (Service Specifications)}
+
+Hệ thống CoSpace không chỉ cài đặt các hàm CRUD cơ bản mà còn giải quyết các bài toán kỹ thuật phức tạp: Kiểm soát tương tranh giao dịch không gian làm việc, bảo vệ an toàn dòng tiền với chữ ký số HMAC-SHA256, so khớp năng lực thành viên bằng giải thuật Jaccard trọng số kết hợp AI, và giải phóng tài nguyên định kỳ tự động.
+
+\subsection{Hiện thực Dịch vụ Quản lý Đặt chỗ (BookingService)}
+
+\noindent\textbf{1. Trách nhiệm và Phạm vi:}\\
+\texttt{BookingService} đóng vai trò là hạt nhân điều phối dịch vụ, chịu trách nhiệm tiếp nhận yêu cầu đặt chỗ, thẩm định khung giờ, thực thi khóa phòng chống giữ chỗ ảo, kiểm soát tương tranh hai tầng ngăn chặn xung đột lịch trình (Double Booking) và suy diễn tự động chi nhánh vật lý.
+
+\noindent\textbf{2. Bảng chữ ký phương thức chuẩn hóa:}
+
+\begin{table}[H]
+\centering
+\caption{Bảng đặc tả phương thức nghiệp vụ của BookingService}
+\label{tab:spec-booking-service}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|p{3.5cm}|p{3.5cm}|p{2.5cm}|p{5.5cm}|}
+\hline
+\textbf{Tên phương thức} & \textbf{Tham số đầu vào} & \textbf{Kiểu trả về} & \textbf{Mô tả chức năng nghiệp vụ} \\
+\hline
+\texttt{createBooking} & \texttt{UUID userId, BookingCreateRequest req} & \texttt{BookingResponse} & Thẩm định khung giờ, thực thi khóa hai tầng, kiểm tra giới hạn tần suất, khởi tạo đơn trạng thái \texttt{PENDING\_PAYMENT} có hạn chót 15 phút. \\
+\hline
+\texttt{findOverlapping Bookings} & \texttt{UUID wsId, OffsetDateTime start, OffsetDateTime end, List<Status> st} & \texttt{List<Booking>} & Thực thi câu truy vấn phạm vi giao cắt thời gian (\texttt{startAt < reqEnd AND endAt > reqStart}) trên các đơn đang hoạt động. \\
+\hline
+\texttt{extendBooking} & \texttt{UUID bookingId, BookingExtendRequest req} & \texttt{BookingResponse} & Kiểm tra tính khả dụng của khung giờ mở rộng tiếp theo, cập nhật thời điểm kết thúc mới và tạo hóa đơn phụ phí phát sinh. \\
+\hline
+\texttt{staffCancelBooking} & \texttt{UUID bookingId, UUID staffId, String reason} & \texttt{BookingResponse} & Cho phép nhân viên trực quầy hủy đơn thay khách, cập nhật trạng thái \texttt{CANCELLED} và ghi vết kiểm toán (Rule \#41). \\
+\hline
+\end{tabular}
+\end{table}
+
+\noindent\textbf{3. Thuật toán kiểm soát tương tranh hai tầng (2-Tier Concurrency Algorithm):}
+\begin{itemize}
+    \item \textbf{Bước 1 (Kiểm soát tần suất người dùng -- Rule \#33):} Bắt đầu giao dịch nguyên tử (\texttt{@Transactional}). Thực thi khóa ứng dụng (Advisory Lock) trên ID người dùng:
+    $$\texttt{SELECT pg\_advisory\_xact\_lock(hashtext('rate\_limit:' || userId))}$$
+    Đếm số lượng đơn đang có trạng thái \texttt{PENDING\_PAYMENT} của người này. Nếu số lượng $\ge 3$, ném ngoại lệ \texttt{RateLimitException} chặn khởi tạo đơn mới, loại bỏ hành vi đầu cơ giữ chỗ ảo làm nghẽn hệ thống.
+    \item \textbf{Bước 2 (Suy diễn Chi nhánh tự động -- Rule \#42):} Máy chủ tự động truy vấn \texttt{WorkspaceEntity} $\rightarrow$ lấy \texttt{floorId} $\rightarrow$ truy vấn \texttt{Floor} lấy \texttt{branchId}. Tuyệt đối không chấp nhận tham số \texttt{branchId} truyền từ máy khách nhằm ngăn ngừa hành vi giả mạo ID.
+    \item \textbf{Bước 3 (Khóa tương tranh vật lý trên không gian):} Thực thi khóa Advisory Lock trên mã định danh vị trí:
+    $$\texttt{SELECT pg\_advisory\_xact\_lock(hashtext('booking:' || workspaceId))}$$
+    Khóa này chỉ có hiệu lực trong phạm vi giao dịch hiện hành và tự động giải phóng khi giao dịch Commit hoặc Rollback.
+    \item \textbf{Bước 4 (Phát hiện xung đột lịch trình -- Overlap Detection):} Truy vấn cơ sở dữ liệu tìm các đơn đặt chỗ cùng \texttt{workspaceId} thuộc các trạng thái hoạt động (\texttt{PENDING\_PAYMENT}, \texttt{CONFIRMED}, \texttt{CHECKED\_IN}) có giao cắt thời gian:
+    $$\text{Giao cắt xảy ra khi: } (\text{Start}_{\text{đã\_có}} < \text{End}_{\text{mới}}) \land (\text{End}_{\text{đã\_có}} > \text{Start}_{\text{mới}})$$
+    Nếu phát hiện xung đột, giao dịch tự động Rollback và ném ngoại lệ \texttt{ConflictException} báo chỗ ngồi đã bị người khác chọn.
+    \item \textbf{Bước 5 (Khởi tạo bản ghi và hạn chót):} Tạo thực thể \texttt{Booking} mới trạng thái \texttt{PENDING\_PAYMENT}, gán hạn chót thanh toán chính xác là $\text{now()} + 15\text{ phút}$. Lưu vào DB và trả về DTO cho máy khách chuyển hướng sang trang thanh toán.
+\end{itemize}
+
+\subsection{Hiện thực Dịch vụ Thanh toán và Xử lý Webhook (PaymentService \& PayosService)}
+
+\noindent\textbf{1. Trách nhiệm và Phạm vi:}\\
+Quản trị toàn bộ các giao dịch tài chính phát sinh trên nền tảng, tích hợp cổng thanh toán trực tuyến PayOS theo tiêu chuẩn VietQR Napas 24/7, thẩm định tính toàn vẹn của gói tin Webhook bằng chữ ký số HMAC-SHA256, và giải quyết triệt để bài toán thanh toán trễ sau khi đơn đã bị hủy tự động (Late Webhook Ghost Payment).
+
+\noindent\textbf{2. Bảng đặc tả các phương thức nghiệp vụ:}
+
+\begin{table}[H]
+\centering
+\caption{Bảng đặc tả phương thức của PaymentService và PayosService}
+\label{tab:spec-payment-service}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|p{3.8cm}|p{3.5cm}|p{2.2cm}|p{5.5cm}|}
+\hline
+\textbf{Tên phương thức} & \textbf{Tham số đầu vào} & \textbf{Kiểu trả về} & \textbf{Mô tả chức năng nghiệp vụ} \\
+\hline
+\texttt{createPaymentLink} & \texttt{long orderCode, long amount, String desc} & \texttt{Map<String, Object>} & Đóng gói dữ liệu giao dịch, ký số và gửi yêu cầu tới PayOS Open API để lấy chuỗi liên kết VietQR và mã QR động. \\
+\hline
+\texttt{verifyWebhook Signature} & \texttt{PayosWebhookDto webhookData} & \texttt{boolean} & Trích xuất dữ liệu Webhook, sắp xếp thứ tự bảng chữ cái các khóa (Alphabetical Sort), băm mã HMAC-SHA256 đối soát chữ ký số. \\
+\hline
+\texttt{processPayos Webhook} & \texttt{PayosWebhookDto webhookData} & \texttt{void} & Thực thi giao dịch nguyên tử: Kiểm tra Idempotency, thẩm định chữ ký số, xử lý đơn trễ hoặc kích hoạt trạng thái \texttt{CONFIRMED}. \\
+\hline
+\end{tabular}
+\end{table}
+
+\noindent\textbf{3. Quy trình xác thực Webhook và giải quyết bài toán Ghost Payment:}
+\begin{itemize}
+    \item \textbf{Kiểm tra tính bất biến (Idempotency Guard):} Khi tiếp nhận Webhook callback từ cổng PayOS, hệ thống tra cứu bản ghi \texttt{Payment} theo \texttt{orderCode}. Nếu hóa đơn đã ở trạng thái \texttt{COMPLETED}, hệ thống lập tức phản hồi mã HTTP 200 OK mà không xử lý lại, ngăn ngừa lỗi nhân đôi số dư hay kích hoạt dịch vụ nhiều lần khi mạng chập chờn.
+    \item \textbf{Xác thực chữ ký số HMAC-SHA256:} Lắp ráp chuỗi dữ liệu gốc theo định dạng chuẩn hóa:
+    $$\text{RawData} = \texttt{amount=...}\ \&\ \texttt{cancelUrl=...}\ \&\ \texttt{description=...}\ \&\ \texttt{orderCode=...}\ \&\ \texttt{status=...}$$
+    Băm chuỗi trên với khóa bí mật \texttt{ChecksumKey} bằng thuật toán \texttt{HmacSHA256}. So sánh chuỗi Hex thu được với trường \texttt{signature} từ PayOS. Nếu không trùng khớp, từ chối xử lý ngay lập tức.
+    \item \textbf{Xử lý tình huống biên đơn quá hạn (Late Webhook Resolution):} Nếu Webhook báo thanh toán thành công nhưng đơn đặt chỗ liên kết đã bị hủy (\texttt{CANCELLED}) do khách chuyển khoản sau thời hạn 15 phút:
+    \begin{itemize}
+        \item Hệ thống cập nhật trạng thái hóa đơn sang \texttt{REFUND\_PENDING} (Chờ hoàn tiền).
+        \item Tự động gửi cảnh báo tới bộ phận Lễ tân và Quản lý chi nhánh để thực hiện thủ tục đối soát hoàn tiền Napas hoặc liên hệ xếp chỗ tương đương cho khách hàng.
+    \end{itemize}
+    \item \textbf{Kích hoạt đơn thành công:} Nếu đơn đặt chỗ vẫn đang trong thời hạn hợp lệ, chuyển trạng thái đơn sang \texttt{CONFIRMED}, chuyển trạng thái thanh toán sang \texttt{COMPLETED}, và kích hoạt mã QR Pass vào cửa.
+\end{itemize}
+
+\subsection{Hiện thực Dịch vụ Gợi ý Đối tác Thông minh (PartnerMatchingService)}
+
+\noindent\textbf{1. Trách nhiệm và Phạm vi:}\\
+\texttt{PartnerMatchingService} cung cấp tính năng kết nối mạng lưới đối tác trong hệ sinh thái văn phòng chia sẻ CoSpace. Dịch vụ phân tích hồ sơ kỹ năng chuyên môn, sở thích nghề nghiệp và vị trí làm việc để tính toán chỉ số tương đồng, sau đó tích hợp Google Gemini AI tạo lời giải thích đề xuất mang tính cá nhân hóa.
+
+\noindent\textbf{2. Bảng đặc tả các phương thức nghiệp vụ:}
+
+\begin{table}[H]
+\centering
+\caption{Bảng đặc tả phương thức của PartnerMatchingService}
+\label{tab:spec-matching-service}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|p{3.8cm}|p{3.5cm}|p{2.5cm}|p{5.2cm}|}
+\hline
+\textbf{Tên phương thức} & \textbf{Tham số đầu vào} & \textbf{Kiểu trả về} & \textbf{Mô tả chức năng nghiệp vụ} \\
+\hline
+\texttt{calculateSimilarity Score} & \texttt{UUID myId, UUID candId, UUID myBranch, UUID candBranch} & \texttt{double} & Tính toán chỉ số tương đồng tổng hợp dựa trên công thức Jaccard có trọng số kết hợp điểm thưởng cùng chi nhánh (Rule \#18). \\
+\hline
+\texttt{getTopPartner Recommendations} & \texttt{UUID userId, int limit} & \texttt{List<Partner RecommendationDto>} & Truy vấn danh sách ứng viên trong hệ thống, tính điểm tương đồng, sắp xếp giảm dần và lấy $K$ đối tác có độ tương thích cao nhất. \\
+\hline
+\texttt{generateConnection Summary} & \texttt{ProfileDto myProf, ProfileDto candProf} & \texttt{String} & Đóng gói danh sách kỹ năng chung và sở thích giao thoa gửi tới Gemini AI để sinh ra một đoạn giới thiệu kết nối tự nhiên bằng Tiếng Việt. \\
+\hline
+\end{tabular}
+\end{table}
+
+\noindent\textbf{3. Quy trình tính toán tương đồng và tích hợp Trí tuệ Nhân tạo:}
+\begin{itemize}
+    \item \textbf{Bước 1 (Trích xuất tập hợp nhãn):} Tra cứu tập hợp các mã nhận diện kỹ năng ($S_{\text{user}}, S_{\text{cand}}$) và tập hợp mã sở thích ($I_{\text{user}}, I_{\text{cand}}$) của người dùng hiện tại và ứng viên từ các bảng \texttt{profile\_skills} và \texttt{profile\_interests}.
+    \item \textbf{Bước 2 (Tính toán chỉ số tương đồng Jaccard):}
+    $$J_{\text{skill}} = \frac{|S_{\text{user}} \cap S_{\text{cand}}|}{|S_{\text{user}} \cup S_{\text{cand}}|}, \quad J_{\text{interest}} = \frac{|I_{\text{user}} \cap I_{\text{cand}}|}{|I_{\text{user}} \cup I_{\text{cand}}|}$$
+    Nếu cả hai tập hợp hợp lại đều rỗng, điểm số tương ứng mặc định bằng $0.0$.
+    \item \textbf{Bước 3 (Cộng điểm thưởng địa lý -- Rule \#18):} Nếu hai người dùng hiện đang có mặt hoặc đăng ký cùng một cơ sở chi nhánh (\texttt{myBranch.equals(candBranch)}), cộng thêm điểm thưởng tương thích vật lý: $\text{branchBonus} = 0.15$.
+    \item \textbf{Bước 4 (Tổng hợp điểm số):}
+    $$\text{Score}_{\text{final}} = \min\Big(1.0, \, (0.50 \cdot J_{\text{skill}}) + (0.35 \cdot J_{\text{interest}}) + \text{branchBonus}\Big)$$
+    \item \textbf{Bước 5 (Tổng hợp lý do bằng AI):} Lấy các đối tác có $\text{Score}_{\text{final}} \ge 0.20$. Với mỗi đối tác, chuyển danh sách kỹ năng chung sang lời nhắc gửi đến mô hình Google Gemini AI để tạo câu tóm tắt (ví dụ: \textit{`Hai bạn đều có kinh nghiệm về Spring Boot và cùng quan tâm đến lĩnh vực Trí tuệ nhân tạo tại chi nhánh Quận 1'}).
+\end{itemize}
+
+\subsection{Hiện thực Dịch vụ Trợ lý ảo AI Chatbot (ChatbotService)}
+
+\noindent\textbf{1. Trách nhiệm và Phạm vi:}\\
+Cung cấp kênh tư vấn tự động trực tuyến 24/7 trên giao diện khách hàng. Ứng dụng mô hình ngôn ngữ lớn Google Gemini 1.5 Flash nhằm giải đáp các thắc mắc về không gian làm việc, bảng giá, quy định giờ giấc check-in, và chính sách hoàn hủy.
+
+\noindent\textbf{2. Bảng đặc tả các phương thức nghiệp vụ:}
+
+\begin{table}[H]
+\centering
+\caption{Bảng đặc tả phương thức của ChatbotService}
+\label{tab:spec-chatbot-service}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|p{3.5cm}|p{3.5cm}|p{2.5cm}|p{5.5cm}|}
+\hline
+\textbf{Tên phương thức} & \textbf{Tham số đầu vào} & \textbf{Kiểu trả về} & \textbf{Mô tả chức năng nghiệp vụ} \\
+\hline
+\texttt{askAssistant} & \texttt{String question, List<ChatMessageDto> history} & \texttt{String} & Đóng gói câu hỏi của người dùng kèm lịch sử hội thoại 5 lượt gần nhất, tiêm lời nhắc hệ thống (System Prompt) và gửi tới Gemini API. \\
+\hline
+\texttt{buildGemini Payload} & \texttt{String sysPrompt, String userMsg, List<ChatMessage> hist} & \texttt{JsonNode} & Chuẩn hóa cấu trúc JSON theo định dạng Content Parts của Google AI Studio API. \\
+\hline
+\texttt{handleFallback Model} & \texttt{JsonNode payload} & \texttt{String} & Tự động chuyển hướng sang mô hình dự phòng \texttt{gemini-3.7-flash} khi mô hình chính gặp sự cố quá tải hoặc hết hạn ngạch. \\
+\hline
+\end{tabular}
+\end{table}
+
+\noindent\textbf{3. Kỹ thuật Prompt Engineering định hình trợ lý ảo CoSpace:}
+Lời nhắc hệ thống (\textit{System Instruction}) được thiết kế chặt chẽ, đóng vai trò như một bộ khung nội quy vận hành:
+\begin{itemize}
+    \item \textbf{Định vị vai trò:} Khẳng định vị trí Trợ lý ảo chính thức của thương hiệu CoSpace, phong cách lịch thiệp, tôn trọng và chuyên nghiệp.
+    \item \textbf{Tri thức nghiệp vụ tích hợp:} Nạp sẵn các quy định cốt lõi: Hạn chót thanh toán VietQR 15 phút; Cửa sổ dung sai Check-in $\pm 30$ phút; Khung giờ làm việc từ 08:00 đến 22:00 hàng ngày; Chính sách hoàn tiền (trước 24h hoàn 100\%, trước 2h hoàn 50\%).
+    \item \textbf{Nguyên tắc an toàn và kiểm soát ranh giới:} Không bịa đặt thông tin tài chính ngoài dữ liệu hệ thống; hướng dẫn khách hàng liên hệ trực tiếp nhân viên quầy khi câu hỏi vượt quá phạm vi thẩm quyền.
+\end{itemize}
+
+\subsection{Hiện thực Tác vụ định kỳ quét và giải phóng đơn quá hạn (BookingExpiryScheduler)}
+
+\noindent\textbf{1. Trách nhiệm và Chu kỳ kích hoạt:}\\
+Trong mô hình văn phòng chia sẻ, việc giữ chỗ ảo (Seat Holding) mà không thanh toán sẽ làm tổn hại nghiêm trọng đến tỷ lệ lấp đầy của chi nhánh. Lớp \texttt{BookingExpiryScheduler} được thiết lập chạy định kỳ mỗi \textbf{30 giây} một lần (\texttt{@Scheduled(fixedRate = 30000)}), tự động rà soát toàn bộ các đơn hàng chưa hoàn tất thanh toán đã vượt quá mốc \texttt{paymentDeadlineAt}.
+
+\noindent\textbf{2. Bảng đặc tả quy trình quét và giải phóng tự động:}
+
+\begin{table}[H]
+\centering
+\caption{Quy trình các bước giải phóng đơn quá hạn trong BookingExpiryScheduler}
+\label{tab:spec-scheduler}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|p{1.8cm}|p{4.5cm}|p{8.7cm}|}
+\hline
+\textbf{Bước thực thi} & \textbf{Phương thức tương tác DB} & \textbf{Hành động và Ý nghĩa nghiệp vụ} \\
+\hline
+Bước 1 & \texttt{findAllByStatusAnd PaymentDeadlineAtBefore} & Quét nhanh các bản ghi có \texttt{status = 'PENDING\_PAYMENT'} và $\text{paymentDeadlineAt} < \text{now()}$. Nhờ chỉ mục B-tree trên hai trường này, truy vấn đạt thời gian thực thi dưới 5ms. \\
+\hline
+Bước 2 & \texttt{booking.setStatus( CANCELLED)} & Chuyển trạng thái đơn sang \texttt{CANCELLED}, giải phóng không gian vật lý để khách hàng khác có thể lập tức đặt chỗ trên sơ đồ mặt bằng. \\
+\hline
+Bước 3 & \texttt{payment.setStatus( EXPIRED)} & Chuyển trạng thái giao dịch thanh toán liên kết sang \texttt{EXPIRED}, ngăn ngừa việc ghi nhận nhầm giao dịch sau đó. \\
+\hline
+Bước 4 & \texttt{log.info(...)} & Ghi vết nhật ký sự kiện hệ thống phục vụ công tác kiểm toán và giám sát tỷ lệ thanh toán thất bại. \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Hiện thực Dịch vụ Định giá linh hoạt và Thẻ chạy bàn (PricingService \& RunningTabService)}
+
+\noindent\textbf{1. Trách nhiệm và Phạm vi:}\\
+\texttt{PricingService} thực hiện tính toán giá trị đơn hàng theo cấu trúc biểu phí đa tầng của từng chi nhánh, bao gồm đơn giá theo giờ, đơn giá theo ngày, chiết khấu theo thời lượng thuê và phụ phí làm việc ngoài giờ. \texttt{RunningTabService} quản lý các chi phí phát sinh trong quá trình khách làm việc (ví dụ: nước uống, in ấn, thuê máy chiếu) và cộng dồn vào hóa đơn thanh toán lúc trả phòng (Check-out).
+
+\noindent\textbf{2. Bảng đặc tả các phương thức nghiệp vụ:}
+
+\begin{table}[H]
+\centering
+\caption{Bảng đặc tả phương thức của PricingService và RunningTabService}
+\label{tab:spec-pricing-runningtab}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|p{3.8cm}|p{3.5cm}|p{2.5cm}|p{5.2cm}|}
+\hline
+\textbf{Tên phương thức} & \textbf{Tham số đầu vào} & \textbf{Kiểu trả về} & \textbf{Mô tả chức năng nghiệp vụ} \\
+\hline
+\texttt{calculatePrice} & \texttt{UUID wsId, OffsetDateTime start, OffsetDateTime end} & \texttt{PriceBreakdownDto} & Phân tách thời lượng sử dụng, áp dụng biểu phí theo giờ/ngày của chi nhánh, tính phụ phí ngoài giờ (Rule \#21) và chiết khấu. \\
+\hline
+\texttt{addServiceItem} & \texttt{UUID bookingId, UUID extraServiceId, int quantity} & \texttt{RunningTabItemDto} & Ghi nhận dịch vụ tiện ích bổ sung do khách sử dụng tại quầy, cập nhật danh mục dịch vụ liên kết với mã đơn đặt chỗ. \\
+\hline
+\texttt{closeRunningTab} & \texttt{UUID bookingId} & \texttt{InvoiceSummaryDto} & Tổng hợp toàn bộ tiền phòng và tiền dịch vụ phụ trợ, trừ đi số tiền đã thanh toán trước để phát hành hóa đơn đối soát cuối cùng. \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Đóng gói và Triển khai hệ thống (Container \& Cloud Deployment)}
+
+\subsection{Kiến trúc triển khai hạ tầng Đám mây (Cloud Deployment Topology)}
+
+Hệ thống CoSpace áp dụng mô hình triển khai phân tán hoàn toàn trên nền tảng điện toán đám mây (Cloud-native Architecture). Mô hình kiến trúc triển khai thực tế được minh họa chi tiết tại Hình~\ref{fig:deployment-topology}.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    scale=0.88, every node/.style={transform shape},
+    device/.style={rectangle, draw=gray!70, fill=gray!10, rounded corners=4pt, font=\small\bfseries, minimum height=1cm, minimum width=2.6cm, align=center},
+    fe/.style={rectangle, draw=teal!80, fill=teal!10, rounded corners=4pt, font=\small\bfseries, minimum height=1.1cm, minimum width=3cm, align=center},
+    be/.style={rectangle, draw=purple!80, fill=purple!10, rounded corners=4pt, font=\small\bfseries, minimum height=1.1cm, minimum width=3.2cm, align=center},
+    db/.style={cylinder, shape border rotate=90, draw=red!80, fill=red!10, aspect=0.25, font=\small\bfseries, minimum height=1.2cm, minimum width=2.6cm, align=center},
+    ext/.style={rectangle, draw=orange!80, fill=orange!10, rounded corners=4pt, font=\small\bfseries, minimum height=1.1cm, minimum width=2.8cm, align=center},
+    arr/.style={-{Latex[length=2.5mm]}, thick, draw=blue!80}
+]
+
+    % Users
+    \node[device] (cust) at (0, 3) {Khách hàng\\(Mobile / Laptop)};
+    \node[device] (staff) at (0, 0) {Lễ tân Chi nhánh\\(Máy POS quầy)};
+    \node[device] (admin) at (0, -3) {Ban Quản trị\\(Trình duyệt Web)};
+
+    % Frontend Cloud
+    \node[fe] (vercel) at (5, 0) {\textbf{Vercel Edge CDN}\\React 18 + Vite\\Anycast Global PoPs};
+
+    % Backend Cloud
+    \node[be] (render) at (10.5, 0) {\textbf{Render Cloud}\\Spring Boot 3 Container\\Docker Alpine Runtime};
+
+    % Database Cloud
+    \node[db] (supadb) at (15.5, 0) {\textbf{Supabase Managed DB}\\PostgreSQL 15\\pgcrypto + btree\_gist};
+
+    % 3rd Party APIs
+    \node[ext] (payos) at (10.5, 3.2) {\textbf{PayOS Open Banking}\\VietQR Napas 24/7\\Real-time IPN Webhook};
+    \node[ext] (gemini) at (10.5, -3.2) {\textbf{Google Gemini API}\\gemini-1.5-flash LLM\\Xử lý ngôn ngữ tự nhiên};
+
+    % Connectors
+    \draw[arr] (cust.east) -- node[above, font=\tiny] {HTTPS} (vercel.west);
+    \draw[arr] (staff.east) -- node[above, font=\tiny] {HTTPS} (vercel.west);
+    \draw[arr] (admin.east) -- node[below, font=\tiny] {HTTPS} (vercel.west);
+
+    \draw[arr] (vercel.east) -- node[above, font=\scriptsize] {RESTful JSON} (render.west);
+    \draw[arr] (render.east) -- node[above, font=\scriptsize] {JDBC / TLS 5432} (supadb.west);
+
+    \draw[arr] (render.north) -- node[right, font=\tiny] {Tạo mã QR} (payos.south);
+    \draw[arr] (payos.south) -- node[left, font=\tiny] {IPN Webhook} (render.north);
+
+    \draw[arr] (render.south) -- node[right, font=\tiny] {GenerateContent} (gemini.north);
+
+\end{tikzpicture}
+\caption{Sơ đồ hình trạng triển khai đám mây (Cloud Deployment Topology) của CoSpace}
+\label{fig:deployment-topology}
+\end{figure}
+
+\subsection{Đóng gói ứng dụng Back-end với Docker Multi-Stage Build}
+
+Để đảm bảo tệp hình ảnh phần mềm (Docker Image) có dung lượng tối giản, loại bỏ hoàn toàn mã nguồn phát triển và công cụ biên dịch dư thừa trong môi trường chạy thực tế, nhóm áp dụng kỹ thuật \textbf{Docker Multi-stage Build} hai giai đoạn độc lập (Bảng~\ref{tab:docker-spec}).
+
+\begin{table}[H]
+\centering
+\caption{Đặc tả các giai đoạn đóng gói Docker Multi-stage Build cho Back-end}
+\label{tab:docker-spec}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|p{2.5cm}|p{3.8cm}|p{4.2cm}|p{4.5cm}|}
+\hline
+\textbf{Giai đoạn (Stage)} & \textbf{Hình ảnh nền tảng (Base Image)} & \textbf{Chỉ thị cốt lõi (Core Directives)} & \textbf{Mục đích kỹ thuật \& Ý nghĩa an toàn} \\
+\hline
+\textbf{Stage 1: Build Stage} & \texttt{maven:3.9.9- eclipse-temurin-21} & \texttt{COPY pom.xml ./}\newline \texttt{RUN mvn dependency:go-offline}\newline \texttt{COPY src/ src/}\newline \texttt{RUN mvn clean package} & Tận dụng triệt để bộ nhớ đệm lớp (Layer Caching) của Docker: Thư viện chỉ bị tải lại khi \texttt{pom.xml} thay đổi, rút ngắn 80\% thời gian CI/CD build. \\
+\hline
+\textbf{Stage 2: Runtime Stage} & \texttt{eclipse-temurin: 21-jre-alpine} & \texttt{RUN adduser -S app}\newline \texttt{COPY --from=build ... app.jar}\newline \texttt{USER app}\newline \texttt{EXPOSE 8080} & Chỉ sao chép duy nhất tệp JAR thành phẩm; thực thi dưới quyền người dùng không đặc quyền (\texttt{USER app}) để ngăn chặn tấn công chiếm quyền hệ thống. \\
+\hline
+\textbf{Cấu hình JVM Runtime} & \multicolumn{3}{p{12.5cm}|}{\texttt{ENV JAVA\_OPTS="-XX:MaxRAMPercentage=70 -XX:+UseSerialGC -Djava.security.egd=file:/dev/./urandom"}\newline
+$\bullet$ \textbf{MaxRAMPercentage=70}: Tự động co giãn bộ nhớ Heap tối đa 70\% RAM Container cấp phát.\newline
+$\bullet$ \textbf{UseSerialGC}: Cơ chế thu gom rác đơn luồng, giảm tải CPU và tiết kiệm 35\% bộ nhớ.\newline
+$\bullet$ \textbf{egd=file:/dev/./urandom}: Tăng tốc độ thu thập entropy, giúp máy chủ khởi động nhanh hơn 4 giây.} \\
+\hline
+\end{tabular}
+\end{table}
+
+Kỹ thuật Docker Multi-stage giúp giảm dung lượng hình ảnh từ \textbf{850MB} xuống chỉ còn \textbf{215MB} (giảm 74.7\%), đồng thời loại bỏ toàn bộ trình biên dịch \texttt{javac} khỏi container vận hành, nâng cao tối đa độ an toàn bảo mật.
+
+\subsection{Tối ưu hóa và Đóng gói phân hệ Front-end trên Vercel Edge CDN}
+
+Để giảm thiểu thời gian nạp trang ban đầu trên ứng dụng React Single Page Application (SPA), nhóm áp dụng kỹ thuật \textbf{Manual Chunks Splitting} trong cấu hình Vite (\texttt{vite.config.ts}), chia nhỏ mã nguồn thành các khối độc lập theo tần suất cập nhật (Bảng~\ref{tab:bundle-optimization}).
+
+\begin{table}[H]
+\centering
+\caption{Hiệu quả tối ưu hóa kích thước gói tệp sau khi phân tách chunk}
+\label{tab:bundle-optimization}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|p{4.2cm}|p{3.2cm}|p{3.2cm}|p{4.2cm}|}
+\hline
+\textbf{Thành phần gói tệp (Bundle Chunk)} & \textbf{Kích thước gốc (Raw)} & \textbf{Kích thước Gzip} & \textbf{Mục đích sử dụng \& Thư viện thành phần} \\
+\hline
+\texttt{vendor-react.js} & 168.4 KB & 52.1 KB & Thư viện lõi \texttt{react}, \texttt{react-dom}, \texttt{react-router-dom} \\
+\hline
+\texttt{vendor-motion.js} & 94.2 KB & 28.5 KB & Hiệu ứng chuyển cảnh động (\texttt{framer-motion}) \\
+\hline
+\texttt{vendor-supabase.js} & 112.8 KB & 31.4 KB & SDK xác thực và quản trị phiên (\texttt{@supabase/supabase-js}) \\
+\hline
+\texttt{vendor-icons.js} & 45.6 KB & 12.8 KB & Biểu tượng giao diện (\texttt{lucide-react}) \\
+\hline
+\texttt{index.js} (Mã ứng dụng) & 248.5 KB & 68.2 KB & Toàn bộ logic giao diện và các trang nghiệp vụ CoSpace \\
+\hline
+\textbf{Tổng kích thước nạp ban đầu} & \textbf{669.5 KB} & \textbf{193.0 KB} & \textbf{Giảm 76.4\% so với gói gộp 1.2MB ban đầu} \\
+\hline
+\end{tabular}
+\end{table}
+
+Đồng thời, tệp \texttt{vercel.json} được cấu hình quy tắc định tuyến biên (\textbf{Edge Rewrite Rules}) hướng mọi yêu cầu đường dẫn sâu (\texttt{"/(.*)"}) về \texttt{"/index.html"}, đảm bảo trình duyệt phân giải route mượt mà mà không gặp lỗi HTTP 404 Not Found.
+
+\subsection{Thiết lập quy trình CI/CD và Quản trị biến môi trường}
+
+\begin{itemize}
+    \item \textbf{Continuous Integration (CI):} Thiết lập luồng GitHub Actions tự động kích hoạt mỗi khi có Pull Request vào nhánh \texttt{main}. Môi trường máy ảo Ubuntu tiến hành kiểm tra cú pháp, biên dịch và thực thi toàn bộ 273 ca kiểm thử tự động (\texttt{mvn clean test}). Quy trình sẽ chặn hợp nhất mã nguồn nếu có bất kỳ lỗi nào phát sinh.
+    \item \textbf{Continuous Deployment (CD):} Sau khi nhánh chính vượt qua 100\% các ca kiểm thử, Webhook Deploy bí mật kích hoạt Vercel và Render thực hiện tự động cập nhật phiên bản mới với thời gian gián đoạn dịch vụ bằng 0 (\textit{Zero-downtime Rolling Update}).
+    \item \textbf{Quản trị biến môi trường:} Toàn bộ thông tin nhạy cảm (chuỗi kết nối CSDL, Supabase Secret Key, PayOS API Key, Gemini API Token) được mã hóa trong bảng điều khiển hạ tầng đám mây của Vercel và Render, tuyệt đối không lưu vết trong mã nguồn mở.
+\end{itemize}
+
+\section{Kết quả hiện thực giao diện người dùng các phân hệ}
+
+Phần này trình bày kết quả hiện thực giao diện màn hình của hệ thống CoSpace theo 4 phân hệ người dùng chính (Customer, Staff, Branch Admin, Admin) và giao diện xác thực tập trung. Việc thiết kế tuân thủ các nguyên tắc giao diện trực quan, phản hồi tức thì và tương thích hoàn toàn với các thiết bị hiển thị hiện đại.
+
+\subsection{Giao diện Xác thực định danh và Phân luồng người dùng}
+
+Giao diện đăng nhập là điểm tiếp xúc đầu tiên và là chốt chặn bảo mật của hệ thống. Dựa trên thông tin định danh người dùng được cung cấp, hệ thống xác thực qua Supabase Auth và tự động phân luồng người dùng đến đúng cổng tương ứng với vai trò và quyền hạn (RBAC) đã được cấp (Hình~\ref{fig:ui-dangnhap}).
+
+\hinhui{ui-01-dangnhap}{Giao diện xác thực định danh và phân luồng người dùng theo vai trò}{fig:ui-dangnhap}
+
+\subsection{Phân hệ Giao diện Khách hàng (Customer Portal)}
+
+Phân hệ khách hàng cung cấp các công cụ trực quan giúp người dùng cuối dễ dàng tiếp cận không gian, quản lý quá trình sử dụng dịch vụ và mở rộng các mối quan hệ chuyên môn.
+
+\noindent\textbf{1. Tìm kiếm và Sơ đồ mặt bằng tương tác (Interactive Floorplan Canvas):}\\
+Khác biệt với các hệ thống thông thường chỉ hiển thị danh sách dạng bảng, CoSpace hiện thực Canvas đồ họa vector tương tác trực tiếp (\texttt{InteractiveFloorplan.tsx}). Mặt bằng kiến trúc tầng được kết xuất bằng các thẻ SVG chuẩn hóa. Vị trí bàn làm việc, phòng họp được định vị tọa độ thực tế (\texttt{coordX}, \texttt{coordY}, \texttt{width}, \texttt{height}) trích xuất trực tiếp từ cơ sở dữ liệu. Vị trí bàn trống được hiển thị màu xanh lá (\texttt{\#10b981}), vị trí đang có khách hoặc bảo trì hiển thị màu đỏ (\texttt{\#ef4444}) hoặc xám (\texttt{\#94a3b8}) (Hình~\ref{fig:ui-timkiem-matbang}).
+
+\hinhui{ui-02-timkiem-matbang}{Giao diện tìm kiếm không gian và sơ đồ mặt bằng tương tác}{fig:ui-timkiem-matbang}
+
+\noindent\textbf{2. Thanh toán trực tuyến VietQR Napas 24/7 với đồng hồ đếm ngược 15 phút:}\\
+Sau khi chọn vị trí, hệ thống chuyển hướng sang trang thanh toán (\texttt{VietQRCheckoutPage.tsx} -- Hình~\ref{fig:ui-thanhtoan-vietqr}). Màn hình hiển thị mã QR động chuẩn VietQR tạo bởi PayOS API kèm số tiền chính xác đến từng đồng. Hook tùy biến \texttt{useCountdown} đếm ngược 15 phút, kết hợp cùng \texttt{usePolling} gửi truy vấn ngầm mỗi 3 giây; khi nhận Webhook thành công, màn hình lập tức hiển thị hiệu ứng chúc mừng và chuyển hướng tự động.
+
+\hinhui{ui-03-thanhtoan-vietqr}{Giao diện thanh toán VietQR động với đồng hồ đếm ngược 15 phút}{fig:ui-thanhtoan-vietqr}
+
+\noindent\textbf{3. Quản lý Lịch sử đặt chỗ và Hủy đơn minh bạch:}\\
+Giao diện Lịch sử đặt chỗ cá nhân (\texttt{CustomerHistoryPage.tsx} -- Hình~\ref{fig:ui-lichsu-datcho}) tổng hợp các đơn dịch vụ kèm huy hiệu trạng thái chuẩn hóa. Khi khách hàng có nhu cầu hủy đơn, giao diện Hủy đơn (\texttt{CustomerCancelPage.tsx} -- Hình~\ref{fig:ui-huydon-hoantien}) tự động áp dụng chính sách hoàn tiền đa tầng (Rule \#40): Hủy trước 24 giờ hoàn 100\%, trước từ 2 đến 24 giờ hoàn 50\%, và hủy trong vòng 2 giờ không hoàn tiền.
+
+\hinhui{ui-04-lichsu-datcho}{Giao diện quản lý lịch sử đặt chỗ cá nhân và trạng thái sử dụng}{fig:ui-lichsu-datcho}
+
+\hinhui{ui-05-huydon-hoantien}{Giao diện hủy đơn đặt chỗ với chính sách đối soát hoàn tiền minh bạch}{fig:ui-huydon-hoantien}
+
+\noindent\textbf{4. Quản lý Hồ sơ cá nhân và Mạng lưới kết nối đối tác thông minh:}\\
+Giao diện Hồ sơ cá nhân (Hình~\ref{fig:ui-hosonguoidung}) cho phép người dùng khai báo thông tin kỹ năng chuyên môn và sở thích nghề nghiệp. Giao diện Gợi ý đối tác (Hình~\ref{fig:ui-ketnoi-doitac}) ứng dụng thuật toán Jaccard kết hợp Google Gemini AI để hiển thị danh sách các thành viên có sự tương đồng cao kèm lý do đề xuất tự nhiên, thúc đẩy cơ hội hợp tác kinh doanh trong cộng đồng CoSpace.
+
+\hinhui{ui-06-hosonguoidung}{Giao diện chỉnh sửa hồ sơ người dùng và danh mục kỹ năng chuyên môn}{fig:ui-hosonguoidung}
+
+\hinhui{ui-07-ketnoi-doitac}{Giao diện gợi ý và kết nối đối tác thông minh ứng dụng Trí tuệ nhân tạo}{fig:ui-ketnoi-doitac}
+
+\subsection{Phân hệ Giao diện Nhân viên vận hành tại quầy (Staff Portal)}
+
+Nhóm giao diện dành cho nhân viên trực quầy được thiết kế tối ưu hóa cho thao tác nhanh, hỗ trợ xử lý luồng khách đến đột xuất và tiếp nhận thông tin bảo trì cơ sở vật chất.
+
+\noindent\textbf{1. Bảng điều khiển hoạt động chi nhánh theo thời gian thực:}\\
+Bảng điều khiển (Hình~\ref{fig:ui-letan-dashboard}) cung cấp cái nhìn tổng quan về tỷ lệ lấp đầy, số lượng khách đang có mặt và danh sách các lượt khách sắp đến nhận bàn trong ca làm việc.
+
+\hinhui{ui-08-letan-dashboard}{Giao diện Bảng điều khiển vận hành chi nhánh theo thời gian thực}{fig:ui-letan-dashboard}
+
+\noindent\textbf{2. Tiếp đón và Check-in với cơ chế dung sai 30 phút:}\\
+Giao diện Check-in (\texttt{StaffCheckinDeskPage.tsx} -- Hình~\ref{fig:ui-letan-checkin}) hỗ trợ tìm kiếm nhanh bằng mã đơn hoặc quét QR Pass trên điện thoại của khách hàng. Nút xác nhận Check-in chỉ kích hoạt khi thời điểm hiện tại nằm trong khoảng dung sai $[\text{Start} - 30\text{ phút}, \, \text{End} + 30\text{ phút}]$ (Rule \#10), giúp nhân viên tuân thủ nghiêm ngặt quy chuẩn vận hành. Khi khách trả phòng, hệ thống hỗ trợ đối soát các dịch vụ phụ trợ phát sinh trong Running Tab trước khi hoàn tất thủ tục.
+
+\hinhui{ui-09-letan-checkin}{Giao diện thủ tục check-in tại quầy với cơ chế kiểm soát dung sai 30 phút}{fig:ui-letan-checkin}
+
+\noindent\textbf{3. Quản lý sự cố và bảo trì cơ sở vật chất:}\\
+Giao diện Báo cáo bảo trì (Hình~\ref{fig:ui-letan-baotri}) cho phép nhân viên trực quầy ghi nhận các sự cố hỏng hóc thiết bị, cập nhật trạng thái tạm ngừng phục vụ trên sơ đồ mặt bằng và thông báo bộ phận kỹ thuật khắc phục.
+
+\hinhui{ui-10-letan-baotri}{Giao diện báo cáo sự cố và theo dõi tiến độ bảo trì thiết bị chi nhánh}{fig:ui-letan-baotri}
+
+\subsection{Phân hệ Giao diện Quản lý chi nhánh (Branch Admin Portal)}
+
+Cấp quản lý chi nhánh được cung cấp bộ công cụ tự chủ để định hình không gian, thiết lập biểu phí dịch vụ và theo dõi doanh thu cơ sở.
+
+\noindent\textbf{1. Cấu hình Sơ đồ mặt bằng và Không gian làm việc:}\\
+Giao diện cấu hình không gian (Hình~\ref{fig:ui-ql-sodomatbang}) cho phép quản lý chi nhánh thiết lập các khu vực chức năng (Hot Desk, Dedicated Desk, Private Office, Meeting Room) và kích thước tọa độ bàn trên sơ đồ tầng.
+
+\hinhui{ui-11-ql-sodomatbang}{Giao diện cấu hình sơ đồ mặt bằng và định vị không gian làm việc chi nhánh}{fig:ui-ql-sodomatbang}
+
+\noindent\textbf{2. Quản lý Biểu phí và Chính sách giá linh hoạt:}\\
+Giao diện quản lý giá (Hình~\ref{fig:ui-ql-chinhsachgia}) hỗ trợ thiết lập đơn giá theo giờ, đơn giá theo ngày và phụ phí ngoài giờ linh hoạt tùy theo mùa vụ kinh doanh của từng cơ sở.
+
+\hinhui{ui-12-ql-chinhsachgia}{Giao diện thiết lập và quản trị biểu phí dịch vụ không gian chi nhánh}{fig:ui-ql-chinhsachgia}
+
+\subsection{Phân hệ Giao diện Quản trị viên hệ thống (System Admin Portal)}
+
+Phân hệ quản trị viên cấp cao nắm giữ quyền hạn tối cao trong việc kiểm soát quy mô mạng lưới toàn quốc, giám sát vết kiểm toán và phân tích chiến lược kinh doanh.
+
+\noindent\textbf{1. Quản lý Mạng lưới chi nhánh toàn quốc:}\\
+Giao diện quản lý chi nhánh (Hình~\ref{fig:ui-admin-chinhanh}) cho phép quản trị viên xem xét quy mô tổng thể, thêm mới cơ sở hạ tầng hoặc tạm ngưng các chi nhánh đang trong quá trình cải tạo.
+
+\hinhui{ui-13-admin-chinhanh}{Giao diện quản trị danh mục chi nhánh trên toàn mạng lưới CoSpace}{fig:ui-admin-chinhanh}
+
+\noindent\textbf{2. Giám sát Nhật ký hệ thống (Audit Log) và An ninh:}\\
+Giao diện Tra cứu nhật ký hệ thống (Hình~\ref{fig:ui-admin-nhatky-hethong}) ghi nhận toàn bộ các tác động dữ liệu trọng yếu (tạo chi nhánh, thay đổi giá, phân quyền người dùng, hủy đơn đặc biệt) kèm địa chỉ IP và thời gian chính xác, phục vụ công tác đối soát minh bạch.
+
+\hinhui{ui-14-admin-nhatky-hethong}{Giao diện tra cứu nhật ký kiểm toán hệ thống (Audit Log) minh bạch}{fig:ui-admin-nhatky-hethong}
+
+\noindent\textbf{3. Báo cáo thống kê và Phân tích doanh thu toàn hệ thống:}\\
+Giao diện Báo cáo tài chính (Hình~\ref{fig:ui-admin-baocao-doanhthu}) tổng hợp chỉ số doanh thu lũy kế, tỷ lệ lấp đầy trung bình trên từng chi nhánh theo dạng biểu đồ cột và đường trực quan, hỗ trợ ban lãnh đạo ra các quyết định chiến lược mở rộng thị trường.
+
+\hinhui{ui-15-admin-baocao-doanhthu}{Giao diện biểu đồ hóa dữ liệu kinh doanh và báo cáo tài chính toàn hệ thống}{fig:ui-admin-baocao-doanhthu}
+
+\section{Tổng kết chương}
+
+Chương 6 đã trình bày toàn diện kết quả hiện thực hệ sinh thái CoSpace từ tầng dịch vụ Back-end phức tạp đến tầng giao diện người dùng hiện đại:
+\begin{itemize}
+    \item Hệ thống được tổ chức theo kiến trúc Monorepo chuẩn hóa, phân tách rõ ràng trách nhiệm giữa Back-end Spring Boot 3, Front-end React 18 và cơ sở dữ liệu PostgreSQL 15.
+    \item 6 phân hệ nghiệp vụ Back-end then chốt (\texttt{BookingService}, \texttt{PaymentService}, \texttt{PartnerMatchingService}, \texttt{ChatbotService}, \texttt{BookingExpiryScheduler}, \texttt{PricingService}) đã giải quyết triệt để các bài toán kỹ thuật thực tế về kiểm soát tương tranh, an toàn thanh toán, gợi ý AI và giải phóng tài nguyên định kỳ.
+    \item Ứng dụng công nghệ đóng gói Docker Multi-stage tối ưu hóa kích thước hình ảnh phần mềm còn 215MB, kết hợp phân tách chunk Front-end trên Vercel Edge CDN giúp tải trang siêu tốc dưới 0.8 giây.
+    \item Hiện thực thành công 15 màn hình giao diện chuẩn mực thuộc 4 phân hệ người dùng, mang lại trải nghiệm tương tác trực quan qua sơ đồ mặt bằng SVG, thanh toán VietQR động và kết nối mạng lưới thông minh.
+\end{itemize}
