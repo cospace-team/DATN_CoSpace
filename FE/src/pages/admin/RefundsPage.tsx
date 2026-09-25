@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { FiAlertCircle, FiCheck, FiCheckCircle, FiInfo, FiRefreshCw, FiRotateCcw, FiX, FiXCircle } from 'react-icons/fi';
-import { REFUND_REASON_LABEL, refundApi, type RefundDto, type RefundStatus } from '../../api/refundApi';
+import { REFUND_METHOD_LABEL, REFUND_REASON_LABEL, refundApi, type RefundDto, type RefundMethod, type RefundStatus } from '../../api/refundApi';
 import { adminBranchApi, type AdminBranchDto } from '../../lib/spaceApi';
 import { formatDateTime, formatVND } from '../../utils/formatters';
 
@@ -30,6 +30,8 @@ const RefundsPage: React.FC<{ scope: 'admin' | 'branch' }> = ({ scope }) => {
 
   const [action, setAction] = useState<Action>(null);
   const [note, setNote] = useState('');
+  const [method, setMethod] = useState<RefundMethod>('bank_transfer');
+  const [voucherDays, setVoucherDays] = useState(90);
   const [actionError, setActionError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -61,6 +63,8 @@ const RefundsPage: React.FC<{ scope: 'admin' | 'branch' }> = ({ scope }) => {
   const openAction = (type: 'process' | 'reject', refund: RefundDto) => {
     setAction({ type, refund });
     setNote('');
+    setMethod('bank_transfer');
+    setVoucherDays(90);
     setActionError('');
   };
 
@@ -73,7 +77,7 @@ const RefundsPage: React.FC<{ scope: 'admin' | 'branch' }> = ({ scope }) => {
     setIsSubmitting(true);
     try {
       const res = action.type === 'process'
-        ? await refundApi.process(action.refund.id, note)
+        ? await refundApi.process(action.refund.id, note, method, method === 'voucher' ? voucherDays : undefined)
         : await refundApi.reject(action.refund.id, note);
       setSuccessMsg(res.message);
       setTimeout(() => setSuccessMsg(''), 3000);
@@ -193,13 +197,22 @@ const RefundsPage: React.FC<{ scope: 'admin' | 'branch' }> = ({ scope }) => {
                           {r.processedByName ? `${r.processedByName} · ` : ''}{r.processedAt ? formatDateTime(r.processedAt) : ''}
                         </p>
                       )}
+                      {r.status === 'processed' && r.refundMethod && (
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Hình thức: {REFUND_METHOD_LABEL[r.refundMethod]}
+                          {r.voucherCode && (
+                            <> · <span className="font-mono font-semibold text-foreground">{r.voucherCode}</span>
+                              {r.voucherExpiresAt ? ` (HSD ${formatDateTime(r.voucherExpiresAt)})` : ''}</>
+                          )}
+                        </p>
+                      )}
                       {r.resolutionNote && <p className="text-xs text-muted-foreground mt-0.5 max-w-[200px]">"{r.resolutionNote}"</p>}
                     </td>
                     <td>
                       {r.status === 'pending' && (
                         <div className="flex gap-1.5">
                           <button onClick={() => openAction('process', r)} className="btn btn-primary btn-sm whitespace-nowrap">
-                            <FiCheckCircle className="h-3.5 w-3.5" /> Đã hoàn tiền
+                            <FiCheckCircle className="h-3.5 w-3.5" /> Hoàn tiền
                           </button>
                           <button onClick={() => openAction('reject', r)} className="btn btn-ghost btn-sm text-destructive hover:!text-destructive" title="Từ chối">
                             <FiXCircle className="h-4 w-4" />
@@ -221,7 +234,7 @@ const RefundsPage: React.FC<{ scope: 'admin' | 'branch' }> = ({ scope }) => {
           <div className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-md bg-card rounded-3xl border border-border shadow-xl">
             <div className="flex items-center justify-between px-6 py-4 border-b border-border">
               <h3 className="text-lg font-bold font-heading">
-                {action.type === 'process' ? 'Xác nhận đã hoàn tiền' : 'Từ chối hoàn tiền'}
+                {action.type === 'process' ? 'Xử lý hoàn tiền' : 'Từ chối hoàn tiền'}
               </h3>
               <button onClick={() => setAction(null)} className="btn btn-ghost btn-sm !min-h-[32px] !p-2"><FiX className="h-5 w-5" /></button>
             </div>
@@ -235,6 +248,42 @@ const RefundsPage: React.FC<{ scope: 'admin' | 'branch' }> = ({ scope }) => {
                   <FiAlertCircle className="h-4 w-4 shrink-0" />{actionError}
                 </div>
               )}
+              {action.type === 'process' && (
+                <div className="space-y-2">
+                  <span className="text-sm font-medium block">Hình thức hoàn</span>
+                  <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Hình thức hoàn">
+                    {(['bank_transfer', 'cash', 'voucher'] as RefundMethod[]).map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        role="radio"
+                        aria-checked={method === m}
+                        onClick={() => setMethod(m)}
+                        className={`rounded-xl border px-3 py-2 text-sm font-medium transition-colors ${
+                          method === m ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:bg-muted'
+                        }`}
+                      >
+                        {REFUND_METHOD_LABEL[m]}
+                      </button>
+                    ))}
+                  </div>
+                  {method === 'voucher' && (
+                    <div className="rounded-xl bg-primary/5 border border-primary/20 p-3 text-xs space-y-2">
+                      <p>
+                        Hệ thống phát hành ngay một voucher trị giá <strong>{formatVND(action.refund.amount)}</strong> cho
+                        riêng khách này, dùng 1 lần cho tiền thuê chỗ ở đơn tiếp theo. Mã voucher được gửi qua thông báo.
+                      </p>
+                      <label className="flex items-center gap-2">
+                        Hạn dùng
+                        <input type="number" min={1} max={365} value={voucherDays}
+                          onChange={(e) => setVoucherDays(Math.max(1, Math.min(365, Number(e.target.value) || 90)))}
+                          className="input-field !h-8 w-20 text-xs" />
+                        ngày
+                      </label>
+                    </div>
+                  )}
+                </div>
+              )}
               <div>
                 <label className="text-sm font-medium block mb-1.5">
                   {action.type === 'process' ? 'Ghi chú (mã giao dịch, hình thức hoàn...)' : 'Lý do từ chối *'}
@@ -245,7 +294,8 @@ const RefundsPage: React.FC<{ scope: 'admin' | 'branch' }> = ({ scope }) => {
               <div className="flex gap-3 pt-2">
                 <button onClick={submit} disabled={isSubmitting}
                   className={`btn btn-sm flex-1 ${action.type === 'process' ? 'btn-primary' : 'btn-danger'}`}>
-                  {isSubmitting ? 'Đang lưu...' : action.type === 'process' ? 'Xác nhận đã hoàn' : 'Từ chối'}
+                  {isSubmitting ? 'Đang lưu...' : action.type === 'process'
+                    ? (method === 'voucher' ? 'Phát hành voucher' : 'Xác nhận đã hoàn') : 'Từ chối'}
                 </button>
                 <button onClick={() => setAction(null)} className="btn btn-secondary btn-sm">Hủy</button>
               </div>

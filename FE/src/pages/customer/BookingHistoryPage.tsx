@@ -22,6 +22,7 @@ import { bookingApi, type BookingResponse } from "../../lib/bookingApi";
 import { startPayment } from "../../lib/startPayment";
 import { useAuth } from "../../context/AuthContext";
 import BookingServicesModal from "./history/BookingServicesModal";
+import MyVouchersStrip from "./history/MyVouchersStrip";
 
 export interface CustomerBookingItem {
   id: string;
@@ -335,6 +336,8 @@ const BookingHistoryPage: React.FC = () => {
           </span>
         </div>
       )}
+
+      <MyVouchersStrip reloadKey={reloadKey} />
 
       {/* Block-based Navigation Tabs */}
       <div className="flex flex-wrap gap-4 mb-8">

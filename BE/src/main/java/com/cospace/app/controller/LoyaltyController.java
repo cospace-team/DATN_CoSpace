@@ -52,6 +52,12 @@ public class LoyaltyController {
         return promotionService.listAvailable(userId, tierCode, branchId, workspaceTypeId);
     }
 
+    /** The caller's personal vouchers (e.g. refunds paid as vouchers), used or not. */
+    @GetMapping("/api/promotions/my-vouchers")
+    public List<PromotionResponse> myVouchers(@AuthenticationPrincipal Jwt jwt) {
+        return promotionService.listMyVouchers(requireSubject(jwt));
+    }
+
     private UUID requireSubject(Jwt jwt) {
         if (jwt == null || jwt.getSubject() == null || jwt.getSubject().isBlank()) {
             throw new IllegalArgumentException("Missing JWT subject");

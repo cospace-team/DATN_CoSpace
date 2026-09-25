@@ -90,6 +90,10 @@ public class Promotion {
     @Builder.Default
     private boolean isActive = true;
 
+    /** Personal voucher (e.g. a refund paid as a voucher): only this customer may use it. null = anyone. */
+    @Column(name = "owner_user_id")
+    private UUID ownerUserId;
+
     @Column(name = "created_by")
     private UUID createdBy;
 

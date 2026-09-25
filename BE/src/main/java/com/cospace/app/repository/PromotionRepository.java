@@ -22,6 +22,8 @@ public interface PromotionRepository extends JpaRepository<Promotion, UUID> {
 
     boolean existsByMinTierCode(String minTierCode);
 
+    List<Promotion> findByOwnerUserIdOrderByCreatedAtDesc(UUID ownerUserId);
+
     @Query("SELECT p FROM Promotion p WHERE p.isActive = true AND p.isPublic = true "
             + "AND p.startAt <= :now AND p.endAt > :now ORDER BY p.endAt ASC")
     List<Promotion> findPublicRunning(@Param("now") OffsetDateTime now);

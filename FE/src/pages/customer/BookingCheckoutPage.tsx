@@ -521,7 +521,14 @@ const BookingCheckoutPage: React.FC = () => {
                       disabled={isApplyingPromo}
                       className="text-left p-3 rounded-2xl border border-dashed border-border hover:border-primary hover:bg-primary/5 transition-colors"
                     >
-                      <p className="font-mono text-sm font-semibold text-primary">{p.code}</p>
+                      <p className="font-mono text-sm font-semibold text-primary">
+                        {p.code}
+                        {p.ownerUserId && (
+                          <span className="ml-2 rounded-full bg-emerald-500/10 px-2 py-0.5 font-sans text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                            Voucher của bạn
+                          </span>
+                        )}
+                      </p>
                       <p className="text-sm font-medium">{describePromotion(p, formatVND)}</p>
                       <p className="text-xs text-muted-foreground">
                         {p.name}{p.minOrderAmount > 0 ? ` · đơn từ ${formatVND(p.minOrderAmount)}` : ''}

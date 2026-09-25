@@ -36,6 +36,11 @@ public class Refund {
     /** A second payment arrived for a booking that was already paid. */
     public static final String REASON_DUPLICATE_PAYMENT = "DUPLICATE_PAYMENT";
 
+    public static final String METHOD_CASH = "cash";
+    public static final String METHOD_BANK_TRANSFER = "bank_transfer";
+    /** Refunded as a personal single-use voucher instead of money. */
+    public static final String METHOD_VOUCHER = "voucher";
+
     public static final String STATUS_PENDING = "pending";
     public static final String STATUS_PROCESSED = "processed";
     public static final String STATUS_REJECTED = "rejected";
@@ -72,6 +77,14 @@ public class Refund {
 
     @Column(name = "resolution_note", columnDefinition = "text")
     private String resolutionNote;
+
+    /** How a processed refund was paid: cash | bank_transfer | voucher (null for older records). */
+    @Column(name = "refund_method", length = 16)
+    private String refundMethod;
+
+    /** The voucher issued when the refund was paid as a voucher. */
+    @Column(name = "voucher_promotion_id")
+    private UUID voucherPromotionId;
 
     @Column(name = "processed_by")
     private UUID processedBy;
