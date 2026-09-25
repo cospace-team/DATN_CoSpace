@@ -48,7 +48,7 @@ class BookingLifecycleServiceTest {
 
     @Test
     void overdueGuestIsCheckedOutAtBookedEnd() {
-        Booking b = booking(BookingStatus.CHECKED_IN, now.minusMinutes(40));
+        Booking b = booking(BookingStatus.CHECKED_IN, now.minusHours(3));
         CheckinLog log = CheckinLog.builder().id(UUID.randomUUID()).bookingId(b.getId()).checkinAt(now.minusHours(3)).build();
         when(checkinLogRepository.findActiveCheckinByBookingId(b.getId())).thenReturn(Optional.of(log));
 
@@ -61,7 +61,8 @@ class BookingLifecycleServiceTest {
 
     @Test
     void guestWithinGracePeriodIsLeftAlone() {
-        Booking b = booking(BookingStatus.CHECKED_IN, now.minusMinutes(5));
+        // Past the late check-out grace but not the auto check-out window: staff bill the late fee.
+        Booking b = booking(BookingStatus.CHECKED_IN, now.minusMinutes(40));
 
         assertThat(lifecycleService.autoCheckoutOverdue(b.getId(), now)).isFalse();
 

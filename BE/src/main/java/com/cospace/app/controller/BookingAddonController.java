@@ -7,6 +7,7 @@ import com.cospace.app.entity.Payment;
 import com.cospace.app.security.BranchAccessGuard;
 import com.cospace.app.service.AuditLogService;
 import com.cospace.app.service.BookingAddonService;
+import com.cospace.app.service.PaymentService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -21,8 +22,9 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Running tab of a booking. The customer who owns the booking may view it and order services;
- * cancelling a line and collecting payment are counter operations for staff of the booking's branch.
+ * Running tab of a booking. The customer who owns the booking may view it, order services, change
+ * or cancel the unpaid services they ordered and pay what is owed by VietQR (or in cash at the
+ * counter). Staff of the booking's branch may do the same for any line, and collect payment.
  */
 @RestController
 @RequestMapping("/api/bookings/{bookingId}/addons")
@@ -30,6 +32,7 @@ import java.util.UUID;
 public class BookingAddonController {
 
     private final BookingAddonService bookingAddonService;
+    private final PaymentService paymentService;
     private final BranchAccessGuard branchAccessGuard;
     private final AuditLogService auditLogService;
     private final HttpServletRequest httpServletRequest;
@@ -52,17 +55,38 @@ public class BookingAddonController {
         return ResponseEntity.status(HttpStatus.CREATED).body(bookingAddonService.getTab(bookingId));
     }
 
+    @PatchMapping("/{itemId}")
+    public ResponseEntity<BookingAddonDto.TabResponse> updateQuantity(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID bookingId,
+            @PathVariable UUID itemId,
+            @Valid @RequestBody BookingAddonDto.QuantityRequest req) {
+        boolean asStaff = requireOwnerOrBranchStaff(jwt, bookingId);
+        BookingServiceItem item = bookingAddonService.updateQuantity(callerId(jwt), bookingId, itemId, req.getQuantity(), asStaff);
+        auditLogService.log(httpServletRequest, callerId(jwt), "UPDATE", "booking_services", itemId, null,
+                Map.of("bookingId", bookingId, "quantity", item.getQuantity(), "subtotal", item.getSubtotal()));
+        return ResponseEntity.ok(bookingAddonService.getTab(bookingId));
+    }
+
     @DeleteMapping("/{itemId}")
     public ResponseEntity<BookingAddonDto.TabResponse> voidItem(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID bookingId,
             @PathVariable UUID itemId) {
-        Booking booking = bookingAddonService.requireBooking(bookingId);
-        branchAccessGuard.requireAccessToBranch(jwt, booking.getBranchId());
-        bookingAddonService.voidItem(callerId(jwt), bookingId, itemId);
+        boolean asStaff = requireOwnerOrBranchStaff(jwt, bookingId);
+        bookingAddonService.voidItem(callerId(jwt), bookingId, itemId, asStaff);
         auditLogService.log(httpServletRequest, callerId(jwt), "VOID", "booking_services", itemId,
                 Map.of("status", BookingServiceItem.STATUS_UNPAID), Map.of("status", BookingServiceItem.STATUS_VOID));
         return ResponseEntity.ok(bookingAddonService.getTab(bookingId));
+    }
+
+    /** VietQR payment for everything still owed on the tab — shown to the customer to scan. */
+    @PostMapping("/pay/payos")
+    public ResponseEntity<BookingAddonDto.TabPaymentResponse> payByQr(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID bookingId) {
+        requireOwnerOrBranchStaff(jwt, bookingId);
+        return ResponseEntity.ok(paymentService.createTabPayosPayment(bookingId));
     }
 
     @PostMapping("/settle")
@@ -84,11 +108,14 @@ public class BookingAddonController {
         return ResponseEntity.ok(bookingAddonService.getTab(bookingId));
     }
 
-    private void requireOwnerOrBranchStaff(Jwt jwt, UUID bookingId) {
+    /** @return true when the caller acts as branch staff rather than as the booking's owner */
+    private boolean requireOwnerOrBranchStaff(Jwt jwt, UUID bookingId) {
         Booking booking = bookingAddonService.requireBooking(bookingId);
-        if (!booking.getUserId().equals(callerId(jwt))) {
-            branchAccessGuard.requireAccessToBranch(jwt, booking.getBranchId());
+        if (booking.getUserId().equals(callerId(jwt))) {
+            return false;
         }
+        branchAccessGuard.requireAccessToBranch(jwt, booking.getBranchId());
+        return true;
     }
 
     private static UUID callerId(Jwt jwt) {

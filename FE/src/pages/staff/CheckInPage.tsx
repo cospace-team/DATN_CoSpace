@@ -12,6 +12,7 @@ import { staffApi, BookingWithDetailsDto, BranchTodayBookingDto } from '../../ap
 import { useAuth } from '../../context/AuthContext';
 import QrScannerModal from '../../components/QrScannerModal';
 import BookingTabPanel from '../../components/staff/BookingTabPanel';
+import ExtendBookingPanel from '../../components/ExtendBookingPanel';
 import type { BookingTabDto } from '../../api/addonApi';
 import { CheckoutModal } from './checkin/CheckoutModal';
 import { TodayScheduleTab } from './checkin/TodayScheduleTab';
@@ -70,6 +71,7 @@ const CheckInPage: React.FC = () => {
   const [checkoutTab, setCheckoutTab] = useState<BookingTabDto | null>(null);
   // Guest whose running tab is open from the seated list.
   const [tabItem, setTabItem] = useState<BookingWithMeta | null>(null);
+  const [tabRefreshKey, setTabRefreshKey] = useState(0);
 
   // QR Scanner Modal State
   const [showQrScanner, setShowQrScanner] = useState(false);
@@ -859,7 +861,14 @@ const CheckInPage: React.FC = () => {
                 <FiX className="h-4 w-4" />
               </button>
             </div>
-            <BookingTabPanel bookingId={tabItem.booking?.id} branchId={tabItem.booking?.branchId || branchId} />
+            <BookingTabPanel
+              bookingId={tabItem.booking?.id}
+              branchId={tabItem.booking?.branchId || branchId}
+              refreshKey={tabRefreshKey}
+            />
+            {tabItem.booking?.id && (
+              <ExtendBookingPanel bookingId={tabItem.booking.id} onExtended={() => setTabRefreshKey((k) => k + 1)} />
+            )}
           </div>
         </div>
       )}

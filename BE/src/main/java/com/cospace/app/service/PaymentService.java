@@ -148,6 +148,61 @@ public class PaymentService {
         return toPayosCreateResponse(payment, orderCode, qrCode, "Tạo liên kết thanh toán PayOS VietQR thành công.");
     }
 
+    /**
+     * Creates a VietQR (PayOS) payment for everything still owed on a booking's running tab: add-ons
+     * ordered after the booking was paid, extra hours, late check-out fees. The lines are tied to the
+     * payment and become paid when PayOS confirms it. The caller checks that the requester owns the
+     * booking or works at its branch.
+     */
+    @Transactional
+    public com.cospace.app.dto.api.BookingAddonDto.TabPaymentResponse createTabPayosPayment(UUID bookingId) {
+        Booking booking = bookingRepository.findByIdWithLock(bookingId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đặt chỗ."));
+        if (booking.getStatus() != BookingStatus.CONFIRMED && booking.getStatus() != BookingStatus.CHECKED_IN
+                && booking.getStatus() != BookingStatus.COMPLETED) {
+            throw new IllegalStateException("Không thể thanh toán dịch vụ cho đơn ở trạng thái "
+                    + BookingStateMachine.label(booking.getStatus()) + ".");
+        }
+
+        long owed = bookingAddonService.unpaidAmount(bookingId);
+        if (owed <= 0) {
+            throw new IllegalStateException("Đơn không còn khoản nào chưa thanh toán.");
+        }
+
+        long orderCode = (System.currentTimeMillis() % 1000000000L) * 1000 + (RANDOM.nextInt(900) + 100);
+        Payment payment = Payment.builder()
+                .id(UUID.randomUUID())
+                .bookingId(booking.getId())
+                .userId(booking.getUserId())
+                .provider("payos")
+                .method("vietqr")
+                .orderId("PAYOS-" + orderCode)
+                .requestId(UUID.randomUUID().toString())
+                .amount(owed)
+                .status(PaymentStatus.INITIATED)
+                .purpose(Payment.PURPOSE_ADDON)
+                .build();
+        paymentRepository.saveAndFlush(payment);
+
+        long amount = bookingAddonService.linkUnpaidToPayment(bookingId, payment.getId());
+
+        Map<String, Object> payosRes = payosService.createPaymentLink(orderCode, amount, "DV " + booking.getBookingCode(), null);
+        payment.setStatus(PaymentStatus.PENDING);
+        payment.setPayUrl(Objects.toString(payosRes.get("checkoutUrl"), ""));
+        paymentRepository.save(payment);
+
+        return com.cospace.app.dto.api.BookingAddonDto.TabPaymentResponse.builder()
+                .paymentId(payment.getId())
+                .bookingId(booking.getId())
+                .orderCode(orderCode)
+                .orderId(payment.getOrderId())
+                .amount(amount)
+                .checkoutUrl(payment.getPayUrl())
+                .qrCode(Objects.toString(payosRes.get("qrCode"), ""))
+                .status(payment.getStatus().name())
+                .build();
+    }
+
     @Transactional
     public CashCreatePaymentResponse createCashPayment(UUID staffId, UUID bookingId) {
         Booking booking = bookingRepository.findByIdWithLock(bookingId)
@@ -207,7 +262,7 @@ public class PaymentService {
         if ("0".equals(resultCode)) {
             payment.setStatus(PaymentStatus.PAID);
             payment.setPaidAt(OffsetDateTime.now(ZoneOffset.UTC));
-            confirmBooking(payment);
+            applyPaidPayment(payment);
         } else {
             payment.setStatus(PaymentStatus.FAILED);
         }
@@ -253,7 +308,7 @@ public class PaymentService {
         if ("00".equals(code) || "0".equals(code)) {
             payment.setStatus(PaymentStatus.PAID);
             payment.setPaidAt(OffsetDateTime.now(ZoneOffset.UTC));
-            confirmBooking(payment);
+            applyPaidPayment(payment);
             log.info("PayOS payment {} marked as PAID for booking {}", payment.getId(), payment.getBookingId());
         } else {
             payment.setStatus(PaymentStatus.FAILED);
@@ -302,7 +357,7 @@ public class PaymentService {
             payment.setPaidAt(OffsetDateTime.now(ZoneOffset.UTC));
             payment.setRawCallback(safeJson(Map.of("source", "payos_status_lookup", "status", verified)));
             paymentRepository.save(payment);
-            confirmBooking(payment);
+            applyPaidPayment(payment);
             return true;
         }
 
@@ -337,15 +392,17 @@ public class PaymentService {
         if (payment.getStatus() != PaymentStatus.INITIATED && payment.getStatus() != PaymentStatus.PENDING) {
             throw new IllegalStateException("Giao dịch không còn ở trạng thái chờ thanh toán.");
         }
-        Booking booking = bookingRepository.findById(payment.getBookingId())
-                .orElseThrow(() -> new IllegalStateException("Booking not found for payment"));
-        requirePayable(booking.getStatus(), booking.getPaymentDeadlineAt(), booking.getTotalAmount());
+        if (!Payment.PURPOSE_ADDON.equals(payment.getPurpose())) {
+            Booking booking = bookingRepository.findById(payment.getBookingId())
+                    .orElseThrow(() -> new IllegalStateException("Booking not found for payment"));
+            requirePayable(booking.getStatus(), booking.getPaymentDeadlineAt(), booking.getTotalAmount());
+        }
 
         payment.setStatus(PaymentStatus.PAID);
         payment.setPaidAt(OffsetDateTime.now(ZoneOffset.UTC));
         paymentRepository.save(payment);
 
-        confirmBooking(payment);
+        applyPaidPayment(payment);
     }
 
     @Transactional(readOnly = true)
@@ -390,6 +447,32 @@ public class PaymentService {
         }
         if (totalAmount <= 0) {
             throw new IllegalStateException("Đơn đặt chỗ không có số tiền cần thanh toán.");
+        }
+    }
+
+    /** Routes a payment that has just been received to what it was paying for. */
+    private void applyPaidPayment(Payment payment) {
+        if (Payment.PURPOSE_ADDON.equals(payment.getPurpose())) {
+            confirmTabPayment(payment);
+        } else {
+            confirmBooking(payment);
+        }
+    }
+
+    /**
+     * Marks the tab lines a QR payment was made for as paid. If some of them were settled at the
+     * counter or cancelled while the customer was paying, the surplus is queued as a refund.
+     */
+    private void confirmTabPayment(Payment payment) {
+        Booking booking = bookingRepository.findByIdWithLock(payment.getBookingId())
+                .orElseThrow(() -> new IllegalStateException("Booking not found for payment confirmation"));
+        long covered = bookingAddonService.applyTabPayment(payment);
+        long surplus = payment.getAmount() - covered;
+        if (surplus > 0) {
+            log.warn("Tab payment {} for booking {} exceeded what was still owed by {}. Queuing refund.",
+                    payment.getId(), booking.getId(), surplus);
+            refundService.requestRefund(booking, payment.getId(), surplus, com.cospace.app.entity.Refund.REASON_DUPLICATE_PAYMENT,
+                    "Khoản dịch vụ đã được thanh toán hoặc hủy trước khi chuyển khoản về, phần dư sẽ được hoàn lại.");
         }
     }
 

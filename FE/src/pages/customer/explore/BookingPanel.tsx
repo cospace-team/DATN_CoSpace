@@ -3,6 +3,7 @@ import { FiX, FiCheck } from 'react-icons/fi';
 import { WorkspaceAmenities } from '../../../components/WorkspaceAmenities';
 import { formatVND, durationUnitLabel } from '../../../utils/formatters';
 import type { ExtraServiceDto } from '../../../api/addonApi';
+import { QuantityStepper } from '../../../components/ui/QuantityStepper';
 import type { ExtraServiceResponse } from '../../../lib/spaceApi';
 
 export type DurationUnitMode = 'hour' | 'day' | 'week';
@@ -124,6 +125,10 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
       else delete next[id];
       return next;
     });
+  };
+
+  const handleQuantityChange = (id: string, quantity: number) => {
+    setServices(prev => ({ ...prev, [id]: quantity }));
   };
 
   // Calculate unitCount based on selected durationUnit
@@ -379,26 +384,36 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
               allAddons
                 .filter((s: any) => s.isActive !== false)
                 .map((s: any) => (
-                  <label
-                    key={s.id}
-                    htmlFor={`addon-${s.id}-${selectedWs}`}
-                    className="flex items-center gap-3 text-sm cursor-pointer"
-                  >
-                    <input
-                      id={`addon-${s.id}-${selectedWs}`}
-                      type="checkbox"
-                      checked={!!services[s.id]}
-                      onChange={e => handleServiceChange(s.id, e.target.checked)}
-                      className="rounded accent-[var(--brand-primary)]"
-                    />
-                    <span className="flex items-center gap-1.5">
-                      {getServiceIcon(s.unit || s.serviceType, s.name)} {s.name}
+                  <div key={s.id} className="flex items-center gap-3 text-sm">
+                    <label
+                      htmlFor={`addon-${s.id}-${selectedWs}`}
+                      className="flex items-center gap-3 cursor-pointer min-w-0 flex-1"
+                    >
+                      <input
+                        id={`addon-${s.id}-${selectedWs}`}
+                        type="checkbox"
+                        checked={!!services[s.id]}
+                        onChange={e => handleServiceChange(s.id, e.target.checked)}
+                        className="rounded accent-[var(--brand-primary)]"
+                      />
+                      <span className="flex items-center gap-1.5 min-w-0">
+                        {getServiceIcon(s.unit || s.serviceType, s.name)}
+                        <span className="truncate">{s.name}</span>
+                      </span>
+                    </label>
+                    {services[s.id] ? (
+                      <QuantityStepper
+                        value={services[s.id]}
+                        onChange={q => handleQuantityChange(s.id, q)}
+                        label={`Số lượng ${s.name}`}
+                      />
+                    ) : null}
+                    <span className="ml-auto shrink-0 text-xs text-[var(--text-tertiary)] text-right">
+                      {services[s.id]
+                        ? formatVND(s.price * services[s.id])
+                        : `+${formatVND(s.price)}${s.unit ? `/${s.unit}` : ''}`}
                     </span>
-                    <span className="ml-auto text-xs text-[var(--text-tertiary)]">
-                      +{formatVND(s.price)}
-                      {s.unit ? `/${s.unit}` : ''}
-                    </span>
-                  </label>
+                  </div>
                 ))
             )}
           </div>

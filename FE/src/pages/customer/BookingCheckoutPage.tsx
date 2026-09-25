@@ -12,6 +12,7 @@ import { useToast } from '../../components/Toast';
 import { customerSpaceApi, type ExtraServiceResponse } from '../../lib/spaceApi';
 import { describePromotion, promotionApi, type BookingQuoteDto, type PromotionDto } from '../../api/loyaltyApi';
 import { resolveBranchId } from '../../data/branchAliases';
+import { QuantityStepper } from '../../components/ui/QuantityStepper';
 
 const getServiceIcon = (type?: string, name?: string) => {
   const n = (name || '').toLowerCase();
@@ -43,13 +44,20 @@ const BookingCheckoutPage: React.FC = () => {
   const bookingDurationUnit: 'hour' | 'day' | 'week' = state?.durationUnit || 'hour';
   const endDate = rawEndDate && bookingDurationUnit !== 'hour' ? rawEndDate : new Date(date);
   // Add-ons picked on the explore screen (real catalogue ids); the server prices them again.
-  const addons: { serviceId: string; quantity: number; name: string; price: number; unit: string }[] = state?.addons || [];
+  // Quantities can still be changed here; every change is re-priced by the server quote.
+  const [addons, setAddons] = useState<{ serviceId: string; quantity: number; name: string; price: number; unit: string }[]>(
+    state?.addons || [],
+  );
   const addonRequest = addons.map(a => ({ serviceId: a.serviceId, quantity: a.quantity }));
+  const addonKey = addonRequest.map(a => `${a.serviceId}:${a.quantity}`).join(',');
+  const changeAddonQuantity = (serviceId: string, quantity: number) =>
+    setAddons(prev => prev.map(a => (a.serviceId === serviceId ? { ...a, quantity } : a)));
+  const removeAddon = (serviceId: string) => setAddons(prev => prev.filter(a => a.serviceId !== serviceId));
   const services: Record<string, number> = state?.services || {};
   const basePrice = state?.price?.price || 0;
   const subtotal = state?.subtotal || 0;
-  const addonTotal = state?.addonTotal || 0;
-  const total = state?.total || 0;
+  const addonTotal = addons.reduce((sum, a) => sum + a.price * a.quantity, 0);
+  const total = subtotal + addonTotal;
 
   // Booked time span. Day/week bookings run from the start hour on the first date to the same
   // hour on the end date, so "15 → 16" is exactly one day. The backend prices this span itself
@@ -113,9 +121,28 @@ const BookingCheckoutPage: React.FC = () => {
     if (!workspace || !UUID_RE.test(workspace.id)) return;
     // The quote is the server's verdict: price, discounts, add-ons, and whether the slot is bookable
     // at all (opening hours, past time). Without it the customer cannot pay.
-    requestQuote(null)
+    requestQuote(appliedPromoCode)
       .then((q) => { setQuote(q); setQuoteError(''); })
-      .catch((e: any) => { setQuote(null); setQuoteError(e.message || 'Không thể tính giá đơn đặt chỗ.'); });
+      .catch(async (e: any) => {
+        // A promotion can stop qualifying when add-ons change (minimum order); retry without it.
+        if (appliedPromoCode) {
+          setAppliedPromoCode(null);
+          setPromoError(e.message || 'Mã khuyến mãi không còn áp dụng được.');
+          try {
+            setQuote(await requestQuote(null));
+            setQuoteError('');
+            return;
+          } catch (retryError: any) {
+            e = retryError;
+          }
+        }
+        setQuote(null);
+        setQuoteError(e.message || 'Không thể tính giá đơn đặt chỗ.');
+      });
+  }, [workspace?.id, bookingDurationUnit, startAtDate.getTime(), endAtDate.getTime(), addonKey]);
+
+  useEffect(() => {
+    if (!workspace || !UUID_RE.test(workspace.id)) return;
     if (UUID_RE.test(branchId)) {
       promotionApi
         .available(branchId, UUID_RE.test(workspaceTypeId) ? workspaceTypeId : undefined)
@@ -411,7 +438,25 @@ const BookingCheckoutPage: React.FC = () => {
                         </div>
                         <div>
                           <p className="font-semibold text-lg text-foreground">{addon.name}</p>
-                          <p className="text-xs font-medium text-foreground/70">{formatVND(addon.price)} / {addon.unit} × {addon.quantity}</p>
+                          <p className="text-xs font-medium text-foreground/70">{formatVND(addon.price)} / {addon.unit}</p>
+                          <div className="mt-2 flex items-center gap-2">
+                            <QuantityStepper
+                              value={addon.quantity}
+                              onChange={q => changeAddonQuantity(addon.serviceId, q)}
+                              disabled={!!activeBooking || isProcessing}
+                              label={`Số lượng ${addon.name}`}
+                            />
+                            {!activeBooking && (
+                              <button
+                                type="button"
+                                onClick={() => removeAddon(addon.serviceId)}
+                                disabled={isProcessing}
+                                className="text-xs font-medium text-muted-foreground hover:text-destructive cursor-pointer"
+                              >
+                                Bỏ
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                       <span className="text-lg font-mono font-semibold px-4 py-2 rounded-3xl bg-slate-900 text-white border border-border shadow-sm">

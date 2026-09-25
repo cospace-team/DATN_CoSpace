@@ -27,17 +27,20 @@ public class CheckinService {
     private final BookingService bookingService;
     private final UserRepository userRepository;
     private final BookingAddonService bookingAddonService;
+    private final BookingExtensionService bookingExtensionService;
 
     public CheckinService(CheckinLogRepository checkinLogRepository,
                           BookingRepository bookingRepository,
                           BookingService bookingService,
                           UserRepository userRepository,
-                          BookingAddonService bookingAddonService) {
+                          BookingAddonService bookingAddonService,
+                          BookingExtensionService bookingExtensionService) {
         this.checkinLogRepository = checkinLogRepository;
         this.bookingRepository = bookingRepository;
         this.bookingService = bookingService;
         this.userRepository = userRepository;
         this.bookingAddonService = bookingAddonService;
+        this.bookingExtensionService = bookingExtensionService;
     }
 
     @Transactional
@@ -109,13 +112,20 @@ public class CheckinService {
             throw new IllegalArgumentException("Lượt Check-in này đã được giải phóng (Check-out) trước đó.");
         }
 
+        Booking booking = bookingRepository.findByIdWithLock(checkinLog.getBookingId())
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thông tin đặt chỗ"));
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        if (bookingExtensionService.isLateFeePending(booking, now)) {
+            throw new IllegalStateException("Khách trả chỗ muộn hơn giờ kết thúc. Vui lòng tính phụ phí check-out muộn "
+                    + "(hoặc tính rồi hủy để miễn phí) trước khi check-out.");
+        }
+
         long owed = bookingAddonService.unpaidAmount(checkinLog.getBookingId());
         if (owed > 0) {
             throw new IllegalStateException("Khách còn " + RefundService.vnd(owed)
-                    + " tiền dịch vụ gọi thêm chưa thanh toán. Vui lòng thu tiền trước khi check-out.");
+                    + " tiền dịch vụ / phụ phí chưa thanh toán. Vui lòng thu tiền (tiền mặt hoặc QR) trước khi check-out.");
         }
 
-        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         checkinLog.setCheckoutAt(now);
 
         if (note != null && !note.isBlank()) {
@@ -123,9 +133,6 @@ public class CheckinService {
             checkinLog.setNote(currentNote != null && !currentNote.isBlank() ? currentNote + " | Checkout: " + note : "Checkout: " + note);
         }
         checkinLog = checkinLogRepository.save(checkinLog);
-
-        Booking booking = bookingRepository.findByIdWithLock(checkinLog.getBookingId())
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thông tin đặt chỗ"));
 
         // Validate branch matching if staff is bound to a specific branch (same rule as checkin)
         if (staffId != null) {
