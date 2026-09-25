@@ -40,6 +40,7 @@ import java.util.stream.Collectors;
 public class BranchAdminSpaceController {
 
     private final SpaceManagementService spaceService;
+    private final com.cospace.app.service.WorkspaceImageService workspaceImageService;
     private final UserRepository userRepository;
     private final PricePolicyRepository pricePolicyRepository;
     private final PasswordEncoder passwordEncoder;
@@ -194,6 +195,27 @@ public class BranchAdminSpaceController {
         } catch (IllegalArgumentException | AccessDeniedException e) {
             return errorResponse(e);
         }
+    }
+
+    /* ═══════════════════════ Workspace photos ═══════════════════════ */
+
+    @PostMapping(value = "/workspaces/{id}/images", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> uploadWorkspaceImage(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID id,
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
+        UUID branchId = resolveBranchId(jwt, true);
+        return ResponseEntity.status(HttpStatus.CREATED).body(workspaceImageService.add(branchId, id, file));
+    }
+
+    @DeleteMapping("/workspaces/{id}/images/{imageId}")
+    public ResponseEntity<?> deleteWorkspaceImage(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID id,
+            @PathVariable UUID imageId) {
+        UUID branchId = resolveBranchId(jwt, true);
+        workspaceImageService.delete(branchId, id, imageId);
+        return ResponseEntity.ok(Map.of("message", "Đã xóa ảnh."));
     }
 
     /* ═══════════════════════ Staff Management ═══════════════════════ */

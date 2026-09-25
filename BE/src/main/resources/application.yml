@@ -20,6 +20,11 @@ spring:
   jackson:
     serialization:
       write-dates-as-timestamps: false
+  servlet:
+    multipart:
+      # Workspace photos: 5MB per image.
+      max-file-size: 5MB
+      max-request-size: 6MB
   datasource:
     url: ${SUPABASE_DB_URL:jdbc:postgresql://aws-1-ap-south-1.pooler.supabase.com:6543/postgres?sslmode=require&prepareThreshold=0}
     username: ${SUPABASE_DB_USERNAME:postgres.ozaiknomajljfqiepels}
@@ -116,6 +121,16 @@ app:
     base-url: ${APP_FRONTEND_BASE_URL:http://localhost:5173}
   supabase:
     jwt-secret: ${SUPABASE_JWT_SECRET:}
+    # Workspace photos go to Supabase Storage through the backend; the service-role key stays
+    # server-side. Without it uploads are refused with a clear message, everything else works.
+    url: ${SUPABASE_URL:https://ozaiknomajljfqiepels.supabase.co}
+    service-role-key: ${SUPABASE_SERVICE_ROLE_KEY:}
+    storage-bucket: ${SUPABASE_STORAGE_BUCKET:workspace-images}
+  booking:
+    # Checking out later than this after the booked end adds the late check-out fee.
+    late-fee-grace-minutes: ${APP_BOOKING_LATE_FEE_GRACE_MINUTES:15}
+    # Guests nobody checked out are closed automatically this long after the booked end.
+    auto-checkout-after-minutes: ${APP_BOOKING_AUTO_CHECKOUT_AFTER_MINUTES:120}
 
 logging:
   level:

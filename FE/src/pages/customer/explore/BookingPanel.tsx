@@ -4,6 +4,7 @@ import { WorkspaceAmenities } from '../../../components/WorkspaceAmenities';
 import { formatVND, durationUnitLabel } from '../../../utils/formatters';
 import type { ExtraServiceDto } from '../../../api/addonApi';
 import { QuantityStepper } from '../../../components/ui/QuantityStepper';
+import WorkspaceGallery from '../../../components/workspace/WorkspaceGallery';
 import type { ExtraServiceResponse } from '../../../lib/spaceApi';
 
 export type DurationUnitMode = 'hour' | 'day' | 'week';
@@ -19,6 +20,7 @@ export interface ExploreWorkspace {
   status: string;
   floor_id: string;
   branch_id: string;
+  images?: { id: string; url: string }[];
 }
 
 export type PriceUnit = 'hour' | 'day' | 'week' | 'month';
@@ -213,6 +215,7 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
 
       {/* Info */}
       <div className="mt-5 space-y-3">
+        <WorkspaceGallery images={ws.images || []} alt={ws.name} />
         <div className="rounded-2xl bg-[var(--bg-surface-hover)] p-3 border border-border">
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -220,8 +223,10 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
               <p className="text-sm font-semibold">{wsType?.name}</p>
             </div>
             <div>
-              <p className="text-xs text-[var(--text-tertiary)]">Sức chứa</p>
-              <p className="text-sm font-semibold">{ws.capacity} chỗ</p>
+              <p className="text-xs text-[var(--text-tertiary)]">Số chỗ ngồi</p>
+              <p className="text-sm font-semibold">
+                {ws.capacity} {ws.capacity > 1 ? 'chỗ · tối đa ' + ws.capacity + ' người' : 'chỗ (1 người)'}
+              </p>
             </div>
             <div>
               <p className="text-xs text-[var(--text-tertiary)]">Mã</p>

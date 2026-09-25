@@ -38,6 +38,7 @@ public class SpaceManagementService {
     private final BookingRepository bookingRepository;
     private final BranchEntityRepository branchEntityRepository;
     private final ObjectMapper objectMapper;
+    private final com.cospace.app.repository.WorkspaceImageRepository workspaceImageRepository;
 
     private void validateBranchActive(UUID branchId) {
         if (branchId == null) return;
@@ -203,8 +204,19 @@ public class SpaceManagementService {
             throw new IllegalArgumentException("Tầng không thuộc chi nhánh của bạn.");
         }
 
-        return workspaceRepository.findByFloorIdOrderByCode(floorId).stream()
-                .map(this::toResponse)
+        List<WorkspaceEntity> workspaces = workspaceRepository.findByFloorIdOrderByCode(floorId);
+        java.util.Map<UUID, List<com.cospace.app.dto.api.SpaceDto.WorkspaceImageResponse>> images = workspaces.isEmpty()
+                ? java.util.Map.of()
+                : workspaceImageRepository.findByWorkspaceIdInOrderBySortOrderAscCreatedAtAsc(
+                                workspaces.stream().map(WorkspaceEntity::getId).toList()).stream()
+                        .collect(java.util.stream.Collectors.groupingBy(com.cospace.app.entity.WorkspaceImage::getWorkspaceId,
+                                java.util.stream.Collectors.mapping(WorkspaceImageService::toResponse, java.util.stream.Collectors.toList())));
+        return workspaces.stream()
+                .map(ws -> {
+                    WorkspaceResponse r = toResponse(ws);
+                    r.setImages(images.getOrDefault(ws.getId(), List.of()));
+                    return r;
+                })
                 .toList();
     }
 
