@@ -22,6 +22,7 @@ import {
   type PartnerSuggestion,
   type PostType,
 } from "../../lib/communityApi";
+import MemberProfileModal, { type MemberPreview } from "../../components/network/MemberProfileModal";
 
 const POST_TYPES: Array<{ id: PostType; label: string; hint: string; color: string }> = [
   { id: "sharing", label: "Chia sẻ", hint: "Chia sẻ điều bạn đang làm", color: "bg-blue-500" },
@@ -52,6 +53,7 @@ const CommunityPage: React.FC = () => {
   const [posts, setPosts] = useState<CommunityPost[]>([]);
   const [tags, setTags] = useState<CommunityTag[]>([]);
   const [partners, setPartners] = useState<PartnerSuggestion[]>([]);
+  const [selectedMember, setSelectedMember] = useState<MemberPreview | null>(null);
   const [loading, setLoading] = useState(true);
   const [partnersLoading, setPartnersLoading] = useState(true);
 
@@ -493,16 +495,25 @@ const CommunityPage: React.FC = () => {
                         )}
 
                         <button
-                          onClick={() => {
-                            if (p.contactPublic && p.email) {
-                              window.location.href = `mailto:${p.email}?subject=Ket noi tu CoSpace`;
-                            } else {
-                              showToast(`${p.name} đang ẩn thông tin liên hệ trực tiếp.`, "info");
-                            }
-                          }}
+                          onClick={() => setSelectedMember({
+                            userId: p.id,
+                            name: p.name,
+                            avatar: p.avatar,
+                            profession: p.profession,
+                            company: p.company,
+                            matchScore: p.matchScore,
+                            commonTags: p.commonTags,
+                            matchReason: p.matchReason,
+                          })}
                           className="mt-2.5 w-full py-1.5 rounded-lg bg-primary/10 text-primary text-[11px] font-bold hover:bg-primary/20 transition-colors cursor-pointer"
                         >
-                          Kết nối
+                          {p.connectionState === "connected"
+                            ? "Xem hồ sơ · Đã kết nối"
+                            : p.connectionState === "pending_outgoing"
+                              ? "Đã gửi lời mời"
+                              : p.connectionState === "pending_incoming"
+                                ? "Phản hồi lời mời"
+                                : "Xem hồ sơ & kết nối"}
                         </button>
                       </div>
                     </div>
@@ -524,6 +535,11 @@ const CommunityPage: React.FC = () => {
           </section>
         </aside>
       </div>
+      <MemberProfileModal
+        member={selectedMember}
+        onClose={() => setSelectedMember(null)}
+        onChanged={() => communityApi.suggestedPartners().then(setPartners).catch(() => {})}
+      />
     </div>
   );
 };

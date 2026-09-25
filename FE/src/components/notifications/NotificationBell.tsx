@@ -115,6 +115,7 @@ export const NotificationBell = React.memo(function NotificationBell() {
           colorClass: 'text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20',
           badge: 'Nhắc nhở',
         };
+      case 'REFUND':
       case 'REFUND_PROCESSED':
         return {
           icon: <FiDollarSign className="h-4 w-4" />,

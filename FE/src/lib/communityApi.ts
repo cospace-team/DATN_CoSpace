@@ -1,3 +1,4 @@
+import type { ConnectionState } from "./connectionApi";
 /**
  * communityApi.ts — API client for the CoSpace community feed.
  *
@@ -43,6 +44,9 @@ export interface PartnerSuggestion {
   matchScore: number;
   commonTags: string[];
   contactPublic: boolean;
+  contactVisible?: boolean;
+  connectionState?: ConnectionState;
+  connectionId?: string | null;
   email: string | null;
   phone: string | null;
   bio: string;
