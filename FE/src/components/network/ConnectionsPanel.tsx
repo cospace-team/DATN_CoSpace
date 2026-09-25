@@ -26,12 +26,17 @@ const ConnectionsPanel: React.FC<Props> = ({ reloadKey, onOpenMember, onChanged 
   const [tab, setTab] = useState<Tab>('incoming');
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [tabChosen, setTabChosen] = useState(false);
 
   useEffect(() => {
     connectionApi.overview()
       .then((d) => {
         setData(d);
         setError('');
+        // Until the member picks a tab, open the one that has something in it.
+        if (!tabChosen) {
+          setTab(d.incoming.length > 0 ? 'incoming' : d.connected.length > 0 ? 'connected' : d.outgoing.length > 0 ? 'outgoing' : 'incoming');
+        }
       })
       .catch((e: Error) => setError(e.message));
   }, [reloadKey]);
@@ -59,7 +64,10 @@ const ConnectionsPanel: React.FC<Props> = ({ reloadKey, onOpenMember, onChanged 
             <button
               key={t.id}
               type="button"
-              onClick={() => setTab(t.id)}
+              onClick={() => {
+                setTab(t.id);
+                setTabChosen(true);
+              }}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all ${
                 tab === t.id ? 'bg-primary text-primary-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
               }`}

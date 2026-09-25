@@ -129,7 +129,7 @@ const MemberProfileModal: React.FC<Props> = ({ member, onClose, onChanged }) => 
         </div>
 
         <div className="px-6 pb-6">
-          <div className="flex items-end justify-between -mt-10 mb-3">
+          <div className="relative z-10 flex items-end justify-between -mt-10 mb-3">
             <Avatar src={profile?.avatarUrl || member.avatar} name={name} />
             <div className="flex flex-col items-end gap-1">
               {typeof member.matchScore === 'number' && (

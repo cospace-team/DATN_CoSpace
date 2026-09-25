@@ -47,26 +47,28 @@ const WorkspaceBadge: React.FC<{
   status: string | null;
 }> = React.memo(({ el, icon, info, status }) => {
   const capacity = info?.capacity ?? el.seatCount;
-  const compact = el.width < 56 || el.height < 40;
+  const compact = el.width < 90;
   const chipText = capacity ? (compact ? `${capacity}` : `${capacity} chỗ`) : '';
-  const chipWidth = (icon ? 13 : 4) + chipText.length * 5.4 + 6;
+  const chipHeight = 18;
+  const chipWidth = (icon ? 18 : 6) + chipText.length * 6.6 + 7;
   const color = status ? STATUS_COLOR[status] || '#94A3B8' : '#64748B';
   return (
     <g transform={`translate(${el.x}, ${el.y})`} style={{ pointerEvents: 'none', userSelect: 'none' }}>
       {(icon || chipText) && (
-        <g transform="translate(3, 3)">
-          <rect width={chipWidth} height={13} rx={6.5} fill="var(--bg-surface, #fff)" fillOpacity={0.95}
-            stroke={color} strokeWidth={0.8} />
-          {icon && <text x={3} y={9.8} fontSize={8}>{icon}</text>}
+        // Sits on the element's top edge like a tab, so it never covers the drawing inside.
+        <g transform={`translate(6, ${-chipHeight / 2})`}>
+          <rect width={chipWidth} height={chipHeight} rx={chipHeight / 2} fill="var(--bg-surface, #fff)"
+            stroke={color} strokeWidth={1.4} />
+          {icon && <text x={5} y={13} fontSize={11}>{icon}</text>}
           {chipText && (
-            <text x={icon ? 13 : 4} y={9.6} fontSize={8} fontWeight={700} fill="var(--text-main, #0F172A)">
+            <text x={icon ? 19 : 6} y={12.8} fontSize={10.5} fontWeight={800} fill="var(--text-main, #0F172A)">
               {chipText}
             </text>
           )}
         </g>
       )}
       {status && (
-        <circle cx={el.width - 6} cy={6} r={3.6} fill={color} stroke="var(--bg-surface, #fff)" strokeWidth={1.2} />
+        <circle cx={el.width - 7} cy={7} r={4.5} fill={color} stroke="var(--bg-surface, #fff)" strokeWidth={1.5} />
       )}
     </g>
   );

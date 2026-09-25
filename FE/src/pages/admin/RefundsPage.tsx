@@ -115,7 +115,8 @@ const RefundsPage: React.FC<{ scope: 'admin' | 'branch' }> = ({ scope }) => {
       <div className="rounded-xl border border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-950/30 p-4 flex items-start gap-3">
         <FiInfo className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
         <p className="text-sm text-blue-800 dark:text-blue-300">
-          Hãy chuyển khoản hoặc trả tiền mặt cho khách <strong>trước</strong>, sau đó bấm "Đã hoàn tiền" và ghi chú mã giao dịch.
+          Hoàn bằng tiền: chuyển khoản hoặc trả tiền mặt cho khách <strong>trước</strong>, sau đó bấm "Hoàn tiền" và ghi chú mã giao dịch.
+          Hoặc chọn <strong>Voucher</strong> để hệ thống phát hành ngay cho khách một mã giảm giá cùng giá trị.
           Khách hàng sẽ nhận được thông báo ngay khi bạn xác nhận hoặc từ chối.
         </p>
       </div>
