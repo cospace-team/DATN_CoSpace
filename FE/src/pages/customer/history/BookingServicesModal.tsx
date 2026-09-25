@@ -130,7 +130,8 @@ const BookingServicesModal: React.FC<Props> = ({ bookingId, bookingCode, branchI
                       {item.serviceName}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {formatVND(item.unitPrice)}{item.lineType === 'service' ? ` × ${item.quantity}` : ''}
+                      {formatVND(item.unitPrice)}
+                      {item.lineType === 'service' ? ` × ${item.quantity}` : item.lineType === 'extension' ? `/giờ × ${item.quantity} giờ` : ''}
                     </p>
                   </div>
                   {editable && (

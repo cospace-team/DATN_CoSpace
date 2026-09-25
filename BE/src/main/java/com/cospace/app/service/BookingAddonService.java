@@ -133,6 +133,11 @@ public class BookingAddonService {
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đặt chỗ."));
         BookingServiceItem item = requireEditableLine(booking, itemId, actorId, asStaff);
         voidLine(booking, item, actorId);
+        if (BookingServiceItem.LINE_EXTENSION.equals(item.getLineType())) {
+            // Cancelling an extension gives the hours back: the booking ends when it did before.
+            OffsetDateTime revertedEnd = booking.getEndAt().minusHours(item.getQuantity());
+            booking.setEndAt(revertedEnd.isAfter(booking.getStartAt()) ? revertedEnd : booking.getStartAt().plusHours(1));
+        }
         bookingRepository.save(booking);
     }
 
@@ -163,19 +168,22 @@ public class BookingAddonService {
 
     /**
      * Puts a charge that is not a catalogue service (extra hours, late check-out) on the tab. It is
-     * owed like any add-on, so the guest cannot check out until it is paid. The caller saves the booking.
+     * owed like any add-on, so the guest cannot check out until it is paid. For an extension the
+     * quantity is the number of hours, so cancelling the line can give them back. The caller saves
+     * the booking.
      */
     @Transactional
-    public BookingServiceItem addCharge(Booking booking, String lineType, String description, long amount, UUID actorId) {
-        if (amount <= 0) {
+    public BookingServiceItem addCharge(Booking booking, String lineType, String description, int quantity, long unitPrice, UUID actorId) {
+        long amount = unitPrice * quantity;
+        if (quantity < 1 || amount <= 0) {
             throw new IllegalArgumentException("Số tiền phụ phí không hợp lệ.");
         }
         BookingServiceItem item = bookingServiceItemRepository.save(BookingServiceItem.builder()
                 .bookingId(booking.getId())
                 .lineType(lineType)
                 .description(description)
-                .quantity(1)
-                .unitPrice(amount)
+                .quantity(quantity)
+                .unitPrice(unitPrice)
                 .subtotal(amount)
                 .status(BookingServiceItem.STATUS_UNPAID)
                 .createdBy(actorId)
@@ -208,6 +216,17 @@ public class BookingAddonService {
             bookingServiceItemRepository.save(item);
         }
         return total(unpaid);
+    }
+
+    /** Unties the unpaid lines from a payment that will never be paid (its link could not be created). */
+    @Transactional
+    public void unlinkPayment(UUID bookingId, UUID paymentId) {
+        for (BookingServiceItem item : bookingServiceItemRepository.findByBookingIdAndStatus(bookingId, BookingServiceItem.STATUS_UNPAID)) {
+            if (paymentId.equals(item.getPaymentId())) {
+                item.setPaymentId(null);
+                bookingServiceItemRepository.save(item);
+            }
+        }
     }
 
     /**
@@ -375,6 +394,14 @@ public class BookingAddonService {
             // The pending payment was created for the full total; changing it now would let the
             // gateway confirm a different amount than the booking owes.
             throw new IllegalStateException("Đơn đang chờ thanh toán, không thể thay đổi dịch vụ đã đặt kèm.");
+        }
+        boolean inUse = booking.getStatus() == BookingStatus.CONFIRMED || booking.getStatus() == BookingStatus.CHECKED_IN;
+        if (!asStaff && !inUse) {
+            // After check-out what was ordered was consumed: only the counter can still adjust it.
+            throw new IllegalStateException("Đơn đã kết thúc, vui lòng liên hệ quầy nếu cần điều chỉnh dịch vụ.");
+        }
+        if (BookingServiceItem.LINE_EXTENSION.equals(item.getLineType()) && !inUse) {
+            throw new IllegalStateException("Đơn đã kết thúc nên không thể hủy phần gia hạn.");
         }
         if (!asStaff) {
             if (!BookingServiceItem.LINE_SERVICE.equals(item.getLineType())) {

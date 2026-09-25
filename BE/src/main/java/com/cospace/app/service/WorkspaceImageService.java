@@ -68,14 +68,19 @@ public class WorkspaceImageService {
         UUID imageId = UUID.randomUUID();
         String path = "workspaces/" + workspaceId + "/" + imageId + "." + extension;
         String url = storageService.upload(path, bytes, contentTypeFor(extension));
-        WorkspaceImage image = imageRepository.save(WorkspaceImage.builder()
-                .id(imageId)
-                .workspaceId(workspaceId)
-                .url(url)
-                .storagePath(path)
-                .sortOrder((int) count)
-                .build());
-        return toResponse(image);
+        try {
+            WorkspaceImage image = imageRepository.saveAndFlush(WorkspaceImage.builder()
+                    .id(imageId)
+                    .workspaceId(workspaceId)
+                    .url(url)
+                    .storagePath(path)
+                    .sortOrder((int) count)
+                    .build());
+            return toResponse(image);
+        } catch (RuntimeException e) {
+            storageService.delete(path); // don't leave an orphaned file behind
+            throw e;
+        }
     }
 
     @Transactional
@@ -85,7 +90,19 @@ public class WorkspaceImageService {
                 .filter(i -> i.getWorkspaceId().equals(workspaceId))
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ảnh."));
         imageRepository.delete(image);
-        storageService.delete(image.getStoragePath());
+        // Remove the file only once the row is really gone, so a rollback never leaves a broken image.
+        String path = image.getStoragePath();
+        if (org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive()) {
+            org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                    new org.springframework.transaction.support.TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            storageService.delete(path);
+                        }
+                    });
+        } else {
+            storageService.delete(path);
+        }
     }
 
     private void requireWorkspaceInBranch(UUID branchId, UUID workspaceId) {

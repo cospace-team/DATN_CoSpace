@@ -6,7 +6,6 @@ import com.cospace.app.dto.api.PromotionDto.PromotionResponse;
 import com.cospace.app.entity.BookingStatus;
 import com.cospace.app.entity.BranchEntity;
 import com.cospace.app.entity.Promotion;
-import com.cospace.app.entity.User;
 import com.cospace.app.entity.WorkspaceType;
 import com.cospace.app.repository.BookingRepository;
 import com.cospace.app.repository.BranchEntityRepository;
@@ -23,6 +22,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -53,8 +53,10 @@ public class PromotionService {
     @Transactional(readOnly = true)
     public List<PromotionResponse> listAll() {
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-        return promotionRepository.findAllByOrderByCreatedAtDesc().stream()
-                .map(p -> toResponse(p, bookingRepository.countPromotionUsage(p.getId()), now))
+        List<Promotion> promotions = promotionRepository.findAllByOrderByCreatedAtDesc();
+        Map<UUID, String> owners = ownerNames(promotions);
+        return promotions.stream()
+                .map(p -> toResponse(p, bookingRepository.countPromotionUsage(p.getId()), now, owners))
                 .toList();
     }
 
@@ -234,8 +236,10 @@ public class PromotionService {
     @Transactional(readOnly = true)
     public List<PromotionResponse> listMyVouchers(UUID userId) {
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-        return promotionRepository.findByOwnerUserIdOrderByCreatedAtDesc(userId).stream()
-                .map(p -> toResponse(p, bookingRepository.countPromotionUsage(p.getId()), now))
+        List<Promotion> vouchers = promotionRepository.findByOwnerUserIdOrderByCreatedAtDesc(userId);
+        Map<UUID, String> owners = ownerNames(vouchers);
+        return vouchers.stream()
+                .map(p -> toResponse(p, bookingRepository.countPromotionUsage(p.getId()), now, owners))
                 .toList();
     }
 
@@ -321,7 +325,20 @@ public class PromotionService {
         if (req.getIsActive() != null) p.setActive(req.getIsActive());
     }
 
+    /** Names of the owners of personal vouchers among {@code promotions}, loaded in one query. */
+    private Map<UUID, String> ownerNames(List<Promotion> promotions) {
+        List<UUID> ids = promotions.stream().map(Promotion::getOwnerUserId).filter(Objects::nonNull).distinct().toList();
+        if (ids.isEmpty()) return Map.of();
+        Map<UUID, String> names = new java.util.HashMap<>();
+        userRepository.findAllById(ids).forEach(u -> names.put(u.getId(), u.getFullName()));
+        return names;
+    }
+
     private PromotionResponse toResponse(Promotion p, Long usedCount, OffsetDateTime now) {
+        return toResponse(p, usedCount, now, p.getOwnerUserId() == null ? Map.of() : ownerNames(List.of(p)));
+    }
+
+    private PromotionResponse toResponse(Promotion p, Long usedCount, OffsetDateTime now, Map<UUID, String> ownerNames) {
         String state;
         if (!p.isActive()) state = "inactive";
         else if (now.isBefore(p.getStartAt())) state = "scheduled";
@@ -356,8 +373,7 @@ public class PromotionService {
                 .usedCount(usedCount)
                 .state(state)
                 .ownerUserId(p.getOwnerUserId())
-                .ownerName(p.getOwnerUserId() == null ? null
-                        : userRepository.findById(p.getOwnerUserId()).map(User::getFullName).orElse(null))
+                .ownerName(p.getOwnerUserId() == null ? null : ownerNames.get(p.getOwnerUserId()))
                 .createdAt(p.getCreatedAt())
                 .build();
     }

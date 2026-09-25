@@ -108,7 +108,7 @@ class BookingExtensionServiceTest {
         service.extend(b.getUserId(), b.getId(), 1);
 
         assertThat(b.getEndAt()).isEqualTo(originalEnd.plusHours(1));
-        verify(bookingAddonService).addCharge(eq(b), eq(BookingServiceItem.LINE_EXTENSION), any(), eq(50_000L), eq(b.getUserId()));
+        verify(bookingAddonService).addCharge(eq(b), eq(BookingServiceItem.LINE_EXTENSION), any(), eq(1), eq(50_000L), eq(b.getUserId()));
     }
 
     @Test
@@ -139,7 +139,19 @@ class BookingExtensionServiceTest {
         when(bookingAddonService.hasAnyLine(b.getId(), BookingServiceItem.LINE_LATE_FEE)).thenReturn(true);
 
         assertThat(service.chargeLateFee(UUID.randomUUID(), b.getId())).isZero();
-        verify(bookingAddonService, never()).addCharge(any(), any(), any(), org.mockito.ArgumentMatchers.anyLong(), any());
+        verify(bookingAddonService, never()).addCharge(any(), any(), any(), org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.anyLong(), any());
+    }
+
+    @Test
+    void noHourlyPriceMeansNoExtensionInsteadOfAnError() {
+        Booking b = booking(BookingStatus.CHECKED_IN, now.minusHours(1), now.plusHours(1));
+        when(pricingService.getUnitPriceVnd(branchId, typeId, "hour")).thenThrow(new IllegalArgumentException("no price"));
+
+        BookingExtensionDto.QuoteResponse q = service.buildQuote(b, 1, now);
+
+        assertThat(q.isAvailable()).isFalse();
+        assertThat(q.getReason()).contains("giá theo giờ");
     }
 
     @Test

@@ -87,7 +87,7 @@ public class BookingExtensionService {
         booking.setEndAt(quote.getNewEndAt());
         bookingAddonService.addCharge(booking, BookingServiceItem.LINE_EXTENSION,
                 String.format("Gia hạn %d giờ (%s → %s)", hours, local(oldEnd), local(quote.getNewEndAt())),
-                quote.getAmount(), actorId);
+                hours, quote.getPricePerHour(), actorId);
         bookingRepository.save(booking);
         log.info("Booking {} extended by {}h to {} ({}đ)", booking.getBookingCode(), hours, quote.getNewEndAt(), quote.getAmount());
     }
@@ -115,7 +115,13 @@ public class BookingExtensionService {
                     .reason("Đơn đã qua giờ kết thúc, không thể gia hạn. Phụ phí check-out muộn sẽ được tính khi trả chỗ.").build();
         }
 
-        long pricePerHour = pricingService.getUnitPriceVnd(booking.getBranchId(), booking.getWorkspaceTypeId(), DurationUnit.hour.name());
+        long pricePerHour;
+        try {
+            pricePerHour = pricingService.getUnitPriceVnd(booking.getBranchId(), booking.getWorkspaceTypeId(), DurationUnit.hour.name());
+        } catch (IllegalArgumentException noHourlyPrice) {
+            return q.available(false).maxHours(0)
+                    .reason("Loại không gian này chưa có giá theo giờ nên chưa thể gia hạn. Vui lòng liên hệ quầy.").build();
+        }
         q.pricePerHour(pricePerHour).amount(pricePerHour * hours);
 
         Limit limit = maxExtensionHours(booking, now);
@@ -201,7 +207,7 @@ public class BookingExtensionService {
         }
         bookingAddonService.addCharge(booking, BookingServiceItem.LINE_LATE_FEE,
                 String.format("Check-out muộn %d phút (%d giờ × 1,5 giá giờ)", fee.getLateMinutes(), fee.getBillableHours()),
-                fee.getAmount(), actorId);
+                1, fee.getAmount(), actorId);
         bookingRepository.save(booking);
         log.info("Late check-out fee {}đ charged on booking {}", fee.getAmount(), booking.getBookingCode());
         return fee.getAmount();
@@ -249,7 +255,8 @@ public class BookingExtensionService {
         }
     }
 
-    private static boolean isMultiDayPass(Booking booking) {
+    /** A pass spanning several days (week, month, contract, multi-day) rather than a single session. */
+    public static boolean isMultiDayPass(Booking booking) {
         return booking.isContract()
                 || booking.getUnit() == DurationUnit.week
                 || booking.getUnit() == DurationUnit.month

@@ -7,7 +7,7 @@ import com.cospace.app.entity.Payment;
 import com.cospace.app.security.BranchAccessGuard;
 import com.cospace.app.service.AuditLogService;
 import com.cospace.app.service.BookingAddonService;
-import com.cospace.app.service.PaymentService;
+import com.cospace.app.service.TabPaymentService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -32,7 +32,7 @@ import java.util.UUID;
 public class BookingAddonController {
 
     private final BookingAddonService bookingAddonService;
-    private final PaymentService paymentService;
+    private final TabPaymentService tabPaymentService;
     private final BranchAccessGuard branchAccessGuard;
     private final AuditLogService auditLogService;
     private final HttpServletRequest httpServletRequest;
@@ -86,7 +86,7 @@ public class BookingAddonController {
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID bookingId) {
         requireOwnerOrBranchStaff(jwt, bookingId);
-        return ResponseEntity.ok(paymentService.createTabPayosPayment(bookingId));
+        return ResponseEntity.ok(tabPaymentService.createPayosPayment(bookingId));
     }
 
     @PostMapping("/settle")

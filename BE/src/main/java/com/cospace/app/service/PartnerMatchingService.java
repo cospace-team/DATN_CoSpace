@@ -364,22 +364,10 @@ public class PartnerMatchingService {
             String company = candProfile != null && candProfile.getCompany() != null ? candProfile.getCompany() : "Freelancer";
             String bio = candProfile != null && candProfile.getBio() != null ? candProfile.getBio() : "";
 
-            String candLinkedin = null;
-            String candGithub = null;
-            if (candProfile != null && contactVisible && candProfile.getContactLink() != null) {
-                String rawLink = candProfile.getContactLink().trim();
-                if (rawLink.startsWith("{")) {
-                    try {
-                        JsonNode linkNode = new com.fasterxml.jackson.databind.ObjectMapper().readTree(rawLink);
-                        candLinkedin = linkNode.path("linkedin").asText(null);
-                        candGithub = linkNode.path("github").asText(null);
-                    } catch (Exception e) {
-                        candLinkedin = rawLink;
-                    }
-                } else {
-                    candLinkedin = rawLink;
-                }
-            }
+            Map<String, String> links = candProfile != null && contactVisible
+                    ? PartnerConnectionService.parseLinks(candProfile.getContactLink()) : Map.of();
+            String candLinkedin = links.get("linkedin");
+            String candGithub = links.get("github");
 
             suggestions.add(PartnerSuggestionDto.builder()
                     .id(candidateId.toString())

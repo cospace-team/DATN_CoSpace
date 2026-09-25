@@ -121,24 +121,39 @@ const BookingCheckoutPage: React.FC = () => {
     if (!workspace || !UUID_RE.test(workspace.id)) return;
     // The quote is the server's verdict: price, discounts, add-ons, and whether the slot is bookable
     // at all (opening hours, past time). Without it the customer cannot pay.
-    requestQuote(appliedPromoCode)
-      .then((q) => { setQuote(q); setQuoteError(''); })
-      .catch(async (e: any) => {
-        // A promotion can stop qualifying when add-ons change (minimum order); retry without it.
+    // Quantities can change faster than quotes come back: only the latest request may update the page.
+    let active = true;
+    (async () => {
+      try {
+        const q = await requestQuote(appliedPromoCode);
+        if (!active) return;
+        setQuote(q);
+        setQuoteError('');
+      } catch (e: any) {
+        if (!active) return;
+        // A promotion can stop qualifying when add-ons change (minimum order). Retry without it: if
+        // that works the code was the problem, otherwise the slot itself is (keep the code applied).
         if (appliedPromoCode) {
-          setAppliedPromoCode(null);
-          setPromoError(e.message || 'Mã khuyến mãi không còn áp dụng được.');
           try {
-            setQuote(await requestQuote(null));
+            const q = await requestQuote(null);
+            if (!active) return;
+            setQuote(q);
             setQuoteError('');
+            setAppliedPromoCode(null);
+            setPromoError(e.message || 'Mã khuyến mãi không còn áp dụng được.');
             return;
-          } catch (retryError: any) {
-            e = retryError;
+          } catch {
+            /* fall through: report the original error */
           }
         }
+        if (!active) return;
         setQuote(null);
         setQuoteError(e.message || 'Không thể tính giá đơn đặt chỗ.');
-      });
+      }
+    })();
+    return () => {
+      active = false;
+    };
   }, [workspace?.id, bookingDurationUnit, startAtDate.getTime(), endAtDate.getTime(), addonKey]);
 
   useEffect(() => {

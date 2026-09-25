@@ -257,7 +257,7 @@ public class SpaceManagementService {
 
         try {
             ws = workspaceRepository.saveAndFlush(ws);
-            return toResponse(ws);
+            return withImages(toResponse(ws));
         } catch (DataIntegrityViolationException e) {
             throw new IllegalArgumentException("Mã không gian hoặc phần tử SVG đã tồn tại trong tầng này.");
         }
@@ -310,7 +310,7 @@ public class SpaceManagementService {
 
         try {
             ws = workspaceRepository.saveAndFlush(ws);
-            return toResponse(ws);
+            return withImages(toResponse(ws));
         } catch (DataIntegrityViolationException e) {
             throw new IllegalArgumentException("Mã không gian hoặc phần tử SVG đã tồn tại trong tầng này.");
         }
@@ -375,6 +375,14 @@ public class SpaceManagementService {
                 .svgElementId(ws.getSvgElementId())
                 .status(ws.getStatus().name())
                 .build();
+    }
+
+    /** A single workspace's response with its photos, so saving it never drops them from the admin view. */
+    private WorkspaceResponse withImages(WorkspaceResponse r) {
+        r.setImages(workspaceImageRepository.findByWorkspaceIdOrderBySortOrderAscCreatedAtAsc(r.getId()).stream()
+                .map(WorkspaceImageService::toResponse)
+                .toList());
+        return r;
     }
 
     private WorkspaceTypeResponse toResponse(WorkspaceType wt) {

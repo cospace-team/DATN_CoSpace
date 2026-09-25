@@ -5,7 +5,6 @@ import com.cospace.app.dto.api.CheckinLogDto;
 import com.cospace.app.entity.Booking;
 import com.cospace.app.entity.BookingStatus;
 import com.cospace.app.entity.CheckinLog;
-import com.cospace.app.entity.DurationUnit;
 import com.cospace.app.repository.BookingRepository;
 import com.cospace.app.repository.CheckinLogRepository;
 import com.cospace.app.repository.UserRepository;
@@ -57,10 +56,7 @@ public class CheckinService {
             });
         }
 
-        boolean isMultiDayPass = booking.isContract() 
-                || booking.getUnit() == DurationUnit.week 
-                || booking.getUnit() == DurationUnit.month 
-                || (booking.getUnit() == DurationUnit.day && booking.getUnitCount() > 1);
+        boolean isMultiDayPass = BookingExtensionService.isMultiDayPass(booking);
 
         // 2. Validate booking status
         if (!isMultiDayPass && booking.getStatus() != BookingStatus.CONFIRMED) {
@@ -144,10 +140,7 @@ public class CheckinService {
         }
 
         // Multi-day pass: if still within valid period, maintain status CONFIRMED for future days, do not truncate endAt
-        boolean isMultiDayPass = booking.isContract() 
-                || booking.getUnit() == DurationUnit.week 
-                || booking.getUnit() == DurationUnit.month 
-                || (booking.getUnit() == DurationUnit.day && booking.getUnitCount() > 1);
+        boolean isMultiDayPass = BookingExtensionService.isMultiDayPass(booking);
 
         if (isMultiDayPass && now.isBefore(booking.getEndAt())) {
             if (booking.getStatus() != BookingStatus.CONFIRMED) {

@@ -71,12 +71,12 @@ class PartnerConnectionServiceTest {
             if (c.getId() == null) c.setId(UUID.randomUUID());
             return c;
         });
-        lenient().when(profileSkillRepository.findByProfileUserId(any())).thenReturn(List.of());
+        lenient().when(profileSkillRepository.findByProfileUserIdIn(any())).thenReturn(List.of());
         lenient().when(tagRepository.findAllById(any())).thenReturn(List.of());
     }
 
     private void bobHasPrivateContact() {
-        lenient().when(profileRepository.findById(bob.getId())).thenReturn(Optional.of(Profile.builder()
+        lenient().when(profileRepository.findAllById(List.of(bob.getId()))).thenReturn(List.of(Profile.builder()
                 .userId(bob.getId()).contactPublic(false).contactEmail("bob@work.vn")
                 .contactLink("{\"linkedin\":\"https://linkedin.com/in/bob\"}").build()));
     }
@@ -132,14 +132,35 @@ class PartnerConnectionServiceTest {
     }
 
     @Test
-    void declinedRequestCanBeSentAgain() {
+    void declinedRequestCanBeSentAgainAfterAWhile() {
         PartnerConnection declined = PartnerConnection.builder().id(UUID.randomUUID())
-                .requesterId(alice.getId()).addresseeId(bob.getId()).status(PartnerConnection.STATUS_DECLINED).build();
+                .requesterId(alice.getId()).addresseeId(bob.getId()).status(PartnerConnection.STATUS_DECLINED)
+                .respondedAt(java.time.OffsetDateTime.now().minusDays(8)).build();
         when(connectionRepository.findBetween(alice.getId(), bob.getId())).thenReturn(Optional.of(declined));
 
         service.send(alice.getId(), bob.getId(), null);
 
         assertThat(declined.getStatus()).isEqualTo(PartnerConnection.STATUS_PENDING);
+    }
+
+    @Test
+    void staffAreNotPartOfTheNetwork() {
+        User staff = user("Staff");
+        staff.setRole(User.Role.staff);
+
+        assertThatThrownBy(() -> service.send(alice.getId(), staff.getId(), "hi")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.profileFor(alice.getId(), staff.getId())).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void recentlyDeclinedRequestCannotBeResentStraightAway() {
+        PartnerConnection declined = PartnerConnection.builder().id(UUID.randomUUID())
+                .requesterId(alice.getId()).addresseeId(bob.getId()).status(PartnerConnection.STATUS_DECLINED)
+                .respondedAt(java.time.OffsetDateTime.now().minusDays(1)).build();
+        when(connectionRepository.findBetween(alice.getId(), bob.getId())).thenReturn(Optional.of(declined));
+
+        assertThatThrownBy(() -> service.send(alice.getId(), bob.getId(), null)).isInstanceOf(IllegalStateException.class);
+        assertThat(declined.getStatus()).isEqualTo(PartnerConnection.STATUS_DECLINED);
     }
 
     @Test

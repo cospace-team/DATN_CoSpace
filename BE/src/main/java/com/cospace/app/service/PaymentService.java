@@ -148,14 +148,19 @@ public class PaymentService {
         return toPayosCreateResponse(payment, orderCode, qrCode, "Tạo liên kết thanh toán PayOS VietQR thành công.");
     }
 
+    /** A tab payment recorded and tied to its lines, waiting for its PayOS link. */
+    public record PreparedTabPayment(UUID paymentId, UUID bookingId, long orderCode, String orderId, long amount, String bookingCode) {
+    }
+
     /**
-     * Creates a VietQR (PayOS) payment for everything still owed on a booking's running tab: add-ons
-     * ordered after the booking was paid, extra hours, late check-out fees. The lines are tied to the
-     * payment and become paid when PayOS confirms it. The caller checks that the requester owns the
-     * booking or works at its branch.
+     * First step of a VietQR (PayOS) payment for everything still owed on a booking's running tab:
+     * add-ons ordered after the booking was paid, extra hours, late check-out fees. Under the booking
+     * lock, the payment is recorded and the unpaid lines are tied to it; the PayOS call happens
+     * afterwards, outside this transaction (see TabPaymentService), so a slow gateway never holds the
+     * lock that check-out and the counter need.
      */
     @Transactional
-    public com.cospace.app.dto.api.BookingAddonDto.TabPaymentResponse createTabPayosPayment(UUID bookingId) {
+    public PreparedTabPayment prepareTabPayment(UUID bookingId) {
         Booking booking = bookingRepository.findByIdWithLock(bookingId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đặt chỗ."));
         if (booking.getStatus() != BookingStatus.CONFIRMED && booking.getStatus() != BookingStatus.CHECKED_IN
@@ -163,7 +168,6 @@ public class PaymentService {
             throw new IllegalStateException("Không thể thanh toán dịch vụ cho đơn ở trạng thái "
                     + BookingStateMachine.label(booking.getStatus()) + ".");
         }
-
         long owed = bookingAddonService.unpaidAmount(bookingId);
         if (owed <= 0) {
             throw new IllegalStateException("Đơn không còn khoản nào chưa thanh toán.");
@@ -183,24 +187,34 @@ public class PaymentService {
                 .purpose(Payment.PURPOSE_ADDON)
                 .build();
         paymentRepository.saveAndFlush(payment);
-
         long amount = bookingAddonService.linkUnpaidToPayment(bookingId, payment.getId());
-
-        Map<String, Object> payosRes = payosService.createPaymentLink(orderCode, amount, "DV " + booking.getBookingCode(), null);
-        payment.setStatus(PaymentStatus.PENDING);
-        payment.setPayUrl(Objects.toString(payosRes.get("checkoutUrl"), ""));
+        payment.setAmount(amount);
         paymentRepository.save(payment);
+        return new PreparedTabPayment(payment.getId(), booking.getId(), orderCode, payment.getOrderId(), amount, booking.getBookingCode());
+    }
 
-        return com.cospace.app.dto.api.BookingAddonDto.TabPaymentResponse.builder()
-                .paymentId(payment.getId())
-                .bookingId(booking.getId())
-                .orderCode(orderCode)
-                .orderId(payment.getOrderId())
-                .amount(amount)
-                .checkoutUrl(payment.getPayUrl())
-                .qrCode(Objects.toString(payosRes.get("qrCode"), ""))
-                .status(payment.getStatus().name())
-                .build();
+    /** Last step: the PayOS link exists, so the payment is now waiting for the customer (unless it was cancelled meanwhile). */
+    @Transactional
+    public void attachTabPaymentLink(UUID paymentId, String checkoutUrl) {
+        paymentRepository.findById(paymentId)
+                .filter(p -> p.getStatus() == PaymentStatus.INITIATED)
+                .ifPresent(p -> {
+                    p.setStatus(PaymentStatus.PENDING);
+                    p.setPayUrl(checkoutUrl);
+                    paymentRepository.save(p);
+                });
+    }
+
+    /** PayOS refused the link: the payment fails and its lines are free to be paid another way. */
+    @Transactional
+    public void failTabPayment(UUID paymentId) {
+        paymentRepository.findById(paymentId).ifPresent(p -> {
+            if (p.getStatus() == PaymentStatus.INITIATED || p.getStatus() == PaymentStatus.PENDING) {
+                p.setStatus(PaymentStatus.FAILED);
+                paymentRepository.save(p);
+            }
+            bookingAddonService.unlinkPayment(p.getBookingId(), paymentId);
+        });
     }
 
     @Transactional

@@ -33,7 +33,8 @@ const TabQrPayment: React.FC<Props> = ({ payment, onPaid, onClose }) => {
   }, [payment.qrCode]);
 
   useEffect(() => {
-    if (status === 'PAID') return;
+    // Stop asking once the payment is settled one way or the other.
+    if (status === 'PAID' || status === 'CANCELLED' || status === 'FAILED') return;
     const timer = window.setInterval(async () => {
       try {
         const res = await addonApi.paymentStatus(payment.orderCode);

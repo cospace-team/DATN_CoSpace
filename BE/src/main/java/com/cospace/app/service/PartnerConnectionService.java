@@ -4,7 +4,6 @@ import com.cospace.app.dto.api.ConnectionDto;
 import com.cospace.app.entity.PartnerConnection;
 import com.cospace.app.entity.Profile;
 import com.cospace.app.entity.ProfileSkill;
-import com.cospace.app.entity.Tag;
 import com.cospace.app.entity.User;
 import com.cospace.app.repository.BranchEntityRepository;
 import com.cospace.app.repository.PartnerConnectionRepository;
@@ -39,6 +38,8 @@ import java.util.UUID;
 public class PartnerConnectionService {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
+    /** How long a member must wait before inviting someone who declined them again. */
+    static final long RESEND_AFTER_DECLINE_DAYS = 7;
 
     private final PartnerConnectionRepository connectionRepository;
     private final UserRepository userRepository;
@@ -60,9 +61,12 @@ public class PartnerConnectionService {
             throw new IllegalArgumentException("Bạn không thể kết nối với chính mình.");
         }
         User addressee = userRepository.findById(addresseeId)
-                .filter(u -> u.getStatus() == User.Status.active)
+                .filter(PartnerConnectionService::isNetworkingMember)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thành viên."));
         User requester = requireUser(requesterId);
+        if (!isNetworkingMember(requester)) {
+            throw new AccessDeniedException("Chỉ thành viên khách hàng mới dùng được mạng lưới kết nối.");
+        }
         String note = message == null || message.isBlank() ? null : message.trim();
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
 
@@ -77,6 +81,13 @@ public class PartnerConnectionService {
             // They invited us first: sending back means yes.
             accept(existing, now);
             return profileFor(requesterId, addresseeId);
+        }
+
+        if (existing != null && PartnerConnection.STATUS_DECLINED.equals(existing.getStatus())
+                && existing.getRequesterId().equals(requesterId) && existing.getRespondedAt() != null
+                && existing.getRespondedAt().isAfter(now.minusDays(RESEND_AFTER_DECLINE_DAYS))) {
+            // Otherwise a declined member could be sent the same request (and notification) again and again.
+            throw new IllegalStateException("Bạn chưa thể gửi lại lời mời cho thành viên này lúc này. Vui lòng thử lại sau.");
         }
 
         PartnerConnection connection = existing != null ? existing : new PartnerConnection();
@@ -147,19 +158,29 @@ public class PartnerConnectionService {
 
     @Transactional(readOnly = true)
     public ConnectionDto.Overview overview(UUID userId) {
+        List<PartnerConnection> all = connectionRepository.findAllInvolving(userId).stream()
+                .filter(c -> !ConnectionDto.STATE_NONE.equals(stateFor(userId, c)))
+                .toList();
+        // Load every counterpart's user, profile and skills in a few queries instead of per connection.
+        List<UUID> memberIds = all.stream().map(c -> c.otherThan(userId)).distinct().toList();
+        ProfileData data = loadProfileData(memberIds);
+
         List<ConnectionDto.ConnectionItem> incoming = new ArrayList<>();
         List<ConnectionDto.ConnectionItem> outgoing = new ArrayList<>();
         List<ConnectionDto.ConnectionItem> connected = new ArrayList<>();
-        for (PartnerConnection c : connectionRepository.findAllInvolving(userId)) {
+        for (PartnerConnection c : all) {
+            UUID memberId = c.otherThan(userId);
+            User member = data.users().get(memberId);
+            if (member == null) continue;
             String state = stateFor(userId, c);
-            if (ConnectionDto.STATE_NONE.equals(state)) continue;
             ConnectionDto.ConnectionItem item = ConnectionDto.ConnectionItem.builder()
                     .id(c.getId())
                     .state(state)
                     .message(c.getMessage())
                     .createdAt(c.getCreatedAt())
                     .respondedAt(c.getRespondedAt())
-                    .member(buildProfile(c.otherThan(userId), c, state))
+                    .member(buildProfile(member, data.profiles().get(memberId), data.skills().getOrDefault(memberId, List.of()),
+                            c, state))
                     .build();
             switch (state) {
                 case ConnectionDto.STATE_INCOMING -> incoming.add(item);
@@ -170,12 +191,40 @@ public class PartnerConnectionService {
         return ConnectionDto.Overview.builder().incoming(incoming).outgoing(outgoing).connected(connected).build();
     }
 
+    private record ProfileData(Map<UUID, User> users, Map<UUID, Profile> profiles, Map<UUID, List<String>> skills) {
+    }
+
+    private ProfileData loadProfileData(List<UUID> memberIds) {
+        if (memberIds.isEmpty()) return new ProfileData(Map.of(), Map.of(), Map.of());
+        Map<UUID, User> users = new HashMap<>();
+        userRepository.findAllById(memberIds).forEach(u -> users.put(u.getId(), u));
+        Map<UUID, Profile> profiles = new HashMap<>();
+        profileRepository.findAllById(memberIds).forEach(p -> profiles.put(p.getUserId(), p));
+        List<ProfileSkill> skillRows = profileSkillRepository.findByProfileUserIdIn(memberIds);
+        Map<UUID, String> tagNames = new HashMap<>();
+        tagRepository.findAllById(skillRows.stream().map(ProfileSkill::getTagId).distinct().toList())
+                .forEach(t -> tagNames.put(t.getId(), t.getName()));
+        Map<UUID, List<String>> skills = new HashMap<>();
+        for (ProfileSkill row : skillRows) {
+            String name = tagNames.get(row.getTagId());
+            if (name != null) skills.computeIfAbsent(row.getProfileUserId(), k -> new ArrayList<>()).add(name);
+        }
+        skills.values().forEach(list -> list.sort(null));
+        return new ProfileData(users, profiles, skills);
+    }
+
     /** Another member's profile, with contact details only if they are public or the two are connected. */
     @Transactional(readOnly = true)
     public ConnectionDto.MemberProfile profileFor(UUID viewerId, UUID memberId) {
-        requireUser(memberId);
+        User member = requireUser(memberId);
+        // Staff and admins are not part of the networking directory (same rule as the suggestions).
+        if (!viewerId.equals(memberId) && !isNetworkingMember(member)) {
+            throw new IllegalArgumentException("Không tìm thấy thành viên.");
+        }
         PartnerConnection c = viewerId.equals(memberId) ? null : connectionRepository.findBetween(viewerId, memberId).orElse(null);
-        return buildProfile(memberId, c, c == null ? ConnectionDto.STATE_NONE : stateFor(viewerId, c));
+        ProfileData data = loadProfileData(List.of(memberId));
+        return buildProfile(member, data.profiles().get(memberId), data.skills().getOrDefault(memberId, List.of()),
+                c, c == null ? ConnectionDto.STATE_NONE : stateFor(viewerId, c));
     }
 
     /** Connection state and id towards every member the viewer has a live connection or request with. */
@@ -199,14 +248,11 @@ public class PartnerConnectionService {
         return ConnectionDto.STATE_NONE;
     }
 
-    private ConnectionDto.MemberProfile buildProfile(UUID memberId, PartnerConnection connection, String state) {
-        User member = requireUser(memberId);
-        Profile profile = profileRepository.findById(memberId).orElse(null);
+    private ConnectionDto.MemberProfile buildProfile(User member, Profile profile, List<String> skills,
+                                                     PartnerConnection connection, String state) {
+        UUID memberId = member.getId();
         boolean contactPublic = profile != null && profile.isContactPublic();
         boolean contactVisible = contactPublic || ConnectionDto.STATE_CONNECTED.equals(state);
-
-        List<UUID> tagIds = profileSkillRepository.findByProfileUserId(memberId).stream().map(ProfileSkill::getTagId).toList();
-        List<String> skills = tagRepository.findAllById(tagIds).stream().map(Tag::getName).sorted().toList();
 
         ConnectionDto.MemberProfile.MemberProfileBuilder b = ConnectionDto.MemberProfile.builder()
                 .userId(memberId)
@@ -253,6 +299,13 @@ public class PartnerConnectionService {
             log.debug("Unreadable contact_link JSON: {}", e.getMessage());
         }
         return links;
+    }
+
+    /** Active customers who signed up themselves; walk-in guests created at the counter are excluded. */
+    static boolean isNetworkingMember(User u) {
+        return u.getStatus() == User.Status.active
+                && u.getRole() == User.Role.customer
+                && (u.getEmail() == null || !u.getEmail().endsWith(UserService.WALKIN_EMAIL_DOMAIN));
     }
 
     private User requireUser(UUID userId) {
