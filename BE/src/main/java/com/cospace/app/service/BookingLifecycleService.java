@@ -28,9 +28,13 @@ public class BookingLifecycleService {
     private final NotificationService notificationService;
     private final BookingAddonService bookingAddonService;
 
-    /** How long after the booked end time a guest still checked in is checked out automatically. */
-    @Value("${app.booking.checkout-grace-minutes:15}")
-    private long checkoutGraceMinutes = 15;
+    /**
+     * How long after the booked end time a guest still checked in is checked out automatically.
+     * It is well past the 15-minute late check-out grace on purpose: until then a guest who stayed
+     * on is checked out by staff, who bill the late check-out fee (see BookingExtensionService).
+     */
+    @Value("${app.booking.auto-checkout-after-minutes:120}")
+    private long checkoutGraceMinutes = 120;
 
     public long checkoutGraceMinutes() {
         return checkoutGraceMinutes;
@@ -50,7 +54,7 @@ public class BookingLifecycleService {
         }
 
         checkinLogRepository.findActiveCheckinByBookingId(bookingId).ifPresent(log -> {
-            // Record the booked end as the checkout time: the overstay is not billed.
+            // Nobody saw the guest leave: record the booked end as the checkout time and bill no overstay.
             log.setCheckoutAt(booking.getEndAt());
             log.setNote((log.getNote() != null ? log.getNote() + " | " : "")
                     + "Hệ thống tự check-out do quá giờ kết thúc " + checkoutGraceMinutes + " phút");

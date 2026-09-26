@@ -12,5 +12,7 @@ public interface ProfileSkillRepository extends JpaRepository<ProfileSkill, Prof
 
     List<ProfileSkill> findByProfileUserId(UUID profileUserId);
 
+    List<ProfileSkill> findByProfileUserIdIn(java.util.Collection<UUID> profileUserIds);
+
     void deleteByProfileUserId(UUID profileUserId);
 }

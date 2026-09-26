@@ -1,6 +1,7 @@
 import { API_BASE_URL } from '../config/api';
 
 export type RefundStatus = 'pending' | 'processed' | 'rejected';
+export type RefundMethod = 'cash' | 'bank_transfer' | 'voucher';
 export type RefundReason = 'CANCELLATION' | 'MAINTENANCE' | 'LATE_PAYMENT' | 'DUPLICATE_PAYMENT';
 
 export interface RefundDto {
@@ -21,6 +22,9 @@ export interface RefundDto {
   reason: string | null;
   status: RefundStatus;
   resolutionNote: string | null;
+  refundMethod: RefundMethod | null;
+  voucherCode: string | null;
+  voucherExpiresAt: string | null;
   processedByName: string | null;
   processedAt: string | null;
   createdAt: string;
@@ -31,6 +35,12 @@ export const REFUND_REASON_LABEL: Record<RefundReason, string> = {
   MAINTENANCE: 'Bảo trì đột xuất',
   LATE_PAYMENT: 'Thanh toán về muộn',
   DUPLICATE_PAYMENT: 'Thanh toán trùng',
+};
+
+export const REFUND_METHOD_LABEL: Record<RefundMethod, string> = {
+  bank_transfer: 'Chuyển khoản',
+  cash: 'Tiền mặt',
+  voucher: 'Voucher',
 };
 
 const headers = (): HeadersInit => {
@@ -58,9 +68,11 @@ export const refundApi = {
     if (params.branchId) q.append('branchId', params.branchId);
     return request<RefundDto[]>(`/api/refunds?${q}`, {}, 'Không thể tải danh sách hoàn tiền');
   },
-  process: (id: string, note: string) =>
-    request<{ message: string }>(`/api/refunds/${id}/process`, { method: 'POST', body: JSON.stringify({ note }) },
-      'Không thể xác nhận hoàn tiền'),
+  process: (id: string, note: string, method: RefundMethod = 'bank_transfer', voucherValidDays?: number) =>
+    request<{ message: string }>(`/api/refunds/${id}/process`, {
+      method: 'POST',
+      body: JSON.stringify({ note, method, voucherValidDays }),
+    }, 'Không thể xác nhận hoàn tiền'),
   reject: (id: string, note: string) =>
     request<{ message: string }>(`/api/refunds/${id}/reject`, { method: 'POST', body: JSON.stringify({ note }) },
       'Không thể từ chối hoàn tiền'),

@@ -3,6 +3,8 @@ import { FiX, FiCheck } from 'react-icons/fi';
 import { WorkspaceAmenities } from '../../../components/WorkspaceAmenities';
 import { formatVND, durationUnitLabel } from '../../../utils/formatters';
 import type { ExtraServiceDto } from '../../../api/addonApi';
+import { QuantityStepper } from '../../../components/ui/QuantityStepper';
+import WorkspaceGallery from '../../../components/workspace/WorkspaceGallery';
 import type { ExtraServiceResponse } from '../../../lib/spaceApi';
 
 export type DurationUnitMode = 'hour' | 'day' | 'week';
@@ -18,6 +20,7 @@ export interface ExploreWorkspace {
   status: string;
   floor_id: string;
   branch_id: string;
+  images?: { id: string; url: string }[];
 }
 
 export type PriceUnit = 'hour' | 'day' | 'week' | 'month';
@@ -126,6 +129,10 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
     });
   };
 
+  const handleQuantityChange = (id: string, quantity: number) => {
+    setServices(prev => ({ ...prev, [id]: quantity }));
+  };
+
   // Calculate unitCount based on selected durationUnit
   const unitCount = useMemo(() => {
     if (durationUnit === 'hour') return Math.max(1, endHour - selectedHour);
@@ -208,6 +215,7 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
 
       {/* Info */}
       <div className="mt-5 space-y-3">
+        <WorkspaceGallery images={ws.images || []} alt={ws.name} />
         <div className="rounded-2xl bg-[var(--bg-surface-hover)] p-3 border border-border">
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -215,8 +223,10 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
               <p className="text-sm font-semibold">{wsType?.name}</p>
             </div>
             <div>
-              <p className="text-xs text-[var(--text-tertiary)]">Sức chứa</p>
-              <p className="text-sm font-semibold">{ws.capacity} chỗ</p>
+              <p className="text-xs text-[var(--text-tertiary)]">Số chỗ ngồi</p>
+              <p className="text-sm font-semibold">
+                {ws.capacity} {ws.capacity > 1 ? 'chỗ · tối đa ' + ws.capacity + ' người' : 'chỗ (1 người)'}
+              </p>
             </div>
             <div>
               <p className="text-xs text-[var(--text-tertiary)]">Mã</p>
@@ -379,26 +389,36 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
               allAddons
                 .filter((s: any) => s.isActive !== false)
                 .map((s: any) => (
-                  <label
-                    key={s.id}
-                    htmlFor={`addon-${s.id}-${selectedWs}`}
-                    className="flex items-center gap-3 text-sm cursor-pointer"
-                  >
-                    <input
-                      id={`addon-${s.id}-${selectedWs}`}
-                      type="checkbox"
-                      checked={!!services[s.id]}
-                      onChange={e => handleServiceChange(s.id, e.target.checked)}
-                      className="rounded accent-[var(--brand-primary)]"
-                    />
-                    <span className="flex items-center gap-1.5">
-                      {getServiceIcon(s.unit || s.serviceType, s.name)} {s.name}
+                  <div key={s.id} className="flex items-center gap-3 text-sm">
+                    <label
+                      htmlFor={`addon-${s.id}-${selectedWs}`}
+                      className="flex items-center gap-3 cursor-pointer min-w-0 flex-1"
+                    >
+                      <input
+                        id={`addon-${s.id}-${selectedWs}`}
+                        type="checkbox"
+                        checked={!!services[s.id]}
+                        onChange={e => handleServiceChange(s.id, e.target.checked)}
+                        className="rounded accent-[var(--brand-primary)]"
+                      />
+                      <span className="flex items-center gap-1.5 min-w-0">
+                        {getServiceIcon(s.unit || s.serviceType, s.name)}
+                        <span className="truncate">{s.name}</span>
+                      </span>
+                    </label>
+                    {services[s.id] ? (
+                      <QuantityStepper
+                        value={services[s.id]}
+                        onChange={q => handleQuantityChange(s.id, q)}
+                        label={`Số lượng ${s.name}`}
+                      />
+                    ) : null}
+                    <span className="ml-auto shrink-0 text-xs text-[var(--text-tertiary)] text-right">
+                      {services[s.id]
+                        ? formatVND(s.price * services[s.id])
+                        : `+${formatVND(s.price)}${s.unit ? `/${s.unit}` : ''}`}
                     </span>
-                    <span className="ml-auto text-xs text-[var(--text-tertiary)]">
-                      +{formatVND(s.price)}
-                      {s.unit ? `/${s.unit}` : ''}
-                    </span>
-                  </label>
+                  </div>
                 ))
             )}
           </div>

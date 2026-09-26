@@ -123,24 +123,130 @@ public class BookingAddonService {
         return item;
     }
 
-    /** Cancels an unpaid line ordered on the tab (wrong order, item not served). */
+    /**
+     * Cancels an unpaid line on the tab (wrong order, item not served, fee waived). A customer may
+     * only cancel services they ordered themselves; extension and late-fee lines are staff-only.
+     */
     @Transactional
-    public void voidItem(UUID actorId, UUID bookingId, UUID itemId) {
+    public void voidItem(UUID actorId, UUID bookingId, UUID itemId, boolean asStaff) {
         Booking booking = bookingRepository.findByIdWithLock(bookingId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đặt chỗ."));
-        BookingServiceItem item = bookingServiceItemRepository.findById(itemId)
-                .filter(i -> i.getBookingId().equals(bookingId))
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy dịch vụ trong đơn."));
-        if (!BookingServiceItem.STATUS_UNPAID.equals(item.getStatus())) {
-            throw new IllegalStateException("Chỉ hủy được dịch vụ chưa thanh toán.");
-        }
-        if (booking.getStatus() == BookingStatus.PENDING_PAYMENT) {
-            // The pending payment was created for the full total; changing it now would let the
-            // gateway confirm a different amount than the booking owes.
-            throw new IllegalStateException("Đơn đang chờ thanh toán, không thể thay đổi dịch vụ đã đặt kèm.");
-        }
+        BookingServiceItem item = requireEditableLine(booking, itemId, actorId, asStaff);
         voidLine(booking, item, actorId);
+        if (BookingServiceItem.LINE_EXTENSION.equals(item.getLineType())) {
+            // Cancelling an extension gives the hours back: the booking ends when it did before.
+            OffsetDateTime revertedEnd = booking.getEndAt().minusHours(item.getQuantity());
+            booking.setEndAt(revertedEnd.isAfter(booking.getStartAt()) ? revertedEnd : booking.getStartAt().plusHours(1));
+        }
         bookingRepository.save(booking);
+    }
+
+    /** Changes how many of an unpaid service line were ordered; the line's subtotal and the booking's total follow. */
+    @Transactional
+    public BookingServiceItem updateQuantity(UUID actorId, UUID bookingId, UUID itemId, int quantity, boolean asStaff) {
+        Booking booking = bookingRepository.findByIdWithLock(bookingId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đặt chỗ."));
+        BookingServiceItem item = requireEditableLine(booking, itemId, actorId, asStaff);
+        if (!BookingServiceItem.LINE_SERVICE.equals(item.getLineType())) {
+            throw new IllegalStateException("Chỉ đổi được số lượng của dịch vụ thêm.");
+        }
+        int qty = requireQuantity(quantity);
+        if (qty == item.getQuantity()) {
+            return item;
+        }
+        releaseOpenPayment(item);
+        long newSubtotal = item.getUnitPrice() * qty;
+        long delta = newSubtotal - item.getSubtotal();
+        item.setQuantity(qty);
+        item.setSubtotal(newSubtotal);
+        bookingServiceItemRepository.save(item);
+        booking.setAddonAmount(Math.max(0, booking.getAddonAmount() + delta));
+        booking.setTotalAmount(Math.max(0, booking.getTotalAmount() + delta));
+        bookingRepository.save(booking);
+        return item;
+    }
+
+    /**
+     * Puts a charge that is not a catalogue service (extra hours, late check-out) on the tab. It is
+     * owed like any add-on, so the guest cannot check out until it is paid. For an extension the
+     * quantity is the number of hours, so cancelling the line can give them back. The caller saves
+     * the booking.
+     */
+    @Transactional
+    public BookingServiceItem addCharge(Booking booking, String lineType, String description, int quantity, long unitPrice, UUID actorId) {
+        long amount = unitPrice * quantity;
+        if (quantity < 1 || amount <= 0) {
+            throw new IllegalArgumentException("Số tiền phụ phí không hợp lệ.");
+        }
+        BookingServiceItem item = bookingServiceItemRepository.save(BookingServiceItem.builder()
+                .bookingId(booking.getId())
+                .lineType(lineType)
+                .description(description)
+                .quantity(quantity)
+                .unitPrice(unitPrice)
+                .subtotal(amount)
+                .status(BookingServiceItem.STATUS_UNPAID)
+                .createdBy(actorId)
+                .build());
+        booking.setAddonAmount(booking.getAddonAmount() + amount);
+        booking.setTotalAmount(booking.getTotalAmount() + amount);
+        return item;
+    }
+
+    /** True if the booking ever had a line of this type, including one that was cancelled (waived). */
+    @Transactional(readOnly = true)
+    public boolean hasAnyLine(UUID bookingId, String lineType) {
+        return bookingServiceItemRepository.findByBookingIdOrderByCreatedAtAsc(bookingId).stream()
+                .anyMatch(i -> lineType.equals(i.getLineType()));
+    }
+
+    /**
+     * Ties every unpaid line to a payment that is about to be made online (QR). Lines already tied
+     * to an earlier open payment are moved over and that payment is cancelled, so only one QR is
+     * ever valid for a set of lines.
+     *
+     * @return the amount the new payment must collect
+     */
+    @Transactional
+    public long linkUnpaidToPayment(UUID bookingId, UUID paymentId) {
+        List<BookingServiceItem> unpaid = bookingServiceItemRepository.findByBookingIdAndStatus(bookingId, BookingServiceItem.STATUS_UNPAID);
+        for (BookingServiceItem item : unpaid) {
+            releaseOpenPayment(item);
+            item.setPaymentId(paymentId);
+            bookingServiceItemRepository.save(item);
+        }
+        return total(unpaid);
+    }
+
+    /** Unties the unpaid lines from a payment that will never be paid (its link could not be created). */
+    @Transactional
+    public void unlinkPayment(UUID bookingId, UUID paymentId) {
+        for (BookingServiceItem item : bookingServiceItemRepository.findByBookingIdAndStatus(bookingId, BookingServiceItem.STATUS_UNPAID)) {
+            if (paymentId.equals(item.getPaymentId())) {
+                item.setPaymentId(null);
+                bookingServiceItemRepository.save(item);
+            }
+        }
+    }
+
+    /**
+     * Marks the lines an add-on payment was created for as paid.
+     *
+     * @return the amount of those lines still unpaid when the money arrived, i.e. what the payment
+     *         actually covered; anything above it was paid for lines settled or cancelled meanwhile
+     */
+    @Transactional
+    public long applyTabPayment(Payment payment) {
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        long covered = 0;
+        for (BookingServiceItem item : bookingServiceItemRepository.findByBookingIdAndStatus(payment.getBookingId(), BookingServiceItem.STATUS_UNPAID)) {
+            if (!payment.getId().equals(item.getPaymentId())) continue;
+            item.setStatus(BookingServiceItem.STATUS_PAID);
+            item.setPaidAt(now);
+            bookingServiceItemRepository.save(item);
+            covered += item.getSubtotal();
+        }
+        return covered;
     }
 
     /**
@@ -166,6 +272,8 @@ public class BookingAddonService {
         if (amount <= 0) {
             return null;
         }
+        // Collected at the counter: a QR still open for these lines must not be paid on top of it.
+        unpaid.forEach(this::releaseOpenPayment);
 
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         Payment payment = paymentRepository.save(Payment.builder()
@@ -230,7 +338,7 @@ public class BookingAddonService {
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đặt chỗ."));
         List<BookingServiceItem> items = bookingServiceItemRepository.findByBookingIdOrderByCreatedAtAsc(bookingId);
         Map<UUID, ExtraServiceEntity> services = extraServiceRepository.findAllById(
-                        items.stream().map(BookingServiceItem::getServiceId).distinct().toList())
+                        items.stream().map(BookingServiceItem::getServiceId).filter(Objects::nonNull).distinct().toList())
                 .stream().collect(Collectors.toMap(ExtraServiceEntity::getId, Function.identity()));
 
         long unpaid = 0;
@@ -239,12 +347,16 @@ public class BookingAddonService {
         for (BookingServiceItem item : items) {
             if (BookingServiceItem.STATUS_UNPAID.equals(item.getStatus())) unpaid += item.getSubtotal();
             if (BookingServiceItem.STATUS_PAID.equals(item.getStatus())) paid += item.getSubtotal();
-            ExtraServiceEntity service = services.get(item.getServiceId());
+            ExtraServiceEntity service = item.getServiceId() != null ? services.get(item.getServiceId()) : null;
+            String name = item.getDescription() != null ? item.getDescription()
+                    : service != null ? service.getName() : "Dịch vụ đã xóa";
             responses.add(BookingAddonDto.ItemResponse.builder()
                     .id(item.getId())
                     .serviceId(item.getServiceId())
-                    .serviceName(service != null ? service.getName() : "Dịch vụ đã xóa")
+                    .lineType(item.getLineType())
+                    .serviceName(name)
                     .serviceUnit(service != null ? service.getUnit() : null)
+                    .createdBy(item.getCreatedBy())
                     .quantity(item.getQuantity())
                     .unitPrice(item.getUnitPrice())
                     .subtotal(item.getSubtotal())
@@ -270,7 +382,52 @@ public class BookingAddonService {
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đặt chỗ."));
     }
 
+    /** An unpaid line of a booking whose tab can still change, that this caller is allowed to edit. */
+    private BookingServiceItem requireEditableLine(Booking booking, UUID itemId, UUID actorId, boolean asStaff) {
+        BookingServiceItem item = bookingServiceItemRepository.findById(itemId)
+                .filter(i -> i.getBookingId().equals(booking.getId()))
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy dịch vụ trong đơn."));
+        if (!BookingServiceItem.STATUS_UNPAID.equals(item.getStatus())) {
+            throw new IllegalStateException("Chỉ sửa hoặc hủy được dịch vụ chưa thanh toán.");
+        }
+        if (booking.getStatus() == BookingStatus.PENDING_PAYMENT) {
+            // The pending payment was created for the full total; changing it now would let the
+            // gateway confirm a different amount than the booking owes.
+            throw new IllegalStateException("Đơn đang chờ thanh toán, không thể thay đổi dịch vụ đã đặt kèm.");
+        }
+        boolean inUse = booking.getStatus() == BookingStatus.CONFIRMED || booking.getStatus() == BookingStatus.CHECKED_IN;
+        if (!asStaff && !inUse) {
+            // After check-out what was ordered was consumed: only the counter can still adjust it.
+            throw new IllegalStateException("Đơn đã kết thúc, vui lòng liên hệ quầy nếu cần điều chỉnh dịch vụ.");
+        }
+        if (BookingServiceItem.LINE_EXTENSION.equals(item.getLineType()) && !inUse) {
+            throw new IllegalStateException("Đơn đã kết thúc nên không thể hủy phần gia hạn.");
+        }
+        if (!asStaff) {
+            if (!BookingServiceItem.LINE_SERVICE.equals(item.getLineType())) {
+                throw new IllegalStateException("Phí gia hạn / check-out muộn chỉ nhân viên mới điều chỉnh được.");
+            }
+            if (!Objects.equals(item.getCreatedBy(), actorId)) {
+                throw new IllegalStateException("Dịch vụ do nhân viên thêm, vui lòng liên hệ quầy để điều chỉnh.");
+            }
+        }
+        return item;
+    }
+
+    /** Cancels the still-open online payment a line was tied to, and unties the line. */
+    private void releaseOpenPayment(BookingServiceItem item) {
+        if (item.getPaymentId() == null) return;
+        paymentRepository.findById(item.getPaymentId())
+                .filter(p -> p.getStatus() == PaymentStatus.INITIATED || p.getStatus() == PaymentStatus.PENDING)
+                .ifPresent(p -> {
+                    p.setStatus(PaymentStatus.CANCELLED);
+                    paymentRepository.save(p);
+                });
+        item.setPaymentId(null);
+    }
+
     private long voidLine(Booking booking, BookingServiceItem item, UUID actorId) {
+        releaseOpenPayment(item);
         item.setStatus(BookingServiceItem.STATUS_VOID);
         item.setVoidedAt(OffsetDateTime.now(ZoneOffset.UTC));
         item.setVoidedBy(actorId);

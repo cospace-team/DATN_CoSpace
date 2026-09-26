@@ -48,6 +48,9 @@ public class PromotionDto {
         private Long usedCount;
         /** scheduled | running | ended | inactive | exhausted */
         private String state;
+        /** Set on a personal voucher (refund voucher): the only customer who can use it. */
+        private UUID ownerUserId;
+        private String ownerName;
         private OffsetDateTime createdAt;
     }
 

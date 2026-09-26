@@ -374,6 +374,7 @@ const ExplorePage: React.FC = () => {
       status: ws.status,
       floor_id: currentFloor,
       branch_id: resolveBranchId(selectedBranch),
+      images: ws.images || [],
     }));
   }, [dbWorkspaces, currentFloor, selectedBranch]);
 
@@ -441,6 +442,15 @@ const ExplorePage: React.FC = () => {
       return avail as "maintenance" | "available" | "unassigned";
     },
     [getWsAvailability],
+  );
+
+  // Seat count and type shown on each workspace of the floor plan.
+  const getFloorWorkspaceInfo = useCallback(
+    (wsId: string) => {
+      const ws = mappedWorkspaces.find((w) => w.id === wsId);
+      return ws ? { code: ws.code, capacity: ws.capacity, typeName: ws.workspaceTypeName } : null;
+    },
+    [mappedWorkspaces],
   );
 
   const selectedWsData = selectedWs
@@ -753,6 +763,7 @@ const ExplorePage: React.FC = () => {
                       selectedWsId={selectedWs}
                       onSelectWorkspace={setSelectedWs}
                       getAvailability={getFloorAvailability}
+                      getWorkspaceInfo={getFloorWorkspaceInfo}
                     />
                   ) : (
                     <div className="flex flex-col items-center justify-center p-10 text-center bg-card border border-border rounded-3xl max-w-md shadow-sm animate-fade-in">
@@ -900,6 +911,11 @@ const ExplorePage: React.FC = () => {
                           : "border-border shadow-sm hover:-translate-y-1 hover:shadow-md hover:border-primary/40"
                       }`}
                     >
+                      {ws.images && ws.images.length > 0 && (
+                        <div className="-mx-1 -mt-1 mb-3.5 aspect-[16/9] overflow-hidden rounded-2xl bg-muted">
+                          <img src={ws.images[0].url} alt={ws.name} className="h-full w-full object-cover" loading="lazy" />
+                        </div>
+                      )}
                       <div className="flex items-center justify-between mb-3.5">
                         <span
                           className={`px-3 py-1 rounded-full text-xs font-semibold border ${
@@ -927,7 +943,7 @@ const ExplorePage: React.FC = () => {
                         <FiUsers className="h-3.5 w-3.5 text-primary" />
                         <span>{ws.workspaceTypeName || 'Không gian làm việc'}</span>
                         <span>·</span>
-                        <span>{ws.capacity} chỗ ngồi</span>
+                        <span className="font-semibold text-foreground">{ws.capacity} chỗ ngồi</span>
                       </p>
                       
                       <div className="mt-auto pt-4 border-t border-border/60">

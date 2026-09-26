@@ -31,6 +31,13 @@ export interface WorkspaceResponse {
   capacity: number;
   svgElementId: string;
   status: "active" | "maintenance" | "inactive";
+  /** Photos of the workspace, in display order. */
+  images?: WorkspaceImageDto[];
+}
+
+export interface WorkspaceImageDto {
+  id: string;
+  url: string;
 }
 
 export interface WorkspaceTypeResponse {
@@ -217,6 +224,28 @@ export const workspaceApi = {
   delete: (id: string, branchId?: string) =>
     apiFetch<{ message: string }>(
       branchId ? `${API}/api/branch-admin/workspaces/${id}?branchId=${branchId}` : `${API}/api/branch-admin/workspaces/${id}`,
+      { method: "DELETE" }
+    ),
+
+  /** Uploads a photo (multipart, so not through apiFetch's JSON headers). */
+  uploadImage: async (id: string, file: File, branchId?: string): Promise<WorkspaceImageDto> => {
+    const form = new FormData();
+    form.append("file", file);
+    const token = localStorage.getItem("workhub_access_token");
+    const res = await fetch(
+      branchId ? `${API}/api/branch-admin/workspaces/${id}/images?branchId=${branchId}` : `${API}/api/branch-admin/workspaces/${id}/images`,
+      { method: "POST", body: form, headers: token ? { Authorization: `Bearer ${token}` } : {} }
+    );
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || `Không tải được ảnh lên (${res.status})`);
+    return data as WorkspaceImageDto;
+  },
+
+  deleteImage: (id: string, imageId: string, branchId?: string) =>
+    apiFetch<{ message: string }>(
+      branchId
+        ? `${API}/api/branch-admin/workspaces/${id}/images/${imageId}?branchId=${branchId}`
+        : `${API}/api/branch-admin/workspaces/${id}/images/${imageId}`,
       { method: "DELETE" }
     ),
 };

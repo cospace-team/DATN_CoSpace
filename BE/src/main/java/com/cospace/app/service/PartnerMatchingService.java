@@ -54,6 +54,7 @@ public class PartnerMatchingService {
     private final UserRepository userRepository;
     private final PostTagRepository postTagRepository;
     private final GeminiClient geminiClient;
+    private final PartnerConnectionService partnerConnectionService;
 
     @Transactional(readOnly = true)
     public NetworkingProfileDto getNetworkingProfile(UUID userId) {
@@ -201,6 +202,7 @@ public class PartnerMatchingService {
 
         Map<UUID, Tag> tagMap = tagRepository.findAll().stream()
                 .collect(Collectors.toMap(Tag::getId, Function.identity(), (a, b) -> a));
+        Map<UUID, com.cospace.app.entity.PartnerConnection> connections = partnerConnectionService.connectionsByMember(currentUserId);
 
         // Only fellow customers are suggested as partners. Staff and admins work here, they did not
         // sign up for networking, and a same-branch bonus alone was enough to surface every
@@ -344,8 +346,13 @@ public class PartnerMatchingService {
             }
 
             boolean contactPublic = candProfile != null && candProfile.isContactPublic();
-            String email = (candProfile != null && contactPublic) ? (candProfile.getContactEmail() != null ? candProfile.getContactEmail() : candidate.getEmail()) : null;
-            String phone = (candProfile != null && contactPublic) ? (candProfile.getContactPhone() != null ? candProfile.getContactPhone() : candidate.getPhone()) : null;
+            com.cospace.app.entity.PartnerConnection connection = connections.get(candidateId);
+            String connectionState = connection == null ? com.cospace.app.dto.api.ConnectionDto.STATE_NONE
+                    : PartnerConnectionService.stateFor(currentUserId, connection);
+            // Connected members see each other's contact details even when they are not public.
+            boolean contactVisible = contactPublic || com.cospace.app.dto.api.ConnectionDto.STATE_CONNECTED.equals(connectionState);
+            String email = (candProfile != null && contactVisible) ? (candProfile.getContactEmail() != null ? candProfile.getContactEmail() : candidate.getEmail()) : null;
+            String phone = (candProfile != null && contactVisible) ? (candProfile.getContactPhone() != null ? candProfile.getContactPhone() : candidate.getPhone()) : null;
 
             String avatar = (candidate.getAvatarUrl() != null && !candidate.getAvatarUrl().isBlank())
                     ? candidate.getAvatarUrl()
@@ -357,22 +364,10 @@ public class PartnerMatchingService {
             String company = candProfile != null && candProfile.getCompany() != null ? candProfile.getCompany() : "Freelancer";
             String bio = candProfile != null && candProfile.getBio() != null ? candProfile.getBio() : "";
 
-            String candLinkedin = null;
-            String candGithub = null;
-            if (candProfile != null && contactPublic && candProfile.getContactLink() != null) {
-                String rawLink = candProfile.getContactLink().trim();
-                if (rawLink.startsWith("{")) {
-                    try {
-                        JsonNode linkNode = new com.fasterxml.jackson.databind.ObjectMapper().readTree(rawLink);
-                        candLinkedin = linkNode.path("linkedin").asText(null);
-                        candGithub = linkNode.path("github").asText(null);
-                    } catch (Exception e) {
-                        candLinkedin = rawLink;
-                    }
-                } else {
-                    candLinkedin = rawLink;
-                }
-            }
+            Map<String, String> links = candProfile != null && contactVisible
+                    ? PartnerConnectionService.parseLinks(candProfile.getContactLink()) : Map.of();
+            String candLinkedin = links.get("linkedin");
+            String candGithub = links.get("github");
 
             suggestions.add(PartnerSuggestionDto.builder()
                     .id(candidateId.toString())
@@ -383,6 +378,10 @@ public class PartnerMatchingService {
                     .matchScore(scorePercent)
                     .commonTags(commonTags)
                     .contactPublic(contactPublic)
+                    .contactVisible(contactVisible)
+                    .connectionState(connectionState)
+                    .connectionId(connection != null && !com.cospace.app.dto.api.ConnectionDto.STATE_NONE.equals(connectionState)
+                            ? connection.getId().toString() : null)
                     .email(email)
                     .phone(phone)
                     .bio(bio)

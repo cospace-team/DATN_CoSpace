@@ -174,6 +174,11 @@ const WalkinBookingPage: React.FC = () => {
     });
   };
 
+  const getWorkspaceInfo = React.useCallback((wsId: string) => {
+    const ws = workspacesStatus.find((w) => w.workspaceId === wsId);
+    return ws ? { code: ws.code, capacity: ws.capacity } : null;
+  }, [workspacesStatus]);
+
   const getAvailability = React.useCallback((wsId: string) => {
     const ws = workspacesStatus.find(w => w.workspaceId === wsId);
     if (!ws) return 'unassigned';
@@ -527,6 +532,7 @@ const WalkinBookingPage: React.FC = () => {
                       onSelectWorkspace={onMapSelectWorkspace}
                       onElementClick={onMapElementClick}
                       getAvailability={getAvailability}
+                      getWorkspaceInfo={getWorkspaceInfo}
                       isAdmin={false}
                     />
                   ) : (

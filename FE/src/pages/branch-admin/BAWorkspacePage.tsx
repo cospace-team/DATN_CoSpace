@@ -605,6 +605,14 @@ const BAWorkspacePage: React.FC<BAWorkspacePageProps> = ({ isSuperAdminView = fa
     [workspaces]
   );
 
+  const getFloorWorkspaceInfo = useCallback(
+    (wsId: string) => {
+      const ws = workspaces.find((w) => w.id === wsId);
+      return ws ? { code: ws.code, capacity: ws.capacity, typeName: ws.workspaceTypeName } : null;
+    },
+    [workspaces]
+  );
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -819,6 +827,7 @@ const BAWorkspacePage: React.FC<BAWorkspacePageProps> = ({ isSuperAdminView = fa
                 isAdmin={true}
                 onElementClick={onFloorPlanElementClick}
                 getAvailability={getFloorAvailability}
+                getWorkspaceInfo={getFloorWorkspaceInfo}
               />
             ) : (
               <div className="flex flex-col items-center justify-center h-full gap-4 text-muted-foreground p-6 text-center border border-dashed border-border/80 rounded-2xl bg-muted/10">
@@ -904,6 +913,14 @@ const BAWorkspacePage: React.FC<BAWorkspacePageProps> = ({ isSuperAdminView = fa
           onClose={() => setModal(null)}
           onChangeForm={setWsForm}
           onSubmit={saveWorkspace}
+          workspaceId={modal.type === 'edit-ws' ? modal.ws.id : undefined}
+          branchId={activeBranchId}
+          images={modal.type === 'edit-ws' ? workspaces.find((w) => w.id === modal.ws.id)?.images || [] : []}
+          onImagesChange={(images) => {
+            if (modal.type !== 'edit-ws') return;
+            const wsId = modal.ws.id;
+            setWorkspaces((prev) => prev.map((w) => (w.id === wsId ? { ...w, images } : w)));
+          }}
         />
       )}
 
