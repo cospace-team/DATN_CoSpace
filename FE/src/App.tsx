@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, Suspense } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef, Suspense } from "react";
 import {
   BrowserRouter,
   Routes,
@@ -137,6 +137,16 @@ const roleLabel: Record<UserRole, string> = {
   super_admin: "Quản trị viên tổng",
 };
 
+// Each role only has pages under its own area; a URL from another area is never valid for it.
+const ROLE_AREA: Record<UserRole, string> = {
+  customer: "/customer",
+  staff: "/staff",
+  super_admin: "/admin",
+  branch_admin: "/branch-admin",
+};
+const PROTECTED_AREAS = Object.values(ROLE_AREA);
+const inArea = (path: string, area: string) => path === area || path.startsWith(`${area}/`);
+
 // ── Role routes ──
 // Memoized on `role` so AppShell-local state (sidebar, collapse, theme toggle) doesn't re-render
 // the active page. <Routes> still re-renders on navigation because it subscribes to the location.
@@ -234,6 +244,17 @@ const AppShell: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
+  // An explicit log-out must not keep the page left behind as "redirect after login": whoever
+  // signs in next (e.g. an admin after a customer) would land on a page of the wrong role.
+  // Session expiry still keeps it, so the same user returns to where they were.
+  const loggingOut = useRef(false);
+  const handleLogout = useCallback(async () => {
+    loggingOut.current = true;
+    await logout();
+  }, [logout]);
+  useEffect(() => {
+    if (location.pathname === "/login") loggingOut.current = false;
+  }, [location.pathname]);
 
   const navItems: NavItem[] = useMemo(() => {
     if (!user) return customerNav;
@@ -293,12 +314,11 @@ const AppShell: React.FC = () => {
     }
 
     // Protected areas require login with redirect back
-    const isKnownProtectedRoute =
-      location.pathname.startsWith("/customer") ||
-      location.pathname.startsWith("/staff") ||
-      location.pathname.startsWith("/admin") ||
-      location.pathname.startsWith("/branch-admin");
+    const isKnownProtectedRoute = PROTECTED_AREAS.some((area) => inArea(location.pathname, area));
 
+    if (isKnownProtectedRoute && loggingOut.current) {
+      return <Navigate to="/login" replace />;
+    }
     if (isKnownProtectedRoute) {
       return <Navigate to={`/login?redirect=${encodeURIComponent(location.pathname + location.search)}`} replace />;
     }
@@ -322,10 +342,22 @@ const AppShell: React.FC = () => {
     const params = new URLSearchParams(location.search);
     const redirectUrl = params.get("redirect") || (location.state as { redirect?: string })?.redirect;
     const branchId = params.get("branchId") || (location.state as { branchId?: string })?.branchId;
-    if (redirectUrl) {
+    // Only go back to the saved page if it belongs to this user's role; a page of another role
+    // (left over from the previous account) would just be a 404 for them.
+    const redirectPath = redirectUrl ? redirectUrl.split("?")[0] : "";
+    if (redirectUrl && inArea(redirectPath, ROLE_AREA[user.role])) {
       const fullRedirect = branchId ? `${redirectUrl}?branchId=${branchId}` : redirectUrl;
       return <Navigate to={fullRedirect} replace />;
     }
+    return <Navigate to={defaultRoute} replace />;
+  }
+
+  // Signed in, but on a page of another role's area (bookmark, old tab, shared link): go home
+  // instead of showing a 404 inside this role's layout.
+  const otherArea = PROTECTED_AREAS.find(
+    (area) => area !== ROLE_AREA[user.role] && inArea(location.pathname, area),
+  );
+  if (otherArea) {
     return <Navigate to={defaultRoute} replace />;
   }
 
@@ -427,7 +459,7 @@ const AppShell: React.FC = () => {
                 <p className="text-[11px] text-sidebar-foreground/60 truncate">{roleLabel[user.role]}</p>
               </div>
               <button
-                onClick={() => void logout()}
+                onClick={() => void handleLogout()}
                 className="p-1.5 rounded-lg text-sidebar-foreground/40 hover:text-red-400 hover:bg-red-500/10 transition-all shrink-0"
                 aria-label="Đăng xuất"
                 title="Đăng xuất"
@@ -505,7 +537,7 @@ const AppShell: React.FC = () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => void logout()}
+              onClick={() => void handleLogout()}
               className="hidden lg:inline-flex text-muted-foreground hover:text-destructive hover:bg-destructive/10"
               aria-label="Đăng xuất"
             >
