@@ -63,33 +63,33 @@ Các lớp thực thể trong CoSpace sử dụng thuộc tính khóa ngoại ki
 
 Mô hình miền dữ liệu của hệ thống CoSpace được tổ chức thành 6 sơ đồ lớp nghiệp vụ chuyên biệt:
 
-\subsubsection{1. Miền Không gian làm việc (Hình \ref{fig:cd_khonggian})}
-Sơ đồ phản ánh cấu trúc phân cấp vật lý: Chi nhánh (\texttt{Branch}) $\rightarrow$ Tầng (\texttt{Floor}) $\rightarrow$ Không gian làm việc (\texttt{Workspace}). Các tiện ích (\texttt{Amenity}) được gắn kết ở mức Loại không gian (\texttt{WorkspaceType}) qua lớp liên kết \texttt{WorkspaceTypeAmenity}.
+\subsubsection{Miền Không gian làm việc}
+Sơ đồ phản ánh cấu trúc phân cấp vật lý: Chi nhánh (\texttt{Branch}) $\rightarrow$ Tầng (\texttt{Floor}) $\rightarrow$ Không gian làm việc (\texttt{Workspace}). Các tiện ích (\texttt{Amenity}) được gắn kết ở mức Loại không gian (\texttt{WorkspaceType}) qua lớp liên kết \texttt{WorkspaceTypeAmenity} (Hình~\ref{fig:cd_khonggian}).
 
 \hinhuml{cd-01-khonggian}{Sơ đồ lớp miền dữ liệu: không gian làm việc}{fig:cd_khonggian}
 
-\subsubsection{2. Miền Bảng giá, Dịch vụ bổ sung và Chính sách hủy (Hình \ref{fig:cd_gia})}
-Sơ đồ thể hiện mô hình kế thừa ``Toàn cục và ghi đè theo chi nhánh'' (Global with Branch Override). Các thực thể \texttt{PricePolicy}, \texttt{ExtraService} và \texttt{CancellationPolicy} đều chứa trường \texttt{branchId} có thể nhận giá trị \texttt{NULL} (toàn cục) hoặc mã chi nhánh cụ thể (ưu tiên áp dụng trước).
+\subsubsection{Miền Bảng giá và Chính sách hủy}
+Sơ đồ thể hiện mô hình kế thừa ``Toàn cục và ghi đè theo chi nhánh'' (Global with Branch Override). Các thực thể \texttt{PricePolicy}, \texttt{ExtraService} và \texttt{CancellationPolicy} đều chứa trường \texttt{branchId} có thể nhận giá trị \texttt{NULL} (toàn cục) hoặc mã chi nhánh cụ thể (ưu tiên áp dụng trước) (Hình~\ref{fig:cd_gia}).
 
 \hinhuml{cd-02-gia-chinhsach}{Sơ đồ lớp miền dữ liệu: bảng giá, dịch vụ bổ sung và chính sách hủy}{fig:cd_gia}
 
-\subsubsection{3. Miền Đặt chỗ, Check-in và Hủy phòng (Hình \ref{fig:cd_datcho})}
-Lớp \texttt{Booking} quản lý vòng đời đơn với 4 thuộc tính tài chính độc lập: \texttt{subtotalAmount}, \texttt{discountAmount}, \texttt{extraServicesAmount} và \texttt{totalAmount}. Lớp \texttt{BookingAddon} lưu bản chụp đơn giá tại thời điểm gọi dịch vụ. Lớp \texttt{BookingCheckin} quản lý các lượt check-in mở/đóng cho gói dài hạn.
+\subsubsection{Miền Đặt chỗ và Check-in}
+Lớp \texttt{Booking} quản lý vòng đời đơn với 4 thuộc tính tài chính độc lập: \texttt{subtotalAmount}, \texttt{discountAmount}, \texttt{extraServicesAmount} và \texttt{totalAmount}. Lớp \texttt{BookingAddon} lưu bản chụp đơn giá tại thời điểm gọi dịch vụ. Lớp \texttt{BookingCheckin} quản lý các lượt check-in mở/đóng cho gói dài hạn (Hình~\ref{fig:cd_datcho}).
 
 \hinhuml{cd-03-datcho}{Sơ đồ lớp miền dữ liệu: đặt chỗ, check-in và hủy}{fig:cd_datcho}
 
-\subsubsection{4. Miền Thanh toán, Hoàn tiền và Ưu đãi thành viên (Hình \ref{fig:cd_thanhtoan})}
-Một đơn đặt chỗ có thể có nhiều giao dịch thanh toán (\texttt{Payment}). Thực thể \texttt{RefundRequest} đại diện cho yêu cầu hoàn tiền độc lập trong hàng chờ phê duyệt. Lớp \texttt{UserLoyalty} theo dõi tổng chi tiêu thực tế để xếp hạng hội viên trong \texttt{MembershipTier}.
+\subsubsection{Miền Thanh toán và Ưu đãi thành viên}
+Một đơn đặt chỗ có thể có nhiều giao dịch thanh toán (\texttt{Payment}). Thực thể \texttt{RefundRequest} đại diện cho yêu cầu hoàn tiền độc lập trong hàng chờ phê duyệt. Lớp \texttt{UserLoyalty} theo dõi tổng chi tiêu thực tế để xếp hạng hội viên trong \texttt{MembershipTier} (Hình~\ref{fig:cd_thanhtoan}).
 
 \hinhuml{cd-04-thanhtoan}{Sơ đồ lớp miền dữ liệu: thanh toán, hoàn tiền, khuyến mãi và hạng thành viên}{fig:cd_thanhtoan}
 
-\subsubsection{5. Miền Hồ sơ năng lực và Gợi ý đối tác (Hình \ref{fig:cd_goiy})}
-Lớp \texttt{UserProfile} lưu trữ thông tin chuyên môn, liên kết với kỹ năng (\texttt{UserSkill}) có đánh giá mức độ thành thạo ($1..5$) và sở thích (\texttt{UserInterest}). Kết quả tính toán độ tương đồng giữa hai thành viên được lưu tạm vào \texttt{PartnerMatch}.
+\subsubsection{Miền Hồ sơ năng lực và Gợi ý đối tác}
+Lớp \texttt{UserProfile} lưu trữ thông tin chuyên môn, liên kết với kỹ năng (\texttt{UserSkill}) có đánh giá mức độ thành thạo ($1..5$) và sở thích (\texttt{UserInterest}). Kết quả tính toán độ tương đồng giữa hai thành viên được lưu tạm vào \texttt{PartnerMatch} (Hình~\ref{fig:cd_goiy}).
 
 \hinhuml{cd-05-goiydoitac}{Sơ đồ lớp miền dữ liệu: hồ sơ năng lực và gợi ý đối tác}{fig:cd_goiy}
 
-\subsubsection{6. Miền Cộng đồng, Thông báo và Nhật ký kiểm toán (Hình \ref{fig:cd_congdong})}
-Quản lý các bài viết trên diễn đàn (\texttt{Post}), thẻ phân loại (\texttt{PostTag}), thông báo trong ứng dụng (\texttt{Notification}) và nhật ký kiểm toán bất biến (\texttt{AuditLog}).
+\subsubsection{Miền Cộng đồng và Kiểm toán}
+Quản lý các bài viết trên diễn đàn (\texttt{Post}), thẻ phân loại (\texttt{PostTag}), thông báo trong ứng dụng (\texttt{Notification}) và nhật ký kiểm toán bất biến (\texttt{AuditLog}) (Hình~\ref{fig:cd_congdong}).
 
 \hinhuml{cd-06-congdong}{Sơ đồ lớp miền dữ liệu: bảng tin cộng đồng, thông báo và nhật ký kiểm toán}{fig:cd_congdong}
 
@@ -98,28 +98,28 @@ Quản lý các bài viết trên diễn đàn (\texttt{Post}), thẻ phân lo�
 
 Tầng dịch vụ nghiệp vụ được mô hình hóa qua 5 sơ đồ lớp dịch vụ:
 
-\subsubsection{1. Tầng dịch vụ Đặt chỗ và Tính giá (Hình \ref{fig:cd_svc_datcho})}
-\texttt{BookingService} giữ vai trò điều phối việc kiểm tra hạn mức, lấy khóa tư vấn, tính đơn giá qua \texttt{PricingService}, áp dụng ưu đãi qua \texttt{LoyaltyService} và chuyển trạng thái qua \texttt{BookingStateMachine}.
+\subsubsection{Dịch vụ Đặt chỗ và Tính giá}
+\texttt{BookingService} giữ vai trò điều phối việc kiểm tra hạn mức, lấy khóa tư vấn, tính đơn giá qua \texttt{PricingService}, áp dụng ưu đãi qua \texttt{LoyaltyService} và chuyển trạng thái qua \texttt{BookingStateMachine} (Hình~\ref{fig:cd_svc_datcho}).
 
 \hinhumlngang{cd-07-svc-datcho}{Sơ đồ lớp tầng nghiệp vụ: đặt chỗ, tính giá và ưu đãi}{fig:cd_svc_datcho}
 
-\subsubsection{2. Tầng dịch vụ Vòng đời tự động, Check-in và Bảo trì (Hình \ref{fig:cd_svc_vongdoi})}
-Bao gồm \texttt{BookingLifecycleService}, \texttt{BookingExpiryScheduler} (hủy đơn hết hạn 15 phút), \texttt{CheckinService} (cửa sổ check-in 30 phút) và \texttt{StaffMaintenanceService} (khóa không gian bảo trì và xử lý đơn bị ảnh hưởng).
+\subsubsection{Dịch vụ Vòng đời tự động và Bảo trì}
+Bao gồm \texttt{BookingLifecycleService}, \texttt{BookingExpiryScheduler} (hủy đơn hết hạn 15 phút), \texttt{CheckinService} (cửa sổ check-in 30 phút) và \texttt{StaffMaintenanceService} (khóa không gian bảo trì và xử lý đơn bị ảnh hưởng) (Hình~\ref{fig:cd_svc_vongdoi}).
 
 \hinhuml{cd-08-svc-vongdoi}{Sơ đồ lớp tầng nghiệp vụ: vòng đời tự động, check-in và bảo trì}{fig:cd_svc_vongdoi}
 
-\subsubsection{3. Tầng dịch vụ Thanh toán, Hủy đơn và Hoàn tiền (Hình \ref{fig:cd_svc_thanhtoan})}
-Điều phối giao tiếp với cổng PayOS (\texttt{PayosService}), ví MoMo (\texttt{MomoService}), xử lý hủy đơn theo bậc thời gian (\texttt{CancellationService}) và quản lý hàng chờ hoàn tiền (\texttt{RefundService}).
+\subsubsection{Dịch vụ Thanh toán và Hoàn tiền}
+Điều phối giao tiếp với cổng PayOS (\texttt{PayosService}), ví MoMo (\texttt{MomoService}), xử lý hủy đơn theo bậc thời gian (\texttt{CancellationService}) và quản lý hàng chờ hoàn tiền (\texttt{RefundService}) (Hình~\ref{fig:cd_svc_thanhtoan}).
 
 \hinhumlngang{cd-09-svc-thanhtoan}{Sơ đồ lớp tầng nghiệp vụ: thanh toán, hủy và hoàn tiền}{fig:cd_svc_thanhtoan}
 
-\subsubsection{4. Tầng dịch vụ Xác thực và Phân quyền (Hình \ref{fig:cd_svc_xacthuc})}
-Bao gồm \texttt{AuthService}, \texttt{JwtUtil} (ký và kiểm tra token HS384), \texttt{SupabaseJwtAuthenticationConverter} (nạp quyền động từ CSDL) và \texttt{BranchAccessGuard} (chốt chặn cô lập dữ liệu chi nhánh).
+\subsubsection{Dịch vụ Xác thực và Phân quyền}
+Bao gồm \texttt{AuthService}, \texttt{JwtUtil} (ký và kiểm tra token HS384), \texttt{SupabaseJwtAuthenticationConverter} (nạp quyền động từ CSDL) và \texttt{BranchAccessGuard} (chốt chặn cô lập dữ liệu chi nhánh) (Hình~\ref{fig:cd_svc_xacthuc}).
 
 \hinhuml{cd-10-svc-xacthuc}{Sơ đồ lớp tầng nghiệp vụ: xác thực và phân quyền}{fig:cd_svc_xacthuc}
 
-\subsubsection{5. Tầng dịch vụ Trợ lý ảo AI, Gợi ý đối tác và Kiểm toán (Hình \ref{fig:cd_svc_trolyao})}
-Bao gồm \texttt{ChatbotService} (kết nối Gemini API, điều phối Function Calling), \texttt{PartnerMatchingService} (tính điểm Jaccard) và \texttt{AuditLogService} (ghi nhận vết an ninh bất đồng bộ).
+\subsubsection{Dịch vụ Trợ lý AI và Kiểm toán}
+Bao gồm \texttt{ChatbotService} (kết nối Gemini API, điều phối Function Calling), \texttt{PartnerMatchingService} (tính điểm Jaccard) và \texttt{AuditLogService} (ghi nhận vết an ninh bất đồng bộ) (Hình~\ref{fig:cd_svc_trolyao}).
 
 \hinhuml{cd-11-svc-trolyao}{Sơ đồ lớp tầng nghiệp vụ: trợ lý ảo, gợi ý đối tác và nhật ký kiểm toán}{fig:cd_svc_trolyao}
 
@@ -263,38 +263,38 @@ Mô hình thực thể kết hợp mức quan niệm sử dụng ký pháp Peter
 
 Nhằm đảm bảo tính tường minh và mạch lạc cho một hệ thống quản lý toàn diện với 30 thực thể quan hệ, nhóm phân rã mô hình Chen thành 7 phân hệ chuyên biệt tương ứng với các luồng nghiệp vụ cốt lõi:
 
-\subsubsection{1. Phân hệ Định danh, Hồ sơ cá nhân và Gợi ý đối tác (Hình \ref{fig:erd_chen_dinhdanh})}
-Phân hệ mô tả cấu trúc định danh người dùng (\texttt{User}) với các phương thức xác thực liên kết (\texttt{ConnectedAccount}), hồ sơ chuyên môn (\texttt{UserProfile}) cùng hệ thống kỹ năng (\texttt{Skill}) và sở thích (\texttt{Interest}). Quan hệ giữa hồ sơ người dùng và kỹ năng/sở thích là quan hệ nhiều--nhiều ($N:M$), đi kèm thuộc tính bổ trợ như mức độ thành thạo (proficiency level từ $1..5$) phục vụ cho thuật toán đối sánh gợi ý đối tác hợp tác.
+\subsubsection{Phân hệ Định danh và Gợi ý đối tác}
+Phân hệ mô tả cấu trúc định danh người dùng (\texttt{User}) với các phương thức xác thực liên kết (\texttt{ConnectedAccount}), hồ sơ chuyên môn (\texttt{UserProfile}) cùng hệ thống kỹ năng (\texttt{Skill}) và sở thích (\texttt{Interest}). Quan hệ giữa hồ sơ người dùng và kỹ năng/sở thích là quan hệ nhiều--nhiều ($N:M$), đi kèm thuộc tính bổ trợ như mức độ thành thạo (proficiency level từ $1..5$) phục vụ cho thuật toán đối sánh gợi ý đối tác hợp tác (Hình~\ref{fig:erd_chen_dinhdanh}).
 
 \hinherd{erd-chen-01-dinhdanh.jpg}{Mô hình ERD Peter Chen: Phân hệ Định danh, Hồ sơ cá nhân và Gợi ý đối tác}{fig:erd_chen_dinhdanh}
 
-\subsubsection{2. Phân hệ Chi nhánh, Mặt bằng và Không gian làm việc (Hình \ref{fig:erd_chen_khonggian})}
-Phân hệ thể hiện cấu trúc không gian vật lý phân cấp: Chuỗi văn phòng sở hữu nhiều Chi nhánh (\texttt{Branch}), mỗi chi nhánh gồm nhiều Tầng (\texttt{Floor}), và mỗi tầng được chia thành nhiều Không gian làm việc (\texttt{Workspace}) độc lập. Mỗi không gian thuộc một Loại không gian (\texttt{WorkspaceType}) xác định với danh mục các Tiện ích đi kèm (\texttt{Amenity}) thông qua quan hệ nhiều--nhiều. Các đợt bảo dưỡng không gian (\texttt{Maintenance}) được liên kết trực tiếp với từng không gian cụ thể.
+\subsubsection{Phân hệ Không gian làm việc và Mặt bằng}
+Phân hệ thể hiện cấu trúc không gian vật lý phân cấp: Chuỗi văn phòng sở hữu nhiều Chi nhánh (\texttt{Branch}), mỗi chi nhánh gồm nhiều Tầng (\texttt{Floor}), và mỗi tầng được chia thành nhiều Không gian làm việc (\texttt{Workspace}) độc lập. Mỗi không gian thuộc một Loại không gian (\texttt{WorkspaceType}) xác định với danh mục các Tiện ích đi kèm (\texttt{Amenity}) thông qua quan hệ nhiều--nhiều. Các đợt bảo dưỡng không gian (\texttt{Maintenance}) được liên kết trực tiếp với từng không gian cụ thể (Hình~\ref{fig:erd_chen_khonggian}).
 
 \hinherd{erd-chen-02-khonggian.jpg}{Mô hình ERD Peter Chen: Phân hệ Không gian làm việc, Mặt bằng và Cơ sở vật chất}{fig:erd_chen_khonggian}
 
-\subsubsection{3. Phân hệ Bảng giá, Dịch vụ bổ sung và Hạng hội viên (Hình \ref{fig:erd_chen_gia})}
-Phân hệ quy định chính sách giá thuê linh hoạt (\texttt{PricePolicy}) theo giờ, ngày hoặc tháng tương ứng với từng loại không gian hoặc chi nhánh cụ thể. Bên cạnh đó là danh mục các Dịch vụ phát sinh tại quầy (\texttt{ExtraService}) và cơ chế tích lũy chi tiêu để tự động nâng cấp Hạng thành viên thân thiết (\texttt{MembershipTier}).
+\subsubsection{Phân hệ Bảng giá và Dịch vụ bổ sung}
+Phân hệ quy định chính sách giá thuê linh hoạt (\texttt{PricePolicy}) theo giờ, ngày hoặc tháng tương ứng với từng loại không gian hoặc chi nhánh cụ thể. Bên cạnh đó là danh mục các Dịch vụ phát sinh tại quầy (\texttt{ExtraService}) và cơ chế tích lũy chi tiêu để tự động nâng cấp Hạng thành viên thân thiết (\texttt{MembershipTier}) (Hình~\ref{fig:erd_chen_gia}).
 
 \hinherd{erd-chen-03-gia.jpg}{Mô hình ERD Peter Chen: Phân hệ Bảng giá, Dịch vụ bổ sung và Hạng thành viên}{fig:erd_chen_gia}
 
-\subsubsection{4. Phân hệ Chính sách hủy phòng và Chương trình khuyến mãi (Hình \ref{fig:erd_chen_chinhsach})}
-Phân hệ quản lý biểu phí phạt hủy đơn theo bậc thang thời gian (\texttt{CancellationPolicy}) và các chiến dịch giảm giá (\texttt{Promotion}). Lịch sử áp dụng khuyến mãi của khách hàng được kiểm soát chặt chẽ thông qua thực thể ghi nhận lượt sử dụng nhằm ngăn chặn hành vi gian lận mã ưu đãi.
+\subsubsection{Phân hệ Chính sách hủy và Khuyến mãi}
+Phân hệ quản lý biểu phí phạt hủy đơn theo bậc thang thời gian (\texttt{CancellationPolicy}) và các chiến dịch giảm giá (\texttt{Promotion}). Lịch sử áp dụng khuyến mãi của khách hàng được kiểm soát chặt chẽ thông qua thực thể ghi nhận lượt sử dụng nhằm ngăn chặn hành vi gian lận mã ưu đãi (Hình~\ref{fig:erd_chen_chinhsach}).
 
 \hinherd{erd-chen-04-chinhsach.jpg}{Mô hình ERD Peter Chen: Phân hệ Chính sách hủy phòng và Chương trình khuyến mãi}{fig:erd_chen_chinhsach}
 
-\subsubsection{5. Phân hệ Đặt chỗ, Lượt check-in và Lịch sử hủy đơn (Hình \ref{fig:erd_chen_datcho})}
-Đơn đặt chỗ (\texttt{Booking}) đóng vai trò thực thể trung tâm, gắn kết khách hàng với không gian làm việc trong một khoảng thời gian nhất định. Đi kèm với đơn đặt chỗ là danh mục các dịch vụ gọi thêm (\texttt{BookingAddon}), các phiên ra vào mặt bằng thực tế (\texttt{BookingCheckin}), và biên bản hủy đơn ghi nhận lý do cùng số tiền phạt (\texttt{BookingCancellation}).
+\subsubsection{Phân hệ Đặt chỗ và Check-in}
+Đơn đặt chỗ (\texttt{Booking}) đóng vai trò thực thể trung tâm, gắn kết khách hàng với không gian làm việc trong một khoảng thời gian nhất định. Đi kèm với đơn đặt chỗ là danh mục các dịch vụ gọi thêm (\texttt{BookingAddon}), các phiên ra vào mặt bằng thực tế (\texttt{BookingCheckin}), và biên bản hủy đơn ghi nhận lý do cùng số tiền phạt (\texttt{BookingCancellation}) (Hình~\ref{fig:erd_chen_datcho}).
 
 \hinherd{erd-chen-05-datcho.jpg}{Mô hình ERD Peter Chen: Phân hệ Đặt chỗ, Lượt check-in và Biên bản hủy đơn}{fig:erd_chen_datcho}
 
-\subsubsection{6. Phân hệ Giao dịch thanh toán và Yêu cầu hoàn tiền (Hình \ref{fig:erd_chen_thanhtoan})}
-Phân hệ ghi nhận các giao dịch tài chính (\texttt{Payment}) phát sinh từ đơn đặt chỗ qua các cổng VietQR Napas, ví MoMo hoặc tiền mặt tại quầy, chuỗi sự kiện phản hồi tức thời từ Webhook (\texttt{PaymentEvent}), và quy trình thẩm định, giải ngân các khoản tiền hoàn lại cho khách hàng (\texttt{RefundRequest}).
+\subsubsection{Phân hệ Thanh toán và Hoàn tiền}
+Phân hệ ghi nhận các giao dịch tài chính (\texttt{Payment}) phát sinh từ đơn đặt chỗ qua các cổng VietQR Napas, ví MoMo hoặc tiền mặt tại quầy, chuỗi sự kiện phản hồi tức thời từ Webhook (\texttt{PaymentEvent}), và quy trình thẩm định, giải ngân các khoản tiền hoàn lại cho khách hàng (\texttt{RefundRequest}) (Hình~\ref{fig:erd_chen_thanhtoan}).
 
 \hinherd{erd-chen-06-thanhtoan.jpg}{Mô hình ERD Peter Chen: Phân hệ Giao dịch thanh toán và Yêu cầu hoàn tiền}{fig:erd_chen_thanhtoan}
 
-\subsubsection{7. Phân hệ Diễn đàn cộng đồng, Thông báo và Nhật ký hệ thống (Hình \ref{fig:erd_chen_congdong})}
-Phân hệ cung cấp kênh tương tác mạng xã hội nội bộ cho cộng đồng thành viên thông qua Bài viết (\texttt{Post}) được phân loại theo Thẻ (\texttt{Tag}), trung tâm Thông báo đa kênh (\texttt{Notification}), cùng Nhật ký kiểm toán bất biến (\texttt{AuditLog}) theo dõi mọi biến động dữ liệu nhạy cảm của hệ thống.
+\subsubsection{Phân hệ Diễn đàn cộng đồng và Nhật ký hệ thống}
+Phân hệ cung cấp kênh tương tác mạng xã hội nội bộ cho cộng đồng thành viên thông qua Bài viết (\texttt{Post}) được phân loại theo Thẻ (\texttt{Tag}), trung tâm Thông báo đa kênh (\texttt{Notification}), cùng Nhật ký kiểm toán bất biến (\texttt{AuditLog}) theo dõi mọi biến động dữ liệu nhạy cảm của hệ thống (Hình~\ref{fig:erd_chen_congdong}).
 
 \hinherd{erd-chen-07-congdong.jpg}{Mô hình ERD Peter Chen: Phân hệ Cộng đồng, Thông báo và Nhật ký kiểm toán}{fig:erd_chen_congdong}
 
