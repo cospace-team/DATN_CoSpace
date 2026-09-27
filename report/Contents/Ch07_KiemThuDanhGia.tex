@@ -18,7 +18,7 @@ Chương này trình bày toàn diện chiến lược, phương pháp luận v�
 \section{Kiểm thử tự động phía máy chủ (Back-end Automated Testing)}
 \label{sec:kt-backend}
 
-Bộ kiểm thử tự động Back-end được thực thi tự động qua Apache Maven Wrapper (\texttt{./mvnw clean test}). Kết quả thực nghiệm ghi nhận trên môi trường OpenJDK 17 LTS: **307 ca kiểm thử trong 24 lớp kiểm thử**, đạt tỷ lệ tuyệt đối **100\% thành công (0 thất bại, 0 lỗi)** (Bảng~\ref{tab:backend-test-summary}). Toàn bộ quy trình hoàn tất trong 48.8 giây.
+Bộ kiểm thử tự động Back-end được thực thi qua Apache Maven Wrapper (\texttt{./mvnw clean test}). Kết quả thực nghiệm ghi nhận trên môi trường OpenJDK 17 LTS: **307 ca kiểm thử trong 24 lớp kiểm thử**, đạt tỷ lệ **100\% thành công (306 thành công, 1 bỏ qua, 0 thất bại, 0 lỗi)** (Bảng~\ref{tab:backend-test-summary}). Toàn bộ quy trình hoàn tất trong 48.8 giây.
 
 \begin{table}[H]
 \centering
@@ -161,7 +161,7 @@ TC-PAY-05 & Xử lý tiền vào trễ (Late Webhook Ghost) & Webhook báo thàn
 \hline
 TC-PAY-06 & Xác nhận thanh toán tiền mặt tại quầy & Staff quầy nhận tiền mặt và bấm xác nhận & Cập nhật Payment \texttt{COMPLETED}, Booking \texttt{CONFIRMED} & PASS \\
 \hline
-TC-PAY-07 & Bảo toàn bất biến tài chính Invariant & Đơn có chiết khấu và dịch vụ phát sinh & Đảm bảo \texttt{total = subtotal - discount + addon} tuyệt đối & PASS \\
+TC-PAY-07 & Bảo toàn bất biến tài chính Invariant & Đơn có chiết khấu và dịch vụ phát sinh & Đảm bảo đẳng thức \texttt{total = subtotal - discount + addon} & PASS \\
 \hline
 \end{tabular}
 \end{table}
@@ -259,10 +259,10 @@ Bên cạnh đó, nhóm đã thực thi tập lệnh gồm \textbf{14 kịch b�
     \item \textbf{Mục tiêu:} Kiểm chứng luồng nghiệp vụ cơ bản chuẩn (Happy Path).
     \item \textbf{Các bước thực hiện:}
     \begin{enumerate}
-        \item Khách hàng đăng nhập vào hệ thống tại trang Đăng nhập (Hình~\ref{fig:ui-dangnhap}).
-        \item Điều hướng tới trang Tìm kiếm không gian, chọn chi nhánh Quận 1, tầng 2 và nhấp chọn bàn làm việc \texttt{WD-01} trên sơ đồ tương tác SVG (Hình~\ref{fig:ui-timkiem-matbang}).
+        \item Khách hàng đăng nhập vào hệ thống tại trang Đăng nhập (Hình~\ref{fig:ui-auth-login}).
+        \item Điều hướng tới trang Tìm kiếm không gian, chọn chi nhánh Quận 1, tầng 2 và nhấp chọn bàn làm việc \texttt{WD-01} trên sơ đồ tương tác SVG (Hình~\ref{fig:ui-cust-floorplan}).
         \item Chọn khung giờ thuê từ 08:00 đến 12:00 ngày hôm sau và nhấn \textit{"Xác nhận đặt chỗ"}.
-        \item Hệ thống hiển thị mã VietQR động cùng đồng hồ đếm ngược 15:00 (Hình~\ref{fig:ui-thanhtoan-vietqr}).
+        \item Hệ thống hiển thị mã VietQR động cùng đồng hồ đếm ngược 15:00 (Hình~\ref{fig:ui-cust-checkout}).
         \item Sử dụng ứng dụng Mobile Banking quét mã QR và chuyển khoản chính xác số tiền.
         \item Cổng PayOS gửi tín hiệu Webhook IPN về máy chủ CoSpace.
     \end{enumerate}
@@ -289,7 +289,7 @@ Bên cạnh đó, nhóm đã thực thi tập lệnh gồm \textbf{14 kịch b�
 \subsubsection*{Kịch bản E2E 04: Quy trình Check-in tại quầy Lễ tân kết hợp Running Tab phát sinh}
 \begin{itemize}
     \item \textbf{Mục tiêu:} Kiểm chứng chức năng vận hành thực tế của nhân viên quầy.
-    \item \textbf{Các bước thực hiện:} Khách hàng đến quầy và cung cấp mã đặt chỗ trước giờ bắt đầu 15 phút. Lễ tân nhập mã vào giao diện Check-in (Hình~\ref{fig:ui-letan-checkin}). Trong phiên làm việc, khách gọi thêm đồ uống và được ghi vào Running Tab. Khi về, lễ tân bấm Check-out thu tiền phụ phí.
+    \item \textbf{Các bước thực hiện:} Khách hàng đến quầy và cung cấp mã đặt chỗ trước giờ bắt đầu 15 phút. Lễ tân nhập mã vào giao diện Check-in (Hình~\ref{fig:ui-staff-checkin}). Trong phiên làm việc, khách gọi thêm đồ uống và được ghi vào Running Tab. Khi về, lễ tân bấm Check-out thu tiền phụ phí.
     \item \textbf{Kết quả mong đợi:} Hệ thống cho phép check-in trong cửa sổ dung sai 30 phút, ghi nhận chính xác chi phí phát sinh và cập nhật trạng thái đơn sang \texttt{COMPLETED}.
     \item \textbf{Kết quả thực tế:} Hóa đơn tổng kết xuất chính xác từng danh mục dịch vụ đi kèm. Đạt yêu cầu (\textbf{PASS}).
 \end{itemize}
@@ -297,7 +297,7 @@ Bên cạnh đó, nhóm đã thực thi tập lệnh gồm \textbf{14 kịch b�
 \subsubsection*{Kịch bản E2E 05: Hủy đặt chỗ chủ động và Khấu trừ phí hoàn tiền theo chính sách}
 \begin{itemize}
     \item \textbf{Mục tiêu:} Kiểm chứng tính đúng đắn của chính sách hoàn tiền tự động.
-    \item \textbf{Các bước thực hiện:} Khách hàng có đơn đặt chỗ lúc 14:00 ngày mai. Vào lúc 10:00 sáng nay (còn cách giờ bắt đầu 28 tiếng), khách hàng nhấn nút \textit{"Hủy đặt chỗ"} trên trang Lịch sử (Hình~\ref{fig:ui-huydon-hoantien}).
+    \item \textbf{Các bước thực hiện:} Khách hàng có đơn đặt chỗ lúc 14:00 ngày mai. Vào lúc 10:00 sáng nay (còn cách giờ bắt đầu 28 tiếng), khách hàng nhấn nút \textit{"Hủy đặt chỗ"} trên trang Lịch sử (Hình~\ref{fig:history_cancelled}).
     \item \textbf{Kết quả mong đợi:} Hệ thống áp dụng quy tắc hủy trước 24 giờ, tính toán tỷ lệ hoàn tiền là 100\% giá trị đơn hàng, khởi tạo bản ghi hủy và giải phóng lịch trình.
     \item \textbf{Kết quả thực tế:} Giao diện hiển thị số tiền hoàn trả 100\%, lịch sử đặt chỗ cập nhật trạng thái \texttt{CANCELLED}. Đạt yêu cầu (\textbf{PASS}).
 \end{itemize}
@@ -333,10 +333,10 @@ Thời gian cập nhật trạng thái VietQR & $< 10\text{ s}$ sau chuyển kho
 
 \section{Tổng kết chương}
 
-Chương 7 đã chứng minh một cách định lượng và khoa học về tính đúng đắn, độ tin cậy và hiệu năng của hệ sinh thái CoSpace:
+Chương 7 đã chứng minh một cách định lượng về tính đúng đắn, độ tin cậy và hiệu năng của hệ thống CoSpace:
 \begin{itemize}
-    \item 100\% các ca kiểm thử tự động Back-end (272/272 PASS trong 20 lớp kiểm thử) đã bảo vệ toàn diện các luồng nghiệp vụ phức tạp từ xác thực JWT, phân quyền đa chi nhánh đến máy trạng thái đặt chỗ.
-    \item Cơ chế kiểm soát tương tranh hai tầng (\texttt{pg\_advisory\_xact\_lock} và \texttt{EXCLUDE USING gist}) đã chứng minh khả năng ngăn chặn tuyệt đối lỗi Double Booking trong các thử nghiệm tải nặng.
-    \item 5 kịch bản E2E và 14 kịch bản SQL thực nghiệm đã tái hiện chính xác các quy trình thực tế của người dùng và lễ tân quầy, mang lại trải nghiệm liền mạch và an toàn tài chính.
-    \item Các chỉ số đo lường hiệu năng thực tế (độ trễ API $< 125\text{ ms}$, chịu tải 100 req/s, điểm Lighthouse 94/100) khẳng định hệ thống hoàn toàn sẵn sàng cho việc đưa vào vận hành thương mại.
+    \item Bộ kiểm thử tự động Back-end gồm 307 ca kiểm thử trong 24 lớp kiểm thử (306 PASS, 1 Skipped, 0 thất bại) đã bao phủ các luồng nghiệp vụ từ xác thực JWT kép, phân quyền chi nhánh đến máy trạng thái đặt chỗ.
+    \item Cơ chế kiểm soát tương tranh hai tầng (\texttt{pg\_advisory\_xact\_lock} và \texttt{EXCLUDE USING gist}) đã chứng minh khả năng ngăn chặn lỗi Double Booking trong các kịch bản thử nghiệm tải đồng thời.
+    \item 5 kịch bản E2E và 14 kịch bản SQL thực nghiệm đã kiểm tra các quy trình thực tế của người dùng và nhân viên lễ tân, bảo đảm tính toàn vẹn dữ liệu.
+    \item Các chỉ số đo lường thực nghiệm ghi nhận độ trễ API trung bình khoảng 163.8 ms (kết nối Supabase cloud), thông lượng 55--100 req/s với tỷ lệ lỗi 0.0\%, thuật toán Jaccard phản hồi dưới 1 ms, gói giao diện tải nhanh và tối ưu.
 \end{itemize}

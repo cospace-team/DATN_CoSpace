@@ -38,7 +38,7 @@ Bảng \ref{tab:sosanh_vanphong} trình bày sự khác biệt toàn diện gi�
 \hline
 \textbf{Tiêu chí} & \textbf{Văn phòng truyền thống} & \textbf{Văn phòng chia sẻ (Co-working Space)} \\
 \hline
-Thời hạn cam kết hợp đồng & Dài hạn, thông thường từ 2 đến 5 năm & Cực kỳ linh hoạt: theo giờ, ngày, tuần, tháng hoặc năm \\
+Thời hạn cam kết hợp đồng & Dài hạn, thông thường từ 2 đến 5 năm & Linh hoạt: theo giờ, ngày, tuần, tháng hoặc năm \\
 \hline
 Chi phí đầu tư ban đầu & Rất lớn (thiết kế, thi công, nội thất, tiền cọc 3--6 tháng) & Gần như bằng 0, chỉ trả tiền thuê cho thời gian sử dụng \\
 \hline
@@ -223,7 +223,7 @@ Dựa trên kết quả khảo sát và đối sánh hệ thống, nhóm thực 
 \label{sec:dexuat}
 
 \subsection{Ý tưởng và định vị giải pháp}
-Hệ thống \textbf{CoSpace} được định vị là một nền tảng quản trị chuỗi văn phòng chia sẻ thế hệ mới (Next-Generation Co-working Management Platform), dung hòa hoàn hảo giữa:
+Hệ thống \textbf{CoSpace} được định vị là một nền tảng quản trị chuỗi văn phòng chia sẻ thế hệ mới (Next-Generation Co-working Management Platform), kết hợp hài hòa giữa:
 \begin{itemize}
     \item Sự tiện lợi, hiện đại và chuẩn mực kỹ thuật của các nền tảng quốc tế cao cấp.
     \item Sự tương thích sâu sắc với thói quen sử dụng và hạ tầng tài chính công nghệ tại Việt Nam (VietQR Napas 24/7, MoMo, hỗ trợ quầy tiền mặt).
@@ -260,8 +260,8 @@ Hệ thống được thiết kế theo cấu trúc mô-đun hóa cao, bao gồm
 
 \begin{enumerate}
     \item \textbf{Bài toán trực quan hóa và tương tác với sơ đồ mặt bằng SVG:} Xây dựng một trình hiển thị đồ họa vector hai chiều (2D SVG Viewer) có khả năng co giãn đa thiết bị, cho phép ánh xạ tọa độ không gian làm việc với trạng thái cơ sở dữ liệu thời gian thực mà không làm giảm tốc độ kết xuất trang.
-    \item \textbf{Bài toán kiểm soát tương tranh thời gian thực (Real-time Concurrency Control):} Ngăn chặn triệt để hiện tượng xung đột đặt trùng chỗ (Double Booking) khi nhiều người dùng cùng chọn một bàn trong cùng một khoảng thời gian ngắn mà không làm giảm thông lượng phục vụ của hệ thống.
-    \item \textbf{Bài toán thanh toán tự động và xử lý Webhook bất biến (Idempotent Payment):} Thiết kế quy trình tiếp nhận thông báo biến động số dư từ cổng thanh toán VietQR đảm bảo an toàn tuyệt đối, loại trừ rủi ro cộng tiền lặp lại khi nhận Webhook nhiều lần hoặc cập nhật đơn khi đã hết hạn thanh toán (Late Webhook).
+    \item \textbf{Bài toán kiểm soát tương tranh thời gian thực (Real-time Concurrency Control):} Ngăn chặn hiện tượng xung đột đặt trùng chỗ (Double Booking) khi nhiều người dùng cùng chọn một bàn trong cùng một khoảng thời gian ngắn mà không làm giảm thông lượng phục vụ của hệ thống.
+    \item \textbf{Bài toán thanh toán tự động và xử lý Webhook bất biến (Idempotent Payment):} Thiết kế quy trình tiếp nhận thông báo biến động số dư từ cổng thanh toán VietQR đảm bảo an toàn giao dịch, loại trừ rủi ro cộng tiền lặp lại khi nhận Webhook nhiều lần hoặc cập nhật đơn khi đã hết hạn thanh toán (Late Webhook).
     \item \textbf{Bài toán tính toán chính sách hủy linh hoạt phân cấp:} Xây dựng thuật toán so khớp bậc thời gian tính bằng phút, cho phép áp dụng linh hoạt chính sách riêng của từng chi nhánh hoặc kế thừa chính sách chung của toàn chuỗi một cách tự động và minh bạch.
     \item \textbf{Bài toán thuật toán so khớp đối tác tối ưu (Partner Matching Engine):} Thiết kế độ đo tương đồng kết hợp giữa hệ số Jaccard trên tập hợp kỹ năng, sở thích và khoảng cách địa lý tại chi nhánh để đề xuất đối tác chính xác, phản hồi nhanh dưới 100ms.
     \item \textbf{Bài toán tích hợp Trợ lý ảo AI có kiểm soát an toàn (Guarded AI Assistant):} Ứng dụng mô hình ngôn ngữ lớn để hỗ trợ người dùng bằng ngôn ngữ tự nhiên, đồng thời thiết lập rào chắn xác nhận hai bước (Confirmation Barrier) đối với các hành động gọi hàm làm thay đổi dữ liệu cơ sở dữ liệu.

@@ -15,7 +15,7 @@ Hệ thống CoSpace xác định bốn tác nhân (Actors) chính tham gia tư�
 \noindent\textbf{Ràng buộc gắn kết dữ liệu theo chi nhánh:} Để bảo đảm tính cô lập dữ liệu và an toàn bảo mật, hệ thống thiết lập ràng buộc nghiêm ngặt ở cả tầng ứng dụng và cơ sở dữ liệu:
 \begin{itemize}
     \item Tác nhân **Khách hàng** và **Quản trị viên hệ thống** không bị ràng buộc vào bất kỳ chi nhánh nào (\texttt{branch\_id IS NULL}). Khách hàng có thể đặt chỗ tại mọi chi nhánh trong mạng lưới, trong khi Super Admin có toàn quyền truy cập dữ liệu hợp nhất của tất cả các chi nhánh.
-    \item Tác nhân **Nhân viên quầy** và **Quản lý chi nhánh** bắt buộc phải gắn với duy nhất một chi nhánh cụ thể (\texttt{branch\_id IS NOT NULL}). Người dùng thuộc hai vai trò này tuyệt đối không được phép xem hoặc chỉnh sửa dữ liệu (đơn đặt chỗ, sơ đồ, bảng giá, nhân sự, doanh thu) của chi nhánh khác.
+    \item Tác nhân **Nhân viên quầy** và **Quản lý chi nhánh** bắt buộc phải gắn với duy nhất một chi nhánh cụ thể (\texttt{branch\_id IS NOT NULL}). Người dùng thuộc hai vai trò này không được phép truy cập hoặc chỉnh sửa dữ liệu (đơn đặt chỗ, sơ đồ, bảng giá, nhân sự, doanh thu) của chi nhánh khác.
 \end{itemize}
 
 Bảng \ref{tab:tacnhan} tổng hợp danh mục tác nhân và phạm vi dữ liệu cho phép truy cập.
@@ -105,7 +105,7 @@ Yêu cầu chức năng của hệ thống được chuẩn hóa và đánh mã 
     \item \textbf{Tính toàn vẹn và Nhất quán dữ liệu (NFR-02):}
     Hệ thống cam kết $100\%$ không xảy ra tình trạng đặt trùng lịch (Overbooking) trong mọi tình huống truy cập đồng thời. Mọi giao dịch tài chính phải tuân thủ nghiêm ngặt nguyên lý bất biến và đẳng thức tài chính: $\text{Số tiền hoàn} + \text{Phí phạt} = \text{Tổng tiền thanh toán}$.
     \item \textbf{Bảo mật và An toàn thông tin (NFR-03):}
-    Toàn bộ giao tiếp giữa máy khách và máy chủ bắt buộc phải mã hóa qua HTTPS/TLS 1.3. Mật khẩu người dùng được băm một chiều an toàn bằng thuật toán BCrypt với hệ số tải $10$. Thẻ xác thực JWT nội bộ phải được ký bằng khóa bí mật có độ dài tối thiểu 384 bits (HS384). Dữ liệu nhạy cảm (khóa API, thông tin thanh toán bí mật) tuyệt đối không được ghi vào mã nguồn công khai mà phải quản lý qua biến môi trường.
+    Toàn bộ giao tiếp giữa máy khách và máy chủ bắt buộc phải mã hóa qua HTTPS/TLS 1.3. Mật khẩu người dùng được băm một chiều an toàn bằng thuật toán BCrypt với hệ số tải $10$. Thẻ xác thực JWT nội bộ phải được ký bằng khóa bí mật có độ dài tối thiểu 384 bits (HS384). Dữ liệu nhạy cảm (khóa API, thông tin thanh toán bí mật) không được lưu trực tiếp trong mã nguồn mà phải quản lý qua biến môi trường.
     \item \textbf{Tính sẵn sàng và Độ tin cậy (NFR-04):}
     Hệ thống đặt mục tiêu độ sẵn sàng đạt $99.5\%$ thời gian hoạt động. Các tác vụ định kỳ nền (Scheduler) tự phục hồi sau lỗi kết nối mạng tạm thời và không làm ảnh hưởng đến các luồng phục vụ người dùng chính.
     \item \textbf{Tính dễ sử dụng và Khả năng tương thích (NFR-05):}
@@ -158,7 +158,7 @@ Rule 43 & Giới hạn thời lượng đặt chỗ tối đa theo từng đơn 
 \hline
 \textbf{Mã rule} & \textbf{Phát biểu quy tắc nghiệp vụ} & \textbf{Ý nghĩa và mục đích bảo vệ} \\
 \hline
-Rule 05 & Khách hàng tuyệt đối không được phép hủy đơn đặt chỗ khi thời gian hiện tại đã đến hoặc vượt quá giờ bắt đầu ($now \ge start\_at$) & Ngăn chặn việc khách dùng phòng xong mới bấm hủy để đòi hoàn tiền \\
+Rule 05 & Khách hàng không được phép hủy đơn đặt chỗ khi thời gian hiện tại đã đến hoặc vượt quá giờ bắt đầu ($now \ge start\_at$) & Ngăn chặn việc khách dùng phòng xong mới bấm hủy để đòi hoàn tiền \\
 \hline
 Rule 06 & Khách hàng không đến nhận phòng sau khi đơn đã hết giờ kết thúc sẽ tự động chuyển sang trạng thái \texttt{NO\_SHOW} và mất $100\%$ tiền & Doanh thu được bảo toàn cho doanh nghiệp do chỗ đã được giữ trọn ca \\
 \hline

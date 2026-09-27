@@ -1,143 +1,129 @@
 \chapter{Tổng kết và Hướng phát triển}
 \label{ch:tong-ket-va-huong-phat-trien}
 
-Chương này tổng kết toàn bộ các kết quả nghiên cứu, thiết kế và hiện thực đạt được của đề tài \textbf{``Phát triển hệ thống quản lý văn phòng chia sẻ (CoSpace)''}; đánh giá khách quan các ưu điểm nổi bật và những mặt hạn chế kỹ thuật còn tồn tại; đồng thời vạch ra lộ trình phát triển trong tương lai hướng tới thương mại hóa và ứng dụng thực tiễn trên quy mô chuỗi dịch vụ.
+Chương này tổng kết các kết quả đạt được, đánh giá ưu điểm và hạn chế, đồng thời đề xuất hướng phát triển cho hệ thống CoSpace.
 
-\section{Kết quả đạt được của đề tài}
+\section{Kết quả đạt được}
 \label{sec:tk-ket-qua}
 
-Trải qua quá trình nghiên cứu lý thuyết, khảo sát nghiệp vụ thực tiễn, phân tích kiến trúc và hiện thực hóa phần mềm, đề tài đã hoàn thành xuất sắc toàn bộ các mục tiêu đặt ra cho đồ án tốt nghiệp ngành Khoa học Máy tính (CO4337 -- HK253). Hệ thống CoSpace không chỉ dừng lại ở một công cụ quản lý cơ sở vật chất đơn thuần mà đã thực sự trở thành một nền tảng số toàn diện, hỗ trợ quản trị vận hành chuỗi văn phòng chia sẻ đa chi nhánh, tự động hóa thanh toán trực tuyến và kiến tạo mạng lưới kết nối nghề nghiệp cho cộng đồng thành viên.
+Sau 15 tuần nghiên cứu và phát triển, đề tài đã hoàn thành các mục tiêu đề ra. Hệ thống CoSpace cung cấp nền tảng quản lý chuỗi văn phòng chia sẻ đa chi nhánh, tự động hóa thanh toán trực tuyến và hỗ trợ kết nối cộng đồng thành viên.
 
-Bảng~\ref{tab:kl_solieu} tổng hợp các số liệu kỹ thuật then chốt của sản phẩm phần mềm CoSpace, được đo đạc và thống kê trực tiếp từ kho mã nguồn của dự án tính đến thời điểm hoàn tất.
+Bảng~\ref{tab:kl_solieu} tổng hợp các số liệu kỹ thuật của sản phẩm.
 
 \begin{table}[H]
 \centering
-\caption{Số liệu tổng hợp về quy mô và các thành phần kỹ thuật của hệ thống CoSpace}
+\caption{Số liệu tổng hợp quy mô kỹ thuật hệ thống CoSpace}
 \label{tab:kl_solieu}
 \small
 \renewcommand{\arraystretch}{1.25}
 \begin{tabular}{|p{7.2cm}|p{6.8cm}|}
 \hline
-\textbf{Hạng mục đo đạc / Thành phần kỹ thuật} & \textbf{Kết quả thực tế trong kho mã nguồn} \\
+\textbf{Hạng mục} & \textbf{Kết quả} \\
 \hline
-Vai trò người dùng và giao diện Web & 4 vai trò (Customer, Staff, Branch Admin, Admin); 33 trang giao diện có đường dẫn định tuyến độc lập \\
+Vai trò người dùng & 4 vai trò (Customer, Staff, Branch Admin, Admin); 33 trang giao diện \\
 \hline
-Lớp điều khiển Back-end và điểm cuối API & 26 lớp Controller; 133 điểm cuối API RESTful chuẩn hóa (đặc tả chi tiết tại Chương~\ref{ch:thietke}, Mục~\ref{sec:thietke_api}) \\
+API Back-end & 26 Controllers; 133 API endpoints RESTful \\
 \hline
-Bảng dữ liệu trong cơ sở dữ liệu quan hệ & 30 bảng quan hệ, khóa ngoại chuẩn hóa, chỉ mục GiST và B-tree \\
+Cơ sở dữ liệu & 30 bảng quan hệ, chỉ mục GiST và B-tree \\
 \hline
-Cơ chế bảo vệ chống xung đột đặt trùng lịch & 2 tầng độc lập (Khóa tư vấn \texttt{pg\_advisory\_xact\_lock} và ràng buộc loại trừ \texttt{EXCLUDE USING gist}) \\
+Chống đặt trùng lịch & 2 tầng: \texttt{pg\_advisory\_xact\_lock} + \texttt{EXCLUDE USING gist} \\
 \hline
-Phương thức thanh toán tích hợp & 3 phương thức (Cổng PayOS VietQR Napas 24/7, Ví điện tử MoMo Sandbox, Tiền mặt tại quầy) \\
+Thanh toán & PayOS VietQR Napas 24/7, MoMo Sandbox, Tiền mặt \\
 \hline
-Tích hợp Trợ lý ảo AI và Công cụ & Google Gemini 1.5 Flash hỗ trợ 9 Function Tools (6 tra cứu, 3 đề xuất hành động xác thực) \\
+Trợ lý ảo AI & Google Gemini 1.5 Flash, 9 Function Tools \\
 \hline
-Kiểm thử tự động phía máy chủ Back-end & 307 ca kiểm thử trong 24 lớp, 0 ca thất bại, đạt tỷ lệ 100\% thành công \\
+Kiểm thử tự động & 307 ca / 24 lớp, 0 thất bại (100\% pass) \\
 \hline
-Kích thước gói phân phối giao diện Front-end & 193.0 kB Gzip (giảm 76.4\% nhờ chia nhỏ manualChunks Vite) \\
+Gói Front-end & 193.0 kB Gzip (chia nhỏ manualChunks Vite) \\
 \hline
-Kích thước hình ảnh Container Back-end & 215 MB (nhờ kỹ thuật Docker Multi-stage build với Alpine Linux) \\
+Docker image Back-end & 215 MB (Multi-stage build, Alpine Linux) \\
 \hline
 \end{tabular}
 \end{table}
 
-Để đánh giá mức độ hoàn thành nhiệm vụ nghiên cứu và phát triển một cách khách quan, Bảng~\ref{tab:kl_muctieu} trình bày kết quả đối chiếu chi tiết giữa các mục tiêu đề ra ban đầu tại Chương~\ref{ch:tongquan} với thành phẩm thực tế đạt được của hệ thống CoSpace.
+Bảng~\ref{tab:kl_muctieu} đối chiếu các mục tiêu đề ra với kết quả thực tế.
 
 \begin{table}[H]
 \centering
-\caption{Đối chiếu mục tiêu đề tài với kết quả thực tế đạt được}
+\caption{Đối chiếu mục tiêu đề tài với kết quả đạt được}
 \label{tab:kl_muctieu}
 \small
 \renewcommand{\arraystretch}{1.22}
 \begin{tabular}{|p{1.4cm}|p{4.0cm}|p{6.8cm}|c|}
 \hline
-\textbf{Nhóm} & \textbf{Mục tiêu đề ra} & \textbf{Kết quả thực tế đạt được} & \textbf{Đánh giá} \\
+\textbf{Nhóm} & \textbf{Mục tiêu} & \textbf{Kết quả đạt được} & \textbf{Đánh giá} \\
 \hline
-Nghiệp vụ & 1. Số hóa vòng đời đặt chỗ & Hiện thực trọn vẹn quy trình: tra cứu mặt bằng SVG động, giữ chỗ 15 phút, thanh toán VietQR Napas 24/7, nhận vé điện tử QR Pass. & Đạt \\
+Nghiệp vụ & 1. Số hóa vòng đời đặt chỗ & Tra cứu mặt bằng SVG, giữ chỗ 15 phút, thanh toán VietQR, nhận QR Pass. & Đạt \\
 \cline{2-4}
- & 2. Quản lý chuỗi đa chi nhánh & Mô hình dữ liệu phân cấp Tòa nhà -- Tầng -- Không gian; phân quyền 4 vai trò; cấu hình bảng giá và dịch vụ riêng từng cơ sở. & Đạt \\
+ & 2. Quản lý chuỗi đa chi nhánh & Phân cấp Tòa nhà -- Tầng -- Không gian; phân quyền 4 vai trò; bảng giá riêng từng cơ sở. & Đạt \\
 \cline{2-4}
- & 3. Tự động hóa chính sách hủy & Thuật toán tự động tính phí phạt và tiền hoàn theo bậc thời gian $[min, max)$; ghi nhận minh bạch vào bảng đối soát hoàn tiền. & Đạt \\
+ & 3. Tự động hóa chính sách hủy & Tính phí phạt và hoàn tiền tự động theo bậc thời gian $[min, max)$. & Đạt \\
 \cline{2-4}
- & 4. Tối ưu hóa vận hành quầy & Giao diện Check-in một chạm trong cửa sổ dung sai $\pm 30$ phút; tạo đơn tại quầy cho khách vãng lai; thẻ chạy bàn Running Tab. & Đạt \\
+ & 4. Tối ưu vận hành quầy & Check-in dung sai $\pm 30$ phút; tạo đơn tại quầy; Running Tab. & Đạt \\
 \cline{2-4}
- & 5. Thúc đẩy kết nối cộng đồng & Hồ sơ năng lực; thuật toán gợi ý đối tác Jaccard có trọng số kết hợp điểm thưởng cùng chi nhánh và tóm tắt lý do bằng Gemini AI. & Đạt \\
+ & 5. Kết nối cộng đồng & Hồ sơ năng lực; gợi ý đối tác Jaccard có trọng số; tóm tắt bằng Gemini AI. & Đạt \\
 \cline{2-4}
- & 6. Báo cáo quản trị trực quan & Dashboard biểu đồ hóa doanh thu, tỷ lệ lấp đầy theo thời gian thực và so sánh hiệu quả giữa các cơ sở kinh doanh. & Đạt \\
+ & 6. Báo cáo quản trị & Dashboard doanh thu, tỷ lệ lấp đầy, so sánh hiệu quả giữa các chi nhánh. & Đạt \\
 \hline
-Kỹ thuật & 7. Kiến trúc phân tầng chuẩn & Kiến trúc 3 tầng chuẩn mực (React Front-end, Spring Boot Back-end, PostgreSQL Database); tách biệt DTO rõ ràng. & Đạt \\
+Kỹ thuật & 7. Kiến trúc phân tầng & 3 tầng: React Front-end, Spring Boot Back-end, PostgreSQL; tách biệt DTO. & Đạt \\
 \cline{2-4}
- & 8. Phòng chống đụng lịch tương tranh & Cơ chế 2 tầng: khóa tư vấn \texttt{pg\_advisory\_xact\_lock} ở tầng ứng dụng và ràng buộc \texttt{EXCLUDE USING gist} ở CSDL. & Đạt \\
+ & 8. Chống đặt trùng tương tranh & \texttt{pg\_advisory\_xact\_lock} + \texttt{EXCLUDE USING gist}. & Đạt \\
 \cline{2-4}
- & 9. Xử lý thanh toán an toàn lỗi & Xác thực chữ ký HMAC-SHA256; tính bất biến Idempotency; tự động giải quyết thanh toán trễ Ghost Payment vào hàng chờ hoàn tiền. & Đạt \\
+ & 9. Thanh toán an toàn & Xác thực HMAC-SHA256; Idempotency; xử lý Ghost Payment. & Đạt \\
 \cline{2-4}
- & 10. Phân quyền và cô lập dữ liệu & Mô hình xác thực kép (Supabase JWT kết hợp JWT nội bộ HS384); \texttt{BranchAccessGuard} ngăn chặn IDOR chéo chi nhánh. & Đạt \\
+ & 10. Phân quyền và cô lập dữ liệu & JWT kép (Supabase + nội bộ HS384); \texttt{BranchAccessGuard} chống IDOR. & Đạt \\
 \cline{2-4}
- & 11. Trợ lý ảo AI có kiểm soát an toàn & Gemini 1.5 Flash với cơ chế thẻ đề xuất (Proposal Card) buộc người dùng bấm xác nhận trước khi thực thi thao tác ghi dữ liệu. & Đạt \\
+ & 11. AI có kiểm soát an toàn & Gemini 1.5 Flash; thẻ đề xuất Proposal Card bắt buộc xác nhận trước ghi dữ liệu. & Đạt \\
 \cline{2-4}
- & 12. Triển khai đám mây hiện đại & Docker Multi-stage build (215MB); triển khai tự động lên Vercel Edge, Render và Supabase; tích hợp CI/CD qua GitHub Actions. & Đạt \\
+ & 12. Triển khai đám mây & Docker Multi-stage (215MB); Vercel, Render, Supabase; CI/CD GitHub Actions. & Đạt \\
 \hline
 \end{tabular}
 \end{table}
 
-\section{Ưu điểm nổi bật của hệ thống}
+\section{Ưu điểm nổi bật}
 \label{sec:tk-uu-diem}
 
-So với các giải pháp quản lý văn phòng truyền thống và các hệ thống cùng loại trên thị trường, CoSpace sở hữu những ưu điểm công nghệ và nghiệp vụ vượt trội:
-
 \begin{enumerate}
-    \item \textbf{Cơ chế kiểm soát tương tranh hai tầng tối tân:} Việc kết hợp giữa khóa ứng dụng \texttt{pg\_advisory\_xact\_lock} (tuần tự hóa yêu cầu đặt chỗ và giới hạn 3 đơn chờ) với ràng buộc loại trừ không gian--thời gian \texttt{EXCLUDE USING gist} ở tầng CSDL loại bỏ 100\% nguy cơ đụng lịch (Double Booking), bảo vệ tuyệt đối tính toàn vẹn dữ liệu ngay cả khi chịu tải hàng trăm yêu cầu đồng thời.
-    \item \textbf{Tự động hóa thanh toán VietQR Napas 24/7 an toàn lỗi (Fail-safe):} Hệ thống tạo mã QR động có giá trị thanh toán chính xác theo từng đơn hàng, đối soát chữ ký số HMAC-SHA256 chuẩn mã hóa ngân hàng, kiểm tra tính bất biến (Idempotency) và tự động xử lý các tình huống biên như chuyển tiền muộn sau khi đơn bị hủy (Ghost Payment).
-    \item \textbf{Ứng dụng Trí tuệ Nhân tạo có kiểm soát (Proposal-Confirmation):} Tích hợp mô hình ngôn ngữ lớn Google Gemini 1.5 Flash theo mô hình an toàn hai pha: các thao tác ghi dữ liệu nhạy cảm chỉ sinh ra thẻ đề xuất (Proposal Card) để người dùng xác nhận trên giao diện, ngăn ngừa tuyệt đối nguy cơ AI sinh ảo giác làm thay đổi dữ liệu trái phép.
-    \item \textbf{Trải nghiệm người dùng tương tác phong phú:} Sơ đồ mặt bằng tương tác vector SVG cho phép quan sát trực quan vị trí ghế trống/đang dùng theo thời gian thực; giao diện quầy lễ tân trang bị cơ chế dung sai Check-in $\pm 30$ phút và quản lý dịch vụ phát sinh (Running Tab).
-    \item \textbf{Hiệu năng cao và Đóng gói triển khai tối ưu:} Nhờ kỹ thuật Docker Multi-stage build (rút gọn hình ảnh phần mềm còn 215MB) và chia nhỏ gói tệp Front-end trên Vercel Edge CDN (gói Gzip 193kB), hệ thống đạt điểm hiệu năng Google Lighthouse 94/100 với thời gian tải trang dưới 0.8 giây và độ trễ API dưới 125ms.
-    \item \textbf{Đảm bảo chất lượng bằng 307 ca kiểm thử tự động:} Tỷ lệ bao phủ kiểm thử cao bảo vệ vững chắc mọi luồng nghiệp vụ nhạy cảm, cho phép nâng cấp mã nguồn an toàn mà không lo lỗi hồi quy (Regression Bugs).
+    \item \textbf{Kiểm soát tương tranh hai tầng:} Kết hợp \texttt{pg\_advisory\_xact\_lock} (tuần tự hóa yêu cầu, giới hạn 3 đơn chờ) với ràng buộc \texttt{EXCLUDE USING gist} ở tầng CSDL, loại bỏ hoàn toàn nguy cơ đặt trùng lịch (Double Booking) ngay cả khi nhiều yêu cầu đồng thời.
+    \item \textbf{Thanh toán VietQR tự động, an toàn lỗi:} Tạo mã QR động theo đơn hàng, đối soát chữ ký HMAC-SHA256, đảm bảo Idempotency và xử lý Ghost Payment (chuyển tiền muộn sau khi đơn bị hủy).
+    \item \textbf{Trợ lý AI có kiểm soát (Proposal-Confirmation):} Gemini 1.5 Flash chỉ sinh thẻ đề xuất cho các thao tác ghi dữ liệu, buộc người dùng xác nhận trước khi thực thi, ngăn ngừa AI thay đổi dữ liệu trái phép.
+    \item \textbf{Trải nghiệm người dùng trực quan:} Sơ đồ mặt bằng SVG tương tác hiển thị trạng thái chỗ ngồi thời gian thực; check-in dung sai $\pm 30$ phút; quản lý dịch vụ phát sinh Running Tab.
+    \item \textbf{Hiệu năng và triển khai tối ưu:} Docker Multi-stage build (215MB), gói Front-end Gzip 193kB trên Vercel Edge CDN; thời gian tải trang và độ trễ API đáp ứng yêu cầu phi chức năng.
+    \item \textbf{307 ca kiểm thử tự động:} Bao phủ các luồng nghiệp vụ quan trọng, hỗ trợ phát hiện lỗi hồi quy khi nâng cấp mã nguồn.
 \end{enumerate}
 
-\section{Những mặt còn hạn chế}
+\section{Hạn chế}
 \label{sec:tk-han-che}
 
-Bên cạnh những kết quả xuất sắc đã đạt được, nhóm nghiên cứu thẳng thắn nhìn nhận hệ thống vẫn còn một số điểm hạn chế kỹ thuật cần tiếp tục hoàn thiện:
-
 \begin{enumerate}
-    \item \textbf{Phạm vi kiểm thử tích hợp chưa gắn kết hoàn toàn với CSDL thật:} Toàn bộ 307 ca kiểm thử tự động phía máy chủ hiện đang chạy trên nền tảng Mockito và cơ sở dữ liệu giả lập trong bộ nhớ. Mặc dù các kịch bản SQL riêng biệt đã chạy thành công trên PostgreSQL thật, việc tự động hóa kiểm thử tích hợp CSDL thật trong quy trình CI/CD (thông qua giải pháp Testcontainers) vẫn chưa được thiết lập.
-    \item \textbf{Quy trình giải ngân hoàn tiền còn bước xác nhận thủ công:} Mặc dù hệ thống đã tự động hóa việc tính toán phí phạt và ghi nhận số tiền hoàn vào bảng đối soát, việc chuyển khoản tiền hoàn về tài khoản ngân hàng của khách hàng vẫn cần sự can thiệp phê duyệt thủ công của Quản lý chi nhánh trước khi chuyển tiền qua cổng chi hộ.
-    \item \textbf{Kiến trúc tác vụ định kỳ đơn phiên bản (Single-Instance Scheduler):} Bộ quét giải phóng đơn \texttt{BookingExpiryScheduler} và bộ nhớ đệm ứng dụng hiện đang hoạt động trực tiếp trong bộ nhớ máy chủ Spring Boot. Thiết kế này hoạt động tối ưu trên môi trường đơn phiên bản; khi mở rộng nhân bản máy chủ theo chiều ngang (Horizontal Scaling) cần bổ sung cơ chế khóa phân tán (Distributed Lock).
-    \item \textbf{Giới hạn về nền tảng di động bản địa và phần cứng IoT:} Hệ thống hiện vận hành trên nền tảng Web tương thích thiết bị di động (Responsive Web), chưa xây dựng ứng dụng di động bản địa (Native Mobile App) trên App Store và Google Play; đồng thời quy trình mở cửa ra vào vẫn phụ thuộc vào xác thực của nhân viên quầy, chưa tích hợp với khóa cửa điện tử IoT (Smart Door Locks).
+    \item \textbf{Kiểm thử tích hợp chưa dùng CSDL thật:} 307 ca kiểm thử chạy trên Mockito và CSDL giả lập trong bộ nhớ. Các kịch bản SQL đã kiểm tra riêng trên PostgreSQL thật, nhưng chưa tích hợp Testcontainers vào quy trình CI/CD.
+    \item \textbf{Hoàn tiền còn bước thủ công:} Hệ thống tự động tính phí phạt và ghi nhận số tiền hoàn, nhưng việc chuyển khoản hoàn tiền vẫn cần Quản lý chi nhánh phê duyệt thủ công.
+    \item \textbf{Tác vụ định kỳ đơn phiên bản:} \texttt{BookingExpiryScheduler} và bộ nhớ đệm hoạt động trong bộ nhớ máy chủ. Khi mở rộng nhiều phiên bản (Horizontal Scaling) cần bổ sung khóa phân tán (Distributed Lock).
+    \item \textbf{Chưa có ứng dụng di động và IoT:} Hệ thống hoạt động trên nền Web Responsive, chưa xây dựng Native Mobile App và chưa tích hợp khóa cửa điện tử IoT.
 \end{enumerate}
 
-\section{Hướng phát triển và mở rộng trong tương lai}
+\section{Hướng phát triển}
 \label{sec:tk-huong-phat-trien}
 
-Nhằm nâng cao chất lượng kỹ thuật và chuẩn bị cho việc thương mại hóa hệ sinh thái CoSpace trên quy mô chuỗi dịch vụ chuyên nghiệp, nhóm đề xuất lộ trình phát triển theo hai giai đoạn:
-
-\subsection{Giai đoạn hoàn thiện kỹ thuật ngắn hạn (Short-term Horizon)}
+\subsection{Ngắn hạn}
 
 \begin{itemize}
-    \item \textbf{Tích hợp công nghệ Testcontainers và kiểm thử E2E tự động:} Áp dụng Testcontainers để tự động khởi tạo vùng chứa Docker chạy PostgreSQL 15 thật có sẵn \texttt{btree\_gist} trong quy trình CI/CD. Xây dựng bộ kiểm thử giao diện tự động bằng Playwright để kiểm thử toàn diện quy trình người dùng trên trình duyệt thật.
-    \item \textbf{Triển khai khóa phân tán và bộ nhớ đệm tập trung (Redis \& ShedLock):} Thay thế bộ nhớ đệm nội bộ bằng cụm Redis Cluster phân tán, đồng thời tích hợp thư viện ShedLock để đồng bộ hóa các tác vụ định kỳ \texttt{BookingExpiryScheduler} khi hệ thống mở rộng đa phiên bản máy chủ.
-    \item \textbf{Bảo vệ API biên bằng kỹ thuật giới hạn tần suất (Rate Limiting):} Tích hợp Bucket4j kết hợp Redis Token Bucket để giới hạn tần suất gọi API tại các điểm cuối nhạy cảm (đăng nhập, quét thanh toán, gọi Gemini AI), ngăn chặn nguy cơ tấn công từ chối dịch vụ (DoS).
-    \item \textbf{Chuyển đổi lưu trữ mã phiên sang Cookie HttpOnly:} Di chuyển Access Token từ \texttt{localStorage} của trình duyệt sang Cookie an toàn với các cờ \texttt{HttpOnly}, \texttt{Secure} và \texttt{SameSite=Strict} nhằm triệt tiêu hoàn toàn nguy cơ rò rỉ mã phiên do tấn công Cross-Site Scripting (XSS).
+    \item \textbf{Testcontainers và kiểm thử E2E:} Tích hợp PostgreSQL thật qua Testcontainers trong CI/CD; bổ sung kiểm thử giao diện tự động bằng Playwright.
+    \item \textbf{Redis và ShedLock:} Thay bộ nhớ đệm nội bộ bằng Redis Cluster; dùng ShedLock đồng bộ tác vụ định kỳ khi mở rộng đa phiên bản.
+    \item \textbf{Rate Limiting:} Tích hợp Bucket4j + Redis Token Bucket cho các API nhạy cảm (đăng nhập, thanh toán, Gemini AI).
+    \item \textbf{Bảo mật phiên:} Chuyển Access Token từ \texttt{localStorage} sang Cookie \texttt{HttpOnly}, \texttt{Secure}, \texttt{SameSite=Strict} để chống XSS.
 \end{itemize}
 
-\subsection{Giai đoạn mở rộng sản phẩm và kinh doanh dài hạn (Long-term Horizon)}
+\subsection{Dài hạn}
 
 \begin{itemize}
-    \item \textbf{Phát triển Ứng dụng Di động Đa nền tảng (Native Mobile App):} Xây dựng ứng dụng di động cho hệ điều hành iOS và Android bằng React Native hoặc Flutter, hỗ trợ tính năng Thông báo đẩy (Push Notification) nhắc nhở lịch hẹn trước 30 phút, quét mã QR Pass mở cửa nhanh và đăng nhập sinh trắc học (FaceID/Vân tay).
-    \item \textbf{Tích hợp Giải pháp Phần cứng Thông minh IoT (Smart IoT Access Control):} Kết nối hệ thống CoSpace với các bộ điều khiển khóa cửa thông minh và cảm biến hiện diện tại bàn làm việc thông qua giao thức truyền thông nhẹ \textbf{MQTT}. Khi khách thanh toán thành công, hệ thống tự động sinh mã số PIN mở cửa tạm thời hoặc mã QR có hiệu lực đúng trong khung giờ đã đặt, cho phép vận hành không gian tự động 24/7 mà không cần nhân viên trực quầy.
-    \item \textbf{Chuyển đổi sang Kiến trúc Đa bên thuê (Multi-Tenancy SaaS):} Nâng cấp thiết kế cơ sở dữ liệu và mô hình phân quyền để CoSpace trở thành một nền tảng phần mềm dưới dạng dịch vụ (SaaS). Cho phép các chủ doanh nghiệp văn phòng chia sẻ độc lập có thể đăng ký tài khoản doanh nghiệp, tự cấu hình thương hiệu, biểu phí và sơ đồ mặt bằng riêng biệt trên cùng một hạ tầng máy chủ tập trung.
-    \item \textbf{Tối ưu hóa gợi ý đối tác bằng Nhúng véc-tơ (Vector Embeddings \& pgvector):} Ứng dụng mô hình nhúng ngữ nghĩa (Text Embeddings) kết hợp tiện ích mở rộng \texttt{pgvector} của PostgreSQL để phân tích ngữ nghĩa chuyên sâu hồ sơ kỹ năng, bài đăng và nhu cầu tuyển dụng cộng sự, nâng cao độ chính xác và giá trị thương mại của tính năng kết nối mạng lưới đối tác.
+    \item \textbf{Ứng dụng di động:} Phát triển app iOS/Android bằng React Native hoặc Flutter; hỗ trợ Push Notification, quét QR và đăng nhập sinh trắc học.
+    \item \textbf{Tích hợp IoT:} Kết nối khóa cửa thông minh và cảm biến hiện diện qua MQTT; tự động sinh mã PIN/QR mở cửa theo khung giờ đặt chỗ.
+    \item \textbf{Multi-Tenancy SaaS:} Nâng cấp kiến trúc để nhiều doanh nghiệp văn phòng chia sẻ độc lập cùng sử dụng trên một hạ tầng tập trung.
+    \item \textbf{Gợi ý đối tác bằng Vector Embeddings:} Dùng mô hình nhúng ngữ nghĩa kết hợp \texttt{pgvector} để phân tích hồ sơ chuyên sâu hơn thuật toán Jaccard hiện tại.
 \end{itemize}
 
-\section{Kết luận chung}
+\section{Kết luận}
 \label{sec:tk-ket-luan-chung}
 
-Trải qua hai học kỳ nghiên cứu và phát triển liên tục từ giai đoạn Đồ án chuyên ngành đến Đồ án tốt nghiệp, đề tài \textbf{``Phát triển hệ thống quản lý văn phòng chia sẻ (CoSpace)''} đã hoàn thành trọn vẹn tất cả các mục tiêu đề ra ban đầu. Hệ thống không chỉ cung cấp một sản phẩm phần mềm hoàn chỉnh, vận hành ổn định trên nền tảng đám mây và sẵn sàng ứng dụng vào thực tiễn kinh doanh, mà còn chứng minh được tính khả thi của các giải pháp kỹ thuật chuyên sâu:
-\begin{itemize}
-    \item Giải quyết triệt để bài toán xung đột tài nguyên không gian--thời gian thông qua cơ chế kiểm soát tương tranh hai tầng tối tân (\texttt{pg\_advisory\_xact\_lock} và \texttt{EXCLUDE USING gist}).
-    \item Tự động hóa quy trình thanh toán trực tuyến VietQR Napas 24/7 an toàn lỗi, đối soát minh bạch và giải phóng tài nguyên giữ chỗ tức thời.
-    \item Ứng dụng sáng tạo mô hình Trí tuệ Nhân tạo Gemini với cơ chế thẻ đề xuất an toàn hai pha, kết hợp thuật toán so khớp đối tác Jaccard giúp gia tăng giá trị kết nối cộng đồng.
-    \item Tối ưu hóa toàn diện hiệu năng phân phối gói phần mềm và trải nghiệm người dùng tương tác phong phú trên nền tảng Web hiện đại.
-\end{itemize}
-
-Quá trình thực hiện đồ án tốt nghiệp đã trang bị cho các thành viên trong nhóm những kiến thức thực tế vô cùng quý báu về phương pháp luận nghiên cứu khoa học, kỹ năng thiết kế kiến trúc phần mềm chuẩn mực, quy trình kiểm thử tự động nghiêm ngặt và tác phong làm việc nhóm chuyên nghiệp theo mô hình Agile/Scrum. Đây chính là hành trang vững chắc để nhóm tự tin bước vào môi trường kỹ thuật phần mềm thực tế và tiếp tục phát triển các sản phẩm công nghệ có giá trị cao trong tương lai.
+Đề tài đã hoàn thành tất cả 12 mục tiêu nghiệp vụ và kỹ thuật đề ra. Hệ thống CoSpace vận hành ổn định trên nền tảng đám mây, giải quyết được các bài toán cốt lõi: kiểm soát tương tranh đặt chỗ, thanh toán trực tuyến an toàn, và kết nối cộng đồng thành viên. Quá trình thực hiện đồ án đã giúp nhóm tích lũy kinh nghiệm thực tế về thiết kế kiến trúc phần mềm, kiểm thử tự động và quy trình phát triển Agile -- là nền tảng để tiếp tục phát triển sản phẩm trong tương lai.

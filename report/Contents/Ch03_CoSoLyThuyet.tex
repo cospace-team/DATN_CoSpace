@@ -16,7 +16,7 @@ Hệ thống CoSpace được thiết kế dựa trên mô hình kiến trúc kh
 
 Phía máy chủ Back-end áp dụng mô hình ba lớp nghiêm ngặt nhằm tách biệt rạch ròi trách nhiệm (Separation of Concerns):
 \begin{enumerate}
-    \item \textbf{Lớp điều khiển (Controller Layer):} Đóng vai trò là cổng giao tiếp tiếp nhận các yêu cầu HTTP RESTful từ máy khách. Controller chỉ thực hiện nhiệm vụ xác thực sơ bộ định dạng dữ liệu đầu vào thông qua các chú thích chuẩn (Jakarta Validation), kiểm tra quyền hạn của người gọi và chuyển tiếp lời gọi đến tầng dịch vụ. Controller tuyệt đối không chứa logic nghiệp vụ và không thực hiện truy vấn cơ sở dữ liệu trực tiếp.
+    \item \textbf{Lớp điều khiển (Controller Layer):} Đóng vai trò là cổng giao tiếp tiếp nhận các yêu cầu HTTP RESTful từ máy khách. Controller chỉ thực hiện nhiệm vụ xác thực sơ bộ định dạng dữ liệu đầu vào thông qua các chú thích chuẩn (Jakarta Validation), kiểm tra quyền hạn của người gọi và chuyển tiếp lời gọi đến tầng dịch vụ. Controller không chứa logic nghiệp vụ và không thực hiện truy vấn cơ sở dữ liệu trực tiếp.
     \item \textbf{Lớp dịch vụ (Service Layer):} Trái tim xử lý nghiệp vụ của toàn bộ hệ thống. Toàn bộ các quy tắc nghiệp vụ, ranh giới giao dịch (\texttt{@Transactional}), thuật toán tính toán tài chính, cơ chế khóa tương tranh và việc chuyển đổi trạng thái đơn đặt chỗ thông qua máy trạng thái (\texttt{BookingStateMachine}) đều được đóng gói tại đây.
     \item \textbf{Lớp truy cập dữ liệu (Repository / Data Access Layer):} Sử dụng Spring Data JPA để trừu tượng hóa các câu lệnh SQL. Repository chỉ đảm nhận việc đọc và ghi dữ liệu từ các bảng CSDL, cung cấp các phương thức truy vấn tùy biến và các câu lệnh khóa dòng dữ liệu.
 \end{enumerate}
@@ -164,7 +164,7 @@ Cơ sở dữ liệu trung tâm của hệ thống là \textbf{PostgreSQL 15} \c
     \item \textbf{Chỉ mục không gian GiST (\texttt{btree\_gist}):} Tối ưu hóa tốc độ tìm kiếm giao thoa khoảng thời gian thông qua toán tử chứa/chồng lấn (\texttt{\&\&}), đảm bảo tốc độ phản hồi dưới 20ms ngay cả khi bảng chứa hàng chục nghìn lượt đặt chỗ.
     \item \textbf{Cơ chế khóa tư vấn mức giao dịch (\texttt{pg\_advisory\_xact\_lock}):} Cho phép tầng ứng dụng khóa độc quyền logic theo mã định danh không gian làm việc (\texttt{workspace\_id}) trong suốt thời gian thực thi giao dịch mà không làm khóa cứng toàn bộ bảng CSDL.
 \end{itemize}
-Toàn bộ quá trình di trú và đồng bộ hóa lược đồ dữ liệu giữa môi trường phát triển và môi trường thực tế được quản lý tự động thông qua công cụ \textbf{Flyway Migration}, đảm bảo tính nhất quán tuyệt đối về cấu trúc bảng và các chỉ mục toàn vẹn.
+Toàn bộ quá trình di trú và đồng bộ hóa lược đồ dữ liệu giữa môi trường phát triển và môi trường thực tế được quản lý tự động thông qua công cụ \textbf{Flyway Migration}, đảm bảo tính nhất quán về cấu trúc bảng và các chỉ mục toàn vẹn.
 
 \subsection{Cổng thanh toán tự động VietQR PayOS và Ví điện tử MoMo}
 Hệ thống giải quyết triệt để bài toán thanh toán không tiền mặt thông qua việc tích hợp trực tiếp với cổng thanh toán \textbf{PayOS} \cite{payos_docs}. PayOS hỗ trợ tạo mã thanh toán chuẩn quốc gia \textbf{VietQR Napas 24/7}. Khi khách hàng tiến hành đặt chỗ, máy chủ tự động sinh mã QR động chứa số tài khoản, số tiền chính xác và mã đơn hàng duy nhất. Ngay khi khách hàng quét mã và chuyển khoản thành công qua ứng dụng ngân hàng bất kỳ, PayOS sẽ gửi tức thời thông báo giao dịch (Webhook IPN) về máy chủ CoSpace. Hệ thống kiểm tra chữ ký điện tử HMAC-SHA256 để chống giả mạo, tự động kích hoạt đơn sang trạng thái đã thanh toán mà không cần bất kỳ sự can thiệp thủ công nào từ nhân viên thu ngân.
@@ -197,13 +197,13 @@ Thư viện Front-end & React 18.3, TypeScript 5.6 & Vue.js, Angular, Next.js & 
 \hline
 Công cụ đóng gói Front-end & Vite 5.4 & Webpack, Create React App & Tốc độ khởi động và làm mới mô-đun (HMR) cực nhanh nhờ native ES Modules; cấu hình đóng gói chia chunk tinh gọn \\
 \hline
-Hệ quản trị CSDL & PostgreSQL trên Supabase & MySQL, MongoDB & Hỗ trợ xuất sắc các kiểu dữ liệu thời gian có múi giờ, khóa tư vấn mức giao dịch và ràng buộc loại trừ GiST chống trùng lịch \\
+Hệ quản trị CSDL & PostgreSQL trên Supabase & MySQL, MongoDB & Hỗ trợ tốt các kiểu dữ liệu thời gian có múi giờ, khóa tư vấn mức giao dịch và ràng buộc loại trừ GiST chống trùng lịch \\
 \hline
-Kiểm soát tương tranh & Khóa tư vấn CSDL + Ràng buộc GiST & Khóa phân tán Redis (Redlock), Khóa quan mạo & Không phát sinh thêm hạ tầng phụ thuộc bên ngoài; bảo đảm tính toàn vẹn giao dịch ACID tuyệt đối trong cùng một phiên CSDL \\
+Kiểm soát tương tranh & Khóa tư vấn CSDL + Ràng buộc GiST & Khóa phân tán Redis (Redlock), Khóa quan mạo & Không phát sinh thêm hạ tầng phụ thuộc bên ngoài; bảo đảm tính toàn vẹn giao dịch ACID trong cùng một phiên CSDL \\
 \hline
 Cổng thanh toán & PayOS (VietQR) và MoMo & Stripe, PayPal, VNPay & Chuẩn VietQR Napas 24/7 tối ưu cho người dùng Việt Nam; chi phí giao dịch thấp; webhook hỗ trợ xác thực chữ ký an toàn \\
 \hline
-Mô hình AI & Google Gemini Flash (API) & OpenAI GPT-4o, Mô hình cục bộ Llama & Tốc độ phản hồi thấp ($<1$s); hỗ trợ Function Calling chuẩn xác; chi phí sử dụng API cực kỳ tiết kiệm \\
+Mô hình AI & Google Gemini Flash (API) & OpenAI GPT-4o, Mô hình cục bộ Llama & Tốc độ phản hồi nhanh ($<1$s); hỗ trợ Function Calling chuẩn xác; chi phí sử dụng API tối ưu \\
 \hline
 Quản lý di trú CSDL & Flyway Migration & Liquibase, Hibernate ddl-auto & Đơn giản, dựa trên các tệp SQL thuần túy; kiểm soát chặt chẽ phiên bản lược đồ CSDL giữa các môi trường \\
 \hline

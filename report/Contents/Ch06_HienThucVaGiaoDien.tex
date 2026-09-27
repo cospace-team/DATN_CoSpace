@@ -38,7 +38,7 @@ cospace-root/
 |       |   |-- scheduler/               # Tuyen trinh dinh ky BookingExpiryScheduler
 |       |   |-- security/                # SupabaseJwtFilter, UserPrincipal, RBAC Guard
 |       |   `-- service/                 # Logic nghiep vu loi (Booking, Payment, Matching)
-|       `-- test/java/com/cospace/app/   # 273 ca kiem thu tu dong (Unit & Integration Tests)
+|       `-- test/java/com/cospace/app/   # 307 ca kiem thu tu dong (Unit & Integration Tests)
 |-- FE/                                  # Phan he Giao dien (React 18 + TypeScript + Vite)
 |   |-- package.json                     # Khai bao goi thu vien React va Cong cu FE
 |   |-- vite.config.ts                   # Cau hinh chia nho module (manualChunks splitting)
@@ -91,7 +91,7 @@ Hệ thống CoSpace không chỉ cài đặt các hàm CRUD cơ bản mà còn 
     \item \textbf{Bước 1 (Kiểm soát tần suất người dùng -- Rule \#33):} Bắt đầu giao dịch nguyên tử (\texttt{@Transactional}). Thực thi khóa ứng dụng (Advisory Lock) trên ID người dùng:
     $$\texttt{SELECT pg\_advisory\_xact\_lock(hashtext('rate\_limit:' || userId))}$$
     Đếm số lượng đơn đang có trạng thái \texttt{PENDING\_PAYMENT} của người này. Nếu số lượng $\ge 3$, ném ngoại lệ \texttt{RateLimitException} chặn khởi tạo đơn mới, loại bỏ hành vi đầu cơ giữ chỗ ảo làm nghẽn hệ thống.
-    \item \textbf{Bước 2 (Suy diễn Chi nhánh tự động -- Rule \#42):} Máy chủ tự động truy vấn \texttt{WorkspaceEntity} $\rightarrow$ lấy \texttt{floorId} $\rightarrow$ truy vấn \texttt{Floor} lấy \texttt{branchId}. Tuyệt đối không chấp nhận tham số \texttt{branchId} truyền từ máy khách nhằm ngăn ngừa hành vi giả mạo ID.
+    \item \textbf{Bước 2 (Suy diễn Chi nhánh tự động -- Rule \#42):} Máy chủ tự động truy vấn \texttt{WorkspaceEntity} $\rightarrow$ lấy \texttt{floorId} $\rightarrow$ truy vấn \texttt{Floor} lấy \texttt{branchId}. Hệ thống không nhận tham số \texttt{branchId} từ máy khách để ngăn ngừa nguy cơ giả mạo dữ liệu.
     \item \textbf{Bước 3 (Khóa tương tranh vật lý trên không gian):} Thực thi khóa Advisory Lock trên mã định danh vị trí:
     $$\texttt{SELECT pg\_advisory\_xact\_lock(hashtext('booking:' || workspaceId))}$$
     Khóa này chỉ có hiệu lực trong phạm vi giao dịch hiện hành và tự động giải phóng khi giao dịch Commit hoặc Rollback.
@@ -376,9 +376,9 @@ Kỹ thuật Docker Multi-stage giúp giảm dung lượng hình ảnh từ \tex
 \subsection{Thiết lập quy trình CI/CD và Quản trị biến môi trường}
 
 \begin{itemize}
-    \item \textbf{Continuous Integration (CI):} Thiết lập luồng GitHub Actions tự động kích hoạt mỗi khi có Pull Request vào nhánh \texttt{main}. Môi trường máy ảo Ubuntu tiến hành kiểm tra cú pháp, biên dịch và thực thi toàn bộ 273 ca kiểm thử tự động (\texttt{mvn clean test}). Quy trình sẽ chặn hợp nhất mã nguồn nếu có bất kỳ lỗi nào phát sinh.
+    \item \textbf{Continuous Integration (CI):} Thiết lập luồng GitHub Actions tự động kích hoạt mỗi khi có Pull Request vào nhánh \texttt{main}. Môi trường máy ảo Ubuntu tiến hành kiểm tra cú pháp, biên dịch và thực thi toàn bộ 307 ca kiểm thử tự động (\texttt{mvn clean test}). Quy trình sẽ chặn hợp nhất mã nguồn nếu có bất kỳ lỗi nào phát sinh.
     \item \textbf{Continuous Deployment (CD):} Sau khi nhánh chính vượt qua 100\% các ca kiểm thử, Webhook Deploy bí mật kích hoạt Vercel và Render thực hiện tự động cập nhật phiên bản mới với thời gian gián đoạn dịch vụ bằng 0 (\textit{Zero-downtime Rolling Update}).
-    \item \textbf{Quản trị biến môi trường:} Toàn bộ thông tin nhạy cảm (chuỗi kết nối CSDL, Supabase Secret Key, PayOS API Key, Gemini API Token) được mã hóa trong bảng điều khiển hạ tầng đám mây của Vercel và Render, tuyệt đối không lưu vết trong mã nguồn mở.
+    \item \textbf{Quản trị biến môi trường:} Toàn bộ thông tin nhạy cảm (chuỗi kết nối CSDL, Supabase Secret Key, PayOS API Key, Gemini API Token) được mã hóa trong bảng điều khiển hạ tầng đám mây của Vercel và Render, không lưu vết trong mã nguồn.
 \end{itemize}
 
 \section{Kết quả hiện thực giao diện người dùng các phân hệ}
