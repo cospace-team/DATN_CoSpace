@@ -50,6 +50,10 @@ class RefundServiceTest {
     private BranchEntityRepository branchRepository;
     @Mock
     private NotificationService notificationService;
+    @Mock
+    private PromotionService promotionService;
+    @Mock
+    private com.cospace.app.repository.PromotionRepository promotionRepository;
 
     @InjectMocks
     private RefundService refundService;
@@ -122,6 +126,33 @@ class RefundServiceTest {
         assertThat(refund.getProcessedAt()).isNotNull();
         assertThat(payment.getStatus()).isEqualTo(PaymentStatus.REFUNDED);
         assertThat(cancellation.getRefundStatus()).isEqualTo(Refund.STATUS_PROCESSED);
+    }
+
+    @Test
+    void refundCanBePaidAsAPersonalVoucher() {
+        Booking b = booking();
+        Refund refund = Refund.builder().id(UUID.randomUUID()).bookingId(b.getId()).userId(userId).branchId(b.getBranchId())
+                .amount(150_000L).reasonType(Refund.REASON_CANCELLATION).status(Refund.STATUS_PENDING).build();
+        com.cospace.app.entity.Promotion voucher = com.cospace.app.entity.Promotion.builder().id(UUID.randomUUID())
+                .code("HTABCDEFGH").endAt(java.time.OffsetDateTime.now().plusDays(90)).build();
+        when(refundRepository.findById(refund.getId())).thenReturn(Optional.of(refund));
+        when(refundRepository.save(any(Refund.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(bookingRepository.findById(b.getId())).thenReturn(Optional.of(b));
+        when(promotionService.issueVoucher(eq(userId), eq(150_000L), anyString(), anyString(), eq(30), any())).thenReturn(voucher);
+
+        refundService.markProcessed(refund.getId(), UUID.randomUUID(), null, Refund.METHOD_VOUCHER, 30);
+
+        assertThat(refund.getStatus()).isEqualTo(Refund.STATUS_PROCESSED);
+        assertThat(refund.getRefundMethod()).isEqualTo(Refund.METHOD_VOUCHER);
+        assertThat(refund.getVoucherPromotionId()).isEqualTo(voucher.getId());
+        verify(notificationService).createNotification(eq(userId), anyString(),
+                org.mockito.ArgumentMatchers.contains("HTABCDEFGH"), eq("REFUND"), eq(b.getId()), anyString());
+    }
+
+    @Test
+    void unknownRefundMethodIsRejected() {
+        assertThatThrownBy(() -> refundService.markProcessed(UUID.randomUUID(), UUID.randomUUID(), null, "momo", null))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test

@@ -24,6 +24,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -41,6 +42,8 @@ class CheckinServiceTest {
     private UserRepository userRepository;
     @Mock
     private BookingAddonService bookingAddonService;
+    @Mock
+    private BookingExtensionService bookingExtensionService;
 
     @InjectMocks
     private CheckinService checkinService;
@@ -224,6 +227,7 @@ class CheckinServiceTest {
             Booking booking = booking(BookingStatus.CHECKED_IN, DurationUnit.hour, 3, now().minusHours(1), now().plusHours(2));
             CheckinLog log = activeLog(booking);
             when(checkinLogRepository.findById(log.getId())).thenReturn(Optional.of(log));
+            when(bookingRepository.findByIdWithLock(booking.getId())).thenReturn(Optional.of(booking));
             when(bookingAddonService.unpaidAmount(booking.getId())).thenReturn(35_000L);
 
             assertThatThrownBy(() -> checkinService.checkout(staffId, log.getId(), null))
@@ -231,6 +235,21 @@ class CheckinServiceTest {
                     .hasMessageContaining("chưa thanh toán");
             assertThat(log.getCheckoutAt()).isNull();
             assertThat(booking.getStatus()).isEqualTo(BookingStatus.CHECKED_IN);
+            verify(checkinLogRepository, never()).save(any());
+        }
+
+        @Test
+        void lateGuestCannotBeCheckedOutBeforeTheLateFeeIsHandled() {
+            Booking booking = booking(BookingStatus.CHECKED_IN, DurationUnit.hour, 2, now().minusHours(3), now().minusMinutes(50));
+            CheckinLog log = activeLog(booking);
+            when(checkinLogRepository.findById(log.getId())).thenReturn(Optional.of(log));
+            when(bookingRepository.findByIdWithLock(booking.getId())).thenReturn(Optional.of(booking));
+            when(bookingExtensionService.isLateFeePending(eq(booking), any())).thenReturn(true);
+
+            assertThatThrownBy(() -> checkinService.checkout(staffId, log.getId(), null))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("muộn");
+            assertThat(log.getCheckoutAt()).isNull();
             verify(checkinLogRepository, never()).save(any());
         }
 

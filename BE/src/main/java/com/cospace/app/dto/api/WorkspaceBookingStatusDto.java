@@ -17,6 +17,8 @@ public class WorkspaceBookingStatusDto {
     private UUID workspaceId;
     private String name;
     private String code;
+    /** Seats in the workspace. */
+    private int capacity;
     private WorkspaceEntity.Status workspaceStatus;
     
     private String workspaceTypeId;

@@ -17,7 +17,63 @@ interface Props {
   getAvailability?: (wsId: string) => 'available' | 'booked' | 'maintenance' | 'unassigned';
   isAdmin?: boolean;
   onElementClick?: (el: LayoutElement) => void;
+  /** Optional: seat count, code and type of a linked workspace, shown on the map. */
+  getWorkspaceInfo?: (wsId: string) => WorkspaceMapInfo | null;
 }
+
+export interface WorkspaceMapInfo {
+  code?: string;
+  capacity?: number;
+  typeName?: string;
+}
+
+// Same colours as the legend and the element outlines.
+const STATUS_COLOR: Record<string, string> = {
+  available: '#22C55E',
+  booked: '#EF4444',
+  maintenance: '#94A3B8',
+  unassigned: '#CBD5E1',
+};
+
+/**
+ * Identity badges drawn on top of every bookable element: the element type's icon with the seat
+ * count in a chip at the top-left corner, and a status marker at the top-right, so a desk for one
+ * and a meeting room for ten are told apart at a glance. Purely visual, never intercepts clicks.
+ */
+const WorkspaceBadge: React.FC<{
+  el: LayoutElement;
+  icon?: string;
+  info: WorkspaceMapInfo | null;
+  status: string | null;
+}> = React.memo(({ el, icon, info, status }) => {
+  const capacity = info?.capacity ?? el.seatCount;
+  const compact = el.width < 90;
+  const chipText = capacity ? (compact ? `${capacity}` : `${capacity} chỗ`) : '';
+  const chipHeight = 18;
+  const chipWidth = (icon ? 18 : 6) + chipText.length * 6.6 + 7;
+  const color = status ? STATUS_COLOR[status] || '#94A3B8' : '#64748B';
+  return (
+    <g transform={`translate(${el.x}, ${el.y})`} style={{ pointerEvents: 'none', userSelect: 'none' }}>
+      {(icon || chipText) && (
+        // Sits on the element's top edge like a tab, so it never covers the drawing inside.
+        <g transform={`translate(6, ${-chipHeight / 2})`}>
+          <rect width={chipWidth} height={chipHeight} rx={chipHeight / 2} fill="var(--bg-surface, #fff)"
+            stroke={color} strokeWidth={1.4} />
+          {icon && <text x={5} y={13} fontSize={11}>{icon}</text>}
+          {chipText && (
+            <text x={icon ? 19 : 6} y={12.8} fontSize={10.5} fontWeight={800} fill="var(--text-main, #0F172A)">
+              {chipText}
+            </text>
+          )}
+        </g>
+      )}
+      {status && (
+        <circle cx={el.width - 7} cy={7} r={4.5} fill={color} stroke="var(--bg-surface, #fff)" strokeWidth={1.5} />
+      )}
+    </g>
+  );
+});
+WorkspaceBadge.displayName = 'WorkspaceBadge';
 
 const FloorPlanViewer: React.FC<Props> = ({
   layout,
@@ -26,6 +82,7 @@ const FloorPlanViewer: React.FC<Props> = ({
   getAvailability,
   isAdmin = false,
   onElementClick,
+  getWorkspaceInfo,
 }) => {
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -188,6 +245,20 @@ const FloorPlanViewer: React.FC<Props> = ({
     [layout.elements, getElementWithStatus, selectedWsId, isAdmin]
   );
 
+  // Seat-count / type / status badges for every element linked to a workspace.
+  const badges = useMemo(
+    () =>
+      layout.elements
+        .filter((el) => el.visible && el.workspaceId)
+        .map((el) => ({
+          el,
+          icon: ELEMENT_CATALOG.find((c) => c.type === el.type)?.icon,
+          info: getWorkspaceInfo ? getWorkspaceInfo(el.workspaceId as string) : null,
+          status: getAvailability ? getAvailability(el.workspaceId as string) : null,
+        })),
+    [layout.elements, getWorkspaceInfo, getAvailability]
+  );
+
   // ElementRenderer hands back the styled copy; callers expect the original layout element.
   const handleRendererClick = useCallback(
     (_e: React.MouseEvent, styled: LayoutElement) => {
@@ -269,6 +340,12 @@ const FloorPlanViewer: React.FC<Props> = ({
               Bảo trì ({stats.maintenance})
             </span>
           </div>
+          {getWorkspaceInfo && (
+            <div className="hidden sm:flex items-center gap-1.5 pl-3 border-l border-border">
+              <span className="rounded-full border border-border bg-card px-1.5 text-[10px] font-bold">💻 4 chỗ</span>
+              <span className="text-xs font-medium text-muted-foreground">= loại & số chỗ</span>
+            </div>
+          )}
         </div>
       )}
 
@@ -282,6 +359,16 @@ const FloorPlanViewer: React.FC<Props> = ({
               {hoveredEl.sublabel}
             </span>
           )}
+          {hoveredEl.workspaceId && getWorkspaceInfo && (() => {
+            const info = getWorkspaceInfo(hoveredEl.workspaceId);
+            if (!info) return null;
+            return (
+              <span className="ml-2 text-xs text-muted-foreground">
+                {info.typeName ? `${info.typeName} · ` : ''}
+                {info.capacity ? <strong className="text-foreground">{info.capacity} chỗ ngồi</strong> : null}
+              </span>
+            );
+          })()}
           {hoveredEl.workspaceId && getAvailability && (
             <span
               className={`ml-2 text-xs font-medium ${
@@ -359,6 +446,10 @@ const FloorPlanViewer: React.FC<Props> = ({
               onClick={handleRendererClick}
               onHoverChange={setHoveredId}
             />
+          ))}
+
+          {badges.map((b) => (
+            <WorkspaceBadge key={`badge-${b.el.id}`} el={b.el} icon={b.icon} info={b.info} status={b.status} />
           ))}
         </svg>
       </div>

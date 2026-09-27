@@ -28,6 +28,13 @@ public class BookingServiceItem {
     /** Cancelled line: no longer counted in the booking's add-on amount. */
     public static final String STATUS_VOID = "void";
 
+    /** A service from the extra_services catalogue. */
+    public static final String LINE_SERVICE = "service";
+    /** Extra hours bought before the booking ended. */
+    public static final String LINE_EXTENSION = "extension";
+    /** Surcharge for checking out after the booked end (beyond the grace period). */
+    public static final String LINE_LATE_FEE = "late_fee";
+
     @Id
     @Column(nullable = false, updatable = false)
     private UUID id;
@@ -35,8 +42,17 @@ public class BookingServiceItem {
     @Column(name = "booking_id", nullable = false)
     private UUID bookingId;
 
-    @Column(name = "service_id", nullable = false)
+    /** Catalogue service; null for extension and late-fee lines. */
+    @Column(name = "service_id")
     private UUID serviceId;
+
+    @Column(name = "line_type", nullable = false, length = 16)
+    @Builder.Default
+    private String lineType = LINE_SERVICE;
+
+    /** Label of a line that has no catalogue service (e.g. "Gia hạn 2 giờ"). */
+    @Column(length = 200)
+    private String description;
 
     @Column(nullable = false)
     @Builder.Default
@@ -75,6 +91,7 @@ public class BookingServiceItem {
         if (id == null) id = UUID.randomUUID();
         if (createdAt == null) createdAt = OffsetDateTime.now(ZoneOffset.UTC);
         if (status == null) status = STATUS_UNPAID;
+        if (lineType == null) lineType = LINE_SERVICE;
         if (subtotal == 0 && unitPrice > 0 && quantity > 0) {
             subtotal = unitPrice * (long) quantity;
         }

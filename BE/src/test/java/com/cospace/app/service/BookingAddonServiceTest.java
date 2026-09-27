@@ -178,7 +178,7 @@ class BookingAddonServiceTest {
         paid.setStatus(BookingServiceItem.STATUS_PAID);
         when(itemRepository.findById(paid.getId())).thenReturn(Optional.of(paid));
 
-        assertThatThrownBy(() -> addonService.voidItem(UUID.randomUUID(), b.getId(), paid.getId()))
+        assertThatThrownBy(() -> addonService.voidItem(UUID.randomUUID(), b.getId(), paid.getId(), true))
                 .isInstanceOf(IllegalStateException.class);
     }
 
@@ -193,5 +193,126 @@ class BookingAddonServiceTest {
 
         assertThat(line.getStatus()).isEqualTo(BookingServiceItem.STATUS_PAID);
         assertThat(line.getPaymentId()).isEqualTo(paymentId);
+    }
+
+    @Test
+    void changingQuantityRepricesTheLineAndTheBooking() {
+        Booking b = booking(BookingStatus.CHECKED_IN);
+        b.setAddonAmount(35_000L);
+        b.setTotalAmount(135_000L);
+        UUID customer = b.getUserId();
+        BookingServiceItem line = unpaid(b, 35_000L);
+        line.setCreatedBy(customer);
+        when(itemRepository.findById(line.getId())).thenReturn(Optional.of(line));
+
+        addonService.updateQuantity(customer, b.getId(), line.getId(), 3, false);
+
+        assertThat(line.getQuantity()).isEqualTo(3);
+        assertThat(line.getSubtotal()).isEqualTo(105_000L);
+        assertThat(b.getAddonAmount()).isEqualTo(105_000L);
+        assertThat(b.getTotalAmount()).isEqualTo(205_000L);
+    }
+
+    @Test
+    void customerCannotEditLinesAddedByStaff() {
+        Booking b = booking(BookingStatus.CHECKED_IN);
+        BookingServiceItem line = unpaid(b, 35_000L);
+        line.setCreatedBy(UUID.randomUUID());
+        when(itemRepository.findById(line.getId())).thenReturn(Optional.of(line));
+
+        assertThatThrownBy(() -> addonService.updateQuantity(b.getUserId(), b.getId(), line.getId(), 2, false))
+                .isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> addonService.voidItem(b.getUserId(), b.getId(), line.getId(), false))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void customerCannotWaiveALateFee() {
+        Booking b = booking(BookingStatus.CHECKED_IN);
+        BookingServiceItem fee = unpaid(b, 50_000L);
+        fee.setLineType(BookingServiceItem.LINE_LATE_FEE);
+        fee.setCreatedBy(b.getUserId());
+        when(itemRepository.findById(fee.getId())).thenReturn(Optional.of(fee));
+
+        assertThatThrownBy(() -> addonService.voidItem(b.getUserId(), b.getId(), fee.getId(), false))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void editingALineCancelsTheQrItWasBeingPaidWith() {
+        Booking b = booking(BookingStatus.CHECKED_IN);
+        b.setAddonAmount(35_000L);
+        b.setTotalAmount(135_000L);
+        BookingServiceItem line = unpaid(b, 35_000L);
+        Payment qr = Payment.builder().id(UUID.randomUUID()).status(PaymentStatus.PENDING).build();
+        line.setPaymentId(qr.getId());
+        when(itemRepository.findById(line.getId())).thenReturn(Optional.of(line));
+        when(paymentRepository.findById(qr.getId())).thenReturn(Optional.of(qr));
+
+        addonService.updateQuantity(UUID.randomUUID(), b.getId(), line.getId(), 2, true);
+
+        assertThat(qr.getStatus()).isEqualTo(PaymentStatus.CANCELLED);
+        assertThat(line.getPaymentId()).isNull();
+    }
+
+    @Test
+    void tabPaymentOnlyCoversTheLinesItWasCreatedFor() {
+        Booking b = booking(BookingStatus.CHECKED_IN);
+        Payment qr = Payment.builder().id(UUID.randomUUID()).bookingId(b.getId()).amount(55_000L).build();
+        BookingServiceItem linked = unpaid(b, 35_000L);
+        linked.setPaymentId(qr.getId());
+        BookingServiceItem orderedLater = unpaid(b, 20_000L);
+        when(itemRepository.findByBookingIdAndStatus(b.getId(), BookingServiceItem.STATUS_UNPAID))
+                .thenReturn(List.of(linked, orderedLater));
+
+        assertThat(addonService.applyTabPayment(qr)).isEqualTo(35_000L);
+
+        assertThat(linked.getStatus()).isEqualTo(BookingServiceItem.STATUS_PAID);
+        assertThat(orderedLater.getStatus()).isEqualTo(BookingServiceItem.STATUS_UNPAID);
+    }
+
+    @Test
+    void chargesAreAddedToTheBookingTotal() {
+        Booking b = booking(BookingStatus.CHECKED_IN);
+        b.setTotalAmount(100_000L);
+        when(itemRepository.save(any(BookingServiceItem.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        BookingServiceItem fee = addonService.addCharge(b, BookingServiceItem.LINE_LATE_FEE, "Check-out muộn 1 giờ", 1, 75_000L, null);
+
+        assertThat(fee.getServiceId()).isNull();
+        assertThat(fee.getLineType()).isEqualTo(BookingServiceItem.LINE_LATE_FEE);
+        assertThat(b.getAddonAmount()).isEqualTo(75_000L);
+        assertThat(b.getTotalAmount()).isEqualTo(175_000L);
+    }
+
+    @Test
+    void customerCannotEditTheTabOfAFinishedBooking() {
+        Booking b = booking(BookingStatus.COMPLETED);
+        BookingServiceItem line = unpaid(b, 35_000L);
+        line.setCreatedBy(b.getUserId());
+        when(itemRepository.findById(line.getId())).thenReturn(Optional.of(line));
+
+        assertThatThrownBy(() -> addonService.voidItem(b.getUserId(), b.getId(), line.getId(), false))
+                .isInstanceOf(IllegalStateException.class);
+        assertThat(line.getStatus()).isEqualTo(BookingServiceItem.STATUS_UNPAID);
+    }
+
+    @Test
+    void cancellingAnExtensionGivesTheHoursBack() {
+        Booking b = booking(BookingStatus.CHECKED_IN);
+        java.time.OffsetDateTime start = java.time.OffsetDateTime.now().minusHours(1);
+        b.setStartAt(start);
+        b.setEndAt(start.plusHours(5)); // 2h booked + 3h extension
+        b.setAddonAmount(150_000L);
+        b.setTotalAmount(250_000L);
+        BookingServiceItem ext = BookingServiceItem.builder().id(UUID.randomUUID()).bookingId(b.getId())
+                .lineType(BookingServiceItem.LINE_EXTENSION).quantity(3).unitPrice(50_000L).subtotal(150_000L)
+                .status(BookingServiceItem.STATUS_UNPAID).build();
+        when(itemRepository.findById(ext.getId())).thenReturn(Optional.of(ext));
+
+        addonService.voidItem(UUID.randomUUID(), b.getId(), ext.getId(), true);
+
+        assertThat(b.getEndAt()).isEqualTo(start.plusHours(2));
+        assertThat(b.getTotalAmount()).isEqualTo(100_000L);
     }
 }

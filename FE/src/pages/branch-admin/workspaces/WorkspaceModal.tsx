@@ -1,6 +1,7 @@
 import React from 'react';
 import { FiX, FiCheck, FiAlertCircle } from 'react-icons/fi';
-import type { WorkspaceTypeResponse } from '../../../lib/spaceApi';
+import type { WorkspaceImageDto, WorkspaceTypeResponse } from '../../../lib/spaceApi';
+import WorkspaceImagesManager from '../../../components/workspace/WorkspaceImagesManager';
 
 interface WorkspaceModalProps {
   mode: 'add-ws' | 'edit-ws';
@@ -17,6 +18,11 @@ interface WorkspaceModalProps {
   onClose: () => void;
   onChangeForm: (updater: (prev: WorkspaceModalProps['wsForm']) => WorkspaceModalProps['wsForm']) => void;
   onSubmit: (e: React.FormEvent) => void;
+  /** Photos can be managed once the workspace exists (edit mode). */
+  workspaceId?: string;
+  branchId?: string;
+  images?: WorkspaceImageDto[];
+  onImagesChange?: (images: WorkspaceImageDto[]) => void;
 }
 
 export const WorkspaceModal: React.FC<WorkspaceModalProps> = ({
@@ -27,6 +33,10 @@ export const WorkspaceModal: React.FC<WorkspaceModalProps> = ({
   onClose,
   onChangeForm,
   onSubmit,
+  workspaceId,
+  branchId,
+  images = [],
+  onImagesChange,
 }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-fade-in" onClick={onClose}>
@@ -121,6 +131,18 @@ export const WorkspaceModal: React.FC<WorkspaceModalProps> = ({
               </button>
             </div>
           </form>
+          <div className="mt-6 pt-5 border-t border-border">
+            {mode === 'edit-ws' && workspaceId && onImagesChange ? (
+              <WorkspaceImagesManager
+                workspaceId={workspaceId}
+                branchId={branchId}
+                images={images}
+                onChange={onImagesChange}
+              />
+            ) : (
+              <p className="text-xs text-muted-foreground">Lưu không gian trước, sau đó mở lại để thêm hình ảnh.</p>
+            )}
+          </div>
         </div>
       </div>
     </div>

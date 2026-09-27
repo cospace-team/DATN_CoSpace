@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -124,6 +125,18 @@ public class SpaceDto {
         private int capacity;
         private String svgElementId;
         private String status;
+        /** Photos of the workspace, in display order. */
+        @Builder.Default
+        private List<WorkspaceImageResponse> images = new java.util.ArrayList<>();
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class WorkspaceImageResponse {
+        private UUID id;
+        private String url;
     }
 
     @Data

@@ -283,7 +283,11 @@ const PromotionsPage: React.FC = () => {
                         {p.code} <FiCopy className="h-3 w-3" />
                       </button>
                       <p className="text-sm">{p.name}</p>
-                      {!p.isPublic && <p className="text-xs text-muted-foreground">Mã ẩn — khách phải tự nhập</p>}
+                      {p.ownerUserId ? (
+                        <p className="text-xs text-muted-foreground">Voucher cá nhân của {p.ownerName || 'khách hàng'} (hoàn tiền)</p>
+                      ) : (
+                        !p.isPublic && <p className="text-xs text-muted-foreground">Mã ẩn — khách phải tự nhập</p>
+                      )}
                     </td>
                     <td className="text-sm">
                       <p className="font-semibold">{describePromotion(p, formatVND)}</p>

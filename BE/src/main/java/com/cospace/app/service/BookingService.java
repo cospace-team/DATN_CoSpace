@@ -477,6 +477,7 @@ public class BookingService {
             dto.setWorkspaceId(ws.getId());
             dto.setName(ws.getName());
             dto.setCode(ws.getCode());
+            dto.setCapacity(ws.getCapacity());
             dto.setWorkspaceStatus(ws.getStatus());
             dto.setWorkspaceTypeId(ws.getWorkspaceTypeId() != null ? ws.getWorkspaceTypeId().toString() : null);
 

@@ -100,6 +100,9 @@ export interface PromotionDto {
   isActive: boolean;
   usedCount: number | null;
   state: PromotionState;
+  /** Set on a personal voucher (e.g. a refund paid as a voucher). */
+  ownerUserId?: string | null;
+  ownerName?: string | null;
   createdAt: string;
 }
 
@@ -211,6 +214,8 @@ export const promotionApi = {
     if (workspaceTypeId) q.append('workspaceTypeId', workspaceTypeId);
     return request<PromotionDto[]>(`/api/promotions/available?${q}`, {}, 'Không thể tải mã khuyến mãi');
   },
+  /** The caller's personal vouchers (refund vouchers), used or not. */
+  myVouchers: () => request<PromotionDto[]>('/api/promotions/my-vouchers', {}, 'Không thể tải voucher'),
   quote: (payload: { workspaceId: string; unit: string; startAt: string; endAt: string; promotionCode?: string | null;
     addons?: { serviceId: string; quantity: number }[] }) =>
     request<BookingQuoteDto>('/api/bookings/quote', json('POST', payload), 'Không thể tính giá đơn đặt chỗ'),

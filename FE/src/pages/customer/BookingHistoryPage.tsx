@@ -20,10 +20,14 @@ import { Button } from "../../components/ui/button";
 import { formatVND } from "../../utils/formatters";
 import { bookingApi, type BookingResponse } from "../../lib/bookingApi";
 import { startPayment } from "../../lib/startPayment";
+import { useAuth } from "../../context/AuthContext";
+import BookingServicesModal from "./history/BookingServicesModal";
+import MyVouchersStrip from "./history/MyVouchersStrip";
 
 export interface CustomerBookingItem {
   id: string;
   code: string;
+  branchId: string;
   workspaceName: string;
   branchName: string;
   date: Date;
@@ -53,6 +57,9 @@ const formatCountdown = (ms: number) => {
 const BookingHistoryPage: React.FC = () => {
   const location = useLocation();
   const state = location.state as any;
+  const { user } = useAuth();
+  const [servicesBooking, setServicesBooking] = useState<CustomerBookingItem | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   const [activeTab, setActiveTab] = useState<"upcoming" | "past" | "canceled">(
     "upcoming",
@@ -188,6 +195,7 @@ const BookingHistoryPage: React.FC = () => {
           return {
             id: b.id,
             code: b.bookingCode,
+            branchId: b.branchId,
             workspaceName: b.workspaceName || `Chỗ ngồi ${b.workspaceId?.slice(0, 6) ?? ''}`,
             branchName: b.branchName || "CoSpace",
           date: new Date(b.startAt),
@@ -224,7 +232,7 @@ const BookingHistoryPage: React.FC = () => {
       }
     };
     fetchBookings();
-  }, []);
+  }, [reloadKey]);
 
   const getFilteredBookings = () => {
     return bookings.filter((b) => {
@@ -328,6 +336,8 @@ const BookingHistoryPage: React.FC = () => {
           </span>
         </div>
       )}
+
+      <MyVouchersStrip reloadKey={reloadKey} />
 
       {/* Block-based Navigation Tabs */}
       <div className="flex flex-wrap gap-4 mb-8">
@@ -542,6 +552,14 @@ const BookingHistoryPage: React.FC = () => {
 
               {/* Right Quick Actions */}
               <div className="flex flex-row md:flex-col items-center justify-center gap-3 border-t-4 md:border-t-0 md:border-l border-border pt-6 md:pt-0 md:pl-6 min-w-[180px]">
+                {(booking.status === "confirmed" || booking.status === "checked_in") && (
+                  <button
+                    onClick={() => setServicesBooking(booking)}
+                    className="w-full py-3 bg-card text-foreground font-semibold tracking-tight border border-border rounded-full shadow-sm hover:-translate-y-1 hover:shadow-sm transition-all flex justify-center items-center gap-2 text-xs"
+                  >
+                    <FiCoffee className="h-4 w-4" /> Dịch vụ & gia hạn
+                  </button>
+                )}
                 {booking.status === "confirmed" && (
                   <>
                     <button
@@ -596,6 +614,17 @@ const BookingHistoryPage: React.FC = () => {
           ))
         )}
       </div>
+
+      {servicesBooking && (
+        <BookingServicesModal
+          bookingId={servicesBooking.id}
+          bookingCode={servicesBooking.code}
+          branchId={servicesBooking.branchId}
+          currentUserId={user?.id || ""}
+          onClose={() => setServicesBooking(null)}
+          onChanged={() => setReloadKey((k) => k + 1)}
+        />
+      )}
 
       {/* QR Check-in Pass Modal */}
       {showQrModal && (

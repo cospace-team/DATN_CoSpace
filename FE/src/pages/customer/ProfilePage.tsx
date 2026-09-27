@@ -45,7 +45,8 @@ import { bookingApi } from '../../lib/bookingApi';
 import { membershipApi, type MyMembershipDto } from '../../api/loyaltyApi';
 import { formatVND } from '../../utils/formatters';
 import { API_BASE_URL } from '../../config/api';
-import { PartnerDetailsModal, type PartnerSuggestion } from './profile/PartnerDetailsModal';
+import type { PartnerSuggestion } from './profile/partnerTypes';
+import MemberProfileModal, { type MemberPreview } from '../../components/network/MemberProfileModal';
 import { AvatarModal } from './profile/AvatarModal';
 import { ProfileSecurityTab } from './profile/ProfileSecurityTab';
 import { ProfileNetworkTab } from './profile/ProfileNetworkTab';
@@ -198,7 +199,8 @@ const ProfilePage: React.FC = () => {
   const [selectedTagFilter, setSelectedTagFilter] = useState<string | null>(null);
   // Only real suggestions from the matching service; an empty list is shown as such.
   const [partnersList, setPartnersList] = useState<PartnerSuggestion[]>([]);
-  const [selectedPartner, setSelectedPartner] = useState<PartnerSuggestion | null>(null);
+  const [selectedMember, setSelectedMember] = useState<MemberPreview | null>(null);
+  const [connectionsReloadKey, setConnectionsReloadKey] = useState(0);
 
   // ── Tab 3: Security & Password States ──
   const [passwordForm, setPasswordForm] = useState({
@@ -543,13 +545,24 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-  const handleConnectPartner = (partner: PartnerSuggestion) => {
-    if (partner.contactPublic) {
-      window.location.href = `mailto:${partner.email}?subject=Ket noi tu CoSpace`;
-    } else {
-      showToast(`Đã gửi yêu cầu kết nối tới ${partner.name}!`, 'success');
-      setSelectedPartner(null);
-    }
+  // "Kết nối" and "Xem chi tiết" both open the member's profile, where the request is sent,
+  // answered or withdrawn; contact details appear there once the two are connected.
+  const openPartnerProfile = (partner: PartnerSuggestion) => {
+    setSelectedMember({
+      userId: partner.id,
+      name: partner.name,
+      avatar: partner.avatar,
+      profession: partner.profession,
+      company: partner.company,
+      matchScore: partner.matchScore,
+      commonTags: partner.commonTags,
+      matchReason: partner.matchReason,
+    });
+  };
+
+  const handleConnectionChanged = () => {
+    setConnectionsReloadKey(k => k + 1);
+    void reloadPartnerSuggestions();
   };
 
   // ── Auto-save or Manual-save Skills into Database (Optimized & Non-blocking) ──
@@ -1643,8 +1656,11 @@ const ProfilePage: React.FC = () => {
           sortedAndFilteredPartners={sortedAndFilteredPartners}
           isLoadingPartners={isLoadingPartners}
           renderAvatar={renderAvatarElement}
-          onSelectPartner={setSelectedPartner}
-          onConnect={handleConnectPartner}
+          onSelectPartner={openPartnerProfile}
+          onConnect={openPartnerProfile}
+          connectionsReloadKey={connectionsReloadKey}
+          onOpenMember={setSelectedMember}
+          onConnectionsChanged={handleConnectionChanged}
         />
       )}
 
@@ -1669,11 +1685,10 @@ const ProfilePage: React.FC = () => {
       {/* ══════════════════════════════════════════════════════════════
           7. MODALS
           ══════════════════════════════════════════════════════════════ */}
-      <PartnerDetailsModal
-        partner={selectedPartner}
-        onClose={() => setSelectedPartner(null)}
-        renderAvatar={renderAvatarElement}
-        onConnect={handleConnectPartner}
+      <MemberProfileModal
+        member={selectedMember}
+        onClose={() => setSelectedMember(null)}
+        onChanged={handleConnectionChanged}
       />
 
       <AvatarModal

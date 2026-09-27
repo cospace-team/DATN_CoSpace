@@ -34,6 +34,32 @@ public final class BookingAddonDto {
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
+    public static class QuantityRequest {
+        @Min(value = 1, message = "Số lượng phải từ 1")
+        @Max(value = 100, message = "Số lượng tối đa là 100")
+        private int quantity = 1;
+    }
+
+    /** QR payment created for everything still owed on the tab. */
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class TabPaymentResponse {
+        private UUID paymentId;
+        private UUID bookingId;
+        private Long orderCode;
+        private String orderId;
+        private long amount;
+        private String checkoutUrl;
+        /** Image URL (demo) or VietQR payload string (live PayOS). */
+        private String qrCode;
+        private String status;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class SettleRequest {
         /** cash | bank_transfer */
         private String method;
@@ -46,12 +72,15 @@ public final class BookingAddonDto {
     public static class ItemResponse {
         private UUID id;
         private UUID serviceId;
+        /** service | extension | late_fee */
+        private String lineType;
         private String serviceName;
         private String serviceUnit;
         private int quantity;
         private long unitPrice;
         private long subtotal;
         private String status;
+        private UUID createdBy;
         private OffsetDateTime createdAt;
         private OffsetDateTime paidAt;
     }

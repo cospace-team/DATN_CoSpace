@@ -5,12 +5,14 @@ import com.cospace.app.entity.Booking;
 import com.cospace.app.entity.BranchEntity;
 import com.cospace.app.entity.Payment;
 import com.cospace.app.entity.PaymentStatus;
+import com.cospace.app.entity.Promotion;
 import com.cospace.app.entity.Refund;
 import com.cospace.app.entity.User;
 import com.cospace.app.repository.BookingCancellationRepository;
 import com.cospace.app.repository.BookingRepository;
 import com.cospace.app.repository.BranchEntityRepository;
 import com.cospace.app.repository.PaymentRepository;
+import com.cospace.app.repository.PromotionRepository;
 import com.cospace.app.repository.RefundRepository;
 import com.cospace.app.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -41,6 +43,9 @@ public class RefundService {
 
     /** Refunds that still count against what may be refunded for a booking. */
     private static final Set<String> OPEN_OR_DONE = Set.of(Refund.STATUS_PENDING, Refund.STATUS_PROCESSED);
+    private static final Set<String> REFUND_METHODS = Set.of(Refund.METHOD_CASH, Refund.METHOD_BANK_TRANSFER, Refund.METHOD_VOUCHER);
+    /** Default validity of a refund voucher. */
+    private static final int DEFAULT_VOUCHER_DAYS = 90;
 
     private final RefundRepository refundRepository;
     private final PaymentRepository paymentRepository;
@@ -48,7 +53,9 @@ public class RefundService {
     private final BookingCancellationRepository cancellationRepository;
     private final UserRepository userRepository;
     private final BranchEntityRepository branchRepository;
+    private final PromotionRepository promotionRepository;
     private final NotificationService notificationService;
+    private final PromotionService promotionService;
 
     /** What can still be refunded for a booking: money received minus refunds already owed or paid. */
     @Transactional(readOnly = true)
@@ -118,6 +125,9 @@ public class RefundService {
         Map<UUID, Payment> payments = paymentRepository.findAllById(refunds.stream().map(Refund::getPaymentId)
                         .filter(java.util.Objects::nonNull).distinct().toList())
                 .stream().collect(Collectors.toMap(Payment::getId, Function.identity()));
+        Map<UUID, Promotion> vouchers = promotionRepository.findAllById(refunds.stream().map(Refund::getVoucherPromotionId)
+                        .filter(java.util.Objects::nonNull).distinct().toList())
+                .stream().collect(Collectors.toMap(Promotion::getId, Function.identity()));
 
         return refunds.stream().map(r -> {
             Booking b = bookings.get(r.getBookingId());
@@ -142,6 +152,11 @@ public class RefundService {
                     .reason(r.getReason())
                     .status(r.getStatus())
                     .resolutionNote(r.getResolutionNote())
+                    .refundMethod(r.getRefundMethod())
+                    .voucherCode(r.getVoucherPromotionId() != null && vouchers.containsKey(r.getVoucherPromotionId())
+                            ? vouchers.get(r.getVoucherPromotionId()).getCode() : null)
+                    .voucherExpiresAt(r.getVoucherPromotionId() != null && vouchers.containsKey(r.getVoucherPromotionId())
+                            ? vouchers.get(r.getVoucherPromotionId()).getEndAt() : null)
                     .processedByName(processor != null ? processor.getFullName() : null)
                     .processedAt(r.getProcessedAt())
                     .createdAt(r.getCreatedAt())
@@ -154,12 +169,39 @@ public class RefundService {
         return findRefund(refundId).getBranchId();
     }
 
-    /** Marks a pending refund as paid back to the customer. */
+    /** Marks a pending refund as paid back by bank transfer. */
     @Transactional
     public Refund markProcessed(UUID refundId, UUID actorId, String note) {
+        return markProcessed(refundId, actorId, note, Refund.METHOD_BANK_TRANSFER, null);
+    }
+
+    /**
+     * Marks a pending refund as paid back to the customer, in cash, by bank transfer, or as a
+     * personal single-use voucher of the same value that is issued right away.
+     */
+    @Transactional
+    public Refund markProcessed(UUID refundId, UUID actorId, String note, String method, Integer voucherValidDays) {
+        String normalizedMethod = method == null || method.isBlank()
+                ? Refund.METHOD_BANK_TRANSFER : method.trim().toLowerCase(Locale.ROOT);
+        if (!REFUND_METHODS.contains(normalizedMethod)) {
+            throw new IllegalArgumentException("Hình thức hoàn tiền không hợp lệ (cash, bank_transfer hoặc voucher).");
+        }
         Refund refund = findPendingRefund(refundId);
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        String code = bookingCode(refund);
+
+        Promotion voucher = null;
+        if (Refund.METHOD_VOUCHER.equals(normalizedMethod)) {
+            int validDays = voucherValidDays != null ? voucherValidDays : DEFAULT_VOUCHER_DAYS;
+            voucher = promotionService.issueVoucher(refund.getUserId(), refund.getAmount(),
+                    "Voucher hoàn tiền đơn " + code,
+                    "Hoàn tiền đơn " + code + " dưới dạng voucher, dùng một lần cho đơn đặt chỗ tiếp theo.",
+                    validDays, actorId);
+            refund.setVoucherPromotionId(voucher.getId());
+        }
+
         refund.setStatus(Refund.STATUS_PROCESSED);
+        refund.setRefundMethod(normalizedMethod);
         refund.setResolutionNote(blankToNull(note));
         refund.setProcessedBy(actorId);
         refund.setProcessedAt(now);
@@ -168,11 +210,23 @@ public class RefundService {
         markPaymentsRefunded(refund, now);
         syncCancellation(refund);
 
-        notificationService.createNotification(refund.getUserId(),
-                "Hoàn tiền thành công",
-                String.format("Bạn đã được hoàn %s cho đơn %s.%s", vnd(refund.getAmount()), bookingCode(refund),
-                        refund.getResolutionNote() != null ? " Ghi chú: " + refund.getResolutionNote() : ""),
-                "REFUND", refund.getBookingId(), "BOOKING");
+        String noteSuffix = refund.getResolutionNote() != null ? " Ghi chú: " + refund.getResolutionNote() : "";
+        if (voucher != null) {
+            notificationService.createNotification(refund.getUserId(),
+                    "Bạn nhận được voucher hoàn tiền",
+                    String.format("Đơn %s được hoàn %s dưới dạng voucher %s, dùng khi đặt chỗ đến hết %s.%s",
+                            code, vnd(refund.getAmount()), voucher.getCode(),
+                            voucher.getEndAt().atZoneSameInstant(BookingService.BUSINESS_ZONE).toLocalDate()
+                                    .format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")),
+                            noteSuffix),
+                    "REFUND", refund.getBookingId(), "BOOKING");
+        } else {
+            notificationService.createNotification(refund.getUserId(),
+                    "Hoàn tiền thành công",
+                    String.format("Bạn đã được hoàn %s cho đơn %s (%s).%s", vnd(refund.getAmount()), code,
+                            Refund.METHOD_CASH.equals(normalizedMethod) ? "tiền mặt" : "chuyển khoản", noteSuffix),
+                    "REFUND", refund.getBookingId(), "BOOKING");
+        }
         return refund;
     }
 

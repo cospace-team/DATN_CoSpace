@@ -45,9 +45,15 @@ public class RefundController {
     public Map<String, Object> process(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id,
                                        @Valid @RequestBody(required = false) ResolveRequest req) {
         branchAccessGuard.requireAccessToBranch(jwt, refundService.getBranchId(id));
-        Refund refund = refundService.markProcessed(id, UUID.fromString(jwt.getSubject()), req != null ? req.getNote() : null);
+        Refund refund = refundService.markProcessed(id, UUID.fromString(jwt.getSubject()),
+                req != null ? req.getNote() : null,
+                req != null ? req.getMethod() : null,
+                req != null ? req.getVoucherValidDays() : null);
         audit(jwt, "PROCESS", refund);
-        return Map.of("id", refund.getId(), "status", refund.getStatus(), "message", "Đã xác nhận hoàn tiền cho khách.");
+        return Map.of("id", refund.getId(), "status", refund.getStatus(),
+                "message", Refund.METHOD_VOUCHER.equals(refund.getRefundMethod())
+                        ? "Đã phát hành voucher hoàn tiền cho khách."
+                        : "Đã xác nhận hoàn tiền cho khách.");
     }
 
     @PostMapping("/{id}/reject")
@@ -65,6 +71,7 @@ public class RefundController {
         values.put("amount", refund.getAmount());
         values.put("bookingId", refund.getBookingId().toString());
         values.put("note", refund.getResolutionNote());
+        values.put("method", refund.getRefundMethod());
         auditLogService.log(httpServletRequest, UUID.fromString(jwt.getSubject()), action, "refunds", refund.getId(),
                 Map.of("status", Refund.STATUS_PENDING), values);
     }

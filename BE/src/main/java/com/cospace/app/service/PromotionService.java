@@ -11,6 +11,7 @@ import com.cospace.app.repository.BookingRepository;
 import com.cospace.app.repository.BranchEntityRepository;
 import com.cospace.app.repository.MembershipTierRepository;
 import com.cospace.app.repository.PromotionRepository;
+import com.cospace.app.repository.UserRepository;
 import com.cospace.app.repository.WorkspaceTypeRepository;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -40,6 +42,7 @@ public class PromotionService {
     private final MembershipTierRepository membershipTierRepository;
     private final MembershipTierCatalog tierCatalog;
     private final EntityManager entityManager;
+    private final UserRepository userRepository;
 
     /** A promotion that passed every eligibility check, with the discount it yields. */
     public record AppliedPromotion(Promotion promotion, long discountAmount) {
@@ -50,8 +53,10 @@ public class PromotionService {
     @Transactional(readOnly = true)
     public List<PromotionResponse> listAll() {
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-        return promotionRepository.findAllByOrderByCreatedAtDesc().stream()
-                .map(p -> toResponse(p, bookingRepository.countPromotionUsage(p.getId()), now))
+        List<Promotion> promotions = promotionRepository.findAllByOrderByCreatedAtDesc();
+        Map<UUID, String> owners = ownerNames(promotions);
+        return promotions.stream()
+                .map(p -> toResponse(p, bookingRepository.countPromotionUsage(p.getId()), now, owners))
                 .toList();
     }
 
@@ -99,11 +104,20 @@ public class PromotionService {
 
     /* ─────────────── Customer ─────────────── */
 
-    /** Public promotions the customer could apply right now for this branch / workspace type. */
+    /**
+     * Promotions the customer could apply right now for this branch / workspace type: the public
+     * ones, plus the customer's own personal vouchers.
+     */
     @Transactional(readOnly = true)
     public List<PromotionResponse> listAvailable(UUID userId, String userTierCode, UUID branchId, UUID workspaceTypeId) {
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-        return promotionRepository.findPublicRunning(now).stream()
+        List<Promotion> candidates = new java.util.ArrayList<>(promotionRepository.findByOwnerUserIdOrderByCreatedAtDesc(userId).stream()
+                .filter(p -> p.isActive() && !now.isBefore(p.getStartAt()) && now.isBefore(p.getEndAt()))
+                .toList());
+        promotionRepository.findPublicRunning(now).stream()
+                .filter(p -> p.getOwnerUserId() == null)
+                .forEach(candidates::add);
+        return candidates.stream()
                 .filter(p -> p.getBranchId() == null || p.getBranchId().equals(branchId))
                 .filter(p -> p.getWorkspaceTypeId() == null || workspaceTypeId == null || p.getWorkspaceTypeId().equals(workspaceTypeId))
                 .filter(p -> tierAllows(p, userTierCode))
@@ -137,6 +151,11 @@ public class PromotionService {
             entityManager.createNativeQuery("SELECT pg_advisory_xact_lock(hashtext(:key))")
                     .setParameter("key", "promotion:" + p.getId())
                     .getSingleResult();
+        }
+
+        // Someone else's personal voucher is treated exactly like an unknown code.
+        if (p.getOwnerUserId() != null && !p.getOwnerUserId().equals(userId)) {
+            throw new IllegalArgumentException("Mã khuyến mãi không tồn tại.");
         }
 
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
@@ -173,6 +192,63 @@ public class PromotionService {
         }
 
         return new AppliedPromotion(p, computeDiscount(p, discountBase));
+    }
+
+    /* ─────────────── Personal vouchers ─────────────── */
+
+    /**
+     * Issues a single-use voucher worth {@code amount} to one customer, e.g. when a refund is paid
+     * as a voucher instead of money. It works on any branch and workspace type, is not listed
+     * publicly and nobody else can redeem it.
+     */
+    @Transactional
+    public Promotion issueVoucher(UUID ownerId, long amount, String name, String description, int validDays, UUID actorId) {
+        if (amount <= 0) {
+            throw new IllegalArgumentException("Giá trị voucher phải lớn hơn 0.");
+        }
+        if (validDays < 1 || validDays > 365) {
+            throw new IllegalArgumentException("Hạn dùng voucher phải từ 1 đến 365 ngày.");
+        }
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        String code;
+        do {
+            code = "HT" + randomCode(8);
+        } while (promotionRepository.existsByCodeIgnoreCase(code));
+        return promotionRepository.save(Promotion.builder()
+                .code(code)
+                .name(name)
+                .description(description)
+                .discountType(Promotion.TYPE_FIXED)
+                .discountValue(amount)
+                .minOrderAmount(0)
+                .startAt(now)
+                .endAt(now.plusDays(validDays))
+                .usageLimit(1)
+                .perUserLimit(1)
+                .isPublic(false)
+                .isActive(true)
+                .ownerUserId(ownerId)
+                .createdBy(actorId)
+                .build());
+    }
+
+    /** Every personal voucher the customer owns, newest first, with whether it can still be used. */
+    @Transactional(readOnly = true)
+    public List<PromotionResponse> listMyVouchers(UUID userId) {
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        List<Promotion> vouchers = promotionRepository.findByOwnerUserIdOrderByCreatedAtDesc(userId);
+        Map<UUID, String> owners = ownerNames(vouchers);
+        return vouchers.stream()
+                .map(p -> toResponse(p, bookingRepository.countPromotionUsage(p.getId()), now, owners))
+                .toList();
+    }
+
+    private static String randomCode(int length) {
+        String chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        java.security.SecureRandom random = new java.security.SecureRandom();
+        StringBuilder sb = new StringBuilder(length);
+        for (int i = 0; i < length; i++) sb.append(chars.charAt(random.nextInt(chars.length())));
+        return sb.toString();
     }
 
     static long computeDiscount(Promotion p, long base) {
@@ -249,7 +325,20 @@ public class PromotionService {
         if (req.getIsActive() != null) p.setActive(req.getIsActive());
     }
 
+    /** Names of the owners of personal vouchers among {@code promotions}, loaded in one query. */
+    private Map<UUID, String> ownerNames(List<Promotion> promotions) {
+        List<UUID> ids = promotions.stream().map(Promotion::getOwnerUserId).filter(Objects::nonNull).distinct().toList();
+        if (ids.isEmpty()) return Map.of();
+        Map<UUID, String> names = new java.util.HashMap<>();
+        userRepository.findAllById(ids).forEach(u -> names.put(u.getId(), u.getFullName()));
+        return names;
+    }
+
     private PromotionResponse toResponse(Promotion p, Long usedCount, OffsetDateTime now) {
+        return toResponse(p, usedCount, now, p.getOwnerUserId() == null ? Map.of() : ownerNames(List.of(p)));
+    }
+
+    private PromotionResponse toResponse(Promotion p, Long usedCount, OffsetDateTime now, Map<UUID, String> ownerNames) {
         String state;
         if (!p.isActive()) state = "inactive";
         else if (now.isBefore(p.getStartAt())) state = "scheduled";
@@ -283,6 +372,8 @@ public class PromotionService {
                 .isActive(p.isActive())
                 .usedCount(usedCount)
                 .state(state)
+                .ownerUserId(p.getOwnerUserId())
+                .ownerName(p.getOwnerUserId() == null ? null : ownerNames.get(p.getOwnerUserId()))
                 .createdAt(p.getCreatedAt())
                 .build();
     }

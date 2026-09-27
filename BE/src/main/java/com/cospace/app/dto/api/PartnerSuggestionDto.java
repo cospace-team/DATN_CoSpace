@@ -21,6 +21,11 @@ public class PartnerSuggestionDto {
     private int matchScore; // 0 to 100 percentage
     private List<String> commonTags;
     private boolean contactPublic;
+    /** Contact details are included: public, or the viewer is connected with this member. */
+    private boolean contactVisible;
+    /** none | pending_outgoing | pending_incoming | connected */
+    private String connectionState;
+    private String connectionId;
     private String email;
     private String phone;
     private String bio;

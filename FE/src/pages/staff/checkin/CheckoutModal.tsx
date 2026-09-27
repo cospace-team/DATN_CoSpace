@@ -1,8 +1,8 @@
-import React from 'react';
-import { FiLogOut, FiX, FiAlertTriangle, FiCheck } from 'react-icons/fi';
-import { formatTime, formatDate } from '../../../utils/formatters';
+import React, { useEffect, useState } from 'react';
+import { FiLogOut, FiX, FiAlertTriangle, FiCheck, FiClock } from 'react-icons/fi';
+import { formatTime, formatDate, formatVND } from '../../../utils/formatters';
 import BookingTabPanel from '../../../components/staff/BookingTabPanel';
-import type { BookingTabDto } from '../../../api/addonApi';
+import { addonApi, type BookingTabDto, type LateFeeDto } from '../../../api/addonApi';
 import type { BookingWithMeta } from '../CheckInPage';
 
 interface CheckoutModalProps {
@@ -30,6 +30,40 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   branchId,
   formatMinutes,
 }) => {
+  const bookingId: string | undefined = selectedCheckoutItem?.booking?.id;
+  const [lateFee, setLateFee] = useState<LateFeeDto | null>(null);
+  const [lateFeeBusy, setLateFeeBusy] = useState(false);
+  const [lateFeeError, setLateFeeError] = useState('');
+  const [tabRefresh, setTabRefresh] = useState(0);
+
+  useEffect(() => {
+    setLateFee(null);
+    setLateFeeError('');
+    if (!bookingId) return;
+    let active = true;
+    addonApi.lateFee(bookingId)
+      .then((fee) => { if (active) setLateFee(fee); })
+      .catch((e: Error) => { if (active) setLateFeeError(e.message); });
+    return () => { active = false; };
+  }, [bookingId]);
+
+  const chargeLateFee = async () => {
+    if (!bookingId) return;
+    setLateFeeBusy(true);
+    setLateFeeError('');
+    try {
+      setCheckoutTab(await addonApi.chargeLateFee(bookingId));
+      setLateFee(await addonApi.lateFee(bookingId));
+      setTabRefresh((k) => k + 1);
+    } catch (e: any) {
+      setLateFeeError(e.message || 'Không thể tính phụ phí');
+    } finally {
+      setLateFeeBusy(false);
+    }
+  };
+
+  const lateFeePending = !!lateFee && lateFee.due && !lateFee.alreadyCharged;
+
   if (!selectedCheckoutItem) return null;
 
   return (
@@ -83,11 +117,29 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               <p className="text-xs text-red-700 dark:text-red-400 mt-0.5 leading-relaxed">
                 Khách đã sử dụng quá thời gian đăng ký{' '}
                 <strong>{formatMinutes(selectedCheckoutItem.meta.overdueMinutes)}</strong>. Vui lòng
-                kiểm tra và thu phụ phí nếu có trước khi giải phóng bàn.
+                tính và thu phụ phí check-out muộn trước khi giải phóng bàn.
               </p>
             </div>
           </div>
         )}
+
+        {/* Late check-out surcharge */}
+        {lateFeePending && lateFee && (
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 space-y-2">
+            <p className="text-sm font-bold text-foreground flex items-center gap-1.5">
+              <FiClock className="h-4 w-4 text-amber-600" /> Phụ phí check-out muộn: {formatVND(lateFee.amount)}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Trễ {lateFee.lateMinutes} phút (miễn phí {lateFee.graceMinutes} phút đầu) → tính {lateFee.billableHours} giờ ×{' '}
+              {formatVND(lateFee.pricePerHour)} × {lateFee.multiplierPercent / 100}. Sau khi tính, phí nằm trong danh sách
+              dịch vụ bên dưới; có thể hủy dòng phí để miễn cho khách.
+            </p>
+            <button type="button" onClick={chargeLateFee} disabled={lateFeeBusy} className="btn btn-primary btn-sm text-xs">
+              Tính phụ phí vào đơn
+            </button>
+          </div>
+        )}
+        {lateFeeError && <p className="text-xs text-destructive">{lateFeeError}</p>}
 
         {/* Session Summary Card */}
         <div className="bg-muted/40 rounded-xl p-4 border border-border space-y-3 text-xs">
@@ -160,6 +212,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
           bookingId={selectedCheckoutItem.booking?.id}
           branchId={selectedCheckoutItem.booking?.branchId || branchId}
           onTabChange={setCheckoutTab}
+          refreshKey={tabRefresh}
           compact
         />
 
@@ -190,11 +243,13 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
           <button
             type="button"
             onClick={onConfirmCheckout}
-            disabled={checkoutSubmitting || (checkoutTab?.unpaidAmount ?? 0) > 0}
+            disabled={checkoutSubmitting || lateFeePending || (checkoutTab?.unpaidAmount ?? 0) > 0}
             title={
-              (checkoutTab?.unpaidAmount ?? 0) > 0
-                ? 'Thu tiền dịch vụ gọi thêm trước khi check-out'
-                : undefined
+              lateFeePending
+                ? 'Tính phụ phí check-out muộn trước khi check-out'
+                : (checkoutTab?.unpaidAmount ?? 0) > 0
+                  ? 'Thu tiền dịch vụ / phụ phí trước khi check-out'
+                  : undefined
             }
             className="btn btn-primary btn-sm text-xs font-bold px-4 py-2 flex items-center gap-1.5 shadow-sm"
           >

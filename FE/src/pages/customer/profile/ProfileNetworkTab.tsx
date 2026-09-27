@@ -1,7 +1,9 @@
 import React from 'react';
 import { FiUsers, FiSearch, FiX, FiChevronDown, FiMessageCircle } from 'react-icons/fi';
 import { Skeleton } from '../../../components/ui/Skeleton';
-import type { PartnerSuggestion } from './PartnerDetailsModal';
+import type { PartnerSuggestion } from './partnerTypes';
+import ConnectionsPanel from '../../../components/network/ConnectionsPanel';
+import type { MemberPreview } from '../../../components/network/MemberProfileModal';
 
 interface ProfileNetworkTabProps {
   networkFilterMode: 'best' | 'all';
@@ -23,7 +25,16 @@ interface ProfileNetworkTabProps {
   ) => React.ReactNode;
   onSelectPartner: (partner: PartnerSuggestion) => void;
   onConnect: (partner: PartnerSuggestion) => void;
+  connectionsReloadKey: number;
+  onOpenMember: (member: MemberPreview) => void;
+  onConnectionsChanged: () => void;
 }
+
+const CONNECT_LABEL: Record<string, string> = {
+  pending_outgoing: 'Đã gửi lời mời',
+  pending_incoming: 'Phản hồi lời mời',
+  connected: 'Đã kết nối',
+};
 
 export const ProfileNetworkTab: React.FC<ProfileNetworkTabProps> = ({
   networkFilterMode,
@@ -40,9 +51,14 @@ export const ProfileNetworkTab: React.FC<ProfileNetworkTabProps> = ({
   renderAvatar,
   onSelectPartner,
   onConnect,
+  connectionsReloadKey,
+  onOpenMember,
+  onConnectionsChanged,
 }) => {
   return (
     <div className="space-y-6 animate-fade-in">
+      <ConnectionsPanel reloadKey={connectionsReloadKey} onOpenMember={onOpenMember} onChanged={onConnectionsChanged} />
+
       {/* Network Header & Search / Filters */}
       <div className="bg-card rounded-3xl border border-border p-6 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
@@ -221,9 +237,14 @@ export const ProfileNetworkTab: React.FC<ProfileNetworkTabProps> = ({
                   <button
                     type="button"
                     onClick={() => onConnect(partner)}
-                    className="py-2.5 px-4 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors flex items-center gap-1.5 cursor-pointer"
+                    className={`py-2.5 px-4 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer ${
+                      partner.connectionState && partner.connectionState !== 'none'
+                        ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20'
+                        : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                    }`}
                   >
-                    <FiMessageCircle className="h-3.5 w-3.5" /> Kết nối
+                    <FiMessageCircle className="h-3.5 w-3.5" />
+                    {CONNECT_LABEL[partner.connectionState || ''] || 'Kết nối'}
                   </button>
                 </div>
               </div>

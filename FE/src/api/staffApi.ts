@@ -66,6 +66,7 @@ export interface WorkspaceMaintenanceStatusDto {
   workspaceId: string;
   name: string;
   code: string;
+  capacity?: number;
   workspaceStatus: 'active' | 'maintenance' | 'inactive';
   activeMaintenance?: MaintenanceResponseDto;
 }
@@ -74,6 +75,7 @@ export interface WorkspaceBookingStatusDto {
   workspaceId: string;
   name: string;
   code: string;
+  capacity?: number;
   workspaceStatus: 'active' | 'maintenance' | 'inactive';
   workspaceTypeId?: string;
   activeMaintenance?: MaintenanceResponseDto;
