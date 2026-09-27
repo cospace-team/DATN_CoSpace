@@ -70,3 +70,5 @@ refer report&slide/
 
 # Root temporary report pdfs
 /report (*).pdf
+/*.pdf
+/report/main.pdf
