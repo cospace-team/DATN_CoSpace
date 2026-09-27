@@ -382,101 +382,516 @@ Kỹ thuật Docker Multi-stage giúp giảm dung lượng hình ảnh từ \tex
 \end{itemize}
 
 \section{Kết quả hiện thực giao diện người dùng các phân hệ}
+\label{sec:ketqua-giaodien}
 
-Phần này trình bày kết quả hiện thực giao diện màn hình của hệ thống CoSpace theo 4 phân hệ người dùng chính (Customer, Staff, Branch Admin, Admin) và giao diện xác thực tập trung. Việc thiết kế tuân thủ các nguyên tắc giao diện trực quan, phản hồi tức thì và tương thích hoàn toàn với các thiết bị hiển thị hiện đại.
+Phần này trình bày toàn diện kết quả hiện thực giao diện người dùng của hệ thống CoSpace. Ứng dụng được xây dựng trên nền tảng React 18, TypeScript và Vite, áp dụng ngôn ngữ thiết kế hiện đại (Bento Grid, Dark/Light Mode, đồ họa vector SVG tương tác, hiệu ứng chuyển động mượt mà với Framer Motion). Toàn bộ hệ thống giao diện được phân tách thành 5 nhóm màn hình chính tương ứng với cổng công cộng và 4 vai trò người dùng trong cơ chế kiểm soát truy cập dựa trên vai trò (RBAC):
 
-\subsection{Giao diện Xác thực định danh và Phân luồng người dùng}
+\begin{enumerate}
+    \item \textbf{Cổng công cộng và Xác thực tập trung:} Trang chủ đón tiếp (Landing Page) và Cổng đăng nhập phân luồng định danh.
+    \item \textbf{Phân hệ Khách hàng (Customer Portal):} Khám phá không gian trên sơ đồ 2D, thanh toán VietQR, lịch sử đặt chỗ đa trạng thái, bảng tin cộng đồng và mạng lưới đối tác thông minh.
+    \item \textbf{Phân hệ Nhân viên vận hành tại quầy (Staff Portal):} Bảng điều khiển trực ban thời gian thực, đặt chỗ trực tiếp (Walk-in POS), thủ tục Check-in/out với dung sai 30 phút và khóa bảo trì quầy.
+    \item \textbf{Phân hệ Quản lý chi nhánh (Branch Admin Portal):} Báo cáo doanh thu cơ sở, quản trị không gian, trình biên tập sơ đồ mặt bằng (Floor Plan Editor), biểu phí riêng và duyệt hoàn tiền/voucher.
+    \item \textbf{Phân hệ Quản trị viên hệ thống (Super Admin Portal):} Tổng quan hợp nhất toàn quốc, ma trận giá chuẩn, quản lý người dùng RBAC, chính sách hủy đa tầng, hạng thành viên Loyalty, nhật ký kiểm toán (Audit Log) và báo cáo phân tích tài chính.
+\end{enumerate}
 
-Giao diện đăng nhập là điểm tiếp xúc đầu tiên và là chốt chặn bảo mật của hệ thống. Dựa trên thông tin định danh người dùng được cung cấp, hệ thống xác thực qua Supabase Auth và tự động phân luồng người dùng đến đúng cổng tương ứng với vai trò và quyền hạn (RBAC) đã được cấp (Hình~\ref{fig:ui-dangnhap}).
+\subsection{Giao diện Trang chủ và Xác thực định danh tập trung}
 
-\hinhui{ui-01-dangnhap}{Giao diện xác thực định danh và phân luồng người dùng theo vai trò}{fig:ui-dangnhap}
+\noindent\textbf{1. Trang chủ đón tiếp (Landing Page):}\\
+Trang chủ CoSpace được thiết kế theo phong cách hiện đại với gam màu tối (Dark Theme) sang trọng, kết hợp bố cục Bento Grid và các khối thẻ nổi bật (Glassmorphism). Trang đóng vai trò giới thiệu toàn bộ giá trị cốt lõi của nền tảng đến khách hàng vãng lai thông qua 5 phân đoạn trải nghiệm liền mạch:
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[b]{0.49\textwidth}
+    \includegraphics[width=\linewidth,keepaspectratio]{ui-01-landing-hero.png}
+    \caption{Phân đoạn mở đầu (Hero Section)}
+    \label{fig:landing_hero}
+  \end{subfigure}\hfill
+  \begin{subfigure}[b]{0.49\textwidth}
+    \includegraphics[width=\linewidth,keepaspectratio]{ui-01-landing-intro.png}
+    \caption{Giới thiệu tiện ích không gian}
+    \label{fig:landing_intro}
+  \end{subfigure}\\[0.3cm]
+  \begin{subfigure}[b]{0.49\textwidth}
+    \includegraphics[width=\linewidth,keepaspectratio]{ui-01-landing-features.png}
+    \caption{Giá trị vận hành nổi bật}
+    \label{fig:landing_features}
+  \end{subfigure}\hfill
+  \begin{subfigure}[b]{0.49\textwidth}
+    \includegraphics[width=\linewidth,keepaspectratio]{ui-01-landing-steps.png}
+    \caption{Quy trình 4 bước từ tìm chỗ đến Check-in}
+    \label{fig:landing_steps}
+  \end{subfigure}
+  \caption{Giao diện Trang chủ đón tiếp (Landing Page) với cấu trúc Bento UI hiện đại}
+  \label{fig:ui-landing-page}
+\end{figure}
+
+\begin{itemize}
+    \item \textbf{Khối chào đón (Hero Banner -- Hình~\ref{fig:landing_hero}):} Nổi bật với thông điệp \textit{``Làm việc đúng chỗ, đúng lúc''}, tích hợp hai nút điều hướng chính: \textit{Đặt chỗ ngay} (dẫn thẳng tới bản đồ số) và \textit{Đặt lịch tham quan}.
+    \item \textbf{Giới thiệu mô hình CoSpace (Hình~\ref{fig:landing_intro}):} Nhấn mạnh 3 trụ cột cơ sở hạ tầng: Internet cáp quang tốc độ cao chuyên dụng, hệ thống phòng họp tiêu chuẩn hội nghị và mạng lưới đối tác nghề nghiệp.
+    \item \textbf{Tính năng vượt trội (Hình~\ref{fig:landing_features}):} Giới thiệu 4 tính năng cốt lõi: Sơ đồ mặt bằng Real-time cập nhật trạng thái từng phút, thanh toán 1 chạm qua VietQR/MoMo, check-in không chạm bằng mã QR và đối soát hoàn tiền tự động theo chính sách.
+    \item \textbf{Quy trình trải nghiệm 4 bước (Hình~\ref{fig:landing_steps}):} Trực quan hóa hành trình khách hàng từ bước chọn chi nhánh, chọn chỗ ngồi trên sơ đồ, thanh toán trực tuyến trong 15 phút đến lúc quét mã tại quầy lễ tân để nhận bàn.
+\end{itemize}
+
+\noindent\textbf{2. Giao diện Xác thực định danh tập trung (Login Portal):}\\
+Giao diện đăng nhập (\texttt{LoginPage.tsx} -- Hình~\ref{fig:ui-auth-login}) áp dụng thiết kế chia đôi màn hình (Split-screen Layout). Nửa bên trái hiển thị hình ảnh không gian văn phòng thực tế; nửa bên phải chứa biểu mẫu đăng nhập tối giản và an toàn:
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.88\linewidth,keepaspectratio]{ui-02-auth-login.png}
+  \caption{Giao diện xác thực định danh tập trung và tự động phân luồng theo vai trò (RBAC)}
+  \label{fig:ui-auth-login}
+\end{figure}
+
+Hệ thống kết nối trực tiếp với dịch vụ Supabase Auth, hỗ trợ xác thực bằng tài khoản Email/Mật khẩu và đăng nhập nhanh qua Google OAuth. Khi người dùng đăng nhập thành công, thành phần bảo vệ tuyến đường (\texttt{ProtectedRoute}) và cơ chế \texttt{ROLE\_AREA} trong \texttt{App.tsx} sẽ đối soát trường vai trò (\texttt{role}) trong bảng \texttt{users} để điều hướng người dùng tới đúng cổng nghiệp vụ tương ứng:
+\begin{itemize}
+    \item \texttt{customer} $\rightarrow$ Chuyển hướng tới Cổng khách hàng (\texttt{/customer/explore}).
+    \item \texttt{staff} $\rightarrow$ Chuyển hướng tới Bảng điều khiển trực ban (\texttt{/staff/dashboard}).
+    \item \texttt{branch\_admin} $\rightarrow$ Chuyển hướng tới Quản lý chi nhánh (\texttt{/branch-admin/dashboard}).
+    \item \texttt{super\_admin} $\rightarrow$ Chuyển hướng tới Bảng điều khiển hệ thống (\texttt{/admin/dashboard}).
+\end{itemize}
+
+Đặc biệt, hệ thống đã giải quyết triệt để lỗi chuyển hướng chéo role khi đăng xuất: Thao tác đăng xuất chủ động sẽ xóa bỏ tham số \texttt{redirect} lưu tạm, đảm bảo tài khoản tiếp theo đăng nhập không bị dẫn vào trang của vai trò trước đó.
 
 \subsection{Phân hệ Giao diện Khách hàng (Customer Portal)}
 
-Phân hệ khách hàng cung cấp các công cụ trực quan giúp người dùng cuối dễ dàng tiếp cận không gian, quản lý quá trình sử dụng dịch vụ và mở rộng các mối quan hệ chuyên môn.
+Phân hệ Khách hàng là trung tâm giao tiếp của người dùng cuối, cung cấp trải nghiệm đặt chỗ trực quan, thanh toán an toàn và kết nối mạng lưới nghề nghiệp.
 
-\noindent\textbf{1. Tìm kiếm và Sơ đồ mặt bằng tương tác (Interactive Floorplan Canvas):}\\
-Khác biệt với các hệ thống thông thường chỉ hiển thị danh sách dạng bảng, CoSpace hiện thực Canvas đồ họa vector tương tác trực tiếp (\texttt{InteractiveFloorplan.tsx}). Mặt bằng kiến trúc tầng được kết xuất bằng các thẻ SVG chuẩn hóa. Vị trí bàn làm việc, phòng họp được định vị tọa độ thực tế (\texttt{coordX}, \texttt{coordY}, \texttt{width}, \texttt{height}) trích xuất trực tiếp từ cơ sở dữ liệu. Vị trí bàn trống được hiển thị màu xanh lá (\texttt{\#10b981}), vị trí đang có khách hoặc bảo trì hiển thị màu đỏ (\texttt{\#ef4444}) hoặc xám (\texttt{\#94a3b8}) (Hình~\ref{fig:ui-timkiem-matbang}).
+\noindent\textbf{1. Tìm kiếm và Sơ đồ mặt bằng tương tác 2D (Interactive Floorplan Canvas):}\\
+Thay vì hiển thị danh sách dạng bảng tĩnh truyền thống, CoSpace hiện thực một Canvas đồ họa vector SVG tương tác hoàn chỉnh (\texttt{FloorPlanViewer.tsx} -- Hình~\ref{fig:ui-cust-floorplan}). Mặt bằng kiến trúc tầng được kết xuất động từ cơ sở dữ liệu với đầy đủ các khu vực công năng: bàn làm việc cá nhân (\textit{Hot Desk}), cụm bàn cố định (\textit{Dedicated Workstations}), phòng họp nhóm (\textit{Meeting Suites}), văn phòng riêng (\textit{Executive Private Offices}), khu Pantry, thang máy và nhà vệ sinh.
 
-\hinhui{ui-02-timkiem-matbang}{Giao diện tìm kiếm không gian và sơ đồ mặt bằng tương tác}{fig:ui-timkiem-matbang}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.94\linewidth,keepaspectratio]{ui-03-cust-floorplan.png}
+  \caption{Giao diện khám phá không gian và Sơ đồ mặt bằng tương tác 2D theo thời gian thực}
+  \label{fig:ui-cust-floorplan}
+\end{figure}
 
-\noindent\textbf{2. Thanh toán trực tuyến VietQR Napas 24/7 với đồng hồ đếm ngược 15 phút:}\\
-Sau khi chọn vị trí, hệ thống chuyển hướng sang trang thanh toán (\texttt{VietQRCheckoutPage.tsx} -- Hình~\ref{fig:ui-thanhtoan-vietqr}). Màn hình hiển thị mã QR động chuẩn VietQR tạo bởi PayOS API kèm số tiền chính xác đến từng đồng. Hook tùy biến \texttt{useCountdown} đếm ngược 15 phút, kết hợp cùng \texttt{usePolling} gửi truy vấn ngầm mỗi 3 giây; khi nhận Webhook thành công, màn hình lập tức hiển thị hiệu ứng chúc mừng và chuyển hướng tự động.
+Các đặc điểm kỹ thuật nổi bật trên giao diện sơ đồ:
+\begin{itemize}
+    \item \textbf{Thẻ số lượng chỗ ngồi (Seat Chips):} Mỗi khối không gian hiển thị rõ biểu tượng chủng loại và sức chứa thực tế (ví dụ: \textit{``1 chỗ''}, \textit{``6 chỗ''}, \textit{``8 chỗ''}) giúp khách hàng dễ dàng ước lượng không gian.
+    \item \textbf{Huy hiệu trạng thái thời gian thực:} Các chấm màu phản ánh tình trạng chỗ ngồi tại khung giờ được chọn: Màu xanh lá (\texttt{\#10b981}) biểu thị chỗ còn trống (\textit{Trống 11}); màu đỏ (\texttt{\#ef4444}) biểu thị chỗ đã có người đặt; màu xám (\texttt{\#94a3b8}) biểu thị không gian đang tạm khóa để bảo trì kỹ thuật (\textit{Bảo trì 3}).
+    \item \textbf{Thanh trượt trục thời gian (Timeline Slider):} Khách hàng có thể kéo thanh trượt mốc giờ trong ngày (từ 08:00 đến 22:00) để quan sát sơ đồ thay đổi trạng thái khả dụng tương ứng theo từng thời điểm.
+    \item \textbf{Điều hướng trực quan:} Hỗ trợ các công cụ phóng to/thu nhỏ (Zoom in/out), chuyển đổi qua lại giữa các tầng và nút xem toàn màn hình.
+\end{itemize}
 
-\hinhui{ui-03-thanhtoan-vietqr}{Giao diện thanh toán VietQR động với đồng hồ đếm ngược 15 phút}{fig:ui-thanhtoan-vietqr}
+\noindent\textbf{2. Giao diện Thanh toán Đặt chỗ và Hóa đơn minh bạch:}\\
+Sau khi lựa chọn vị trí và khung giờ, khách hàng được chuyển tiếp đến trang thanh toán (\texttt{BookingCheckoutPage.tsx} -- Hình~\ref{fig:ui-cust-checkout}). Màn hình được bố cục khoa học, tách bạch giữa thông tin xác nhận và bản phân tích chi phí:
 
-\noindent\textbf{3. Quản lý Lịch sử đặt chỗ và Hủy đơn minh bạch:}\\
-Giao diện Lịch sử đặt chỗ cá nhân (\texttt{CustomerHistoryPage.tsx} -- Hình~\ref{fig:ui-lichsu-datcho}) tổng hợp các đơn dịch vụ kèm huy hiệu trạng thái chuẩn hóa. Khi khách hàng có nhu cầu hủy đơn, giao diện Hủy đơn (\texttt{CustomerCancelPage.tsx} -- Hình~\ref{fig:ui-huydon-hoantien}) tự động áp dụng chính sách hoàn tiền đa tầng (Rule \#40): Hủy trước 24 giờ hoàn 100\%, trước từ 2 đến 24 giờ hoàn 50\%, và hủy trong vòng 2 giờ không hoàn tiền.
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\linewidth,keepaspectratio]{ui-04-cust-checkout.png}
+  \caption{Giao diện thanh toán đặt chỗ, tùy chọn số lượng dịch vụ và áp dụng mã giảm giá}
+  \label{fig:ui-cust-checkout}
+\end{figure}
 
-\hinhui{ui-04-lichsu-datcho}{Giao diện quản lý lịch sử đặt chỗ cá nhân và trạng thái sử dụng}{fig:ui-lichsu-datcho}
+\begin{itemize}
+    \item \textbf{Tùy chọn số lượng dịch vụ bổ sung (Add-on Stepper):} Khách hàng có thể gọi thêm các dịch vụ đi kèm như đồ uống, bữa phụ (\textit{Cà Phê Latte Sữa Tươi}) và tùy chỉnh số lượng trực tiếp bằng bộ đếm tăng giảm (\texttt{QuantityStepper}). Máy chủ sẽ tự động tính toán lại báo giá tức thì.
+    \item \textbf{Ưu đãi hạng thành viên tự động:} Dựa trên cấp độ thành viên trong chương trình Loyalty, hệ thống tự động trừ chiết khấu tương ứng (ví dụ trong hình: thành viên \textit{Hạng Silver} được giảm ngay $3\%$ tiền thuê phòng).
+    \item \textbf{Hỗ trợ Voucher cá nhân và Mã khuyến mãi:} Ô nhập mã ưu đãi hỗ trợ cả mã chiến dịch toàn hệ thống lẫn mã bồi hoàn cá nhân (\textit{Voucher HTxxxxxxxx}) được cấp khi khách thực hiện hoàn tiền.
+    \item \textbf{Phương thức thanh toán linh hoạt:} Khách hàng có thể chọn quét mã Chuyển khoản VietQR (tự động điền số tiền và nội dung Napas 24/7) hoặc Ví điện tử MoMo. Cơ chế đồng hồ đếm ngược thông báo đơn hàng được giữ tạm trong \textbf{15 phút} (Rule \#33).
+\end{itemize}
 
-\hinhui{ui-05-huydon-hoantien}{Giao diện hủy đơn đặt chỗ với chính sách đối soát hoàn tiền minh bạch}{fig:ui-huydon-hoantien}
+\noindent\textbf{3. Quản lý Lịch sử đặt chỗ đa trạng thái (3 Tab):}\\
+Trang Lịch sử đặt chỗ (\texttt{BookingHistoryPage.tsx} -- Hình~\ref{fig:ui-cust-history-tabs}) là nơi khách hàng theo dõi toàn bộ vòng đời các đơn dịch vụ của mình. Giao diện phân loại thành 3 tab rõ ràng:
 
-\noindent\textbf{4. Quản lý Hồ sơ cá nhân và Mạng lưới kết nối đối tác thông minh:}\\
-Giao diện Hồ sơ cá nhân (Hình~\ref{fig:ui-hosonguoidung}) cho phép người dùng khai báo thông tin kỹ năng chuyên môn và sở thích nghề nghiệp. Giao diện Gợi ý đối tác (Hình~\ref{fig:ui-ketnoi-doitac}) ứng dụng thuật toán Jaccard kết hợp Google Gemini AI để hiển thị danh sách các thành viên có sự tương đồng cao kèm lý do đề xuất tự nhiên, thúc đẩy cơ hội hợp tác kinh doanh trong cộng đồng CoSpace.
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[b]{0.32\textwidth}
+    \includegraphics[width=\linewidth,keepaspectratio]{ui-05-cust-history-upcoming.png}
+    \caption{Tab Sắp tới (Giữ chỗ 15 phút)}
+    \label{fig:history_upcoming}
+  \end{subfigure}\hfill
+  \begin{subfigure}[b]{0.32\textwidth}
+    \includegraphics[width=\linewidth,keepaspectratio]{ui-05-cust-history-completed.png}
+    \caption{Tab Hoàn thành (Lịch sử sử dụng)}
+    \label{fig:history_completed}
+  \end{subfigure}\hfill
+  \begin{subfigure}[b]{0.32\textwidth}
+    \includegraphics[width=\linewidth,keepaspectratio]{ui-05-cust-history-cancelled.png}
+    \caption{Tab Đã hủy (Quá hạn/Hủy phòng)}
+    \label{fig:history_cancelled}
+  \end{subfigure}
+  \caption{Giao diện quản lý Lịch sử đặt chỗ cá nhân phân tách theo 3 trạng thái nghiệp vụ}
+  \label{fig:ui-cust-history-tabs}
+\end{figure}
 
-\hinhui{ui-06-hosonguoidung}{Giao diện chỉnh sửa hồ sơ người dùng và danh mục kỹ năng chuyên môn}{fig:ui-hosonguoidung}
+\begin{itemize}
+    \item \textbf{Tab Sắp tới (Hình~\ref{fig:history_upcoming}):} Hiển thị các đơn đặt chỗ đang hoạt động. Đối với đơn ở trạng thái \texttt{PENDING\_PAYMENT}, hệ thống hiển thị đồng hồ đếm ngược thời gian giữ chỗ theo thời gian thực (ví dụ: \textit{``Giữ chỗ còn 11:27''}), kèm nút \textit{Thanh toán ngay} và nút \textit{Hủy đặt chỗ}. Đối với các đơn đã xác nhận (\texttt{CONFIRMED}), khách hàng có thể mở popup để gia hạn thời gian làm việc hoặc gọi thêm dịch vụ trong quá trình ngồi làm việc.
+    \item \textbf{Tab Hoàn thành (Hình~\ref{fig:history_completed}):} Lưu trữ lịch sử toàn bộ các buổi làm việc đã check-out thành công (ví dụ: \textit{Bàn Hotdesk 101, Bàn Hotdesk 102}), giúp khách hàng đối soát chi tiêu và xuất hóa đơn điện tử khi cần.
+    \item \textbf{Tab Đã hủy (Hình~\ref{fig:history_cancelled}):} Ghi nhận các đơn bị hủy do khách hàng chủ động hủy, đơn bị quá hạn thanh toán sau 15 phút hoặc lượt đặt chỗ khách không đến nhận bàn (\texttt{NO\_SHOW}).
+\end{itemize}
 
-\hinhui{ui-07-ketnoi-doitac}{Giao diện gợi ý và kết nối đối tác thông minh ứng dụng Trí tuệ nhân tạo}{fig:ui-ketnoi-doitac}
+\noindent\textbf{4. Diễn đàn Cộng đồng và Bảng tin tương tác (Community Portal):}\\
+Một trong những điểm đổi mới sáng tạo cốt lõi của CoSpace là biến không gian làm việc vật lý thành mạng lưới kết nối nghề nghiệp số. Giao diện Cộng đồng (\texttt{CommunityPage.tsx} -- Hình~\ref{fig:ui-cust-community}) tích hợp hai phân vùng tương hỗ:
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\linewidth,keepaspectratio]{ui-06-cust-community.png}
+  \caption{Giao diện Bảng tin Cộng đồng và danh mục đề xuất kết nối đối tác thông minh}
+  \label{fig:ui-cust-community}
+\end{figure}
+
+\begin{itemize}
+    \item \textbf{Bảng tin chia sẻ chuyên môn (Feed):} Cho phép thành viên đăng bài viết giới thiệu dự án khởi nghiệp, kêu gọi cộng sự hoặc thông báo các buổi Workshop chuyên đề (ví dụ: \textit{``Workshop Xây dựng Design System từ Figma đến React Component''}). Các bài viết được phân loại theo bộ lọc thẻ kỹ năng đa dạng: \textit{Frontend Dev, Backend Dev, UI/UX Design, AI/Machine Learning, Khởi nghiệp, Fintech}.
+    \item \textbf{Khối Đề xuất Đối tác (Sidebar phải):} Ứng dụng thuật toán so khớp Jaccard có trọng số kết hợp Google Gemini AI. Hệ thống phân tích bài viết, bộ kỹ năng và cơ sở làm việc để đưa ra danh sách các thành viên có độ tương thích cao kèm chỉ số Match cụ thể ($67\%$, $57\%$, $45\%$), tạo điều kiện mở rộng quan hệ hợp tác kinh doanh tự nhiên ngay tại không gian co-working.
+\end{itemize}
+
+\noindent\textbf{5. Hồ sơ năng lực cá nhân và Mạng lưới kết nối nghề nghiệp (3 Tab):}\\
+Giao diện Hồ sơ người dùng (\texttt{ProfilePage.tsx} -- Hình~\ref{fig:ui-cust-profile-tabs}) là nơi thành viên xây dựng thương hiệu cá nhân và quản trị các kết nối trong cộng đồng:
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[b]{0.32\textwidth}
+    \includegraphics[width=\linewidth,keepaspectratio]{ui-07-cust-profile-info.png}
+    \caption{Tab Hồ sơ \& Kỹ năng}
+    \label{fig:profile_info}
+  \end{subfigure}\hfill
+  \begin{subfigure}[b]{0.32\textwidth}
+    \includegraphics[width=\linewidth,keepaspectratio]{ui-07-cust-profile-network.png}
+    \caption{Tab Mạng lưới kết nối}
+    \label{fig:profile_network}
+  \end{subfigure}\hfill
+  \begin{subfigure}[b]{0.32\textwidth}
+    \includegraphics[width=\linewidth,keepaspectratio]{ui-07-cust-profile-security.png}
+    \caption{Tab Tài khoản \& Bảo mật}
+    \label{fig:profile_security}
+  \end{subfigure}
+  \caption{Giao diện quản lý Hồ sơ năng lực cá nhân và Mạng lưới đối tác qua 3 tab chuyên biệt}
+  \label{fig:ui-cust-profile-tabs}
+\end{figure}
+
+\begin{itemize}
+    \item \textbf{Tab Hồ sơ \& Nghề nghiệp (Hình~\ref{fig:profile_info}):} Hiển thị danh thiếp số của thành viên (Họ tên, Đơn vị công tác, Hạng thành viên Silver). Khách hàng có thể khai báo chức danh, tiểu sử giới thiệu, liên kết trang web/Portfolio cá nhân và gắn các thẻ kỹ năng chuyên môn (\textit{Spring Boot, React, TypeScript, UI/UX Design}).
+    \item \textbf{Tab Mạng lưới kết nối (Hình~\ref{fig:profile_network}):} Quản trị các yêu cầu kết nối thực tế theo 3 nhóm: \textit{Lời mời mới, Đã kết nối, Đã gửi}. Bên dưới là danh sách đối tác được hệ thống gợi ý dựa trên sự tương đồng về kỹ năng từ CSDL kèm nút \textit{Kết nối} và \textit{Xem chi tiết hồ sơ}.
+    \item \textbf{Tab Tài khoản \& Bảo mật (Hình~\ref{fig:profile_security}):} Cung cấp tính năng đổi mật khẩu trực tiếp qua Supabase Auth và tùy chọn \textit{Quyền riêng tư}: Người dùng có thể chủ động bật/tắt công khai địa chỉ Email và Số điện thoại cho thành viên khác.
+\end{itemize}
 
 \subsection{Phân hệ Giao diện Nhân viên vận hành tại quầy (Staff Portal)}
 
-Nhóm giao diện dành cho nhân viên trực quầy được thiết kế tối ưu hóa cho thao tác nhanh, hỗ trợ xử lý luồng khách đến đột xuất và tiếp nhận thông tin bảo trì cơ sở vật chất.
+Giao diện dành cho nhân viên trực ca được tối ưu hóa cho tốc độ xử lý và khả năng quan sát nhanh lưu lượng khách tại chi nhánh.
 
-\noindent\textbf{1. Bảng điều khiển hoạt động chi nhánh theo thời gian thực:}\\
-Bảng điều khiển (Hình~\ref{fig:ui-letan-dashboard}) cung cấp cái nhìn tổng quan về tỷ lệ lấp đầy, số lượng khách đang có mặt và danh sách các lượt khách sắp đến nhận bàn trong ca làm việc.
+\noindent\textbf{1. Bảng điều khiển Trực ban vận hành chi nhánh (Staff Dashboard):}\\
+Màn hình Bảng điều khiển (\texttt{OperationsDashboardPage.tsx} -- Hình~\ref{fig:ui-staff-dashboard}) cung cấp bức tranh toàn cảnh về hoạt động trong ca trực:
 
-\hinhui{ui-08-letan-dashboard}{Giao diện Bảng điều khiển vận hành chi nhánh theo thời gian thực}{fig:ui-letan-dashboard}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\linewidth,keepaspectratio]{ui-08-staff-dashboard.png}
+  \caption{Giao diện Bảng điều khiển trực ban theo dõi lưu lượng khách và điều phối chi nhánh}
+  \label{fig:ui-staff-dashboard}
+\end{figure}
 
-\noindent\textbf{2. Tiếp đón và Check-in với cơ chế dung sai 30 phút:}\\
-Giao diện Check-in (\texttt{StaffCheckinDeskPage.tsx} -- Hình~\ref{fig:ui-letan-checkin}) hỗ trợ tìm kiếm nhanh bằng mã đơn hoặc quét QR Pass trên điện thoại của khách hàng. Nút xác nhận Check-in chỉ kích hoạt khi thời điểm hiện tại nằm trong khoảng dung sai $[\text{Start} - 30\text{ phút}, \, \text{End} + 30\text{ phút}]$ (Rule \#10), giúp nhân viên tuân thủ nghiêm ngặt quy chuẩn vận hành. Khi khách trả phòng, hệ thống hỗ trợ đối soát các dịch vụ phụ trợ phát sinh trong Running Tab trước khi hoàn tất thủ tục.
+\begin{itemize}
+    \item \textbf{Các chỉ số vận hành tức thời:} Theo dõi doanh thu trong ngày, tỷ lệ lấp đầy phòng, số lượng khách đang có mặt trên tổng sức chứa (\textit{0 / 69 chỗ}) và số lượng bàn làm việc đang ở trạng thái sẵn sàng đón khách (\textit{21 / 21 bàn}).
+    \item \textbf{Biểu đồ phân bổ lưu lượng theo khung giờ:} Biểu đồ cột hiển thị trực quan số lượt khách phân bổ từ 08:00 đến 22:00, hỗ trợ nhân viên dự báo các khung giờ cao điểm để chủ động chuẩn bị cơ sở vật chất.
+    \item \textbf{Lịch trình khách đến nhận bàn:} Danh sách các đơn đặt chỗ sắp đến ca (ví dụ đơn \texttt{\#WH-PRRBM5} của khách hàng Toàn Vương Song tại Bàn Hotdesk 104 lúc 20:00) kèm nút gọi nhanh thủ tục Check-in.
+\end{itemize}
 
-\hinhui{ui-09-letan-checkin}{Giao diện thủ tục check-in tại quầy với cơ chế kiểm soát dung sai 30 phút}{fig:ui-letan-checkin}
+\noindent\textbf{2. Đặt chỗ tại quầy cho khách vãng lai (Walk-in Booking POS):}\\
+Khi khách hàng đến trực tiếp quầy mà chưa đặt trước qua ứng dụng, nhân viên sử dụng giao diện Walk-in POS (\texttt{WalkinBookingPage.tsx} -- Hình~\ref{fig:ui-staff-walkin}) để tạo đơn tức thời:
 
-\noindent\textbf{3. Quản lý sự cố và bảo trì cơ sở vật chất:}\\
-Giao diện Báo cáo bảo trì (Hình~\ref{fig:ui-letan-baotri}) cho phép nhân viên trực quầy ghi nhận các sự cố hỏng hóc thiết bị, cập nhật trạng thái tạm ngừng phục vụ trên sơ đồ mặt bằng và thông báo bộ phận kỹ thuật khắc phục.
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\linewidth,keepaspectratio]{ui-09-staff-walkin.png}
+  \caption{Giao diện tạo đơn đặt chỗ trực tiếp tại quầy (Walk-in Booking) tích hợp sơ đồ tầng}
+  \label{fig:ui-staff-walkin}
+\end{figure}
 
-\hinhui{ui-10-letan-baotri}{Giao diện báo cáo sự cố và theo dõi tiến độ bảo trì thiết bị chi nhánh}{fig:ui-letan-baotri}
+\begin{itemize}
+    \item \textbf{Quy trình 3 bước chuẩn hóa:} (1) Nhập số điện thoại/họ tên để tra cứu hoặc tạo mới hồ sơ khách hàng; (2) Chọn thời lượng thuê và chọn trực tiếp vị trí bàn mong muốn trên Sơ đồ mặt bằng tương tác; (3) Xác nhận thanh toán tại quầy qua Tiền mặt, Ví MoMo hoặc Quẹt thẻ ngân hàng.
+    \item \textbf{Kích hoạt tức thì:} Nhân viên có tùy chọn đánh dấu \textit{``Kích hoạt Check-in ngay cho khách''} để mở cửa và cấp quyền sử dụng không gian ngay khi hoàn tất thu tiền mà không cần thao tác thêm một bước xác nhận.
+\end{itemize}
+
+\noindent\textbf{3. Thủ tục Check-in/Check-out và Thu phí phát sinh tại quầy:}\\
+Giao diện tiếp đón và xác nhận vào ca (\texttt{CheckInPage.tsx} -- Hình~\ref{fig:ui-staff-checkin}) được trang bị các rào chắn nghiệp vụ nghiêm ngặt:
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\linewidth,keepaspectratio]{ui-10-staff-checkin.png}
+  \caption{Giao diện kiểm tra và xác nhận thủ tục Check-in/Check-out tại quầy lễ tân}
+  \label{fig:ui-staff-checkin}
+\end{figure}
+
+\begin{itemize}
+    \item \textbf{Tiếp nhận đa kênh:} Hỗ trợ nhân viên nhập nhanh mã đặt chỗ 6 ký tự hoặc bấm nút \textit{Quét QR} để kích hoạt camera nhận diện mã vé điện tử trên thiết bị di động của khách.
+    \item \textbf{Kiểm soát dung sai thời gian (Rule \#10):} Nút xác nhận Check-in chỉ khả dụng khi thời điểm hiện tại nằm trong cửa sổ $[\text{Start} - 30\text{ phút}, \, \text{End} + 30\text{ phút}]$, ngăn chặn việc nhân viên check-in sai giờ quy định.
+    \item \textbf{Quản lý Running Tab và Phụ phí check-out muộn:} Khi khách trả phòng, hệ thống tự động kiểm tra số phút quá hạn. Nếu khách trả trễ quá 15 phút, hệ thống tự động tính phụ phí ($\text{Số giờ trễ} \times \text{Đơn giá giờ} \times 1.5$) và hiển thị danh mục các dịch vụ phụ trợ chưa thanh toán để nhân viên đối soát, xuất mã VietQR thu tiền tại quầy trước khi giải phóng bàn.
+\end{itemize}
+
+\noindent\textbf{4. Quản lý Không gian và Khóa bàn bảo trì tại quầy:}\\
+Để phản hồi tức thì các sự cố vật lý (như ổ điện hỏng, đèn chiếu sáng gặp sự cố), nhân viên quầy sử dụng giao diện Quản lý không gian (\texttt{MaintenancePage.tsx} -- Hình~\ref{fig:ui-staff-maintenance}):
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\linewidth,keepaspectratio]{ui-11-staff-maintenance.png}
+  \caption{Giao diện quản lý trạng thái không gian và thao tác khóa bàn bảo trì khẩn cấp}
+  \label{fig:ui-staff-maintenance}
+\end{figure}
+
+Nhân viên có thể bấm nút \textit{Khóa bàn} đối với từng vị trí cụ thể. Khi bàn bị khóa, hệ thống lập tức cập nhật trạng thái \texttt{MAINTENANCE} và chuyển màu xám trên Sơ đồ mặt bằng 2D của khách hàng, ngăn chặn hoàn toàn việc khách khác đặt phải bàn đang bị sự cố kỹ thuật.
 
 \subsection{Phân hệ Giao diện Quản lý chi nhánh (Branch Admin Portal)}
 
-Cấp quản lý chi nhánh được cung cấp bộ công cụ tự chủ để định hình không gian, thiết lập biểu phí dịch vụ và theo dõi doanh thu cơ sở.
+Quản lý chi nhánh được trao quyền tự chủ cấu hình không gian, chính sách giá và giám sát số liệu kinh doanh tại cơ sở được phân công phụ trách.
 
-\noindent\textbf{1. Cấu hình Sơ đồ mặt bằng và Không gian làm việc:}\\
-Giao diện cấu hình không gian (Hình~\ref{fig:ui-ql-sodomatbang}) cho phép quản lý chi nhánh thiết lập các khu vực chức năng (Hot Desk, Dedicated Desk, Private Office, Meeting Room) và kích thước tọa độ bàn trên sơ đồ tầng.
+\noindent\textbf{1. Báo cáo phân tích kinh doanh chi nhánh:}\\
+Giao diện Báo cáo tổng quan chi nhánh (\texttt{BADashboardPage.tsx} -- Hình~\ref{fig:ui-ba-dashboard}) tổng hợp các chỉ số hiệu suất kinh doanh chủ chốt:
 
-\hinhui{ui-11-ql-sodomatbang}{Giao diện cấu hình sơ đồ mặt bằng và định vị không gian làm việc chi nhánh}{fig:ui-ql-sodomatbang}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\linewidth,keepaspectratio]{ui-12-ba-dashboard.png}
+  \caption{Giao diện Báo cáo và Phân tích hiệu suất kinh doanh định kỳ tại chi nhánh}
+  \label{fig:ui-ba-dashboard}
+\end{figure}
 
-\noindent\textbf{2. Quản lý Biểu phí và Chính sách giá linh hoạt:}\\
-Giao diện quản lý giá (Hình~\ref{fig:ui-ql-chinhsachgia}) hỗ trợ thiết lập đơn giá theo giờ, đơn giá theo ngày và phụ phí ngoài giờ linh hoạt tùy theo mùa vụ kinh doanh của từng cơ sở.
+\begin{itemize}
+    \item \textbf{Thẻ chỉ số tổng hợp:} Ghi nhận $52$ lượt đặt chỗ, $25$ đơn hoàn tất thành công, $5$ đơn hủy ($10\%$ tỷ lệ hủy) và tổng doanh thu thực nhận đạt \textbf{18.160.550 đ}.
+    \item \textbf{Biểu đồ biến động dòng tiền:} Biểu đồ cột biểu diễn doanh thu phân theo từng tuần trong tháng, giúp phát hiện xu hướng tăng trưởng.
+    \item \textbf{Cơ cấu doanh thu theo loại không gian:} Biểu đồ tròn Donut minh họa rõ tỷ trọng đóng góp: Văn phòng riêng tư (\textit{Private Office}) đóng góp chủ lực với 13.000.000 đ ($71.6\%$), tiếp theo là Bàn làm việc linh hoạt (\textit{Hot Desk}) đạt 3.330.550 đ ($18.3\%$) và Phòng họp tiêu chuẩn đạt 1.830.000 đ ($10.1\%$).
+\end{itemize}
 
-\hinhui{ui-12-ql-chinhsachgia}{Giao diện thiết lập và quản trị biểu phí dịch vụ không gian chi nhánh}{fig:ui-ql-chinhsachgia}
+\noindent\textbf{2. Quản lý Không gian và Phân cấp tầng chi nhánh:}\\
+Trang Sơ đồ \& Không gian (\texttt{BAWorkspacePage.tsx} -- Hình~\ref{fig:ui-ba-spaces}) cho phép quản lý chi nhánh định hình cấu trúc phân cấp vật lý của tòa nhà:
 
-\subsection{Phân hệ Giao diện Quản trị viên hệ thống (System Admin Portal)}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\linewidth,keepaspectratio]{ui-13-ba-spaces.png}
+  \caption{Giao diện quản lý danh mục tầng, sơ đồ tổng thể và danh sách vị trí làm việc}
+  \label{fig:ui-ba-spaces}
+\end{figure}
 
-Phân hệ quản trị viên cấp cao nắm giữ quyền hạn tối cao trong việc kiểm soát quy mô mạng lưới toàn quốc, giám sát vết kiểm toán và phân tích chiến lược kinh doanh.
+Giao diện tổ chức theo các thẻ tầng (\textit{Tầng 1 -- Open Hotdesking \& Café Lounge, Tầng 2 -- Meeting Suites, Tầng 3 -- Executive Private Offices}). Quản lý có thể thêm tầng mới, xem trước sơ đồ tổng thể và quản lý bảng danh sách các bàn làm việc trực thuộc kèm nút \textit{Chỉnh sửa Layout} để mở trình soạn thảo chuyên sâu.
 
-\noindent\textbf{1. Quản lý Mạng lưới chi nhánh toàn quốc:}\\
-Giao diện quản lý chi nhánh (Hình~\ref{fig:ui-admin-chinhanh}) cho phép quản trị viên xem xét quy mô tổng thể, thêm mới cơ sở hạ tầng hoặc tạm ngưng các chi nhánh đang trong quá trình cải tạo.
+\noindent\textbf{3. Trình biên tập Sơ đồ mặt bằng tương tác (Floor Plan Editor -- Điểm nhấn kỹ thuật):}\\
+Một trong những thành tựu công nghệ nổi bật nhất của đề tài là việc xây dựng thành công bộ công cụ biên tập sơ đồ kiến trúc vector trực tiếp trên trình duyệt Web (\texttt{FloorPlanEditorPage.tsx} -- Hình~\ref{fig:ui-ba-floorplan-editor}):
 
-\hinhui{ui-13-admin-chinhanh}{Giao diện quản trị danh mục chi nhánh trên toàn mạng lưới CoSpace}{fig:ui-admin-chinhanh}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.96\linewidth,keepaspectratio]{ui-14-ba-floorplan-editor.png}
+  \caption{Trình biên tập Sơ đồ mặt bằng trực quan (Floor Plan Editor) với công nghệ kéo thả vector}
+  \label{fig:ui-ba-floorplan-editor}
+\end{figure}
 
-\noindent\textbf{2. Giám sát Nhật ký hệ thống (Audit Log) và An ninh:}\\
-Giao diện Tra cứu nhật ký hệ thống (Hình~\ref{fig:ui-admin-nhatky-hethong}) ghi nhận toàn bộ các tác động dữ liệu trọng yếu (tạo chi nhánh, thay đổi giá, phân quyền người dùng, hủy đơn đặc biệt) kèm địa chỉ IP và thời gian chính xác, phục vụ công tác đối soát minh bạch.
+Kiến trúc và các tính năng tương tác chuyên nghiệp của Floor Plan Editor:
+\begin{itemize}
+    \item \textbf{Panel Thư viện vật tư (Bên trái):} Cung cấp 20+ phần tử mẫu chuẩn hóa chia thành hai nhóm: Khối không gian chức năng (\textit{Bàn làm việc, Ghế, Bàn đứng công thái học, Phòng họp, VP riêng, Phone Booth, Khu sự kiện}) và Cấu kiện kiến trúc xây dựng (\textit{Tường, Cửa ra vào, Cửa sổ, Cột trụ bê tông, Cây xanh, Thang máy, Thang bộ, WC, Pantry}).
+    \item \textbf{Canvas thiết kế đồ họa vector SVG (Ở giữa):} Không gian vẽ với lưới tọa độ Grid 20px, cơ chế bắt điểm tự động (Snap-to-grid) đảm bảo bố trí thẳng hàng; hỗ trợ các thao tác xoay hướng, phóng to/thu nhỏ, kéo rê (Pan/Zoom) mượt mà.
+    \item \textbf{Hỗ trợ tổ hợp phím tắt tiêu chuẩn phần mềm CAD:} Nhân bản (\texttt{Ctrl + D}), Hoàn tác/Làm lại (\texttt{Ctrl + Z / Ctrl + Y}), Chọn tất cả (\texttt{Ctrl + A}), Xóa phần tử (\texttt{Delete / Backspace}) và vi chỉnh vị trí từng pixel (\texttt{Arrow Keys / Shift + Arrows}).
+    \item \textbf{Panel Thuộc tính và Gán CSDL (Bên phải):} Khi chọn một phần tử trên mặt bằng, thanh công cụ cho phép quản lý tùy chỉnh kích thước, nhãn hiển thị và liên kết trực tiếp ID phần tử đồ họa với bản ghi \texttt{Workspace} trong cơ sở dữ liệu để phục vụ việc hiển thị trạng thái thực cho khách hàng.
+\end{itemize}
 
-\hinhui{ui-14-admin-nhatky-hethong}{Giao diện tra cứu nhật ký kiểm toán hệ thống (Audit Log) minh bạch}{fig:ui-admin-nhatky-hethong}
+\noindent\textbf{4. Cấu hình Biểu phí, Chính sách hủy và Quản lý nhân sự chi nhánh:}\\
+Quản lý chi nhánh được phân quyền tinh chỉnh các chính sách kinh doanh phù hợp với mặt bằng thị trường địa phương (Hình~\ref{fig:ui-ba-management-group}):
 
-\noindent\textbf{3. Báo cáo thống kê và Phân tích doanh thu toàn hệ thống:}\\
-Giao diện Báo cáo tài chính (Hình~\ref{fig:ui-admin-baocao-doanhthu}) tổng hợp chỉ số doanh thu lũy kế, tỷ lệ lấp đầy trung bình trên từng chi nhánh theo dạng biểu đồ cột và đường trực quan, hỗ trợ ban lãnh đạo ra các quyết định chiến lược mở rộng thị trường.
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[b]{0.32\textwidth}
+    \includegraphics[width=\linewidth,keepaspectratio]{ui-15-ba-pricing.png}
+    \caption{Quản lý Bảng giá chi nhánh}
+    \label{fig:ba_pricing}
+  \end{subfigure}\hfill
+  \begin{subfigure}[b]{0.32\textwidth}
+    \includegraphics[width=\linewidth,keepaspectratio]{ui-16-ba-policies.png}
+    \caption{Chính sách hủy phòng riêng}
+    \label{fig:ba_policies}
+  \end{subfigure}\hfill
+  \begin{subfigure}[b]{0.32\textwidth}
+    \includegraphics[width=\linewidth,keepaspectratio]{ui-17-ba-staff.png}
+    \caption{Quản lý tài khoản nhân viên}
+    \label{fig:ba_staff}
+  \end{subfigure}
+  \caption{Nhóm màn hình cấu hình Biểu phí, Chính sách hủy và Quản lý nhân sự chi nhánh}
+  \label{fig:ui-ba-management-group}
+\end{figure}
 
-\hinhui{ui-15-admin-baocao-doanhthu}{Giao diện biểu đồ hóa dữ liệu kinh doanh và báo cáo tài chính toàn hệ thống}{fig:ui-admin-baocao-doanhthu}
+\begin{itemize}
+    \item \textbf{Bảng giá chi nhánh (Hình~\ref{fig:ba_pricing}):} Cho phép thiết lập mức giá thuê riêng cho từng loại không gian (\textit{Phòng họp: 150.000 đ/giờ, Hot Desk: 200.000 đ/ngày}). Mức giá chi nhánh được đánh dấu nhãn \textit{``Chi nhánh''} và sẽ tự động ghi đè lên biểu phí chuẩn toàn hệ thống (Rule \#21).
+    \item \textbf{Chính sách hủy (Hình~\ref{fig:ba_policies}):} Cho phép chi nhánh áp dụng quy tắc hoàn tiền riêng nếu cơ sở có điều kiện vận hành đặc thù.
+    \item \textbf{Quản lý nhân viên (Hình~\ref{fig:ba_staff}):} Danh sách tài khoản nhân viên trực ban tại cơ sở, trạng thái hoạt động và quyền thao tác.
+\end{itemize}
+
+\noindent\textbf{5. Quản lý Bảo trì, Dịch vụ phụ trợ và Phê duyệt Hoàn tiền/Voucher:}\\
+Nhóm tính năng phục vụ công tác hậu cần và tài chính nội bộ chi nhánh (Hình~\ref{fig:ui-ba-ops-group}):
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[b]{0.32\textwidth}
+    \includegraphics[width=\linewidth,keepaspectratio]{ui-18-ba-maintenance.png}
+    \caption{Lịch sử và Kế hoạch bảo trì}
+    \label{fig:ba_maint}
+  \end{subfigure}\hfill
+  \begin{subfigure}[b]{0.32\textwidth}
+    \includegraphics[width=\linewidth,keepaspectratio]{ui-19-ba-services.png}
+    \caption{Quản lý Dịch vụ thêm (Add-ons)}
+    \label{fig:ba_services}
+  \end{subfigure}\hfill
+  \begin{subfigure}[b]{0.32\textwidth}
+    \includegraphics[width=\linewidth,keepaspectratio]{ui-20-ba-refunds.png}
+    \caption{Phê duyệt hoàn tiền / Voucher}
+    \label{fig:ba_refunds}
+  \end{subfigure}
+  \caption{Nhóm màn hình quản lý Bảo trì, Dịch vụ ăn uống bổ trợ và Duyệt hoàn tiền chi nhánh}
+  \label{fig:ui-ba-ops-group}
+\end{figure}
+
+\begin{itemize}
+    \item \textbf{Lịch bảo trì (Hình~\ref{fig:ba_maint}):} Theo dõi tiến độ bảo dưỡng trang thiết bị, thời điểm bắt đầu/kết thúc và lý do sự cố phục vụ công tác thanh tra cơ sở vật chất.
+    \item \textbf{Dịch vụ thêm (Add-ons -- Hình~\ref{fig:ba_services}):} Thiết lập danh mục các mặt hàng ăn uống và gói tiện ích riêng tại quầy (ví dụ: \textit{Cà Phê Latte Pha Máy Premium Q1: 45.000 đ/ly, Combo Sáng: 65.000 đ/phần, Phòng Thu Podcast Mini Q1: 250.000 đ/giờ}) kèm công tắc bật/tắt hiển thị.
+    \item \textbf{Hoàn tiền cho khách hàng (Hình~\ref{fig:ba_refunds}):} Tiếp nhận và xử lý các khoản cần bồi hoàn cho khách (do hủy đơn đúng hạn, thanh toán trùng hoặc sự cố phòng). Quản lý chi nhánh có thể chọn hình thức chuyển khoản Napas, trả tiền mặt hoặc \textbf{phát hành Voucher cá nhân} có hạn dùng 90 ngày tương ứng số tiền hoàn.
+\end{itemize}
+
+\subsection{Phân hệ Giao diện Quản trị viên hệ thống (Super Admin Portal)}
+
+Quản trị viên cấp cao nắm toàn quyền thiết lập các tham số vận hành chuẩn mực trên toàn mạng lưới CoSpace, giám sát an ninh dữ liệu và phân tích chỉ số kinh doanh vĩ mô.
+
+\noindent\textbf{1. Bảng điều khiển Tổng quan Toàn hệ thống (Super Admin Dashboard):}\\
+Màn hình Bảng điều khiển hợp nhất (\texttt{AdminDashboardPage.tsx} -- Hình~\ref{fig:ui-admin-dashboard}) cung cấp số liệu tổng thể theo thời gian thực kết nối trực tiếp với Live Database:
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\linewidth,keepaspectratio]{ui-21-admin-dashboard.png}
+  \caption{Giao diện Tổng quan Quản trị cấp cao hợp nhất số liệu toàn mạng lưới CoSpace}
+  \label{fig:ui-admin-dashboard}
+\end{figure}
+
+\begin{itemize}
+    \item \textbf{Các chỉ số toàn mạng lưới:} Tổng doanh thu hợp nhất tháng đạt \textbf{22.415.550 đ}, $70$ tổng đơn đặt chỗ toàn quốc, tỷ lệ hoàn thành $50\%$ và $3/4$ chi nhánh đang trong trạng thái vận hành ổn định.
+    \item \textbf{Biểu đồ dòng tiền hợp nhất và Cơ cấu không gian:} Biểu đồ cột tổng hợp biến động dòng tiền 4 tuần trong tháng và biểu đồ tròn cơ cấu các nguồn thu.
+    \item \textbf{So sánh hiệu suất chi nhánh trực tiếp:} Bảng tổng hợp so sánh hiệu quả kinh doanh giữa các cơ sở: \textit{CoSpace Nguyễn Huệ} (18.160.550 đ / 52 đơn), \textit{CoSpace Cầu Giấy} (2.570.000 đ / 10 đơn), \textit{CoSpace Nam Kỳ Khởi Nghĩa} (1.685.000 đ / 8 đơn).
+\end{itemize}
+
+\noindent\textbf{2. Quản lý Mạng lưới Chi nhánh và Ma trận Biểu phí chuẩn:}\\
+Super Admin kiểm soát danh mục các cơ sở vật lý và thiết lập biểu phí chuẩn áp dụng toàn quốc (Hình~\ref{fig:ui-admin-branches-pricing}):
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[b]{0.49\textwidth}
+    \includegraphics[width=\linewidth,keepaspectratio]{ui-22-admin-branches.png}
+    \caption{Danh mục Chi nhánh và Mẫu không gian}
+    \label{fig:admin_branches}
+  \end{subfigure}\hfill
+  \begin{subfigure}[b]{0.49\textwidth}
+    \includegraphics[width=\linewidth,keepaspectratio]{ui-23-admin-pricing-matrix.png}
+    \caption{Ma trận Biểu phí chuẩn toàn hệ thống}
+    \label{fig:admin_pricing_matrix}
+  \end{subfigure}
+  \caption{Màn hình Quản lý danh mục Chi nhánh và Ma trận Biểu phí chuẩn đa mốc thời gian}
+  \label{fig:ui-admin-branches-pricing}
+\end{figure}
+
+\begin{itemize}
+    \item \textbf{Danh mục Chi nhánh (Hình~\ref{fig:admin_branches}):} Quản lý mã cơ sở (\textit{CS-Q1, CS-Q3, CS-CG}), địa chỉ thực tế và nút kích hoạt chuyển đổi trạng thái Hoạt động / Tạm dừng chi nhánh.
+    \item \textbf{Ma trận Giá chuẩn toàn hệ thống (Hình~\ref{fig:admin_pricing_matrix}):} Quản trị tập trung 42 mốc giá chỗ ngồi theo 4 đơn vị thời lượng (\textit{1 Giờ, 1 Ngày, 1 Tuần, 1 Tháng}) cho từng mô hình không gian (\textit{Hot Desk: 25.000 đ/giờ, 170.000 đ/ngày, 700.000 đ/tuần, 2.500.000 đ/tháng; Phòng họp: 100.000 đ/giờ, 700.000 đ/ngày; VP riêng: 200.000 đ/giờ, 18.000.000 đ/tháng}).
+\end{itemize}
+
+\noindent\textbf{3. Phân quyền Người dùng RBAC và Chính sách hủy phòng đa tầng:}\\
+Bảo đảm tính kỷ luật vận hành và phòng chống rủi ro thất thoát doanh thu (Hình~\ref{fig:ui-admin-users-cancellation}):
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[b]{0.49\textwidth}
+    \includegraphics[width=\linewidth,keepaspectratio]{ui-24-admin-users-rbac.png}
+    \caption{Quản lý tài khoản và Phân quyền RBAC}
+    \label{fig:admin_users}
+  \end{subfigure}\hfill
+  \begin{subfigure}[b]{0.49\textwidth}
+    \includegraphics[width=\linewidth,keepaspectratio]{ui-25-admin-cancellation.png}
+    \caption{Quy định Hủy booking và Hoàn tiền đa tầng}
+    \label{fig:admin_cancellation}
+  \end{subfigure}
+  \caption{Màn hình Quản lý phân quyền người dùng RBAC và Cấu hình chính sách hoàn hủy đa tầng}
+  \label{fig:ui-admin-users-cancellation}
+\end{figure}
+
+\begin{itemize}
+    \item \textbf{Quản lý tài khoản người dùng (Hình~\ref{fig:admin_users}):} Quản trị tập trung $42$ tài khoản trên hệ thống, phân loại 4 vai trò rõ ràng kèm nhãn màu sắc (\textit{Khách hàng, Nhân viên, Quản lý CN, Super Admin}), gán chi nhánh công tác và trạng thái hoạt động.
+    \item \textbf{Chính sách hủy đa tầng (Hình~\ref{fig:admin_cancellation}):} Cấu hình bảng quy tắc phạt hủy tự động: Hủy trước 24 giờ hoàn $100\%$, hủy từ 12 đến 24 giờ hoàn $50\%$, hủy dưới 12 giờ không hoàn tiền ($0\%$), cùng chính sách \textit{Thời gian ân hạn} (Grace Period -- miễn phí hủy trong 2 giờ đầu sau khi đặt).
+\end{itemize}
+
+\noindent\textbf{4. Quản lý Danh mục Tiện ích, Dịch vụ gia tăng và Khuyến mãi toàn mạng lưới:}\\
+Hệ thống cung cấp các công cụ chuẩn hóa danh mục tiện ích và triển khai các chương trình kích cầu tiêu dùng (Hình~\ref{fig:ui-admin-amenities-services-promos}):
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[b]{0.32\textwidth}
+    \includegraphics[width=\linewidth,keepaspectratio]{ui-26-admin-services.png}
+    \caption{Dịch vụ bổ sung toàn hệ thống}
+    \label{fig:admin_extra_services}
+  \end{subfigure}\hfill
+  \begin{subfigure}[b]{0.32\textwidth}
+    \includegraphics[width=\linewidth,keepaspectratio]{ui-27-admin-amenities.png}
+    \caption{Tiện ích không gian làm việc}
+    \label{fig:admin_amenities}
+  \end{subfigure}\hfill
+  \begin{subfigure}[b]{0.32\textwidth}
+    \includegraphics[width=\linewidth,keepaspectratio]{ui-28-admin-promotions.png}
+    \caption{Chương trình khuyến mãi}
+    \label{fig:admin_promotions}
+  \end{subfigure}
+  \caption{Màn hình Quản lý Dịch vụ bổ sung, Tiện ích cơ sở vật chất và Chiến dịch Khuyến mãi}
+  \label{fig:ui-admin-amenities-services-promos}
+\end{figure}
+
+\begin{itemize}
+    \item \textbf{Dịch vụ bổ sung toàn chuỗi (Hình~\ref{fig:admin_extra_services}):} Định nghĩa các dịch vụ chuẩn áp dụng cho tất cả chi nhánh: đồ uống (\textit{Cà phê Latte: 35.000 đ, Nước ép: 45.000 đ}), dịch vụ in ấn (\textit{In trắng đen A4: 1.000 đ, In màu: 3.000 đ}) và thiết bị sự kiện (\textit{Máy chiếu 4K 150in: 150.000 đ/giờ, Bảng tương tác 75in: 100.000 đ/giờ}).
+    \item \textbf{Tiện ích không gian (Hình~\ref{fig:admin_amenities}):} Danh mục cơ sở vật chất chuẩn hóa (\textit{Wi-Fi tốc độ cao, Bảng trắng, Phòng cách âm, Điều hòa trung tâm, Màn hình TV, Nước uống miễn phí, Tủ khóa cá nhân}) để gắn tự động vào các loại phòng.
+    \item \textbf{Chương trình khuyến mãi (Hình~\ref{fig:admin_promotions}):} Thiết lập các mã giảm giá Marketing toàn hệ thống (ví dụ mã \texttt{DATN126} -- \textit{Ưu đãi Tốt nghiệp} giảm $10\%$ áp dụng trên mọi chi nhánh).
+\end{itemize}
+
+\noindent\textbf{5. Chương trình Khách hàng thân thiết (Loyalty Tiers):}\\
+Nhằm gia tăng tỷ lệ giữ chân khách hàng (Retention Rate), CoSpace tích hợp chương trình khách hàng thân thiết đa cấp độ (\texttt{MembershipTiersPage.tsx} -- Hình~\ref{fig:ui-admin-membership}):
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\linewidth,keepaspectratio]{ui-29-admin-membership-tiers.png}
+  \caption{Giao diện Cấu hình Chương trình Khách hàng thân thiết và Hạng thành viên Loyalty}
+  \label{fig:ui-admin-membership}
+\end{figure}
+
+Super Admin có thể thiết lập 4 hạng thành viên chuẩn:
+\begin{itemize}
+    \item \textbf{Bronze (Hạng mặc định):} Giảm $0\%$ tiền thuê phòng.
+    \item \textbf{Silver:} Giảm ngay $3\%$ trên mọi đơn đặt chỗ; điều kiện: chi tiêu tích lũy từ $2.000.000\text{ đ}$ hoặc hoàn thành từ 3 đơn đặt chỗ.
+    \item \textbf{Gold:} Giảm ngay $5\%$ trên mọi đơn đặt chỗ; điều kiện: chi tiêu tích lũy từ $5.000.000\text{ đ}$ hoặc hoàn thành từ 10 đơn đặt chỗ.
+    \item \textbf{Platinum:} Giảm ngay $10\%$ trên mọi đơn đặt chỗ; điều kiện: chi tiêu tích lũy từ $15.000.000\text{ đ}$ hoặc hoàn thành từ 20 đơn đặt chỗ.
+\end{itemize}
+Hệ thống tự động kích hoạt tiến trình xét duyệt thăng hạng mỗi khi một giao dịch được xác nhận thành công, bảo đảm quyền lợi tức thì cho người dùng.
+
+\noindent\textbf{6. Quản trị Hoàn tiền, Nhật ký kiểm toán an ninh và Báo cáo tài chính chuyên sâu:}\\
+Bộ ba công cụ giám sát tối cao phục vụ kiểm toán tài chính và minh bạch vận hành toàn hệ thống (Hình~\ref{fig:ui-admin-audit-reports-group}):
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[b]{0.32\textwidth}
+    \includegraphics[width=\linewidth,keepaspectratio]{ui-30-admin-refunds.png}
+    \caption{Quản lý Hoàn tiền toàn quốc}
+    \label{fig:admin_refunds}
+  \end{subfigure}\hfill
+  \begin{subfigure}[b]{0.32\textwidth}
+    \includegraphics[width=\linewidth,keepaspectratio]{ui-31-admin-audit-log.png}
+    \caption{Nhật ký kiểm toán (Audit Log)}
+    \label{fig:admin_audit_log}
+  \end{subfigure}\hfill
+  \begin{subfigure}[b]{0.32\textwidth}
+    \includegraphics[width=\linewidth,keepaspectratio]{ui-32-admin-reports.png}
+    \caption{Báo cáo Phân tích \& Thống kê}
+    \label{fig:admin_reports}
+  \end{subfigure}
+  \caption{Màn hình Quản trị Hoàn tiền, Nhật ký kiểm toán an ninh và Báo cáo phân tích tài chính}
+  \label{fig:ui-admin-audit-reports-group}
+\end{figure}
+
+\begin{itemize}
+    \item \textbf{Quản lý Hoàn tiền toàn quốc (Hình~\ref{fig:admin_refunds}):} Theo dõi tập trung các yêu cầu hoàn tiền phát sinh trên toàn chuỗi, thẩm định lý do và trạng thái giải ngân Napas / Voucher.
+    \item \textbf{Nhật ký kiểm toán an ninh (Audit Log -- Hình~\ref{fig:admin_audit_log}):} Ghi vết bất biến mọi tác động dữ liệu quan trọng trong cơ sở dữ liệu: Thời gian chính xác, người thực hiện (\textit{Admin Hệ Thống, Lê Thị Quản Lý, Nhân viên 1}), vai trò, loại hành động (\texttt{Thêm mới}, \texttt{Cập nhật}, \texttt{Xóa}, \texttt{RECALCULATE}, \texttt{SETTLE\_TAB}) và đối tượng đích (\textit{promotions, Chính sách hủy, membership\_tiers, Thanh toán, booking\_services}). Đây là bằng chứng xác thực hỗ trợ công tác truy vết khi có tranh chấp hoặc sự cố an toàn thông tin.
+    \item \textbf{Báo cáo Phân tích \& Thống kê kinh doanh (Hình~\ref{fig:admin_reports}):} Cung cấp bộ lọc theo dải thời gian từ ngày đến ngày và theo từng chi nhánh; tổng kết doanh thu lũy kế toàn chuỗi đạt \textbf{31.990.550 đ} với $118$ đơn đặt chỗ ($59$ đơn hoàn thành, $17$ đơn hủy); phân rã doanh thu theo từng chủng loại workspace và hiệu suất chi nhánh. Đặc biệt, giao diện tích hợp nút \textit{Xuất CSV} cho phép trích xuất dữ liệu thô phục vụ công tác kế toán và báo cáo hội đồng quản trị.
+\end{itemize}
 
 \section{Tổng kết chương}
 
-Chương 6 đã trình bày toàn diện kết quả hiện thực hệ sinh thái CoSpace từ tầng dịch vụ Back-end phức tạp đến tầng giao diện người dùng hiện đại:
+Chương 6 đã trình bày toàn diện và chi tiết kết quả hiện thực hệ sinh thái CoSpace từ tầng dịch vụ Back-end kỹ thuật phức tạp đến tầng giao diện người dùng hiện đại và chuẩn mực:
 \begin{itemize}
-    \item Hệ thống được tổ chức theo kiến trúc Monorepo chuẩn hóa, phân tách rõ ràng trách nhiệm giữa Back-end Spring Boot 3, Front-end React 18 và cơ sở dữ liệu PostgreSQL 15.
-    \item 6 phân hệ nghiệp vụ Back-end then chốt (\texttt{BookingService}, \texttt{PaymentService}, \texttt{PartnerMatchingService}, \texttt{ChatbotService}, \texttt{BookingExpiryScheduler}, \texttt{PricingService}) đã giải quyết triệt để các bài toán kỹ thuật thực tế về kiểm soát tương tranh, an toàn thanh toán, gợi ý AI và giải phóng tài nguyên định kỳ.
-    \item Ứng dụng công nghệ đóng gói Docker Multi-stage tối ưu hóa kích thước hình ảnh phần mềm còn 215MB, kết hợp phân tách chunk Front-end trên Vercel Edge CDN giúp tải trang siêu tốc dưới 0.8 giây.
-    \item Hiện thực thành công 15 màn hình giao diện chuẩn mực thuộc 4 phân hệ người dùng, mang lại trải nghiệm tương tác trực quan qua sơ đồ mặt bằng SVG, thanh toán VietQR động và kết nối mạng lưới thông minh.
+    \item Hệ sinh thái được tổ chức theo kiến trúc Monorepo chuẩn mực, phân tách minh bạch trách nhiệm giữa Back-end Spring Boot 3, Front-end React 18 / TypeScript và cơ sở dữ liệu quan hệ PostgreSQL 15.
+    \item 6 dịch vụ nghiệp vụ cốt lõi tầng Back-end (\texttt{BookingService}, \texttt{PaymentService}, \texttt{PartnerMatchingService}, \texttt{ChatbotService}, \texttt{BookingExpiryScheduler}, \texttt{PricingService}) đã giải quyết thành công các bài toán kỹ thuật chuyên sâu về kiểm soát tương tranh hai tầng, an toàn dòng tiền PayOS VietQR, so khớp đối tác Jaccard AI và tự động hóa giải phóng tài nguyên giữ chỗ quá hạn.
+    \item Quy trình đóng gói Docker Multi-stage giúp tối ưu hóa kích thước hình ảnh phần mềm còn 215MB, kết hợp phân tách chunk Front-end trên Vercel Edge CDN mang lại tốc độ nạp trang ban đầu dưới 0.8 giây.
+    \item Hiện thực thành công trọn vẹn \textbf{40 màn hình giao diện trực quan} thuộc 5 phân nhóm trải nghiệm, bao gồm Trang chủ Bento UI, Canvas Sơ đồ mặt bằng 2D, Trình biên tập kiến trúc Floor Plan Editor chuyên nghiệp, quy trình Check-in/out dung sai 30 phút, thanh toán VietQR động và mạng lưới kết nối đối tác thông minh.
 \end{itemize}
