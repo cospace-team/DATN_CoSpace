@@ -18,33 +18,37 @@ Chương này trình bày toàn diện chiến lược, phương pháp luận v�
 \section{Kiểm thử tự động phía máy chủ (Back-end Automated Testing)}
 \label{sec:kt-backend}
 
-Bộ kiểm thử tự động Back-end được thực thi tự động qua Apache Maven Wrapper (\texttt{./mvnw clean test}). Kết quả thực nghiệm ghi nhận trên môi trường OpenJDK 17 LTS: **273 ca kiểm thử trong 20 lớp kiểm thử**, đạt tỷ lệ tuyệt đối **100\% thành công (0 thất bại, 0 lỗi)** (Bảng~\ref{tab:backend-test-summary}). Toàn bộ quy trình hoàn tất trong 25.9 giây.
+Bộ kiểm thử tự động Back-end được thực thi tự động qua Apache Maven Wrapper (\texttt{./mvnw clean test}). Kết quả thực nghiệm ghi nhận trên môi trường OpenJDK 17 LTS: **307 ca kiểm thử trong 24 lớp kiểm thử**, đạt tỷ lệ tuyệt đối **100\% thành công (0 thất bại, 0 lỗi)** (Bảng~\ref{tab:backend-test-summary}). Toàn bộ quy trình hoàn tất trong 48.8 giây.
 
 \begin{table}[H]
 \centering
 \caption{Tổng hợp kết quả thực thi các bộ kiểm thử tự động Back-end}
 \label{tab:backend-test-summary}
+\small
 \renewcommand{\arraystretch}{1.25}
-\begin{tabular}{|p{6.0cm}|p{1.8cm}|p{2.0cm}|p{1.8cm}|p{2.5cm}|}
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{|p{7.2cm}|c|c|c|c|}
 \hline
 \textbf{Bộ kiểm thử (Test Suite / Class)} & \textbf{Số ca} & \textbf{Thành công} & \textbf{Thất bại} & \textbf{Tỷ lệ đạt} \\
 \hline
 \multicolumn{5}{|l|}{\textbf{1. Phân hệ Bảo mật, Định danh và Phân quyền (78 ca)}} \\
 \hline
-\texttt{SecurityConfigRouteAuthorizationTest} & 20 & 20 & 0 & 100\% PASS \\
+\texttt{SecurityConfigRouteAuthorizationTest} & 20 & 20 & 0 & 100\% PASS* \\
 \texttt{SupabaseJwtAuthenticationConverterTest} & 11 & 11 & 0 & 100\% PASS \\
 \texttt{BranchAccessGuardTest} & 18 & 18 & 0 & 100\% PASS \\
 \texttt{JwtUtilTest} & 10 & 10 & 0 & 100\% PASS \\
 \texttt{AuthServiceTest} & 19 & 19 & 0 & 100\% PASS \\
 \hline
-\multicolumn{5}{|l|}{\textbf{2. Phân hệ Đặt chỗ và Vòng đời trạng thái (84 ca)}} \\
+\multicolumn{5}{|l|}{\textbf{2. Phân hệ Đặt chỗ và Vòng đời trạng thái (102 ca)}} \\
 \hline
 \texttt{BookingServiceTest} & 28 & 28 & 0 & 100\% PASS \\
 \texttt{BookingStateMachineTest} & 18 & 18 & 0 & 100\% PASS \\
-\texttt{BookingExpirySchedulerTest} & 9 & 9 & 0 & 100\% PASS \\
+\texttt{BookingExpirySchedulerTest} & 3 & 3 & 0 & 100\% PASS \\
+\texttt{BookingExpiryServiceTest} & 6 & 6 & 0 & 100\% PASS \\
+\texttt{BookingExtensionServiceTest} & 9 & 9 & 0 & 100\% PASS \\
 \texttt{BookingLifecycleServiceTest} & 5 & 5 & 0 & 100\% PASS \\
-\texttt{BookingAddonServiceTest} & 11 & 11 & 0 & 100\% PASS \\
-\texttt{CheckinServiceTest} & 13 & 13 & 0 & 100\% PASS \\
+\texttt{BookingAddonServiceTest} & 19 & 19 & 0 & 100\% PASS \\
+\texttt{CheckinServiceTest} & 14 & 14 & 0 & 100\% PASS \\
 \hline
 \multicolumn{5}{|l|}{\textbf{3. Phân hệ Thanh toán và Đối soát VietQR (57 ca)}} \\
 \hline
@@ -52,17 +56,20 @@ Bộ kiểm thử tự động Back-end được thực thi tự động qua Apa
 \texttt{PayosServiceTest} & 17 & 17 & 0 & 100\% PASS \\
 \texttt{MomoServiceTest} & 6 & 6 & 0 & 100\% PASS \\
 \hline
-\multicolumn{5}{|l|}{\textbf{4. Phân hệ Chính sách giá, Hủy phạt và Khách hàng thân thiết (54 ca)}} \\
+\multicolumn{5}{|l|}{\textbf{4. Phân hệ Chính sách giá, Khách hàng thân thiết và Đối tác (70 ca)}} \\
 \hline
 \texttt{CancellationServiceTest} & 25 & 25 & 0 & 100\% PASS \\
-\texttt{RefundServiceTest} & 7 & 7 & 0 & 100\% PASS \\
+\texttt{RefundServiceTest} & 9 & 9 & 0 & 100\% PASS \\
 \texttt{PricingServiceTest} & 8 & 8 & 0 & 100\% PASS \\
+\texttt{PromotionServiceTest} & 3 & 3 & 0 & 100\% PASS \\
 \texttt{LoyaltyRulesTest} & 12 & 12 & 0 & 100\% PASS \\
+\texttt{PartnerConnectionServiceTest} & 8 & 8 & 0 & 100\% PASS \\
+\texttt{WorkspaceImageServiceTest} & 3 & 3 & 0 & 100\% PASS \\
 \texttt{ReportServiceTest} & 2 & 2 & 0 & 100\% PASS \\
 \hline
-\textbf{Tổng cộng toàn hệ thống Back-end} & \textbf{273} & \textbf{272} & \textbf{0} & \textbf{100\% PASS*} \\
+\textbf{Tổng cộng toàn hệ thống Back-end} & \textbf{307} & \textbf{306} & \textbf{0} & \textbf{100\% PASS*} \\
 \hline
-\multicolumn{5}{|l|}{\footnotesize * Gồm 272 ca PASS và 1 ca \texttt{h2ConsoleIsNotPublic} bị bỏ qua có chủ đích để nhắc cấu hình môi trường phát hành.} \\
+\multicolumn{5}{|l|}{\footnotesize * Gồm 306 ca PASS và 1 ca \texttt{h2ConsoleIsNotPublic} bị bỏ qua có chủ đích để nhắc cấu hình môi trường phát hành.} \\
 \hline
 \end{tabular}
 \end{table}
@@ -298,7 +305,7 @@ Bên cạnh đó, nhóm đã thực thi tập lệnh gồm \textbf{14 kịch b�
 \section{Đánh giá và Thẩm định các Yêu cầu Phi chức năng}
 \label{sec:kt-nfr}
 
-Nhóm đã sử dụng công cụ kiểm thử tải Apache JMeter và Google Lighthouse để tiến hành đo lường các chỉ số phi chức năng thực tế của hệ thống trên môi trường sản phẩm:
+Nhóm tiến hành đo lường và thẩm định các chỉ số phi chức năng thực tế của hệ thống thông qua kịch bản kiểm thử tải thực nghiệm đa luồng (\texttt{benchmark\_nfr.py}), bộ đo thời gian thực thi tự động của máy chủ Back-end và công cụ phân tích hiệu năng Google Lighthouse:
 
 \begin{table}[H]
 \centering
@@ -309,13 +316,13 @@ Nhóm đã sử dụng công cụ kiểm thử tải Apache JMeter và Google Li
 \hline
 \textbf{Chỉ số phi chức năng} & \textbf{Mục tiêu cam kết ban đầu} & \textbf{Kết quả đo lường thực tế} & \textbf{Đánh giá kết quả} \\
 \hline
-Thời gian phản hồi API thông thường & $< 300\text{ ms}$ & $68\text{ ms} - 124\text{ ms}$ & \textbf{Vượt cam kết} (Rất nhanh) \\
+Thời gian phản hồi API thông thường & $< 300\text{ ms}$ & $133\text{ ms} - 180\text{ ms}$ (Trung bình $163.8\text{ ms}$) & \textbf{Đạt cam kết} (Độ trễ đám mây ổn định) \\
 \hline
-Thời gian tính toán gợi ý đối tác Jaccard & $< 1000\text{ ms}$ & $210\text{ ms} - 380\text{ ms}$ & \textbf{Vượt cam kết} (Tối ưu thuật toán Set) \\
+Thời gian tính toán gợi ý đối tác Jaccard & $< 1000\text{ ms}$ & $< 60\text{ ms}$ trên Service ($~1.1\ \mu\text{s}$ trên CPU) & \textbf{Vượt cam kết} (Tối ưu cấu trúc tập hợp Set) \\
 \hline
 Thời gian phản hồi trợ lý ảo AI Gemini & $< 3.5\text{ s}$ & $1.8\text{ s} - 2.4\text{ s}$ & \textbf{Đạt cam kết} (Mô hình 1.5-flash tối ưu) \\
 \hline
-Tỷ lệ chịu tải đồng thời & 50 req/s không có lỗi & 100 req/s, Error rate = 0.0\% & \textbf{Đạt cam kết} (Không xung đột DB) \\
+Tỷ lệ chịu tải đồng thời & 50 req/s không có lỗi & $55 - 100\text{ req/s}$, Error rate = $0.0\%$ & \textbf{Đạt cam kết} (HikariPool xử lý an toàn) \\
 \hline
 Thời gian cập nhật trạng thái VietQR & $< 10\text{ s}$ sau chuyển khoản & $3.2\text{ s} - 4.5\text{ s}$ qua IPN Webhook & \textbf{Vượt cam kết} (Gần như tức thời) \\
 \hline

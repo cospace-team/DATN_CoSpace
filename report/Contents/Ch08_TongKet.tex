@@ -32,7 +32,7 @@ Phương thức thanh toán tích hợp & 3 phương thức (Cổng PayOS VietQR
 \hline
 Tích hợp Trợ lý ảo AI và Công cụ & Google Gemini 1.5 Flash hỗ trợ 9 Function Tools (6 tra cứu, 3 đề xuất hành động xác thực) \\
 \hline
-Kiểm thử tự động phía máy chủ Back-end & 273 ca kiểm thử trong 20 lớp, 0 ca thất bại, đạt tỷ lệ 100\% thành công \\
+Kiểm thử tự động phía máy chủ Back-end & 307 ca kiểm thử trong 24 lớp, 0 ca thất bại, đạt tỷ lệ 100\% thành công \\
 \hline
 Kích thước gói phân phối giao diện Front-end & 193.0 kB Gzip (giảm 76.4\% nhờ chia nhỏ manualChunks Vite) \\
 \hline
@@ -91,7 +91,7 @@ So với các giải pháp quản lý văn phòng truyền thống và các hệ
     \item \textbf{Ứng dụng Trí tuệ Nhân tạo có kiểm soát (Proposal-Confirmation):} Tích hợp mô hình ngôn ngữ lớn Google Gemini 1.5 Flash theo mô hình an toàn hai pha: các thao tác ghi dữ liệu nhạy cảm chỉ sinh ra thẻ đề xuất (Proposal Card) để người dùng xác nhận trên giao diện, ngăn ngừa tuyệt đối nguy cơ AI sinh ảo giác làm thay đổi dữ liệu trái phép.
     \item \textbf{Trải nghiệm người dùng tương tác phong phú:} Sơ đồ mặt bằng tương tác vector SVG cho phép quan sát trực quan vị trí ghế trống/đang dùng theo thời gian thực; giao diện quầy lễ tân trang bị cơ chế dung sai Check-in $\pm 30$ phút và quản lý dịch vụ phát sinh (Running Tab).
     \item \textbf{Hiệu năng cao và Đóng gói triển khai tối ưu:} Nhờ kỹ thuật Docker Multi-stage build (rút gọn hình ảnh phần mềm còn 215MB) và chia nhỏ gói tệp Front-end trên Vercel Edge CDN (gói Gzip 193kB), hệ thống đạt điểm hiệu năng Google Lighthouse 94/100 với thời gian tải trang dưới 0.8 giây và độ trễ API dưới 125ms.
-    \item \textbf{Đảm bảo chất lượng bằng 273 ca kiểm thử tự động:} Tỷ lệ bao phủ kiểm thử cao bảo vệ vững chắc mọi luồng nghiệp vụ nhạy cảm, cho phép nâng cấp mã nguồn an toàn mà không lo lỗi hồi quy (Regression Bugs).
+    \item \textbf{Đảm bảo chất lượng bằng 307 ca kiểm thử tự động:} Tỷ lệ bao phủ kiểm thử cao bảo vệ vững chắc mọi luồng nghiệp vụ nhạy cảm, cho phép nâng cấp mã nguồn an toàn mà không lo lỗi hồi quy (Regression Bugs).
 \end{enumerate}
 
 \section{Những mặt còn hạn chế}
@@ -100,7 +100,7 @@ So với các giải pháp quản lý văn phòng truyền thống và các hệ
 Bên cạnh những kết quả xuất sắc đã đạt được, nhóm nghiên cứu thẳng thắn nhìn nhận hệ thống vẫn còn một số điểm hạn chế kỹ thuật cần tiếp tục hoàn thiện:
 
 \begin{enumerate}
-    \item \textbf{Phạm vi kiểm thử tích hợp chưa gắn kết hoàn toàn với CSDL thật:} Toàn bộ 273 ca kiểm thử tự động phía máy chủ hiện đang chạy trên nền tảng Mockito và cơ sở dữ liệu giả lập trong bộ nhớ. Mặc dù các kịch bản SQL riêng biệt đã chạy thành công trên PostgreSQL thật, việc tự động hóa kiểm thử tích hợp CSDL thật trong quy trình CI/CD (thông qua giải pháp Testcontainers) vẫn chưa được thiết lập.
+    \item \textbf{Phạm vi kiểm thử tích hợp chưa gắn kết hoàn toàn với CSDL thật:} Toàn bộ 307 ca kiểm thử tự động phía máy chủ hiện đang chạy trên nền tảng Mockito và cơ sở dữ liệu giả lập trong bộ nhớ. Mặc dù các kịch bản SQL riêng biệt đã chạy thành công trên PostgreSQL thật, việc tự động hóa kiểm thử tích hợp CSDL thật trong quy trình CI/CD (thông qua giải pháp Testcontainers) vẫn chưa được thiết lập.
     \item \textbf{Quy trình giải ngân hoàn tiền còn bước xác nhận thủ công:} Mặc dù hệ thống đã tự động hóa việc tính toán phí phạt và ghi nhận số tiền hoàn vào bảng đối soát, việc chuyển khoản tiền hoàn về tài khoản ngân hàng của khách hàng vẫn cần sự can thiệp phê duyệt thủ công của Quản lý chi nhánh trước khi chuyển tiền qua cổng chi hộ.
     \item \textbf{Kiến trúc tác vụ định kỳ đơn phiên bản (Single-Instance Scheduler):} Bộ quét giải phóng đơn \texttt{BookingExpiryScheduler} và bộ nhớ đệm ứng dụng hiện đang hoạt động trực tiếp trong bộ nhớ máy chủ Spring Boot. Thiết kế này hoạt động tối ưu trên môi trường đơn phiên bản; khi mở rộng nhân bản máy chủ theo chiều ngang (Horizontal Scaling) cần bổ sung cơ chế khóa phân tán (Distributed Lock).
     \item \textbf{Giới hạn về nền tảng di động bản địa và phần cứng IoT:} Hệ thống hiện vận hành trên nền tảng Web tương thích thiết bị di động (Responsive Web), chưa xây dựng ứng dụng di động bản địa (Native Mobile App) trên App Store và Google Play; đồng thời quy trình mở cửa ra vào vẫn phụ thuộc vào xác thực của nhân viên quầy, chưa tích hợp với khóa cửa điện tử IoT (Smart Door Locks).
@@ -129,15 +129,15 @@ Nhằm nâng cao chất lượng kỹ thuật và chuẩn bị cho việc thươ
     \item \textbf{Tối ưu hóa gợi ý đối tác bằng Nhúng véc-tơ (Vector Embeddings \& pgvector):} Ứng dụng mô hình nhúng ngữ nghĩa (Text Embeddings) kết hợp tiện ích mở rộng \texttt{pgvector} của PostgreSQL để phân tích ngữ nghĩa chuyên sâu hồ sơ kỹ năng, bài đăng và nhu cầu tuyển dụng cộng sự, nâng cao độ chính xác và giá trị thương mại của tính năng kết nối mạng lưới đối tác.
 \end{itemize}
 
-\section{Lời kết và Lời cảm ơn}
-\label{sec:tk-loi-ket}
+\section{Kết luận chung}
+\label{sec:tk-ket-luan-chung}
 
-Đề tài \textbf{``Phát triển hệ thống quản lý văn phòng chia sẻ (CoSpace)''} đã hoàn thành xuất sắc các mục tiêu nghiên cứu và phát triển đề ra. Đồ án không chỉ cung cấp một sản phẩm phần mềm hoàn chỉnh, sẵn sàng ứng dụng vào thực tiễn kinh doanh mà còn đúc kết được những bài học kỹ thuật giá trị về kiến trúc phân tầng chuẩn mực, kiểm soát tương tranh hai tầng, an toàn giao dịch tài chính và tích hợp trí tuệ nhân tạo có kiểm soát an toàn.
-
-Nhóm tác giả xin bày tỏ lòng biết ơn sâu sắc và chân thành nhất đến:
+Trải qua hai học kỳ nghiên cứu và phát triển liên tục từ giai đoạn Đồ án chuyên ngành đến Đồ án tốt nghiệp, đề tài \textbf{``Phát triển hệ thống quản lý văn phòng chia sẻ (CoSpace)''} đã hoàn thành trọn vẹn tất cả các mục tiêu đề ra ban đầu. Hệ thống không chỉ cung cấp một sản phẩm phần mềm hoàn chỉnh, vận hành ổn định trên nền tảng đám mây và sẵn sàng ứng dụng vào thực tiễn kinh doanh, mà còn chứng minh được tính khả thi của các giải pháp kỹ thuật chuyên sâu:
 \begin{itemize}
-    \item \textbf{ThS. Trương Quỳnh Chi} -- Giảng viên hướng dẫn, đã tận tâm chỉ bảo, định hướng phương pháp luận khoa học, phản biện kỹ thuật và đồng hành cùng nhóm trong suốt quá trình thực hiện đồ án tốt nghiệp.
-    \item \textbf{Quý Thầy Cô trong Hội đồng Chấm Đồ án Tốt nghiệp:} PGS. TS. Lê Hồng Trang (Chủ tịch Hội đồng), TS. Phạm An Vinh (Thư ký), ThS. Lê Thị Bảo Thu (Ủy viên) cùng Giảng viên hướng dẫn ThS. Trương Quỳnh Chi đã dành thời gian quý báu đọc duyệt, nhận xét và đóng góp những ý kiến học thuật sâu sắc để đề tài được hoàn thiện một cách trọn vẹn nhất.
-    \item Toàn thể Quý Thầy Cô Khoa Khoa học và Kỹ thuật Máy tính, Trường Đại học Bách khoa -- ĐHQG-HCM, những người đã truyền dạy tri thức nền tảng và niềm đam mê công nghệ trong suốt những năm tháng đại học.
-    \item Gia đình, người thân và bạn bè đã luôn là điểm tựa vững chắc, động viên và tạo mọi điều kiện thuận lợi nhất để nhóm hoàn thành tốt đồ án tốt nghiệp này.
+    \item Giải quyết triệt để bài toán xung đột tài nguyên không gian--thời gian thông qua cơ chế kiểm soát tương tranh hai tầng tối tân (\texttt{pg\_advisory\_xact\_lock} và \texttt{EXCLUDE USING gist}).
+    \item Tự động hóa quy trình thanh toán trực tuyến VietQR Napas 24/7 an toàn lỗi, đối soát minh bạch và giải phóng tài nguyên giữ chỗ tức thời.
+    \item Ứng dụng sáng tạo mô hình Trí tuệ Nhân tạo Gemini với cơ chế thẻ đề xuất an toàn hai pha, kết hợp thuật toán so khớp đối tác Jaccard giúp gia tăng giá trị kết nối cộng đồng.
+    \item Tối ưu hóa toàn diện hiệu năng phân phối gói phần mềm và trải nghiệm người dùng tương tác phong phú trên nền tảng Web hiện đại.
 \end{itemize}
+
+Quá trình thực hiện đồ án tốt nghiệp đã trang bị cho các thành viên trong nhóm những kiến thức thực tế vô cùng quý báu về phương pháp luận nghiên cứu khoa học, kỹ năng thiết kế kiến trúc phần mềm chuẩn mực, quy trình kiểm thử tự động nghiêm ngặt và tác phong làm việc nhóm chuyên nghiệp theo mô hình Agile/Scrum. Đây chính là hành trang vững chắc để nhóm tự tin bước vào môi trường kỹ thuật phần mềm thực tế và tiếp tục phát triển các sản phẩm công nghệ có giá trị cao trong tương lai.
