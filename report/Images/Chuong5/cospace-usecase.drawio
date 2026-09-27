@@ -1,3 +1,4 @@
+<?xml version='1.0' encoding='utf-8'?>
 <mxfile host="Claude" type="device">
   <diagram id="page1" name="Hệ thống quản lý văn phòng chia sẻ CoSpace">
     <mxGraphModel dx="1200" dy="800" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="826" math="0" shadow="0" adaptiveColors="auto">
@@ -168,8 +169,7 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="ga53" value="Cổng thanh toán
-(PayOS / MoMo)" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=12;fontStyle=2;strokeColor=#b85450;fillColor=#f8cecc" vertex="1" parent="1">
+        <mxCell id="ga53" value="Cổng thanh toán (PayOS / MoMo)" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=12;fontStyle=2;strokeColor=#b85450;fillColor=#f8cecc" vertex="1" parent="1">
           <mxGeometry x="1225" y="535" width="60" height="90" as="geometry" />
         </mxCell>
         <mxCell id="ge54" value="" style="edgeStyle=orthogonalEdgeStyle;endArrow=none;html=1;rounded=0;strokeColor=#b85450;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0" edge="1" parent="1" source="ga53" target="gu5">
@@ -230,7 +230,7 @@
         <mxCell id="cc3" value="Đăng nhập bằng Google SSO" style="ellipse;whiteSpace=wrap;html=1;fontSize=11;fillColor=#fff2cc;strokeColor=#d6b656;dashed=0" vertex="1" parent="1">
           <mxGeometry x="830" y="182" width="280" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="ce4" value="«extend»" style="endArrow=open;endFill=0;endSize=8;dashed=1;html=1;rounded=0;strokeColor=#7f7f7f;fontSize=10;fontColor=#555555;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0" edge="1" parent="1" source="cu2" target="cc3">
+        <mxCell id="ce4" value="«extend»" style="endArrow=open;endFill=0;endSize=8;dashed=1;html=1;rounded=0;strokeColor=#7f7f7f;fontSize=10;fontColor=#555555;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0" edge="1" parent="1" source="cc3" target="cu2">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="cu5" value="Quản lý hồ sơ cá nhân" style="ellipse;whiteSpace=wrap;html=1;fontSize=12;fillColor=#dae8fc;strokeColor=#6c8ebf" vertex="1" parent="1">
@@ -266,13 +266,13 @@
         <mxCell id="cc15" value="Áp dụng mã khuyến mãi" style="ellipse;whiteSpace=wrap;html=1;fontSize=11;fillColor=#fff2cc;strokeColor=#d6b656;dashed=0" vertex="1" parent="1">
           <mxGeometry x="830" y="734" width="280" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="ce16" value="«extend»" style="endArrow=open;endFill=0;endSize=8;dashed=1;html=1;rounded=0;strokeColor=#7f7f7f;fontSize=10;fontColor=#555555;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0" edge="1" parent="1" source="cu14" target="cc15">
+        <mxCell id="ce16" value="«extend»" style="endArrow=open;endFill=0;endSize=8;dashed=1;html=1;rounded=0;strokeColor=#7f7f7f;fontSize=10;fontColor=#555555;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0" edge="1" parent="1" source="cc15" target="cu14">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="cc17" value="Áp dụng chiết khấu hạng thành viên" style="ellipse;whiteSpace=wrap;html=1;fontSize=11;fillColor=#fff2cc;strokeColor=#d6b656;dashed=0" vertex="1" parent="1">
           <mxGeometry x="830" y="826" width="280" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="ce18" value="«extend»" style="endArrow=open;endFill=0;endSize=8;dashed=1;html=1;rounded=0;strokeColor=#7f7f7f;fontSize=10;fontColor=#555555;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0" edge="1" parent="1" source="cu14" target="cc17">
+        <mxCell id="ce18" value="«extend»" style="endArrow=open;endFill=0;endSize=8;dashed=1;html=1;rounded=0;strokeColor=#7f7f7f;fontSize=10;fontColor=#555555;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0" edge="1" parent="1" source="cc17" target="cu14">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="cu19" value="Chọn dịch vụ bổ sung cho đơn" style="ellipse;whiteSpace=wrap;html=1;fontSize=12;fillColor=#dae8fc;strokeColor=#6c8ebf" vertex="1" parent="1">
@@ -308,7 +308,7 @@
         <mxCell id="cc29" value="Đặt chỗ qua hội thoại" style="ellipse;whiteSpace=wrap;html=1;fontSize=11;fillColor=#fff2cc;strokeColor=#d6b656;dashed=0" vertex="1" parent="1">
           <mxGeometry x="830" y="1562" width="280" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="ce30" value="«extend»" style="endArrow=open;endFill=0;endSize=8;dashed=1;html=1;rounded=0;strokeColor=#7f7f7f;fontSize=10;fontColor=#555555;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0" edge="1" parent="1" source="cu28" target="cc29">
+        <mxCell id="ce30" value="«extend»" style="endArrow=open;endFill=0;endSize=8;dashed=1;html=1;rounded=0;strokeColor=#7f7f7f;fontSize=10;fontColor=#555555;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0" edge="1" parent="1" source="cc29" target="cu28">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="ca31" value="Khách hàng" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=13;fontStyle=1" vertex="1" parent="1">
@@ -381,8 +381,7 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="ca51" value="Cổng thanh toán
-(PayOS / MoMo)" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=12;fontStyle=2;strokeColor=#b85450;fillColor=#f8cecc" vertex="1" parent="1">
+        <mxCell id="ca51" value="Cổng thanh toán (PayOS / MoMo)" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=12;fontStyle=2;strokeColor=#b85450;fillColor=#f8cecc" vertex="1" parent="1">
           <mxGeometry x="1225" y="765" width="60" height="90" as="geometry" />
         </mxCell>
         <mxCell id="ce52" value="" style="edgeStyle=orthogonalEdgeStyle;endArrow=none;html=1;rounded=0;strokeColor=#b85450;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0" edge="1" parent="1" source="ca51" target="cu14">
@@ -448,7 +447,7 @@
         <mxCell id="sc11" value="Ghi nhận khách không đến (no-show)" style="ellipse;whiteSpace=wrap;html=1;fontSize=11;fillColor=#fff2cc;strokeColor=#d6b656;dashed=0" vertex="1" parent="1">
           <mxGeometry x="830" y="550" width="280" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="se12" value="«extend»" style="endArrow=open;endFill=0;endSize=8;dashed=1;html=1;rounded=0;strokeColor=#7f7f7f;fontSize=10;fontColor=#555555;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0" edge="1" parent="1" source="su10" target="sc11">
+        <mxCell id="se12" value="«extend»" style="endArrow=open;endFill=0;endSize=8;dashed=1;html=1;rounded=0;strokeColor=#7f7f7f;fontSize=10;fontColor=#555555;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0" edge="1" parent="1" source="sc11" target="su10">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="su13" value="Ghi nhận dịch vụ gọi thêm" style="ellipse;whiteSpace=wrap;html=1;fontSize=12;fillColor=#dae8fc;strokeColor=#6c8ebf" vertex="1" parent="1">
@@ -607,7 +606,7 @@
         <mxCell id="bc13" value="Xuất dữ liệu báo cáo CSV" style="ellipse;whiteSpace=wrap;html=1;fontSize=11;fillColor=#fff2cc;strokeColor=#d6b656;dashed=0" vertex="1" parent="1">
           <mxGeometry x="830" y="918" width="280" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="be14" value="«extend»" style="endArrow=open;endFill=0;endSize=8;dashed=1;html=1;rounded=0;strokeColor=#7f7f7f;fontSize=10;fontColor=#555555;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0" edge="1" parent="1" source="bu12" target="bc13">
+        <mxCell id="be14" value="«extend»" style="endArrow=open;endFill=0;endSize=8;dashed=1;html=1;rounded=0;strokeColor=#7f7f7f;fontSize=10;fontColor=#555555;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0" edge="1" parent="1" source="bc13" target="bu12">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="bu15" value="Xem nhật ký hoạt động của chi nhánh" style="ellipse;whiteSpace=wrap;html=1;fontSize=12;fillColor=#dae8fc;strokeColor=#6c8ebf" vertex="1" parent="1">
@@ -713,7 +712,7 @@
         <mxCell id="ac14" value="Xuất dữ liệu CSV" style="ellipse;whiteSpace=wrap;html=1;fontSize=11;fillColor=#fff2cc;strokeColor=#d6b656;dashed=0" vertex="1" parent="1">
           <mxGeometry x="830" y="1010" width="280" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="ae15" value="«extend»" style="endArrow=open;endFill=0;endSize=8;dashed=1;html=1;rounded=0;strokeColor=#7f7f7f;fontSize=10;fontColor=#555555;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0" edge="1" parent="1" source="au13" target="ac14">
+        <mxCell id="ae15" value="«extend»" style="endArrow=open;endFill=0;endSize=8;dashed=1;html=1;rounded=0;strokeColor=#7f7f7f;fontSize=10;fontColor=#555555;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0" edge="1" parent="1" source="ac14" target="au13">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="au16" value="Tra cứu nhật ký kiểm toán toàn hệ thống" style="ellipse;whiteSpace=wrap;html=1;fontSize=12;fillColor=#dae8fc;strokeColor=#6c8ebf" vertex="1" parent="1">

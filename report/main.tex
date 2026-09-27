@@ -23,106 +23,81 @@
 \newcommand{\thoigian}{TP. HỒ CHÍ MINH, THÁNG 10/2026}
 
 \begin{document}
+\hypersetup{pageanchor=false}
 
 %=====================================================================
-%  TRANG BÌA 1: TRANG BÌA CHÍNH THỨC
+%  TRANG BÌA CHÍNH THỨC (CÓ KHUNG VIỀN ĐÔI CHUẨN BÁCH KHOA)
 %=====================================================================
 \begin{titlepage}
-\begin{center}
-\textbf{\large ĐẠI HỌC QUỐC GIA THÀNH PHỐ HỒ CHÍ MINH} \\
-\textbf{\large TRƯỜNG ĐẠI HỌC BÁCH KHOA} \\
-\textbf{\large KHOA KHOA HỌC VÀ KỸ THUẬT MÁY TÍNH} \\
-\vspace{0.6cm}
-\begin{picture}(45,45)(0,0)
-    \put(-22,-8){\includegraphics[width=35mm, height=35mm]{hcmut.png}}
-\end{picture}
-\vspace{0.8cm}
+\begin{tikzpicture}[remember picture, overlay]
+  \draw[line width=3.0pt] ($(current page.north west)+(20mm,-15mm)$) rectangle ($(current page.south east)+(-15mm,15mm)$);
+  \draw[line width=1.0pt] ($(current page.north west)+(21.5mm,-16.5mm)$) rectangle ($(current page.south east)+(-16.5mm,16.5mm)$);
+\end{tikzpicture}
 
-\parbox{0.95\textwidth}{\centering
+\begin{center}
+\textbf{\large ĐẠI HỌC QUỐC GIA THÀNH PHỐ HỒ CHÍ MINH} \\[0.12cm]
+\textbf{\large TRƯỜNG ĐẠI HỌC BÁCH KHOA} \\[0.12cm]
+\textbf{\large KHOA KHOA HỌC VÀ KỸ THUẬT MÁY TÍNH}
+\end{center}
+
+\vspace{0.2cm}
+\begin{center}
+\includegraphics[width=2.8cm,keepaspectratio]{hcmut.png}
+\end{center}
+\vspace{0.2cm}
+
+\begin{center}
+\parbox{0.92\textwidth}{\centering
 \textbf{{\LARGE BÁO CÁO}}\\[0.2cm]
-\textbf{{\LARGE ĐỒ ÁN TỐT NGHIỆP}}\\[0.5cm]
-\textbf{\LARGE \tendetai}\\[0.3cm]
-{\large \textbf{\tendetaiphu}}\\[0.4cm]
-{\large \textbf{CHUYÊN NGÀNH: \chuyennganh}}\\[0.2cm]
-{\Large NGÀNH: \nganh}
+\textbf{{\LARGE ĐỒ ÁN TỐT NGHIỆP}}\\[0.35cm]
+\textbf{\LARGE \tendetai}\\[0.2cm]
+{\large \textbf{\tendetaiphu}}\\[0.35cm]
+{\large \textbf{CHUYÊN NGÀNH: \chuyennganh}}\\[0.15cm]
+{\Large \textbf{NGÀNH: \nganh}}
 }
 \end{center}
 
-\vspace{0.4cm}
-\begin{table}[h]
-\begin{tabular}{rll}
-\hspace{3.8cm} & \textbf{\large HỘI ĐỒNG:} & {\large \hoidong} \\[0.25cm]
-\hspace{3.8cm} & \textbf{\large MÃ ĐỒ ÁN:} & {\large \madoan} \\[0.25cm]
-\hspace{3.8cm} & \textbf{\large GVHD:}     & {\large \gvhd} \\[0.25cm]
-\hspace{3.8cm} & \multicolumn{2}{l}{\hspace{2.2cm}\textbf{\Large ---o0o---}} \\[0.25cm]
-\hspace{3.8cm} & \textbf{\large SVTH 1:}   & {\large \svmot} \\[0.25cm]
-\hspace{3.8cm} & \textbf{\large SVTH 2:}   & {\large \svhai} \\[0.25cm]
-\end{tabular}
-\end{table}
+\vfill
 
-\vspace{0.4cm}
 \begin{center}
-{\Large \thoigian}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{rll}
+\hspace{1.5cm} & \textbf{\large HỘI ĐỒNG:} & {\large \hoidong} \\[0.15cm]
+\hspace{1.5cm} & \textbf{\large GVHD:}     & {\large \gvhd} \\[0.15cm]
+\hspace{1.5cm} & \multicolumn{2}{l}{\hspace{2.2cm}\textbf{\Large ---o0o---}} \\[0.15cm]
+\hspace{1.5cm} & \textbf{\large SVTH 1:}   & {\large \svmot} \\[0.15cm]
+\hspace{1.5cm} & \textbf{\large SVTH 2:}   & {\large \svhai} \\
+\end{tabular}
 \end{center}
+
+\vfill
+
+\begin{center}
+{\large \textbf{\thoigian}}
+\end{center}
+\vspace{0.4cm}
 \end{titlepage}
 
 %=====================================================================
-%  TRANG BÌA 2: TRANG THÔNG TIN HỘI ĐỒNG & CHỮ KÝ GVHD
+%  TRANG XÁC NHẬN CỦA GIẢNG VIÊN HƯỚNG DẪN (CHUẨN BÁCH KHOA)
 %=====================================================================
 \newpage
 \thispagestyle{empty}
 \begin{center}
-\textbf{\large TRƯỜNG ĐẠI HỌC BÁCH KHOA -- ĐHQG-HCM} \\
-\textbf{\large KHOA KHOA HỌC VÀ KỸ THUẬT MÁY TÍNH} \\
-\vspace{0.6cm}
-\rule{12cm}{0.5pt} \\
-\vspace{0.4cm}
-{\Large \textbf{BÁO CÁO ĐỒ ÁN TỐT NGHIỆP}} \\[0.25cm]
-{\LARGE \textbf{\tendetai}} \\[0.25cm]
-\textbf{MÃ ĐỒ ÁN: \madoan} \\[0.2cm]
-\textbf{Chuyên ngành: \chuyennganh{} -- Ngành: \nganh}
+\textbf{\large TRƯỜNG ĐẠI HỌC BÁCH KHOA -- ĐHQG-HCM} \\[0.15cm]
+\textbf{\large KHOA KHOA HỌC VÀ KỸ THUẬT MÁY TÍNH} \\[0.4cm]
+\rule{12cm}{0.5pt} \\[1.5cm]
+\textbf{\LARGE BÁO CÁO ĐỒ ÁN TỐT NGHIỆP} \\[0.5cm]
+\textbf{\LARGE \tendetai} \\[0.3cm]
+{\large \textbf{\tendetaiphu}} \\[2.0cm]
 \end{center}
-\vspace{0.3cm}
 
-\noindent \textbf{HỘI ĐỒNG CHẤM ĐỒ ÁN TỐT NGHIỆP: HỘI ĐỒNG 4L}
-\begin{itemize}
-    \item \textbf{Địa điểm}: Cơ sở 2, Trường Đại học Bách Khoa -- ĐHQG-HCM
-    \item \textbf{Thời gian bảo vệ}: 13:30, Ngày 05 tháng 10 năm 2026
-\end{itemize}
-
-\vspace{0.2cm}
-\noindent \textbf{DANH SÁCH THÀNH VIÊN HỘI ĐỒNG:}
-\begin{table}[h!]
-\centering
-\renewcommand{\arraystretch}{1.2}
-\begin{tabular}{|c|l|c|l|}
-\hline
-\textbf{STT} & \textbf{Họ và tên} & \textbf{Mã CBGD} & \textbf{Đơn vị công tác} \\
-\hline
-1 & PGS. TS. Lê Hồng Trang & 003744 & Khoa KH\&KT Máy tính \\
-\hline
-2 & TS. Phạm An Vinh & 004361 & Khoa KH\&KT Máy tính \\
-\hline
-3 & ThS. Lê Thị Bảo Thu & 003383 & Khoa KH\&KT Máy tính \\
-\hline
-4 & ThS. Trương Quỳnh Chi (GVHD) & 002889 & Khoa KH\&KT Máy tính \\
-\hline
-\end{tabular}
-\end{table}
-
-\vspace{0.2cm}
-\noindent \textbf{SINH VIÊN THỰC HIỆN:}
-\begin{itemize}
-    \item Vương Song Toàn -- MSSV: 2213544 -- Hệ: Chính quy (KHMT - CQ)
-    \item Lê Đăng Khoa -- MSSV: 2211599 -- Hệ: Chính quy (KHMT - CQ)
-\end{itemize}
-
-\vspace{1.0cm}
 \begin{flushright}
 \begin{tabular}{c}
-\textit{TP. Hồ Chí Minh, ngày 05 tháng 10 năm 2026} \\
-\textbf{XÁC NHẬN CỦA GIẢNG VIÊN HƯỚNG DẪN} \\[2.0cm]
-\textbf{ThS. Trương Quỳnh Chi}
+\textit{TP. Hồ Chí Minh, ngày 05 tháng 10 năm 2026} \\[0.3cm]
+\textbf{\large XÁC NHẬN CỦA GIẢNG VIÊN HƯỚNG DẪN} \\[2.5cm]
+\textbf{\large ThS. Trương Quỳnh Chi} \\[0.2cm]
+\small (Khoa Khoa học và Kỹ thuật Máy tính)
 \end{tabular}
 \end{flushright}
 
@@ -176,9 +151,10 @@
 \newpage
 \input{Outro/TaiLieuThamKhao}
 \newpage
-\appendix
-\chapter{Danh mục 133 điểm cuối API RESTful}
-\label{ch:phu-luc-api}
-\input{Outro/BangAPI}
+% Tạm đóng phụ lục API chi tiết để giữ dung lượng báo cáo < 150 trang theo quy định
+% \appendix
+% \chapter{Danh mục 133 điểm cuối API RESTful}
+% \label{ch:phu-luc-api}
+% \input{Outro/BangAPI}
 
 \end{document}

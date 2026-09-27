@@ -67,3 +67,6 @@ Thumbs.db
 
 # Local reference materials
 refer report&slide/
+
+# Root temporary report pdfs
+/report (*).pdf

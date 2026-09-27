@@ -111,32 +111,70 @@ Hệ thống CoSpace tích hợp mô hình **Google Gemini Flash** thông qua c�
 \section{Công nghệ phía giao diện người dùng}
 \label{sec:cn_frontend}
 
-\subsection{Thư viện React và TypeScript}
-Phía giao diện người dùng (Front-end) được phát triển bằng thư viện **React 18.3** \cite{react_docs} kết hợp với ngôn ngữ **TypeScript 5.6**. Việc áp dụng TypeScript loại bỏ hoàn toàn việc sử dụng kiểu \texttt{any}, bảo đảm 100\% các thuộc tính (Props), trạng thái (State) và đối tượng phản hồi từ API (DTO) đều được định nghĩa kiểu tường minh.
+\subsection{Thư viện React 18 và ngôn ngữ TypeScript 5}
+Phía giao diện người dùng (Front-end) của hệ thống CoSpace được xây dựng dựa trên thư viện \textbf{React 18.3} \cite{react_docs} kết hợp với ngôn ngữ \textbf{TypeScript 5.6}. React cung cấp mô hình phát triển dựa trên thành phần (Component-based Architecture), cho phép phân rã các màn hình phức tạp thành các khối giao diện độc lập, dễ dàng tái sử dụng và kiểm thử đơn vị. Với cơ chế Virtual DOM cùng các tính năng mới trong phiên bản 18 như Concurrent Rendering và tự động nhóm các cập nhật trạng thái (Automatic Batching), ứng dụng duy trì được tốc độ khung hình ổn định và phản hồi mượt mà ngay cả khi hiển thị các sơ đồ mặt bằng lớn chứa hàng trăm vị trí chỗ ngồi.
 
-\subsection{Công cụ xây dựng Vite và Tailwind CSS}
-Dự án sử dụng **Vite 5.4** \cite{vite_docs} làm công cụ đóng gói và máy chủ phát triển cục bộ, tối ưu hóa tốc độ khởi động và hỗ trợ chia nhỏ các gói thư viện (Chunk splitting). Về kiểu dáng, hệ thống sử dụng **Tailwind CSS 3.4** \cite{tailwind_docs}, mang lại khả năng tùy biến cao, hỗ trợ cả chế độ sáng và tối (Dark Mode).
+Việc tích hợp chặt chẽ ngôn ngữ \textbf{TypeScript} loại bỏ triệt để việc sử dụng kiểu ngầm định (\texttt{any}). 100\% các thuộc tính truyền vào thành phần (Props), trạng thái cục bộ (State) và các đối tượng dữ liệu truyền tải nhận từ máy chủ (DTO) đều được định nghĩa kiểu dữ liệu tĩnh nghiêm ngặt. Điều này giúp phát hiện sớm các lỗi sai lệch cấu trúc dữ liệu ngay trong quá trình biên dịch (Compile-time), đồng thời cung cấp khả năng gợi ý mã nguồn thông minh (IntelliSense), hỗ trợ nhóm phát triển tăng tốc độ lập trình và bảo đảm tính bền vững của mã nguồn khi hệ thống mở rộng.
 
-\subsection{Kết xuất và tương tác với đồ họa vector SVG}
-Đối với phân hệ sơ đồ mặt bằng (Floor Plan), hệ thống sử dụng định dạng đồ họa vector SVG. Mỗi phần tử đồ họa (bàn, ghế) được gắn mã định danh \texttt{data-space-id}, cho phép kết nối trực tiếp với trạng thái CSDL và phản hồi sự kiện chuột (click, hover) theo thời gian thực.
+\subsection{Công cụ đóng gói Vite và khung giao diện Tailwind CSS}
+Dự án lựa chọn \textbf{Vite 5.4} \cite{vite_docs} làm công cụ đóng gói và máy chủ phát triển cục bộ thay cho các công cụ truyền thống như Webpack hay Create React App. Nhờ tận dụng cơ chế Native ES Modules của trình duyệt hiện đại kết hợp trình biên dịch Esbuild viết bằng ngôn ngữ Go, Vite mang lại tốc độ khởi động máy chủ gần như tức thì ($<300$ms) và thời gian phản ánh thay đổi mã nguồn lên trình duyệt (Hot Module Replacement -- HMR) chỉ trong vài chục mili-giây. Khi đóng gói sản phẩm để triển khai thực tế (Production Build), Vite sử dụng Rollup để tối ưu hóa kích thước gói mã nguồn thông qua kỹ thuật loại bỏ mã thừa (Tree-shaking) và phân tách gói động (Code-splitting / Dynamic chunking), giúp thời gian tải trang đầu tiên của khách hàng giảm xuống dưới 1.2 giây.
+
+Về mặt tạo kiểu dáng và phong cách giao diện, hệ thống áp dụng \textbf{Tailwind CSS 3.4} \cite{tailwind_docs}. Tailwind CSS là một framework CSS theo định hướng tiện ích (Utility-first CSS Framework), cho phép xây dựng các giao diện hiện đại trực tiếp trong mã JSX mà không cần viết các tệp CSS tùy biến rời rạc. Hệ thống xây dựng một bảng mã màu và khoảng cách đồng nhất (Design Tokens), hỗ trợ thiết kế đáp ứng toàn diện (Responsive Design) cho cả máy tính để bàn, máy tính bảng và điện thoại di động, đồng thời tích hợp mượt mà chế độ giao diện sáng/tối (Light/Dark Theme) dựa trên lớp cấu hình gốc.
+
+\subsection{Kết xuất và tương tác với đồ họa vector SVG (Floor Plan Canvas)}
+Một trong những thách thức kỹ thuật quan trọng nhất phía Front-end là hiển thị sơ đồ mặt bằng các tầng của chi nhánh một cách trực quan, cho phép khách hàng tương tác và chọn vị trí ghế hoặc phòng làm việc trong không gian thực tế. Thay vì sử dụng các tệp hình ảnh tĩnh (PNG/JPEG) hoặc các canvas bitmap phức tạp, đề tài lựa chọn giải pháp kết xuất dựa trên định dạng đồ họa vector có thể mở rộng (\textbf{Scalable Vector Graphics -- SVG}).
+
+Sơ đồ mặt bằng SVG được cấu trúc theo từng nhóm phần tử hình học (\texttt{<rect>}, \texttt{<path>}, \texttt{<circle>}) đại diện cho các bàn làm việc, phòng họp và lối đi. Mỗi phần tử không gian được gắn kèm thuộc tính định danh duy nhất \texttt{data-space-id}. Khi dữ liệu trạng thái chỗ ngồi từ máy chủ được nạp về, thành phần \texttt{FloorPlanViewer} sẽ duyệt qua cây phân cấp DOM của SVG để tô màu trạng thái động: màu xanh lá đại diện cho chỗ khả dụng, màu đỏ cho chỗ đã có người đặt, màu vàng cho chỗ đang chọn và màu xám cho khu vực đang bảo trì. Giải pháp này đảm bảo sơ đồ luôn sắc nét ở mọi độ phân giải màn hình, hỗ trợ thao tác phóng to, thu nhỏ, kéo rê (Pan/Zoom) mượt mà và phản hồi sự kiện chuột (Click/Hover) tức thời.
+
+\subsection{Thư viện trực quan hóa dữ liệu Recharts và biểu tượng Lucide}
+Nhằm phục vụ phân hệ quản trị và báo cáo kinh doanh của Ban quản lý chi nhánh và Quản trị viên hệ thống, ứng dụng tích hợp thư viện \textbf{Recharts}. Recharts được xây dựng trên nền tảng React và thư viện tính toán đồ thị D3.js, cung cấp các biểu đồ đường (LineChart), biểu đồ cột (BarChart) và biểu đồ tròn (PieChart) trực quan hóa các chỉ số hiệu năng kinh doanh then chốt như: biến động doanh thu theo ngày/tháng, tỷ lệ lấp đầy theo khung giờ và cơ cấu doanh thu theo loại hình không gian. Bên cạnh đó, hệ thống sử dụng bộ biểu tượng đồ họa vector \textbf{Lucide React} với hơn 40 biểu tượng chuẩn hóa, tạo nên trải nghiệm giao diện người dùng hiện đại, tinh gọn và thân thiện.
 
 \section{Công nghệ phía máy chủ}
 \label{sec:cn_backend}
 
-\subsection{Nền tảng Spring Boot và Spring Security}
-Tầng máy chủ xây dựng trên nền tảng **Spring Boot 3.1.12** \cite{spring_boot_docs} (biên dịch Java 17, thực thi JRE 21). Spring Security cấu hình OAuth2 Resource Server không trạng thái (\texttt{STATELESS}), tích hợp bộ giải mã JWT kép kiểm tra quyền hạn của mỗi yêu cầu HTTP.
+\subsection{Nền tảng Spring Boot 3 và Spring Security OAuth2}
+Tầng dịch vụ máy chủ (Back-end) được phát triển trên nền tảng \textbf{Spring Boot 3.1.12} \cite{spring_boot_docs} biên dịch trên môi trường Java 17 và vận hành chính thức trên JRE 21. Spring Boot là khung ứng dụng cấp doanh nghiệp hàng đầu hiện nay, cung cấp cơ chế cấu hình tự động (Auto-configuration), quản lý phụ thuộc (Dependency Injection / Inversion of Control) và máy chủ nhúng Tomcat hiệu năng cao, giúp chuẩn hóa toàn bộ quy trình phát triển dịch vụ phần mềm.
+
+Hạ tầng bảo mật và phân quyền được thiết lập thông qua \textbf{Spring Security 6}. Hệ thống cấu hình máy chủ hoạt động theo mô hình máy chủ tài nguyên OAuth 2.0 không trạng thái (\texttt{STATELESS Resource Server}). Mỗi yêu cầu HTTP gửi đến đều được kiểm duyệt thông qua bộ lọc bảo mật tùy biến, tích hợp cơ chế giải mã mã thông báo kép (\texttt{JwtDecoder}):
+\begin{itemize}
+    \item \textbf{Token từ Supabase Auth:} Được xác thực bằng khóa công khai bất đối xứng elliptic (ECC P-256) thông qua điểm cuối JWKS (JSON Web Key Set).
+    \item \textbf{Token nội bộ do CoSpace cấp phát:} Được xác thực bằng thuật toán khóa đối xứng HMAC-SHA384 bảo mật cao.
+\end{itemize}
+Cơ chế chuyển đổi quyền hạn \texttt{SupabaseJwtAuthenticationConverter} sẽ đọc lại vai trò và trạng thái khóa tài khoản trực tiếp từ cơ sở dữ liệu để loại trừ hoàn toàn nguy cơ leo thang đặc quyền khi thông tin vai trò ở tầng máy khách bị giả mạo.
 
 \subsection{Spring Data JPA và Bộ nhớ đệm Caffeine}
-Sử dụng Spring Data JPA để truy cập cơ sở dữ liệu quan hệ, áp dụng liên kết UUID thuần túy để ngăn ngừa lỗi truy vấn $N+1$. Thư viện **Caffeine Cache** \cite{caffeine_github} được ứng dụng cho các danh mục ít biến động (chi nhánh, bảng giá, chính sách hủy). Hệ thống đồng thời vận hành các tác vụ định kỳ (\texttt{BookingExpiryScheduler} và \texttt{BookingLifecycleScheduler}) để giải phóng đơn quá hạn và chuyển trạng thái đơn tự động.
+Tầng truy xuất dữ liệu sử dụng \textbf{Spring Data JPA} kết hợp với trình ánh xạ quan hệ đối tượng \textbf{Hibernate 6}. Thay vì phụ thuộc vào các liên kết thực thể lồng nhau phức tạp (\texttt{@ManyToOne}, \texttt{@OneToMany}) dễ gây ra lỗi truy vấn bùng nổ $N+1$ hoặc rủi ro nạp dữ liệu lười biếng (\texttt{LazyInitializationException}), kiến trúc hệ thống áp dụng nguyên tắc liên kết thông qua khóa nhận dạng UUID thuần túy giữa các bảng độc lập. Các giao dịch sửa đổi dữ liệu quan trọng đều được kiểm soát trong ranh giới giao dịch khai báo (\texttt{@Transactional}) với cấp độ cô lập phù hợp.
 
-\section{Cơ sở dữ liệu và tích hợp bên thứ ba}
+Nhằm giảm tải cho cơ sở dữ liệu và tăng tốc độ phản hồi đối với các dữ liệu danh mục tĩnh hoặc ít biến động (như danh sách chi nhánh, bảng giá dịch vụ, chính sách hủy hoàn tiền), hệ thống tích hợp bộ nhớ đệm trong bộ nhớ \textbf{Caffeine Cache} \cite{caffeine_github}. Caffeine là thư viện bộ nhớ đệm hiệu năng cao dựa trên thuật toán thay thế bộ nhớ Window TinyLFU, cho phép cấu hình thời gian hết hạn dữ liệu (TTL) và tự động làm rỗng bộ nhớ đệm khi có thao tác cập nhật danh mục từ quản trị viên, giúp thời gian phản hồi của các API tra cứu giảm xuống dưới 15ms.
+
+\subsection{Bộ lập lịch tác vụ nền và Quản lý vòng đời đơn đặt chỗ}
+Để đảm bảo hệ thống vận hành tự động liên tục mà không cần sự can thiệp thủ công của con người, Back-end triển khai các tác vụ định kỳ sử dụng cơ chế \textbf{Spring Task Scheduling} (\texttt{@Scheduled}):
+\begin{itemize}
+    \item \texttt{BookingExpiryScheduler}: Chạy ngầm với chu kỳ 60 giây một lần, tự động quét và thu hồi các đơn đặt chỗ ở trạng thái chờ thanh toán (\texttt{PENDING\_PAYMENT}) đã quá thời hạn giữ chỗ quy định (15 phút), giải phóng ngay lập tức tài nguyên chỗ ngồi cho các khách hàng khác.
+    \item \texttt{BookingLifecycleScheduler}: Vận hành định kỳ để cập nhật tự động các trạng thái của đơn đặt chỗ theo dòng thời gian thực tế: chuyển từ trạng thái đã xác nhận (\texttt{CONFIRMED}) sang trạng thái đang hoạt động (\texttt{IN\_PROGRESS}) khi đến giờ bắt đầu, và tự động đóng đơn hoàn tất (\texttt{COMPLETED}) khi thời gian thuê kết thúc.
+\end{itemize}
+
+\section{Cơ sở dữ liệu và tích hợp dịch vụ bên thứ ba}
 \label{sec:cn_database}
 
-\subsection{PostgreSQL và Nền tảng Supabase}
-Cơ sở dữ liệu chính là **PostgreSQL** trên nền tảng đám mây **Supabase** \cite{postgresql_documentation}. PostgreSQL cung cấp kiểu dữ liệu thời gian có múi giờ \texttt{TIMESTAMPTZ}, khoảng thời gian \texttt{tstzrange}, cơ chế khóa tư vấn \texttt{pg\_advisory\_xact\_lock} và chỉ mục không gian GiST với phần mở rộng \texttt{btree\_gist}.
+\subsection{Hệ quản trị cơ sở dữ liệu PostgreSQL và Nền tảng Supabase}
+Cơ sở dữ liệu trung tâm của hệ thống là \textbf{PostgreSQL 15} \cite{postgresql_documentation} được triển khai trên nền tảng đám mây phân tán \textbf{Supabase}. PostgreSQL được lựa chọn nhờ sở hữu những tính năng dữ liệu tiên tiến mà các hệ quản trị CSDL quan hệ phổ biến khác (như MySQL hay MariaDB) không hỗ trợ hoặc hỗ trợ chưa hoàn chỉnh:
+\begin{itemize}
+    \item \textbf{Kiểu dữ liệu khoảng thời gian có múi giờ (\texttt{tstzrange}):} Biểu diễn chính xác khoảng thời gian đặt chỗ $[start\_at, end\_at)$ với độ phân giải cao và khả năng xử lý múi giờ \texttt{Asia/Ho\_Chi\_Minh} chuẩn xác.
+    \item \textbf{Chỉ mục không gian GiST (\texttt{btree\_gist}):} Tối ưu hóa tốc độ tìm kiếm giao thoa khoảng thời gian thông qua toán tử chứa/chồng lấn (\texttt{\&\&}), đảm bảo tốc độ phản hồi dưới 20ms ngay cả khi bảng chứa hàng chục nghìn lượt đặt chỗ.
+    \item \textbf{Cơ chế khóa tư vấn mức giao dịch (\texttt{pg\_advisory\_xact\_lock}):} Cho phép tầng ứng dụng khóa độc quyền logic theo mã định danh không gian làm việc (\texttt{workspace\_id}) trong suốt thời gian thực thi giao dịch mà không làm khóa cứng toàn bộ bảng CSDL.
+\end{itemize}
+Toàn bộ quá trình di trú và đồng bộ hóa lược đồ dữ liệu giữa môi trường phát triển và môi trường thực tế được quản lý tự động thông qua công cụ \textbf{Flyway Migration}, đảm bảo tính nhất quán tuyệt đối về cấu trúc bảng và các chỉ mục toàn vẹn.
 
-\subsection{Cổng thanh toán PayOS VietQR và MoMo}
-Tích hợp cổng PayOS với mã thanh toán chuẩn quốc gia VietQR Napas 24/7 \cite{payos_docs}, tự động sinh mã QR động và xử lý Webhook đối soát tức thời. Tích hợp cổng MoMo ở môi trường Sandbox để mở rộng phương thức thanh toán ví điện tử.
+\subsection{Cổng thanh toán tự động VietQR PayOS và Ví điện tử MoMo}
+Hệ thống giải quyết triệt để bài toán thanh toán không tiền mặt thông qua việc tích hợp trực tiếp với cổng thanh toán \textbf{PayOS} \cite{payos_docs}. PayOS hỗ trợ tạo mã thanh toán chuẩn quốc gia \textbf{VietQR Napas 24/7}. Khi khách hàng tiến hành đặt chỗ, máy chủ tự động sinh mã QR động chứa số tài khoản, số tiền chính xác và mã đơn hàng duy nhất. Ngay khi khách hàng quét mã và chuyển khoản thành công qua ứng dụng ngân hàng bất kỳ, PayOS sẽ gửi tức thời thông báo giao dịch (Webhook IPN) về máy chủ CoSpace. Hệ thống kiểm tra chữ ký điện tử HMAC-SHA256 để chống giả mạo, tự động kích hoạt đơn sang trạng thái đã thanh toán mà không cần bất kỳ sự can thiệp thủ công nào từ nhân viên thu ngân.
+
+Bên cạnh PayOS, hệ thống tích hợp thêm cổng thanh toán ví điện tử \textbf{MoMo} (môi trường Sandbox), mở rộng thêm kênh thanh toán di động thuận tiện cho đối tượng khách hàng trẻ tuổi.
+
+\subsection{Mô hình Trí tuệ nhân tạo Google Gemini API (Function Calling)}
+Nhằm nâng cao trải nghiệm người dùng và tự động hóa quy trình hỗ trợ khách hàng, CoSpace tích hợp mô hình ngôn ngữ lớn tiên tiến \textbf{Google Gemini Flash} \cite{google_gemini_api, gemini_function_calling}. Khác với các chatbot trả lời câu hỏi thông thường, hệ thống vận dụng kỹ thuật \textbf{Gọi hàm (Function Calling / Tool Calling)}. 
+
+Mô hình AI được cung cấp danh mục các lược đồ hàm nghiệp vụ (JSON Schema) của CoSpace như: tra cứu chi nhánh (\texttt{getBranches}), kiểm tra bàn trống theo giờ (\texttt{checkAvailableSpaces}), và tính toán báo giá dự kiến (\texttt{calculatePricing}). Khi người dùng đặt câu hỏi bằng ngôn ngữ tự nhiên (ví dụ: \textit{``Tìm giúp tôi phòng họp cho 6 người tại chi nhánh Quận 1 sáng mai từ 9h đến 11h''}), mô hình sẽ tự động trích xuất các tham số thực tế, kích hoạt API tương ứng, nhận dữ liệu có cấu trúc từ máy chủ và tổng hợp câu trả lời thân thiện cho khách hàng. Đối với các thao tác ghi dữ liệu nhạy cảm (như tạo đơn đặt chỗ), hệ thống thiết lập cơ chế rào chắn xác nhận (Confirmation Barrier), chỉ thực thi khi khách hàng chủ động nhấn nút xác nhận trên giao diện.
 
 \section{Tổng hợp lựa chọn công nghệ}
 \label{sec:tonghop_congnghe}

@@ -169,14 +169,14 @@
   \end{figure}
 }
 
-% Chèn sơ đồ UML xoay ngang trang (landscape) cho sơ đồ rộng
+% Chèn sơ đồ UML hiển thị xuôi chiều trang (phù hợp đọc trên màn hình máy tính)
 \newcommand{\hinhumlngang}[3]{%
-  \begin{sidewaysfigure}
+  \begin{figure}[H]
     \centering
-    \includegraphics[width=\linewidth,height=0.72\textheight,keepaspectratio]{#1.png}
+    \includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{#1.png}
     \caption{#2}
     \label{#3}
-  \end{sidewaysfigure}
+  \end{figure}
 }
 
 % \hinhui{tên_file_không_đuôi}{tiêu đề màn hình}{nhãn}
@@ -204,18 +204,28 @@
 \newcommand{\hinhdo}[3]{%
   \begin{figure}[H]
     \centering
-    \includegraphics[width=\linewidth,height=0.86\textheight,keepaspectratio]{#1.png}
+    \includegraphics[width=\linewidth,height=0.82\textheight,keepaspectratio]{#1.png}
     \caption{#2}
     \label{#3}
   \end{figure}%
 }
 
-% \hinhdongang{ChuongX/ten_file_khong_duoi}{chú thích}{nhãn}
+% \hinhdongang{ChuongX/ten_file_khong_duoi}{chú thích}{nhãn} (hiển thị xuôi chiều trang, không xoay 90 độ)
 \newcommand{\hinhdongang}[3]{%
-  \begin{sidewaysfigure}
+  \begin{figure}[H]
     \centering
-    \includegraphics[width=0.95\textheight,height=0.70\textwidth,keepaspectratio]{#1.png}
+    \includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{#1.png}
     \caption{#2}
     \label{#3}
-  \end{sidewaysfigure}%
+  \end{figure}%
+}
+
+% \hinherd{duong_dan_file}{chú thích}{nhãn} (dành cho các sơ đồ ERD Chen)
+\newcommand{\hinherd}[3]{%
+  \begin{figure}[H]
+    \centering
+    \includegraphics[width=0.96\linewidth,height=0.76\textheight,keepaspectratio]{#1}
+    \caption{#2}
+    \label{#3}
+  \end{figure}%
 }

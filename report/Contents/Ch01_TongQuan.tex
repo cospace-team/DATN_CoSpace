@@ -5,7 +5,7 @@
 \label{sec:boicanh}
 
 \subsection{Sự phát triển của mô hình văn phòng chia sẻ}
-Trong bối cảnh nền kinh tế số và làn sóng khởi nghiệp đổi mới sáng tạo đang phát triển mạnh mẽ tại Việt Nam, nhu cầu về một môi trường làm việc linh hoạt, hiện đại và tối ưu hóa chi phí ngày càng trở nên cấp thiết. Theo các báo cáo nghiên cứu thị trường bất động sản thương mại của CBRE và Savills \cite{fielding2000rest}, thị trường không gian làm việc chia sẻ (Co-working Space) tại các đô thị lớn như TP. Hồ Chí Minh và Hà Nội ghi nhận mức tăng trưởng bình quân trên 20\% mỗi năm trong giai đoạn hậu đại dịch. Sự dịch chuyển từ mô hình văn phòng truyền thống dài hạn sang không gian làm việc linh hoạt (Flexible Workspace) đã trở thành xu thế tất yếu của lực lượng lao động tri thức mới, bao gồm các lập trình viên làm việc tự do (Freelancers), các nhóm làm việc từ xa (Remote teams) và các doanh nghiệp vừa và nhỏ (SMEs).
+Trong bối cảnh nền kinh tế số và làn sóng khởi nghiệp đổi mới sáng tạo đang phát triển mạnh mẽ tại Việt Nam, nhu cầu về một môi trường làm việc linh hoạt, hiện đại và tối ưu hóa chi phí ngày càng trở nên cấp thiết. Theo các báo cáo nghiên cứu thị trường bất động sản thương mại của CBRE và Savills \cite{cbre_vietnam_2023, savills_vietnam_2023}, thị trường không gian làm việc chia sẻ (Co-working Space) tại các đô thị lớn như TP. Hồ Chí Minh và Hà Nội ghi nhận mức tăng trưởng bình quân trên 20\% mỗi năm trong giai đoạn hậu đại dịch. Sự dịch chuyển từ mô hình văn phòng truyền thống dài hạn sang không gian làm việc linh hoạt (Flexible Workspace) đã trở thành xu thế tất yếu của lực lượng lao động tri thức mới, bao gồm các lập trình viên làm việc tự do (Freelancers), các nhóm làm việc từ xa (Remote teams) và các doanh nghiệp vừa và nhỏ (SMEs).
 
 Mô hình văn phòng chia sẻ mang lại khả năng tối ưu hóa chi phí vận hành đáng kể khi người thuê không phải chịu gánh nặng chi phí đầu tư ban đầu về thiết kế mặt bằng, trang thiết bị văn phòng, mạng Internet hay dịch vụ lễ tân. Thay vì ký kết các hợp đồng thuê mặt bằng cố định kéo dài nhiều năm kèm khoản tiền đặt cọc lớn, doanh nghiệp và cá nhân có thể lựa chọn các gói thuê linh hoạt theo giờ, theo ngày, theo tuần hoặc theo tháng tùy theo nhu cầu sử dụng thực tế.
 
@@ -116,11 +116,11 @@ Hệ thống CoSpace được thiết kế xoay quanh bốn nhóm tác nhân ng�
 \end{itemize}
 
 \subsection{Kế hoạch và Phân công thực hiện}
-Đề tài được thực hiện trong thời gian 20 tuần bởi nhóm gồm hai sinh viên. Bảng \ref{tab:kehoach} tóm tắt tiến độ và phân công trách nhiệm chi tiết.
+Đề tài được thực hiện trong thời gian 15 tuần theo đúng kế hoạch đã định hướng từ giai đoạn Đồ án Chuyên ngành bởi nhóm gồm hai sinh viên. Bảng \ref{tab:kehoach} tóm tắt tiến độ và phân công trách nhiệm chi tiết của từng thành viên.
 
 \begin{table}[H]
 \centering
-\caption{Kế hoạch thực hiện và phân công công việc trong đề tài}
+\caption{Kế hoạch triển khai 15 tuần và phân công công việc trong đề tài}
 \label{tab:kehoach}
 \small
 \renewcommand{\arraystretch}{1.2}
@@ -128,25 +128,25 @@ Hệ thống CoSpace được thiết kế xoay quanh bốn nhóm tác nhân ng�
 \hline
 \textbf{Giai đoạn} & \textbf{Nội dung công việc} & \textbf{Vương Song Toàn} & \textbf{Lê Đăng Khoa} \\
 \hline
-Tuần 1--2 & Khảo sát thực tế, nghiên cứu các hệ thống tương tự, lập tài liệu đặc tả yêu cầu hệ thống & Phân tích nghiệp vụ, kiến trúc hệ thống & Khảo sát thị trường, yêu cầu chức năng \\
+Tuần 1--2 & Khảo sát yêu cầu bổ sung; thiết kế lại CSDL và kiến trúc API RESTful cho các tính năng mới; thiết lập môi trường & Thiết kế lại CSDL (30 bảng), kịch bản Flyway, cấu hình nền tảng Spring Boot 3 & Khảo sát bổ sung, chuẩn hóa API DTO, thiết lập dự án React/Vite/Tailwind \\
 \hline
-Tuần 3--4 & Thiết kế CSDL quan hệ, thiết kế API RESTful và thiết lập hạ tầng dự án & Thiết kế CSDL, Flyway, cấu hình Security & Dựng khung Front-end, định tuyến và theme \\
+Tuần 3--4 & Hiện thực phân hệ Xác thực bảo mật (OAuth2, JWT kép), Quản lý tài khoản và Dịch vụ thông báo thời gian thực & Cấu hình Spring Security, bộ giải mã JWT kép, dịch vụ Auth và Notification (BE) & Giao diện Đăng nhập, Quản lý hồ sơ cá nhân, Trung tâm thông báo (FE) \\
 \hline
-Tuần 5--6 & Module xác thực người dùng (JWT kép), quản lý chi nhánh, tầng và không gian làm việc & Hiện thực dịch vụ Auth, Branch, Space (BE) & Giao diện Đăng nhập, Profile, Quản trị không gian (FE) \\
+Tuần 5--6 & Tích hợp cổng thanh toán VietQR (PayOS), MoMo Sandbox; xử lý Webhook bất biến; Bảng giá và Dịch vụ thêm & Tích hợp PayOS/MoMo API, xử lý Webhook đối soát bất biến, dịch vụ Giá (BE) & Giao diện Checkout, sinh mã VietQR động, bộ đếm ngược 15 phút thanh toán (FE) \\
 \hline
-Tuần 7--8 & Trình hiển thị sơ đồ mặt bằng SVG; nghiệp vụ Đặt chỗ và 2 tầng khóa tương tranh & Hiện thực dịch vụ Booking, khóa tư vấn (BE) & Trình hiển thị sơ đồ SVG \texttt{FloorPlanViewer} (FE) \\
+Tuần 7--8 & Trình hiển thị sơ đồ mặt bằng tương tác SVG; nghiệp vụ Đặt chỗ và cơ chế khóa tương tranh 2 lớp & Hiện thực dịch vụ Booking, 2 tầng khóa tương tranh (\texttt{advisory lock} + \texttt{GiST}) (BE) & Trình hiển thị sơ đồ mặt bằng vector SVG \texttt{FloorPlanViewer}, chọn chỗ (FE) \\
 \hline
-Tuần 9--10 & Tích hợp cổng thanh toán VietQR (PayOS), MoMo và Webhook bất biến; Scheduler hủy đơn & Tích hợp PayOS, MoMo, Scheduler hết hạn đơn & Giao diện Checkout, mã QR động, đếm ngược \\
+Tuần 9--10 & Tích hợp quy trình Check-in/Check-out mã QR; tác vụ nền tự động hủy đơn hết hạn và quản lý Bảo trì & Dịch vụ Check-in/out, \texttt{BookingExpiryScheduler}, quản lý lịch bảo trì (BE) & Giao diện Lễ tân, quét mã QR check-in, giao diện quản lý lịch bảo trì (FE) \\
 \hline
-Tuần 11--12 & Quy trình Hủy--Hoàn tiền theo bậc thời gian; Module vận hành Check-in/out và Bảo trì & Dịch vụ Hủy/Hoàn tiền, Check-in, Bảo trì (BE) & Giao diện Quầy Lễ tân, quét mã QR check-in (FE) \\
+Tuần 11 & Nghiên cứu và hiện thực thuật toán Gợi ý đối tác kinh doanh (Jaccard Similarity) dựa trên hồ sơ khách hàng & Hiện thực thuật toán Jaccard, tối ưu truy vấn ma trận độ tương đồng (BE) & Giao diện Kết nối cộng đồng, thẻ đối tác, trang cá nhân và bảng tin (FE) \\
 \hline
-Tuần 13--14 & Module gợi ý đối tác (Jaccard) và Trợ lý ảo AI Google Gemini; Quản lý khuyến mãi & Dịch vụ Gemini AI, Matching, Loyalty (BE) & Giao diện Cộng đồng, Chatbot Drawer, Thẻ đối tác (FE) \\
+Tuần 12 & Tích hợp Trợ lý ảo AI Google Gemini (Function Calling) với rào chắn xác nhận an toàn cho người dùng & Tích hợp Gemini API, xây dựng Function Calling và Transaction Barrier (BE) & Giao diện Chatbot Drawer, bong bóng trò chuyện, thẻ xác nhận thao tác (FE) \\
 \hline
-Tuần 15--16 & Báo cáo doanh thu, tỷ lệ lấp đầy, xuất CSV; Nhật ký kiểm toán; Tối ưu Docker và Cloud & Dịch vụ Report, Audit Log, Dockerfile, Render & Giao diện Báo cáo, biểu đồ Recharts, Vercel \\
+Tuần 13 & Nâng cấp Dashboard Thống kê cho Ban quản lý, xuất báo cáo doanh thu/lấp đầy (CSV) và Nhật ký kiểm toán & Dịch vụ Report, tổng hợp KPI doanh thu, module Audit Log (BE) & Giao diện Báo cáo quản trị, biểu đồ trực quan hóa dữ liệu Recharts (FE) \\
 \hline
-Tuần 17--18 & Rà soát logic toàn diện, xử lý các phát hiện nghiệp vụ, nâng suite test lên 273 ca & Rà soát BE, sửa lỗi tương tranh, nâng suite test & Rà soát luồng FE, tối ưu hóa bundle Vite, kiểm thử UAT \\
+Tuần 14 & Kiểm thử toàn diện (273 ca kiểm thử tự động, kiểm thử tải/Race conditions), sửa lỗi logic và kiểm thử UAT & Chạy và mở rộng bộ 273 test cases BE, kiểm thử Race conditions đặt trùng lịch & Kiểm thử giao diện Responsive trên đa thiết bị, tối ưu bundle Vite, kiểm thử UAT \\
 \hline
-Tuần 19--20 & Hoàn thiện báo cáo Đồ án Tốt nghiệp LaTeX, chuẩn bị slide và bảo vệ trước Hội đồng & Hợp nhất nội dung kỹ thuật, Service Specs, Test & Hoàn thiện sơ đồ UML, sinh phụ lục API, đóng gói \\
+Tuần 15 & Đóng gói Docker đa giai đoạn, triển khai Cloud (Render, Vercel, Supabase), hoàn thiện báo cáo và chuẩn bị bảo vệ & Cấu hình Dockerfile/Caddy, triển khai backend Render/Supabase, viết báo cáo & Triển khai frontend Vercel, chuẩn bị kịch bản demo sản phẩm, slide thuyết trình \\
 \hline
 \end{tabular}
 \end{table}
@@ -180,8 +180,8 @@ Bản báo cáo Đồ án Tốt nghiệp được tổ chức thành 8 chương 
     \item \textbf{Chương \ref{ch:cosolythuyet} -- Cơ sở lý thuyết và công nghệ nền tảng:} Cung cấp cơ sở lý thuyết về kiến trúc phần mềm, cơ chế kiểm soát tương tranh PostgreSQL Advisory Locks, chuẩn thanh toán VietQR Napas 24/7, xác thực JWT kép, thuật toán Jaccard và mô hình AI Gemini; tổng hợp công nghệ Spring Boot 3, React 18 và cơ sở dữ liệu.
     \item \textbf{Chương \ref{ch:yeucau} -- Phân tích yêu cầu hệ thống:} Phân tích 4 vai trò người dùng, User stories, danh mục 20 yêu cầu chức năng (FR) và yêu cầu phi chức năng (NFR), cùng hệ thống các sơ đồ Use-case tổng quát và phân hệ.
     \item \textbf{Chương \ref{ch:thietke} -- Thiết kế hệ thống:} Trình bày kiến trúc tổng thể, 11 sơ đồ lớp Class Diagram (Domain và Service), 14 sơ đồ tuần tự Sequence Diagram chi tiết, sơ đồ hoạt động (Activity), máy trạng thái (Statechart) và thiết kế CSDL với 7 lược đồ ERD phân rã.
-    \item \textbf{Chương \ref{ch:hienthuc} -- Hiện thực hệ thống và Giao diện:} Đặc tả chi tiết các dịch vụ then chốt (Service Specifications với bảng Method Specs, Dependencies, 2-Tier Concurrency Algorithm), kiến trúc Container hóa Docker/Caddy, và kết quả hiện thực 12 màn hình giao diện tiêu biểu của 4 phân hệ.
-    \item \textbf{Chương \ref{ch:kiemthu} -- Kiểm thử và đánh giá:} Báo cáo chiến lược kiểm thử, kết quả thực thi 273 ca kiểm thử tự động phía máy chủ, kiểm thử xung đột lịch tương tranh (Race conditions) và kiểm thử chấp nhận người dùng (UAT).
-    \item \textbf{Chương \ref{ch:tongket} -- Tổng kết và hướng phát triển:} Tổng kết các kết quả đạt được, ưu điểm nổi bật, thẳng thắn đánh giá các hạn chế kỹ thuật còn tồn đọng và vạch ra định hướng phát triển tương lai.
+    \item \textbf{Chương \ref{ch:hien-thuc-va-giao-dien} -- Hiện thực hệ thống và Giao diện:} Đặc tả chi tiết các dịch vụ then chốt (Service Specifications với bảng Method Specs, Dependencies, 2-Tier Concurrency Algorithm), kiến trúc Container hóa Docker/Caddy, và kết quả hiện thực 12 màn hình giao diện tiêu biểu của 4 phân hệ.
+    \item \textbf{Chương \ref{ch:kiem-thu-danh-gia} -- Kiểm thử và đánh giá:} Báo cáo chiến lược kiểm thử, kết quả thực thi 273 ca kiểm thử tự động phía máy chủ, kiểm thử xung đột lịch tương tranh (Race conditions) và kiểm thử chấp nhận người dùng (UAT).
+    \item \textbf{Chương \ref{ch:tong-ket-va-huong-phat-trien} -- Tổng kết và hướng phát triển:} Tổng kết các kết quả đạt được, ưu điểm nổi bật, thẳng thắn đánh giá các hạn chế kỹ thuật còn tồn đọng và vạch ra định hướng phát triển tương lai.
     \item \textbf{Phần Phụ lục:} Cung cấp bảng tra cứu toàn diện 26 Controllers và 133 điểm cuối API của hệ thống.
 \end{itemize}
