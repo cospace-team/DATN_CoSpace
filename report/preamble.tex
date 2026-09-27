@@ -87,7 +87,7 @@
  \end{tabular}%
 }
 \fancyfoot[L]{\scriptsize Báo cáo Đồ án Tốt nghiệp -- Hệ thống quản lý văn phòng chia sẻ CoSpace}
-\fancyfoot[R]{\scriptsize Trang {\thepage}/\pageref{LastPage}}
+\fancyfoot[R]{\scriptsize Trang {\thepage}}
 \renewcommand{\headrulewidth}{0.3pt}
 \renewcommand{\footrulewidth}{0.3pt}
 \fancypagestyle{plain}{%   % trang đầu mỗi chương vẫn giữ header/footer
@@ -102,7 +102,26 @@
     \end{tabular}%
   }
   \fancyfoot[L]{\scriptsize Báo cáo Đồ án Tốt nghiệp -- Hệ thống quản lý văn phòng chia sẻ CoSpace}
-  \fancyfoot[R]{\scriptsize Trang {\thepage}/\pageref{LastPage}}
+  \fancyfoot[R]{\scriptsize Trang {\thepage}}
+}
+
+% Cấu hình footer riêng cho phần nội dung chính (Đánh số Ả Rập: Trang x/y)
+\newcommand{\setupArabicFooters}{%
+  \fancyfoot[R]{\scriptsize Trang {\thepage}/\pageref{LastPage}}%
+  \fancypagestyle{plain}{%
+    \fancyhf{}%
+    \fancyhead[L]{%
+      \begin{tabular}{rl}%
+        \begin{picture}(25,15)(0,0)\put(0,-8){\includegraphics[width=10mm, height=10mm]{hcmut.png}}\end{picture}&%
+        \begin{tabular}{l}%
+          \textbf{\small Trường Đại học Bách khoa -- Đại học Quốc gia TP.HCM}\\%
+          \textbf{\small Khoa Khoa học \& Kỹ thuật Máy tính}%
+        \end{tabular}%
+      \end{tabular}%
+    }%
+    \fancyfoot[L]{\scriptsize Báo cáo Đồ án Tốt nghiệp -- Hệ thống quản lý văn phòng chia sẻ CoSpace}%
+    \fancyfoot[R]{\scriptsize Trang {\thepage}/\pageref{LastPage}}%
+  }%
 }
 
 %---------------------- Cấp mục & đánh số ---------------------------
