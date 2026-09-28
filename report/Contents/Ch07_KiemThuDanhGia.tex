@@ -16,7 +16,7 @@ Nhóm dùng ba mức kiểm thử:
 
 \subsection{Môi trường}
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
 \caption{Môi trường kiểm thử}
 \label{tab:test-environment}
@@ -42,7 +42,7 @@ Dữ liệu mẫu & \mt{database/seed\_3\_branches\_9\_floors.sql} và \mt{datab
 
 Chạy \mt{mvn test} trong thư mục \mt{BE} cho kết quả: \textbf{307 ca kiểm thử trong 24 lớp, 306 ca đạt, 1 ca bỏ qua, 0 ca thất bại, 0 lỗi}; trên máy phát triển, toàn bộ lệnh (gồm cả biên dịch) chạy trong khoảng 20 giây. Ca bị bỏ qua là \mt{h2ConsoleIsNotPublic}, được đánh dấu \mt{@Disabled} có chủ đích: cấu hình bảo mật vẫn còn một quy tắc cho phép truy cập \mt{/h2-console/**} dù dự án không dùng H2, và ca này sẽ được bật lại sau khi xóa quy tắc đó. Bảng~\ref{tab:backend-test-summary} liệt kê số ca theo lớp.
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
 \caption{Kết quả kiểm thử tự động phía máy chủ theo lớp}
 \label{tab:backend-test-summary}
@@ -129,48 +129,31 @@ void rejectsIllegalMoves(BookingStatus from, BookingStatus to) {
 \end{lstlisting}
 
 \subsection{Các ca kiểm thử tiêu biểu}
-Các bảng dưới đây chọn một số ca tiêu biểu cho từng nhóm chức năng. Cột ``Phương thức kiểm thử'' là tên phương thức trong mã nguồn; tất cả các ca đều đạt trong lần chạy nêu trên.
+Bảng~\ref{tab:tc-tieubieu} chọn một số ca tiêu biểu cho từng nhóm chức năng. Cột ``Phương thức kiểm thử'' là tên phương thức trong mã nguồn; tất cả các ca đều đạt trong lần chạy nêu trên.
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
-\caption{Ca kiểm thử tiêu biểu: bảo mật và phân quyền}
-\label{tab:tc-security}
+\caption{Một số ca kiểm thử tiêu biểu}
+\label{tab:tc-tieubieu}
 \footnotesize
-\renewcommand{\arraystretch}{1.15}
-\begin{tabularx}{\linewidth}{|P{1.5cm}|P{6.2cm}|L|}
+\renewcommand{\arraystretch}{1.12}
+\begin{tabularx}{\linewidth}{|P{1.7cm}|P{6.0cm}|L|}
 \hline
 \textbf{Mã} & \textbf{Phương thức kiểm thử} & \textbf{Kiểm tra} \\
 \hline
-TC-SEC-01 & \mt{validCustomerTokenIsAccepted} & Token hợp lệ của khách hàng được chấp nhận \\
+\multicolumn{3}{|l|}{\textit{Bảo mật và phân quyền}} \\
 \hline
-TC-SEC-02 & \mt{expiredTokenIsUnauthorized} & Token hết hạn bị từ chối với HTTP 401 \\
+TC-SEC-01 & \mt{suspendedUsersTokenStopsWorkingImmediately} & Tài khoản bị khóa nhận HTTP 401 ngay ở yêu cầu kế tiếp dù token chưa hết hạn \\
 \hline
-TC-SEC-03 & \mt{suspendedUsersTokenStopsWorkingImmediately} & Tài khoản bị khóa nhận HTTP 401 ngay ở yêu cầu kế tiếp dù token chưa hết hạn \\
+TC-SEC-02 & \mt{customerIsForbiddenFromStaffBranchAdminAndAdminRoutes} & Khách hàng gọi API của nhân viên, quản lý, quản trị nhận HTTP 403 \\
 \hline
-TC-SEC-04 & \mt{customerIsForbiddenFromStaffBranchAdminAndAdminRoutes} & Khách hàng gọi API của nhân viên, quản lý, quản trị nhận HTTP 403 \\
+TC-SEC-03 & \mt{roleClaimInTokenCannotEscalateBeyondDatabaseRole} & Vai trò ghi trong token không vượt được vai trò lưu trong cơ sở dữ liệu \\
 \hline
-TC-SEC-05 & \mt{roleClaimInTokenCannotEscalateBeyondDatabaseRole} & Vai trò ghi trong token không vượt được vai trò lưu trong cơ sở dữ liệu \\
+TC-SEC-04 & \mt{staffIsDeniedForOtherBranchResource} & Nhân viên thao tác trên tài nguyên của chi nhánh khác bị từ chối \\
 \hline
-TC-SEC-06 & \mt{refreshTokenCannotBeUsedAsBearerToken} & Token làm mới không dùng được làm token truy cập \\
+TC-SEC-05 & \mt{refusesToLinkAStaffAccountEvenFromGoogle} & Đăng nhập Google không tự liên kết vào tài khoản nhân viên cùng email \\
 \hline
-TC-SEC-07 & \mt{staffIsDeniedForOtherBranchResource} & Nhân viên thao tác trên tài nguyên của chi nhánh khác bị từ chối \\
-\hline
-TC-SEC-08 & \mt{corsPreflightFromUnknownOriginIsRejected} & Yêu cầu CORS từ nguồn không có trong danh sách bị từ chối \\
-\hline
-TC-SEC-09 & \mt{refusesToLinkAStaffAccountEvenFromGoogle} & Đăng nhập Google không tự liên kết vào tài khoản nhân viên cùng email \\
-\hline
-\end{tabularx}
-\end{table}
-
-\begin{table}[H]
-\centering
-\caption{Ca kiểm thử tiêu biểu: đặt chỗ và vòng đời đơn}
-\label{tab:tc-booking}
-\footnotesize
-\renewcommand{\arraystretch}{1.15}
-\begin{tabularx}{\linewidth}{|P{1.6cm}|P{6.1cm}|L|}
-\hline
-\textbf{Mã} & \textbf{Phương thức kiểm thử} & \textbf{Kiểm tra} \\
+\multicolumn{3}{|l|}{\textit{Đặt chỗ và vòng đời đơn}} \\
 \hline
 TC-BOOK-01 & \mt{rejectsFourthPendingBooking} & Đơn chờ thanh toán thứ tư bị từ chối (BR-03) \\
 \hline
@@ -178,32 +161,13 @@ TC-BOOK-02 & \mt{takesAdvisoryLockBeforeCheckingOverlap} & Hai khóa tư vấn \
 \hline
 TC-BOOK-03 & \mt{rejectsOverlappingBooking} & Đơn chồng lấn bị từ chối, không có bản ghi nào được lưu (BR-01) \\
 \hline
-TC-BOOK-04 & \mt{computesPriceAndBranchOnServer} & Giá và chi nhánh do máy chủ tính (BR-08) \\
+TC-BOOK-04 & \mt{chargesForTheBookedSpanNotTheClientUnitCount} & Số đơn vị tính theo khoảng thời gian, không theo số do trình duyệt gửi (BR-06) \\
 \hline
-TC-BOOK-05 & \mt{chargesForTheBookedSpanNotTheClientUnitCount} & Số đơn vị tính theo khoảng thời gian, không theo số do trình duyệt gửi (BR-06) \\
+TC-BOOK-05 & \mt{leavesABookingAloneOnceAPaymentHasConfirmedIt} & Tác vụ hết hạn không ghi đè đơn vừa được thanh toán xác nhận \\
 \hline
-TC-BOOK-06 & \mt{hourlyBookingMustFitInsideOpeningHoursInVietnamTime} & Đơn theo giờ phải nằm trong giờ mở cửa theo giờ Việt Nam (BR-04) \\
+TC-BOOK-06 & \mt{guestCannotBeCheckedOutWithAnUnpaidTab} & Không check-out khi còn dịch vụ chưa thanh toán (BR-18) \\
 \hline
-TC-BOOK-07 & \mt{leavesABookingAloneOnceAPaymentHasConfirmedIt} & Tác vụ hết hạn không ghi đè đơn vừa được thanh toán xác nhận \\
-\hline
-TC-BOOK-08 & \mt{endedBookingNeverCheckedInBecomesNoShow} & Đơn hết giờ chưa check-in chuyển sang \mt{NO\_SHOW} (BR-17) \\
-\hline
-TC-BOOK-09 & \mt{allowsCheckinUpTo30MinutesEarly}, \mt{rejectsCheckinMoreThan30MinutesEarly} & Biên của khung check-in (BR-10) \\
-\hline
-TC-BOOK-10 & \mt{guestCannotBeCheckedOutWithAnUnpaidTab} & Không check-out khi còn dịch vụ chưa thanh toán (BR-18) \\
-\hline
-\end{tabularx}
-\end{table}
-
-\begin{table}[H]
-\centering
-\caption{Ca kiểm thử tiêu biểu: thanh toán}
-\label{tab:tc-payment}
-\footnotesize
-\renewcommand{\arraystretch}{1.15}
-\begin{tabularx}{\linewidth}{|P{1.5cm}|P{6.2cm}|L|}
-\hline
-\textbf{Mã} & \textbf{Phương thức kiểm thử} & \textbf{Kiểm tra} \\
+\multicolumn{3}{|l|}{\textit{Thanh toán}} \\
 \hline
 TC-PAY-01 & \mt{rejectsInvalidSignatureWithoutTouchingPayment} & Webhook sai chữ ký bị từ chối, giao dịch không đổi \\
 \hline
@@ -211,42 +175,17 @@ TC-PAY-02 & \mt{duplicateWebhookIsIgnored} & Webhook gửi lặp không được
 \hline
 TC-PAY-03 & \mt{latePaymentDoesNotResurrectExpiredBooking} & Tiền về sau khi đơn hết hạn không làm sống lại đơn; tạo yêu cầu hoàn tiền (BR-15) \\
 \hline
-TC-PAY-04 & \mt{duplicatePaymentForPaidBookingIsQueuedForRefund} & Thanh toán trùng được đưa vào hàng chờ hoàn tiền \\
+TC-PAY-04 & \mt{demoModeMustNotAcceptForgedSignature} & Chế độ demo của PayOS từ chối mọi webhook \\
 \hline
-TC-PAY-05 & \mt{underpaidPaymentIsNotConfirmed} & Trả thiếu tiền thì không xác nhận đơn \\
+\multicolumn{3}{|l|}{\textit{Hủy đơn, hoàn tiền và báo cáo}} \\
 \hline
-TC-PAY-06 & \mt{demoModeMustNotAcceptForgedSignature} & Chế độ demo của PayOS từ chối mọi webhook \\
+TC-CAN-01 & \mt{policyWindowIsHalfOpenAndMeasuredInMinutes} & Biên của bậc chính sách tính theo phút, nửa khoảng $[min, max)$ \\
 \hline
-TC-PAY-07 & \mt{cashPaymentIsPaidImmediatelyAndConfirmsBooking} & Xác nhận tiền mặt tạo giao dịch \mt{PAID} và xác nhận đơn \\
+TC-CAN-02 & \mt{bookingThatHasAlreadyStartedCannotBeCancelled} & Không hủy được đơn đã đến giờ bắt đầu (BR-11) \\
 \hline
-\end{tabularx}
-\end{table}
-
-\begin{table}[H]
-\centering
-\caption{Ca kiểm thử tiêu biểu: hủy đơn, hoàn tiền, thành viên và kết nối}
-\label{tab:tc-pricing}
-\footnotesize
-\renewcommand{\arraystretch}{1.15}
-\begin{tabularx}{\linewidth}{|P{1.5cm}|P{6.2cm}|L|}
+TC-CAN-03 & \mt{refundPlusPenaltyAlwaysEqualsTotalAmount} & Tiền hoàn cộng phí phạt bằng tổng tiền đơn (BR-13) \\
 \hline
-\textbf{Mã} & \textbf{Phương thức kiểm thử} & \textbf{Kiểm tra} \\
-\hline
-TC-CAN-01 & \mt{branchPolicyIsPreferredOverGlobalPolicy} & Chính sách chi nhánh được ưu tiên (BR-12) \\
-\hline
-TC-CAN-02 & \mt{policyWindowIsHalfOpenAndMeasuredInMinutes} & Biên của bậc chính sách tính theo phút, nửa khoảng $[min, max)$ \\
-\hline
-TC-CAN-03 & \mt{bookingThatHasAlreadyStartedCannotBeCancelled} & Không hủy được đơn đã đến giờ bắt đầu (BR-11) \\
-\hline
-TC-CAN-04 & \mt{refundPlusPenaltyAlwaysEqualsTotalAmount} & Tiền hoàn cộng phí phạt bằng tổng tiền đơn (BR-13) \\
-\hline
-TC-CAN-05 & \mt{refundNeverExceedsWhatWasActuallyPaid} & Tiền hoàn không vượt số đã thu \\
-\hline
-TC-CAN-06 & \mt{refundCanBePaidAsAPersonalVoucher} & Hoàn tiền bằng voucher cá nhân \\
-\hline
-TC-MEM-01 & \mt{onlyBookingsActuallyUsedCountTowardSpend} & Chỉ đơn đã sử dụng được tính vào chi tiêu xét hạng \\
-\hline
-TC-NET-01 & \mt{privateContactIsOnlyShownOnceConnected} & Thông tin liên hệ riêng chỉ hiện khi đã kết nối \\
+TC-CAN-04 & \mt{refundNeverExceedsWhatWasActuallyPaid} & Tiền hoàn không vượt số đã thu \\
 \hline
 TC-RPT-01 & \mt{revenueCountsUsedBookingsNetOfUnpaidTabsAndRefunds} & Doanh thu tính theo BR-19 \\
 \hline
@@ -262,7 +201,7 @@ Ba tệp migration \mt{V1}, \mt{V2}, \mt{V3} được áp dụng lần lượt l
 \subsection{Kiểm thử ràng buộc toàn vẹn}
 Script \mt{database/tests/test\_constraints.sql} chạy trong một giao dịch và hoàn tác ở cuối, nên không để lại dữ liệu. Mỗi ca thực hiện một thao tác ghi và so sánh mã lỗi PostgreSQL (SQLSTATE) với mã mong đợi: \mt{23P01} (vi phạm ràng buộc loại trừ), \mt{23514} (vi phạm CHECK), \mt{23505} (vi phạm ràng buộc duy nhất), hoặc \mt{OK} nếu thao tác phải thành công. Kết quả ở Bảng~\ref{tab:kt_tuongtranh}: cả 17 ca đều đạt.
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
 \caption{Kết quả kiểm thử ràng buộc trên PostgreSQL 16}
 \label{tab:kt_tuongtranh}
@@ -323,7 +262,7 @@ Nhóm chưa có kiểm thử tự động gửi nhiều yêu cầu đặt chỗ 
 Các kịch bản sau được nhóm chạy thủ công trên giao diện web với dữ liệu mẫu.
 % Nhóm cần chạy lại các kịch bản này trên bản triển khai cuối cùng trước buổi bảo vệ.
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
 \caption{Kịch bản kiểm thử chấp nhận}
 \label{tab:kt-e2e}
@@ -349,7 +288,7 @@ E2E-05 & Quản lý chi nhánh xử lý yêu cầu hoàn tiền bằng voucher &
 \section{Đánh giá yêu cầu phi chức năng}
 \label{sec:kt-nfr}
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
 \caption{Đánh giá các yêu cầu phi chức năng}
 \label{tab:nfr-verification}
@@ -361,9 +300,9 @@ E2E-05 & Quản lý chi nhánh xử lý yêu cầu hoàn tiền bằng voucher &
 \hline
 NFR-01 Hiệu năng & Script \mt{benchmark\_nfr.py} gửi 10 yêu cầu tuần tự tới \mt{/api/health} (một truy vấn \mt{SELECT 1} qua pooler Supabase) khi máy chủ chạy trên máy phát triển: thời gian phản hồi 133--180 ms, trung bình 163,8 ms; 100 yêu cầu với 20 luồng không có lỗi. Phép đo này phản ánh độ trễ mạng tới cơ sở dữ liệu, chưa đo các API nghiệp vụ như tạo đơn hay thanh toán. & Đạt một phần (chưa đo API nghiệp vụ) \\
 \hline
-NFR-02 Toàn vẹn & DB-01 đến DB-05 (không đặt trùng), TC-CAN-04, TC-CAN-05 (công thức hoàn tiền), TC-PAY-02 (không xử lý webhook lặp) & Đạt \\
+NFR-02 Toàn vẹn & DB-01 đến DB-05 (không đặt trùng), TC-CAN-03, TC-CAN-04 (công thức hoàn tiền), TC-PAY-02 (không xử lý webhook lặp) & Đạt \\
 \hline
-NFR-03 Bảo mật & TC-SEC-01 đến TC-SEC-09; mật khẩu băm BCrypt; khóa JWT tối thiểu 48 byte được kiểm tra khi khởi động. Còn tồn tại: khóa MoMo sandbox ghi trong mã nguồn, token lưu ở \mt{localStorage}, chưa có cơ chế thu hồi token (Mục~\ref{sec:tk-han-che}) & Đạt một phần \\
+NFR-03 Bảo mật & TC-SEC-01 đến TC-SEC-05; mật khẩu băm BCrypt; khóa JWT tối thiểu 48 byte được kiểm tra khi khởi động. Còn tồn tại: khóa MoMo sandbox ghi trong mã nguồn, token lưu ở \mt{localStorage}, chưa có cơ chế thu hồi token (Mục~\ref{sec:tk-han-che}) & Đạt một phần \\
 \hline
 NFR-04 Độ tin cậy & \mt{oneFailingBookingDoesNotStopTheRest}: lỗi ở một đơn không dừng tác vụ định kỳ; cấu hình production bật graceful shutdown. Chưa đo độ sẵn sàng; máy chủ ở gói miễn phí của Render có độ trễ khởi động lại khi không có truy cập & Đạt một phần \\
 \hline
@@ -379,7 +318,7 @@ NFR-06 Bảo trì & Mã nguồn phân tầng; 307 ca kiểm thử tự động c
 
 Trong quá trình rà soát mã nguồn và kiểm thử, nhóm ghi nhận một số lỗi logic. Bảng~\ref{tab:defects-summary} liệt kê các lỗi quan trọng đã được sửa, kèm ca kiểm thử bảo vệ.
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
 \caption{Các lỗi quan trọng đã khắc phục}
 \label{tab:defects-summary}

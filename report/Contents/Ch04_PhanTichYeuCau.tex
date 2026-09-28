@@ -14,7 +14,7 @@ Hệ thống có bốn tác nhân:
 
 Khách hàng và quản trị viên hệ thống không gắn với chi nhánh (\mt{branch\_id} rỗng); nhân viên và quản lý chi nhánh bắt buộc gắn với đúng một chi nhánh. Quy tắc này được kiểm tra ở tầng ứng dụng và bằng ràng buộc \mt{check\_branch\_by\_role} trong cơ sở dữ liệu (Bảng~\ref{tab:tacnhan}).
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
 \caption{Tác nhân và phạm vi dữ liệu}
 \label{tab:tacnhan}
@@ -107,7 +107,7 @@ Các yêu cầu chức năng được đánh mã \mt{FR-xx}.
 
 Các quy tắc nghiệp vụ được đánh mã \mt{BR-xx} và được tham chiếu ở các chương sau (Bảng~\ref{tab:rule_concurrency} và Bảng~\ref{tab:rule_payment}).
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
 \caption{Quy tắc nghiệp vụ về đặt chỗ}
 \label{tab:rule_concurrency}
@@ -140,7 +140,7 @@ BR-10 & Check-in được phép từ 30 phút trước giờ bắt đầu đến
 \end{tabularx}
 \end{table}
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
 \caption{Quy tắc nghiệp vụ về thanh toán, hủy đơn và hoàn tiền}
 \label{tab:rule_payment}
@@ -177,7 +177,7 @@ BR-19 & Doanh thu chỉ tính trên đơn \mt{COMPLETED} và \mt{NO\_SHOW} theo 
 \subsection{Sơ đồ tổng quát}
 Hình~\ref{fig:uc_tongquat} thể hiện ranh giới hệ thống và các nhóm chức năng của bốn tác nhân.
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
   \centering
   \includegraphics[width=\linewidth,height=0.72\textheight,keepaspectratio]{Chuong5/uc-tongquat.png}
   \caption{Sơ đồ use-case tổng quát của CoSpace}
@@ -187,7 +187,7 @@ Hình~\ref{fig:uc_tongquat} thể hiện ranh giới hệ thống và các nhóm
 \subsection{Khách hàng}
 Khách hàng tự thực hiện các thao tác: tìm chỗ trên sơ đồ, đặt chỗ, thanh toán, quản lý lịch sử đơn và kết nối đối tác (Hình~\ref{fig:uc_customer}).
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
   \centering
   \includegraphics[width=\linewidth,height=0.70\textheight,keepaspectratio]{Chuong5/uc-khachhang.png}
   \caption{Sơ đồ use-case của khách hàng}
@@ -197,7 +197,7 @@ Khách hàng tự thực hiện các thao tác: tìm chỗ trên sơ đồ, đ�
 \subsection{Nhân viên quầy}
 Nhân viên tạo đơn cho khách vãng lai, thu tiền mặt, check-in, check-out và ghi nhận dịch vụ phát sinh (Hình~\ref{fig:uc_staff}).
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
   \centering
   \includegraphics[width=\linewidth,height=0.70\textheight,keepaspectratio]{Chuong5/uc-nhanvien.png}
   \caption{Sơ đồ use-case của nhân viên quầy}
@@ -207,7 +207,7 @@ Nhân viên tạo đơn cho khách vãng lai, thu tiền mặt, check-in, check-
 \subsection{Quản lý chi nhánh}
 Quản lý chi nhánh cấu hình mặt bằng, sơ đồ, bảng giá, chính sách hủy, quản lý nhân viên và xử lý hoàn tiền (Hình~\ref{fig:uc_branch}).
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
   \centering
   \includegraphics[width=\linewidth,height=0.70\textheight,keepaspectratio]{Chuong5/uc-quanlychinhanh.png}
   \caption{Sơ đồ use-case của quản lý chi nhánh}
@@ -217,7 +217,7 @@ Quản lý chi nhánh cấu hình mặt bằng, sơ đồ, bảng giá, chính s
 \subsection{Quản trị viên hệ thống}
 Quản trị viên quản lý chi nhánh, người dùng, chính sách chung, xem báo cáo toàn hệ thống và nhật ký kiểm toán (Hình~\ref{fig:uc_admin}).
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
   \centering
   \includegraphics[width=\linewidth,height=0.70\textheight,keepaspectratio]{Chuong5/uc-quantrihethong.png}
   \caption{Sơ đồ use-case của quản trị viên hệ thống}
@@ -229,7 +229,7 @@ Quản trị viên quản lý chi nhánh, người dùng, chính sách chung, xe
 
 Bảng~\ref{tab:matran_phanquyen} tóm tắt quyền của từng vai trò trên các nhóm tài nguyên. Ký hiệu: C (tạo), R (xem), U (cập nhật), D (xóa hoặc ngừng sử dụng); ``CN'' nghĩa là chỉ trong chi nhánh của người dùng.
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
 \caption{Ma trận phân quyền theo vai trò}
 \label{tab:matran_phanquyen}

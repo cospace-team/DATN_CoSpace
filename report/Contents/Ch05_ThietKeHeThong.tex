@@ -116,7 +116,7 @@ Gồm bài viết (\mt{Post}), thẻ của bài viết (\mt{PostTag}), thông b�
 \section{Sơ đồ tuần tự}
 \label{sec:sequence}
 
-Mười bốn sơ đồ tuần tự dưới đây mô tả các luồng xử lý chính, bám theo mã nguồn phía máy chủ.
+Các sơ đồ tuần tự dưới đây mô tả những luồng xử lý chính, bám theo mã nguồn phía máy chủ; các luồng đơn giản hơn chỉ được mô tả bằng lời.
 
 \subsection{Xác thực và phân quyền}
 \begin{enumerate}
@@ -148,30 +148,27 @@ Mười bốn sơ đồ tuần tự dưới đây mô tả các luồng xử lý
 \subsection{Hủy đơn và hoàn tiền}
 \begin{enumerate}
     \item \textbf{Hủy đơn (Hình~\ref{fig:sd_huy}):} khóa dòng đơn; chỉ hủy được đơn chưa đến giờ bắt đầu (BR-11); tìm bậc chính sách phù hợp (BR-12); số tiền hoàn bằng phần trăm hoàn nhân tiền thuê cộng dịch vụ đã trả, không vượt số đã thu; phí phạt bằng tổng tiền trừ tiền hoàn (BR-13).
-    \item \textbf{Xử lý hoàn tiền (Hình~\ref{fig:sd_duyet_hoantien}):} quản lý chi nhánh trả tiền cho khách rồi đánh dấu yêu cầu là đã xử lý, hoặc từ chối kèm lý do (BR-14).
+    \item \textbf{Xử lý hoàn tiền:} quản lý chi nhánh trả tiền cho khách rồi đánh dấu yêu cầu là đã xử lý, hoặc từ chối kèm lý do (BR-14).
 \end{enumerate}
 
 \hinhuml{sd-07-huy}{Sơ đồ tuần tự hủy đơn và tính tiền hoàn}{fig:sd_huy}
-\hinhuml{sd-08-duyet-hoantien}{Sơ đồ tuần tự xử lý hoặc từ chối yêu cầu hoàn tiền}{fig:sd_duyet_hoantien}
 
 \subsection{Check-in, check-out và tác vụ định kỳ}
 \begin{enumerate}
     \item \textbf{Check-in và check-out (Hình~\ref{fig:sd_checkin}):} kiểm tra chi nhánh, trạng thái, lượt check-in đang mở và khung giờ (BR-10); khi check-out, chặn nếu còn nợ dịch vụ (BR-18). Gói nhiều ngày quay về \mt{CONFIRMED} sau mỗi lần check-out cho đến khi hết hạn.
     \item \textbf{Giải phóng đơn quá hạn thanh toán (Hình~\ref{fig:sd_hethan}):} mỗi 30 giây; mỗi đơn được đọc lại dưới khóa dòng, nên đơn vừa được webhook xác nhận sẽ không bị chuyển sang \mt{EXPIRED}.
-    \item \textbf{Đóng đơn hết giờ (Hình~\ref{fig:sd_dongdon}):} mỗi 5 phút; tự check-out khách quá giờ và chuyển đơn chưa từng check-in sang \mt{NO\_SHOW} (BR-17).
+    \item \textbf{Đóng đơn hết giờ:} mỗi 5 phút, theo cùng cách với tác vụ giải phóng đơn; tự check-out khách quá giờ và chuyển đơn chưa từng check-in sang \mt{NO\_SHOW} (BR-17).
 \end{enumerate}
 
 \hinhuml{sd-09-checkin-checkout}{Sơ đồ tuần tự check-in và check-out}{fig:sd_checkin}
 \hinhuml{sd-10-hethan-giucho}{Sơ đồ tuần tự giải phóng đơn quá hạn thanh toán}{fig:sd_hethan}
-\hinhuml{sd-11-dong-don}{Sơ đồ tuần tự đóng đơn hết giờ: tự check-out và đơn không đến}{fig:sd_dongdon}
 
 \subsection{Bảo trì và trợ lý ảo}
 \begin{enumerate}
-    \item \textbf{Tạo lịch bảo trì (Hình~\ref{fig:sd_baotri}):} lấy cùng khóa tư vấn với luồng đặt chỗ (BR-09); với mỗi đơn bị ảnh hưởng: nếu bảo trì chỉ phủ một phần thời gian thì hoàn tiền phần bị mất; nếu phủ toàn bộ và khách đang dùng thì kết thúc đơn và hoàn phần còn lại; nếu phủ toàn bộ và khách chưa dùng thì hủy đơn và hoàn 100\%.
+    \item \textbf{Tạo lịch bảo trì (sơ đồ hoạt động ở Hình~\ref{fig:act_maintenance}):} lấy cùng khóa tư vấn với luồng đặt chỗ (BR-09); với mỗi đơn bị ảnh hưởng: nếu bảo trì chỉ phủ một phần thời gian thì hoàn tiền phần bị mất; nếu phủ toàn bộ và khách đang dùng thì kết thúc đơn và hoàn phần còn lại; nếu phủ toàn bộ và khách chưa dùng thì hủy đơn và hoàn 100\%.
     \item \textbf{Trợ lý ảo (Hình~\ref{fig:sd_chatbot_1} và Hình~\ref{fig:sd_chatbot_2}):} máy chủ lặp tối đa 6 vòng gọi mô hình; hàm chỉ đọc được thực thi ngay; hàm ghi chỉ tạo đề xuất. Khi người dùng bấm xác nhận, máy chủ gọi đúng dịch vụ nghiệp vụ như khi thao tác trên giao diện, nên vẫn đi qua các khóa và kiểm tra ở trên.
 \end{enumerate}
 
-\hinhuml{sd-12-baotri}{Sơ đồ tuần tự tạo lịch bảo trì và xử lý đơn bị ảnh hưởng}{fig:sd_baotri}
 \hinhuml{sd-13-chatbot-hoithoai}{Sơ đồ tuần tự trợ lý ảo: hội thoại và gọi hàm}{fig:sd_chatbot_1}
 \hinhuml{sd-14-chatbot-xacnhan}{Sơ đồ tuần tự trợ lý ảo: xác nhận và thực hiện thao tác}{fig:sd_chatbot_2}
 
@@ -179,19 +176,10 @@ Mười bốn sơ đồ tuần tự dưới đây mô tả các luồng xử lý
 \label{sec:activity_state}
 
 \subsection{Sơ đồ hoạt động}
-Năm quy trình nghiệp vụ được mô hình hóa bằng sơ đồ hoạt động có phân làn:
-\begin{itemize}
-    \item đặt chỗ và thanh toán trực tuyến (Hình~\ref{fig:act_booking});
-    \item đặt chỗ tại quầy và thanh toán tiền mặt (Hình~\ref{fig:act_counter});
-    \item check-in và check-out (Hình~\ref{fig:act_checkin});
-    \item hủy đơn và hoàn tiền (Hình~\ref{fig:act_cancel});
-    \item bảo trì không gian và xử lý đơn bị ảnh hưởng (Hình~\ref{fig:act_maintenance}).
-\end{itemize}
+Ba quy trình có nhiều bên tham gia được mô hình hóa bằng sơ đồ hoạt động có phân làn: đặt chỗ và thanh toán trực tuyến (Hình~\ref{fig:act_booking}), đặt chỗ tại quầy và thanh toán tiền mặt (Hình~\ref{fig:act_counter}), bảo trì không gian và xử lý đơn bị ảnh hưởng (Hình~\ref{fig:act_maintenance}). Luồng check-in, check-out và luồng hủy đơn đã được thể hiện bằng sơ đồ tuần tự ở Mục~\ref{sec:sequence}.
 
 \hinhdo{Chuong5/act-1-datcho-online}{Sơ đồ hoạt động: đặt chỗ và thanh toán trực tuyến}{fig:act_booking}
 \hinhdo{Chuong5/act-2-datcho-quay}{Sơ đồ hoạt động: đặt chỗ tại quầy và thanh toán tiền mặt}{fig:act_counter}
-\hinhdo{Chuong5/act-3-checkin}{Sơ đồ hoạt động: check-in và check-out}{fig:act_checkin}
-\hinhdo{Chuong5/act-4-huy-hoantien}{Sơ đồ hoạt động: hủy đơn và hoàn tiền}{fig:act_cancel}
 \hinhdo{Chuong5/act-5-baotri}{Sơ đồ hoạt động: bảo trì không gian và xử lý đơn bị ảnh hưởng}{fig:act_maintenance}
 
 \subsection{Máy trạng thái của đơn đặt chỗ}
@@ -199,7 +187,7 @@ Trạng thái đơn được khai báo trong kiểu liệt kê \mt{BookingStatus
 
 \hinhdo{Chuong5/st-1-dondatcho}{Sơ đồ trạng thái của đơn đặt chỗ}{fig:state_booking}
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
 \caption{Các chuyển trạng thái hợp lệ của đơn đặt chỗ}
 \label{tab:state_booking_matrix}
@@ -298,7 +286,7 @@ Lược đồ được quản lý bằng Flyway với ba tệp migration: \mt{V1
 
 \hinhdo{Chuong6/erd-00-tongquan}{Bản đồ các nhóm bảng của cơ sở dữ liệu (V1--V2)}{fig:erd}
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
 \caption{Các bảng dữ liệu theo nhóm chức năng}
 \label{tab:bang_theo_module}
@@ -329,14 +317,7 @@ Bổ sung ở V3 & 2 & \mt{workspace\_images}, \mt{partner\_connections} \\
 \end{tabularx}
 \end{table}
 
-Chi tiết các cột của từng nhóm được thể hiện trong các Hình~\ref{fig:erd_dinhdanh}--\ref{fig:erd_congdong}.
-
-\hinhdo{Chuong6/erd-01-dinhdanh}{ERD mức vật lý: định danh, hồ sơ và gợi ý đối tác}{fig:erd_dinhdanh}
-\hinhdo{Chuong6/erd-02-khonggian}{ERD mức vật lý: không gian làm việc}{fig:erd_khonggian}
-\hinhdo{Chuong6/erd-03-gia}{ERD mức vật lý: bảng giá, dịch vụ thêm, chính sách hủy, khuyến mãi và hạng thành viên}{fig:erd_gia}
-\hinhdo{Chuong6/erd-04-datcho}{ERD mức vật lý: đặt chỗ, dịch vụ gọi thêm, check-in và hủy}{fig:erd_datcho}
-\hinhdo{Chuong6/erd-05-thanhtoan}{ERD mức vật lý: thanh toán và hoàn tiền}{fig:erd_thanhtoan}
-\hinhdo{Chuong6/erd-06-congdong}{ERD mức vật lý: bảng tin, thông báo và nhật ký kiểm toán}{fig:erd_congdong}
+Các cột và kiểu dữ liệu của từng bảng tương ứng với thuộc tính của các lớp thực thể ở Mục~\ref{ssec:lop_mien}.
 
 \subsection{Các ràng buộc toàn vẹn chính}
 \begin{itemize}
@@ -364,7 +345,7 @@ Máy chủ cung cấp 153 điểm cuối REST (tính theo cặp phương thức 
 
 Bảng~\ref{tab:api_nhom} tóm tắt các nhóm điểm cuối.
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
 \caption{Các nhóm điểm cuối API}
 \label{tab:api_nhom}

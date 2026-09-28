@@ -25,6 +25,15 @@
 \newcolumntype{L}{>{\raggedright\arraybackslash}X}
 \newcolumntype{P}[1]{>{\raggedright\arraybackslash}p{#1}}
 \usepackage{float}
+% Hình và bảng được trôi nhưng không vượt qua ranh giới của mục (section)
+\usepackage[section]{placeins}
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\bottomfraction}{0.8}
+\renewcommand{\textfraction}{0.07}
+\renewcommand{\floatpagefraction}{0.75}
+\setcounter{topnumber}{3}
+\setcounter{bottomnumber}{2}
+\setcounter{totalnumber}{4}
 \usepackage{caption, subcaption}
 \captionsetup{font=small}
 \usepackage{tikz}
@@ -142,7 +151,7 @@
 
 % Sơ đồ UML theo chiều dọc trang
 \newcommand{\hinhuml}[3]{%
-  \begin{figure}[H]
+  \begin{figure}[!htbp]
     \centering
     \includegraphics[width=\linewidth,height=0.72\textheight,keepaspectratio]{#1.png}
     \caption{#2}
@@ -151,7 +160,7 @@
 
 % Sơ đồ UML rộng (không xoay trang)
 \newcommand{\hinhumlngang}[3]{%
-  \begin{figure}[H]
+  \begin{figure}[!htbp]
     \centering
     \includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{#1.png}
     \caption{#2}
@@ -160,7 +169,7 @@
 
 % \hinhdo{ChuongX/ten_tep}{chú thích}{nhãn}
 \newcommand{\hinhdo}[3]{%
-  \begin{figure}[H]
+  \begin{figure}[!htbp]
     \centering
     \includegraphics[width=\linewidth,height=0.80\textheight,keepaspectratio]{#1.png}
     \caption{#2}
@@ -169,7 +178,7 @@
 
 % \hinhdongang{ChuongX/ten_tep}{chú thích}{nhãn}: hình rộng
 \newcommand{\hinhdongang}[3]{%
-  \begin{figure}[H]
+  \begin{figure}[!htbp]
     \centering
     \includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{#1.png}
     \caption{#2}
@@ -178,7 +187,7 @@
 
 % \hinherd{ten_tep.jpg}{chú thích}{nhãn}: sơ đồ ERD ký pháp Chen
 \newcommand{\hinherd}[3]{%
-  \begin{figure}[H]
+  \begin{figure}[!htbp]
     \centering
     \includegraphics[width=0.96\linewidth,height=0.76\textheight,keepaspectratio]{#1}
     \caption{#2}
@@ -187,7 +196,7 @@
 
 % \hinhgd{ten_tep}{chú thích}{nhãn}: ảnh chụp giao diện
 \newcommand{\hinhgd}[3]{%
-  \begin{figure}[H]
+  \begin{figure}[!htbp]
     \centering
     \includegraphics[width=0.92\linewidth,height=0.40\textheight,keepaspectratio]{#1.png}
     \caption{#2}

@@ -47,7 +47,7 @@ DATN_CoSpace/
 
 Bảng~\ref{tab:spec-booking-service} liệt kê các phương thức chính.
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
 \small
 \caption{Các phương thức chính của BookingService}
@@ -85,7 +85,7 @@ Hai khóa tư vấn được giữ đến hết giao dịch. Ràng buộc \mt{EX
 
 \subsection{Thanh toán (PaymentService, PayosService, MomoService)}
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
 \small
 \caption{Các phương thức chính của dịch vụ thanh toán}
@@ -138,7 +138,7 @@ trong đó $rental$ là tiền thuê sau giảm giá, $p$ là phần trăm hoàn
 
 Chính sách hủy chung được khởi tạo sẵn trong migration như ở Bảng~\ref{tab:chinhsach_huy}; quản trị viên và quản lý chi nhánh có thể thêm hoặc sửa các bậc.
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
 \small
 \caption{Chính sách hủy chung mặc định}
@@ -184,7 +184,7 @@ Hủy trong vòng 24 giờ trước giờ bắt đầu & \mt{BEFORE\_START\_DAYS
 \subsection{Trợ lý ảo (ChatbotService)}
 \mt{ChatbotController} nhận \mt{POST /api/chatbot/message} và trả về luồng SSE. \mt{ChatbotService.chat(userId, request, onProgress)} gửi lời nhắc hệ thống, lịch sử hội thoại và danh sách hàm cho Gemini, lặp tối đa 6 vòng gọi hàm. Lời nhắc hệ thống yêu cầu trả lời bằng tiếng Việt, luôn lấy dữ liệu thật qua các hàm, không tự đặt ra mã, giá hay tình trạng chỗ, và chỉ gọi hàm đề xuất khi khách đã đồng ý với đầy đủ thông tin. Bảng~\ref{tab:spec-chatbot-tools} liệt kê chín hàm được khai báo.
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
 \small
 \caption{Các hàm khai báo cho trợ lý ảo}
@@ -220,7 +220,7 @@ Hàm chỉ đọc được thực thi ngay với \mt{userId} lấy từ token, n
 \subsection{Đóng gói máy chủ bằng Docker}
 \mt{BE/Dockerfile} gồm hai giai đoạn (Bảng~\ref{tab:docker-spec}).
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
 \small
 \caption{Các giai đoạn của Dockerfile phía máy chủ}
@@ -244,7 +244,7 @@ Tham số JVM & \multicolumn{2}{p{10.2cm}|}{\mt{-XX:MaxRAMPercentage=70}: heap t
 \subsection{Đóng gói giao diện}
 Vite tách các thư viện dùng chung thành các tệp riêng bằng \mt{manualChunks}; mỗi trang được tải lười thành một tệp riêng. Bảng~\ref{tab:bundle-optimization} là kích thước đo được khi chạy \mt{npm run build} trên mã nguồn hiện tại.
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
 \small
 \caption{Kích thước một số tệp sau khi đóng gói giao diện}
@@ -287,7 +287,7 @@ Giao diện gồm trang giới thiệu, trang đăng nhập và 31 trang chức 
 
 Trang giới thiệu (Hình~\ref{fig:ui-landing-page}) trình bày các loại không gian, chức năng chính, các bước đặt chỗ và liên kết tới trang đăng ký.
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
   \centering
   \begin{subfigure}[b]{0.49\textwidth}
     \includegraphics[width=\linewidth,keepaspectratio]{ui-01-landing-hero.png}
@@ -334,7 +334,7 @@ Trang đăng nhập (Hình~\ref{fig:ui-auth-login}) hỗ trợ email và mật k
 
 \textbf{Lịch sử đặt chỗ.} Trang lịch sử (Hình~\ref{fig:ui-cust-history-tabs}) có ba thẻ: sắp tới, đã hoàn thành, đã hủy. Đơn chờ thanh toán có đồng hồ đếm ngược và nút thanh toán, nút hủy; đơn đã xác nhận có mã QR để check-in, có thể gia hạn hoặc gọi thêm dịch vụ. Thẻ ``đã hủy'' gồm đơn khách hủy, đơn hết hạn thanh toán và đơn không đến.
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
   \centering
   \begin{subfigure}[b]{0.32\textwidth}
     \includegraphics[width=\linewidth,keepaspectratio]{ui-05-cust-history-upcoming.png}
@@ -361,7 +361,7 @@ Trang đăng nhập (Hình~\ref{fig:ui-auth-login}) hỗ trợ email và mật k
 
 \textbf{Hồ sơ.} Trang hồ sơ (Hình~\ref{fig:ui-cust-profile-tabs}) có ba thẻ: hồ sơ và kỹ năng; mạng lưới kết nối (lời mời đến, đã kết nối, đã gửi, cùng danh sách gợi ý); tài khoản và bảo mật (đổi mật khẩu, chọn công khai email và số điện thoại).
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
   \centering
   \begin{subfigure}[b]{0.32\textwidth}
     \includegraphics[width=\linewidth,keepaspectratio]{ui-07-cust-profile-info.png}
@@ -416,7 +416,7 @@ Trang đăng nhập (Hình~\ref{fig:ui-auth-login}) hỗ trợ email và mật k
 
 \textbf{Bảng giá, chính sách hủy và nhân viên} (Hình~\ref{fig:ui-ba-management-group}): quản lý chi nhánh đặt giá riêng cho từng loại không gian (ưu tiên hơn giá chung), thêm các bậc chính sách hủy riêng và quản lý tài khoản nhân viên của chi nhánh.
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
   \centering
   \begin{subfigure}[b]{0.32\textwidth}
     \includegraphics[width=\linewidth,keepaspectratio]{ui-15-ba-pricing.png}
@@ -439,7 +439,7 @@ Trang đăng nhập (Hình~\ref{fig:ui-auth-login}) hỗ trợ email và mật k
 
 \textbf{Bảo trì, dịch vụ thêm và hoàn tiền} (Hình~\ref{fig:ui-ba-ops-group}): xem lịch bảo trì; quản lý danh mục dịch vụ thêm của chi nhánh; xử lý hàng chờ hoàn tiền bằng tiền mặt, chuyển khoản hoặc voucher.
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
   \centering
   \begin{subfigure}[b]{0.32\textwidth}
     \includegraphics[width=\linewidth,keepaspectratio]{ui-18-ba-maintenance.png}
@@ -468,7 +468,7 @@ Trang đăng nhập (Hình~\ref{fig:ui-auth-login}) hỗ trợ email và mật k
 
 \textbf{Chi nhánh và bảng giá chung} (Hình~\ref{fig:ui-admin-branches-pricing}): quản lý chi nhánh (mã, địa chỉ, giờ mở cửa, trạng thái) và ma trận giá chung theo loại không gian và đơn vị thời gian.
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
   \centering
   \begin{subfigure}[b]{0.49\textwidth}
     \includegraphics[width=\linewidth,keepaspectratio]{ui-22-admin-branches.png}
@@ -486,7 +486,7 @@ Trang đăng nhập (Hình~\ref{fig:ui-auth-login}) hỗ trợ email và mật k
 
 \textbf{Người dùng và chính sách hủy chung} (Hình~\ref{fig:ui-admin-users-cancellation}): tra cứu tài khoản, đổi vai trò, gán chi nhánh, khóa tài khoản; quản lý các bậc chính sách hủy chung.
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
   \centering
   \begin{subfigure}[b]{0.49\textwidth}
     \includegraphics[width=\linewidth,keepaspectratio]{ui-24-admin-users-rbac.png}
@@ -504,7 +504,7 @@ Trang đăng nhập (Hình~\ref{fig:ui-auth-login}) hỗ trợ email và mật k
 
 \textbf{Dịch vụ thêm, tiện ích và khuyến mãi} (Hình~\ref{fig:ui-admin-amenities-services-promos}): danh mục dịch vụ dùng chung, danh mục tiện ích gắn cho các loại không gian, và các mã khuyến mãi (giảm theo phần trăm hoặc số tiền cố định, có thời hạn, giới hạn lượt dùng, có thể giới hạn theo chi nhánh hoặc loại không gian).
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
   \centering
   \begin{subfigure}[b]{0.32\textwidth}
     \includegraphics[width=\linewidth,keepaspectratio]{ui-26-admin-services.png}
@@ -529,7 +529,7 @@ Trang đăng nhập (Hình~\ref{fig:ui-auth-login}) hỗ trợ email và mật k
 
 \hinhgd{ui-29-admin-membership-tiers}{Trang cấu hình hạng thành viên}{fig:ui-admin-membership}
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
 \small
 \caption{Các hạng thành viên mặc định}
@@ -552,7 +552,7 @@ Platinum & 15.000.000 đ & 20 & 10\% \\
 
 \textbf{Hoàn tiền, nhật ký kiểm toán và báo cáo} (Hình~\ref{fig:ui-admin-audit-reports-group}): hàng chờ hoàn tiền của toàn chuỗi; nhật ký kiểm toán lọc theo thời gian, người thực hiện, đối tượng và hành động; báo cáo doanh thu theo khoảng ngày và chi nhánh, có nút xuất CSV.
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
   \centering
   \begin{subfigure}[b]{0.32\textwidth}
     \includegraphics[width=\linewidth,keepaspectratio]{ui-30-admin-refunds.png}
