@@ -2,23 +2,23 @@
 \addcontentsline{toc}{chapter}{Tóm tắt đề tài}
 \markboth{TÓM TẮT ĐỀ TÀI}{}
 
-Thị trường không gian làm việc chia sẻ (Co-working Space) tại Việt Nam đang tăng trưởng nhanh, nhưng phần lớn các đơn vị vận hành vẫn quản lý thủ công qua bảng tính và tin nhắn, dẫn đến các vấn đề: xung đột trùng lịch đặt chỗ, sai sót đối soát thanh toán, chính sách hủy thiếu nhất quán và bỏ ngỏ giá trị kết nối cộng đồng giữa các thành viên.
+Nhiều không gian làm việc chung (co-working space) quy mô vừa và nhỏ tại Việt Nam vẫn quản lý chỗ ngồi bằng bảng tính và nhận đặt chỗ qua tin nhắn. Cách làm này dễ dẫn đến đặt trùng lịch, đối soát chuyển khoản thủ công, áp dụng chính sách hủy không thống nhất giữa các chi nhánh và gần như không hỗ trợ việc kết nối giữa các thành viên.
 
-Đề tài \textbf{``Phát triển hệ thống quản lý văn phòng chia sẻ (CoSpace)''} xây dựng một nền tảng số hóa toàn diện cho chuỗi Co-working Space đa chi nhánh, phục vụ bốn nhóm tác nhân: Khách hàng, Nhân viên quầy, Quản lý chi nhánh và Quản trị viên hệ thống. Hệ thống bao gồm: sơ đồ mặt bằng tương tác SVG, đặt chỗ thời gian thực, tích hợp thanh toán VietQR PayOS và MoMo, chính sách hủy--hoàn tiền tự động theo bậc thời gian, check-in/check-out bằng mã QR, gợi ý đối tác kinh doanh dựa trên thuật toán Jaccard, và trợ lý ảo Google Gemini AI có rào chắn xác nhận giao dịch.
+Đề tài \textbf{``Phát triển hệ thống quản lý văn phòng chia sẻ (CoSpace)''} xây dựng một ứng dụng web cho chuỗi co-working nhiều chi nhánh với bốn vai trò: khách hàng, nhân viên quầy, quản lý chi nhánh và quản trị viên hệ thống. Các chức năng chính gồm: xem sơ đồ mặt bằng và đặt chỗ theo giờ, ngày, tuần, tháng; thanh toán qua PayOS (VietQR), ví MoMo (môi trường thử nghiệm) hoặc tiền mặt tại quầy; hủy đơn và hoàn tiền theo chính sách nhiều bậc; check-in, check-out và ghi nhận dịch vụ phát sinh tại quầy; gợi ý đối tác dựa trên hệ số Jaccard; trợ lý ảo dùng Google Gemini với cơ chế gọi hàm, trong đó mọi thao tác làm thay đổi dữ liệu đều phải được người dùng xác nhận.
 
-Về công nghệ, hệ thống sử dụng Spring Boot 3.1 (Java 17), React 18 với TypeScript và Tailwind CSS, PostgreSQL trên Supabase, di trú lược đồ bằng Flyway. Bài toán tương tranh được giải quyết bằng cơ chế hai lớp: khóa tư vấn \texttt{pg\_advisory\_xact\_lock} tại tầng ứng dụng kết hợp ràng buộc loại trừ \texttt{EXCLUDE USING gist} tại tầng cơ sở dữ liệu. Webhook thanh toán được thiết kế bất biến (Idempotent) qua trạng thái giao dịch và khóa dòng bi quan.
+Hệ thống dùng Spring Boot 3.1 (Java 17) ở phía máy chủ, React 18 với TypeScript và Tailwind CSS ở phía giao diện, cơ sở dữ liệu PostgreSQL trên Supabase với lược đồ quản lý bằng Flyway. Việc chống đặt trùng lịch dựa trên hai lớp: khóa tư vấn \mt{pg\_advisory\_xact\_lock} trong giao dịch và ràng buộc \mt{EXCLUDE USING gist} trên bảng đặt chỗ. Webhook thanh toán được kiểm tra chữ ký HMAC-SHA256 và xử lý lũy đẳng: một thông báo gửi lặp nhiều lần chỉ được ghi nhận một lần.
 
-Sản phẩm đạt quy mô: \textbf{30 bảng CSDL}, \textbf{26 lớp điều khiển} với \textbf{133 API endpoints}, \textbf{33 trang giao diện}, \textbf{307 ca kiểm thử tự động} Back-end (0 lỗi). Hệ thống được đóng gói Docker đa giai đoạn và triển khai trên Render, Vercel và Supabase.
+Ở thời điểm nộp báo cáo, hệ thống có 32 bảng dữ liệu, 28 lớp controller với 153 điểm cuối REST, 31 trang chức năng cho bốn vai trò và 307 ca kiểm thử tự động phía máy chủ (306 ca đạt, 1 ca được bỏ qua có chủ đích). Máy chủ được đóng gói bằng Docker và chạy trên Render, giao diện được triển khai trên Vercel.
 
 \vspace{0.3cm}
 \noindent Báo cáo gồm 8 chương:
 \begin{itemize}
-    \item \textbf{Chương 1:} Tổng quan -- bối cảnh, bài toán, mục tiêu, phạm vi và kế hoạch thực hiện.
-    \item \textbf{Chương 2:} Khảo sát hiện trạng -- phân tích mô hình Co-working và các hệ thống liên quan.
-    \item \textbf{Chương 3:} Cơ sở lý thuyết -- kiến trúc 3 tầng, RESTful, JWT, Advisory Locks, Jaccard, Gemini.
-    \item \textbf{Chương 4:} Phân tích yêu cầu -- 4 vai trò, 20 yêu cầu chức năng, yêu cầu phi chức năng, Use-case.
-    \item \textbf{Chương 5:} Thiết kế hệ thống -- Class Diagram, Sequence Diagram, ERD, State Machine.
-    \item \textbf{Chương 6:} Hiện thực và Giao diện -- Service Specs, thuật toán tương tranh, Docker, 12 màn hình.
-    \item \textbf{Chương 7:} Kiểm thử và đánh giá -- 307 ca kiểm thử tự động, Race conditions, UAT.
-    \item \textbf{Chương 8:} Tổng kết -- kết quả, hạn chế và hướng phát triển.
+    \item \textbf{Chương 1} -- Tổng quan: bối cảnh, bài toán, mục tiêu, phạm vi và kế hoạch thực hiện.
+    \item \textbf{Chương 2} -- Khảo sát hiện trạng: các mô hình co-working và các hệ thống liên quan.
+    \item \textbf{Chương 3} -- Cơ sở lý thuyết và công nghệ: kiến trúc phân tầng, REST, JWT, điều khiển tương tranh trong PostgreSQL, hệ số Jaccard, mô hình ngôn ngữ lớn với gọi hàm.
+    \item \textbf{Chương 4} -- Phân tích yêu cầu: tác nhân, 34 yêu cầu chức năng, yêu cầu phi chức năng, quy tắc nghiệp vụ, sơ đồ use-case.
+    \item \textbf{Chương 5} -- Thiết kế hệ thống: kiến trúc, sơ đồ lớp, sơ đồ tuần tự, sơ đồ hoạt động và trạng thái, cơ sở dữ liệu, API và bảo mật.
+    \item \textbf{Chương 6} -- Hiện thực và giao diện: các dịch vụ nghiệp vụ chính, đóng gói và triển khai, giao diện theo từng vai trò.
+    \item \textbf{Chương 7} -- Kiểm thử và đánh giá: kiểm thử tự động, kiểm thử ràng buộc trên PostgreSQL, kịch bản chấp nhận và đánh giá yêu cầu phi chức năng.
+    \item \textbf{Chương 8} -- Tổng kết: kết quả đạt được, hạn chế và hướng phát triển.
 \end{itemize}

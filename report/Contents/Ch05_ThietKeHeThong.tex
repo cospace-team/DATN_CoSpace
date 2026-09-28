@@ -1,429 +1,423 @@
 \chapter{Thiết kế hệ thống}
 \label{ch:thietke}
 
-\section{Kiến trúc tổng thể hệ thống}
+\section{Kiến trúc tổng thể}
 \label{sec:kientruc}
 
-Hệ thống CoSpace được thiết kế theo mô hình kiến trúc khách--chủ ba tầng (Client--Server 3-Tier Architecture) kết hợp kiến trúc phân lớp nội bộ (Layered Architecture) ở phía máy chủ. Toàn bộ các thành phần của hệ thống và các kênh giao tiếp liên tầng được thể hiện tại Hình \ref{fig:kientruc_tongthe}.
+Hệ thống theo mô hình khách -- chủ ba tầng như đã trình bày ở Chương~\ref{ch:cosolythuyet}. Hình~\ref{fig:kientruc_tongthe} thể hiện các thành phần và kênh giao tiếp giữa chúng.
 
-\hinhdo{Chuong6/arch-tongthe}{Kiến trúc tổng thể của hệ thống CoSpace}{fig:kientruc_tongthe}
+\hinhdo{Chuong6/arch-tongthe}{Kiến trúc tổng thể của CoSpace}{fig:kientruc_tongthe}
 
-Kiến trúc bao gồm ba tầng chính và các dịch vụ tích hợp bên ngoài:
 \begin{enumerate}
-    \item \textbf{Tầng trình bày (Presentation Tier -- Front-end):} Ứng dụng Single Page Application (SPA) xây dựng trên React 18 và TypeScript, được đóng gói tối ưu bằng Vite và phân phối qua mạng lưới máy chủ biên Vercel Edge CDN. Người dùng cuối giao tiếp với ứng dụng thông qua trình duyệt web trên máy tính hoặc thiết bị di động.
-    \item \textbf{Tầng ứng dụng (Application Tier -- Back-end):} Máy chủ ứng dụng Spring Boot 3 đóng gói trong Docker container và vận hành trên nền tảng đám mây Render. Máy chủ tiếp nhận các yêu cầu HTTPS từ Front-end, chịu trách nhiệm xử lý logic nghiệp vụ, quản lý giao dịch ACID, phân quyền bảo mật và điều phối tương tranh.
-    \item \textbf{Tầng dữ liệu (Data Tier -- Database):} Hệ quản trị cơ sở dữ liệu quan hệ PostgreSQL vận hành trên nền tảng đám mây Supabase tại khu vực Châu Á. Tầng ứng dụng kết nối trực tiếp đến PostgreSQL thông qua giao thức JDBC với bể kết nối HikariCP được mã hóa SSL (cổng 6543).
-    \item \textbf{Các dịch vụ đám mây tích hợp bên thứ ba:}
-    \begin{itemize}
-        \item \textit{Supabase Auth:} Đảm nhận xác thực đăng nhập một lần (Google SSO) và cấp phát thẻ xác thực OAuth2.
-        \item \textit{PayOS:} Cổng thanh toán quốc gia VietQR Napas 24/7, phát hành mã QR động và gửi tín hiệu xác nhận qua Webhook.
-        \item \textit{Ví điện tử MoMo:} Cung cấp kênh thanh toán ví điện tử thử nghiệm qua giao thức IPN Webhook.
-        \item \textit{Google Gemini AI:} Mô hình ngôn ngữ lớn cung cấp dịch vụ trí tuệ nhân tạo đàm thoại và gọi hàm công cụ qua luồng dữ liệu một chiều SSE (Server-Sent Events).
-    \end{itemize}
+    \item \textbf{Giao diện:} ứng dụng React được Vercel phân phối dưới dạng tệp tĩnh. Trình duyệt gọi API máy chủ qua HTTPS với token trong tiêu đề \mt{Authorization}; riêng trợ lý ảo nhận phản hồi dạng luồng Server-Sent Events (SSE).
+    \item \textbf{Máy chủ ứng dụng:} Spring Boot chạy trong container Docker trên Render, gồm tầng bảo mật, controller, service, repository, các tác vụ định kỳ và bộ nhớ đệm Caffeine.
+    \item \textbf{Cơ sở dữ liệu:} PostgreSQL trên Supabase, kết nối qua JDBC với bể kết nối HikariCP tới pooler của Supabase (cổng 6543, bắt buộc SSL).
+    \item \textbf{Dịch vụ bên ngoài:} Supabase Auth (đăng nhập Google, cung cấp JWKS), PayOS và MoMo (tạo giao dịch, gửi webhook), Google Gemini (trợ lý ảo, lý do gợi ý đối tác).
 \end{enumerate}
 
-\subsection{Kiến trúc phân tầng phía máy chủ}
+\subsection{Tổ chức mã nguồn phía máy chủ}
 \label{ssec:phantang_be}
-Mã nguồn Back-end được tổ chức thành các gói tính năng theo mô hình phân lớp chuẩn mực của Spring Boot:
+Mã nguồn máy chủ nằm trong gói \mt{com.cospace.app}:
 \begin{itemize}
-    \item \textbf{Gói \texttt{controller}:} Gồm 26 lớp điều khiển RESTful đón nhận các yêu cầu HTTP. Controller chỉ đóng vai trò phân tích tham số, xác thực dữ liệu đầu vào (Bean Validation) và ủy quyền xử lý cho tầng dịch vụ.
-    \item \textbf{Gói \texttt{service}:} Gồm 32 lớp dịch vụ nghiệp vụ (trong đó 23 lớp được quản lý giao dịch khai báo bằng chú thích \texttt{@Transactional}). Điểm cốt lõi là sự hiện diện của lớp \texttt{BookingStateMachine} -- cổng kiểm soát duy nhất cho mọi chuyển đổi trạng thái của đơn đặt chỗ.
-    \item \textbf{Gói \texttt{repository}:} Gồm 29 giao diện kế thừa \texttt{JpaRepository}, cung cấp các phương thức truy vấn tối ưu và các câu lệnh khóa dòng dữ liệu bi quan (\texttt{findByIdWithLock}).
-    \item \textbf{Gói \texttt{entity}:} Gồm 29 lớp thực thể đại diện cho cấu trúc 30 bảng trong cơ sở dữ liệu quan hệ.
-    \item \textbf{Gói \texttt{security}:} Chứa các thành phần xác thực và phân quyền: \texttt{SecurityConfig}, \texttt{SupabaseJwtAuthenticationConverter}, \texttt{BranchAccessGuard} và \texttt{JwtUtil}.
+    \item \mt{controller}: 28 lớp REST controller với 153 điểm cuối, cùng lớp \mt{ApiExceptionHandler} chuyển ngoại lệ thành phản hồi JSON.
+    \item \mt{service}: 37 lớp, gồm các dịch vụ nghiệp vụ, hai tác vụ định kỳ, lớp \mt{BookingStateMachine} và lớp \mt{GeminiClient} gọi Gemini API. 26 lớp dùng \mt{@Transactional}.
+    \item \mt{repository}: 31 giao diện Spring Data JPA, gồm các truy vấn khóa dòng \mt{findByIdWithLock} và truy vấn tìm khoảng thời gian chồng lấn.
+    \item \mt{entity}: 31 lớp thực thể và 5 kiểu liệt kê (trạng thái đơn, trạng thái thanh toán, đơn vị thời gian, nguồn đơn, trạng thái bảo trì).
+    \item \mt{dto}: 48 lớp dữ liệu vào/ra của API.
+    \item \mt{config}: \mt{SecurityConfig}, \mt{SupabaseJwtAuthenticationConverter}, \mt{CacheConfig}, \mt{PayosConfig}, \mt{PayosProductionGuard}.
+    \item \mt{security}: \mt{BranchAccessGuard}; \mt{util}: \mt{JwtUtil}.
 \end{itemize}
 
-\subsection{Kiến trúc phía giao diện người dùng}
+\subsection{Tổ chức mã nguồn phía giao diện}
 \label{ssec:phantang_fe}
-Ứng dụng Front-end được cấu trúc theo định hướng mô-đun hóa chức năng (Feature-based structure) như minh họa tại Hình \ref{fig:kientruc_frontend}.
+Hình~\ref{fig:kientruc_frontend} thể hiện cấu trúc ứng dụng React.
 
-\hinhdongang{Chuong6/arch-frontend}{Kiến trúc phía giao diện người dùng của hệ thống CoSpace}{fig:kientruc_frontend}
+\hinhdongang{Chuong6/arch-frontend}{Kiến trúc phía giao diện của CoSpace}{fig:kientruc_frontend}
 
-Các thành phần kiến trúc chính bao gồm:
 \begin{itemize}
-    \item \textbf{Tầng truy cập API tập trung (\texttt{src/api/}):} Đóng gói toàn bộ các hàm gọi HTTP thông qua đối tượng dùng chung, tự động gắn thẻ Bearer Token vào tiêu đề \texttt{Authorization}, tự động làm mới token thông qua Refresh Token khi gặp lỗi 401.
-    \item \textbf{Bộ quản lý trạng thái xác thực toàn cục (\texttt{AuthContext}):} Lưu trữ thông tin định danh của người dùng hiện tại, trạng thái đăng nhập, vai trò và định danh chi nhánh.
-    \item \textbf{Định tuyến phân quyền theo vai trò (\texttt{ProtectedRoute}):} Kiểm soát nghiêm ngặt việc truy cập đường dẫn dựa trên vai trò người dùng, tự động chuyển hướng khách hàng về đúng trang chủ của vai trò đó sau khi đăng nhập thành công.
-    \item \textbf{Tải lười (Lazy Loading) và chia nhỏ gói mã (Code Splitting):} Sử dụng hàm \texttt{React.lazy()} cho toàn bộ các mô-đun trang, kết hợp với cấu hình chia nhỏ thư viện của Vite (\texttt{manualChunks}) giúp giảm dung lượng tải trang lần đầu xuống dưới 300KB.
+    \item \textbf{Định tuyến theo vai trò} (\mt{App.tsx}, React Router 7): mỗi vai trò có một nhóm trang riêng (\mt{/customer}, \mt{/staff}, \mt{/branch-admin}, \mt{/admin}); người dùng vào sai nhóm trang được chuyển về trang chủ của vai trò mình. Các trang được tải lười bằng \mt{React.lazy}.
+    \item \textbf{Ngữ cảnh dùng chung:} \mt{AuthContext} giữ phiên đăng nhập, vai trò và chi nhánh; \mt{ThemeProvider} quản lý chế độ sáng/tối.
+    \item \textbf{Tầng gọi API} (\mt{src/lib}, \mt{src/api}): các hàm gọi REST theo từng nhóm chức năng, tự gắn token và làm mới token khi nhận lỗi 401. Địa chỉ máy chủ được cấu hình qua biến \mt{VITE\_API\_BASE\_URL}.
+    \item \textbf{Thành phần giao diện:} sơ đồ mặt bằng (xem và chỉnh sửa), khung chat trợ lý ảo, thông báo, các thành phần riêng của nhân viên và quản lý chi nhánh.
 \end{itemize}
 
-\subsection{Sơ đồ triển khai hệ thống}
+\subsection{Sơ đồ triển khai}
 \label{ssec:trienkhai_tong}
-Hệ thống được phát hành và vận hành theo mô hình kiến trúc đám mây đa nền tảng (Multi-cloud Architecture), tách biệt giữa việc phân phối tệp tĩnh và thực thi mã nghiệp vụ (Hình \ref{fig:trienkhai}).
+Hình~\ref{fig:trienkhai} thể hiện cách hệ thống được triển khai: giao diện trên Vercel, máy chủ trong container Docker trên Render, cơ sở dữ liệu và đăng nhập Google trên Supabase. Vì Render ở gói miễn phí tự tắt máy chủ khi không có truy cập, nhóm dùng một GitHub Actions workflow gọi \mt{/api/health} định kỳ để giữ máy chủ hoạt động.
 
-\hinhdo{Chuong6/arch-trienkhai}{Sơ đồ triển khai của hệ thống CoSpace}{fig:trienkhai}
+\hinhdo{Chuong6/arch-trienkhai}{Sơ đồ triển khai của CoSpace}{fig:trienkhai}
 
-\section{Thiết kế lớp hướng đối tượng}
+\section{Thiết kế lớp}
 \label{sec:thietke_lop}
 
-Các lớp thực thể trong CoSpace sử dụng thuộc tính khóa ngoại kiểu \texttt{UUID} (ký hiệu \guillemotleft FK\guillemotright) thay vì khai báo quan hệ đối tượng lười của Hibernate, giúp loại bỏ hoàn toàn các lỗi \texttt{LazyInitializationException} và truy vấn thừa $N+1$.
+Các lớp thực thể không khai báo quan hệ đối tượng của Hibernate. Mỗi quan hệ được thể hiện bằng một thuộc tính kiểu \mt{UUID} giữ khóa ngoại (ký hiệu \guillemotleft FK\guillemotright{} trên sơ đồ).
 
-\subsection{Mô hình miền dữ liệu (Domain Model Classes)}
+\subsection{Các lớp thực thể}
 \label{ssec:lop_mien}
 
-Mô hình miền dữ liệu của hệ thống CoSpace được tổ chức thành 6 sơ đồ lớp nghiệp vụ chuyên biệt:
+\subsubsection{Không gian làm việc}
+Cấu trúc vật lý gồm \mt{BranchEntity} $\rightarrow$ \mt{Floor} $\rightarrow$ \mt{WorkspaceEntity}. Mỗi không gian thuộc một \mt{WorkspaceType}; tiện ích (\mt{Amenity}) được gắn theo loại không gian qua lớp \mt{WorkspaceTypeAmenity}. Lịch bảo trì là \mt{WorkspaceMaintenanceEntity} (Hình~\ref{fig:cd_khonggian}).
 
-\subsubsection{Miền Không gian làm việc}
-Sơ đồ phản ánh cấu trúc phân cấp vật lý: Chi nhánh (\texttt{Branch}) $\rightarrow$ Tầng (\texttt{Floor}) $\rightarrow$ Không gian làm việc (\texttt{Workspace}). Các tiện ích (\texttt{Amenity}) được gắn kết ở mức Loại không gian (\texttt{WorkspaceType}) qua lớp liên kết \texttt{WorkspaceTypeAmenity} (Hình~\ref{fig:cd_khonggian}).
+\hinhuml{cd-01-khonggian}{Sơ đồ lớp thực thể: không gian làm việc}{fig:cd_khonggian}
 
-\hinhuml{cd-01-khonggian}{Sơ đồ lớp miền dữ liệu: không gian làm việc}{fig:cd_khonggian}
+\subsubsection{Bảng giá, dịch vụ thêm và chính sách hủy}
+\mt{PricePolicy}, \mt{ExtraServiceEntity} và \mt{CancellationPolicy} đều có trường \mt{branchId} có thể rỗng: rỗng là cấu hình chung, có giá trị là cấu hình riêng của chi nhánh và được ưu tiên áp dụng (Hình~\ref{fig:cd_gia}).
 
-\subsubsection{Miền Bảng giá và Chính sách hủy}
-Sơ đồ thể hiện mô hình kế thừa ``Toàn cục và ghi đè theo chi nhánh'' (Global with Branch Override). Các thực thể \texttt{PricePolicy}, \texttt{ExtraService} và \texttt{CancellationPolicy} đều chứa trường \texttt{branchId} có thể nhận giá trị \texttt{NULL} (toàn cục) hoặc mã chi nhánh cụ thể (ưu tiên áp dụng trước) (Hình~\ref{fig:cd_gia}).
+\hinhuml{cd-02-gia-chinhsach}{Sơ đồ lớp thực thể: bảng giá, dịch vụ thêm và chính sách hủy}{fig:cd_gia}
 
-\hinhuml{cd-02-gia-chinhsach}{Sơ đồ lớp miền dữ liệu: bảng giá, dịch vụ bổ sung và chính sách hủy}{fig:cd_gia}
+\subsubsection{Đặt chỗ, check-in và hủy}
+\mt{Booking} lưu các khoản tiền \mt{subtotalAmount}, \mt{discountAmount}, \mt{addonAmount}, \mt{totalAmount} và phần giảm theo hạng thành viên, theo mã khuyến mãi. \mt{BookingServiceItem} là một dòng trên hóa đơn của đơn (dịch vụ thêm, phí gia hạn, phí trả muộn), lưu đơn giá tại thời điểm gọi và trạng thái đã trả hay chưa. \mt{CheckinLog} lưu các lượt check-in, check-out; \mt{BookingCancellation} lưu thông tin hủy (Hình~\ref{fig:cd_datcho}).
 
-\subsubsection{Miền Đặt chỗ và Check-in}
-Lớp \texttt{Booking} quản lý vòng đời đơn với 4 thuộc tính tài chính độc lập: \texttt{subtotalAmount}, \texttt{discountAmount}, \texttt{extraServicesAmount} và \texttt{totalAmount}. Lớp \texttt{BookingAddon} lưu bản chụp đơn giá tại thời điểm gọi dịch vụ. Lớp \texttt{BookingCheckin} quản lý các lượt check-in mở/đóng cho gói dài hạn (Hình~\ref{fig:cd_datcho}).
+\hinhuml{cd-03-datcho}{Sơ đồ lớp thực thể: đặt chỗ, check-in và hủy}{fig:cd_datcho}
 
-\hinhuml{cd-03-datcho}{Sơ đồ lớp miền dữ liệu: đặt chỗ, check-in và hủy}{fig:cd_datcho}
+\subsubsection{Thanh toán, hoàn tiền, khuyến mãi và hạng thành viên}
+Một đơn có thể có nhiều \mt{Payment} (ví dụ lần thanh toán đơn và lần thanh toán dịch vụ phát sinh). \mt{Refund} là một yêu cầu hoàn tiền trong hàng chờ. \mt{Promotion} lưu cả mã giảm giá công khai và voucher cá nhân. Hạng của khách được lưu bằng mã hạng trong \mt{User}, tham chiếu tới \mt{MembershipTier} (Hình~\ref{fig:cd_thanhtoan}).
 
-\subsubsection{Miền Thanh toán và Ưu đãi thành viên}
-Một đơn đặt chỗ có thể có nhiều giao dịch thanh toán (\texttt{Payment}). Thực thể \texttt{RefundRequest} đại diện cho yêu cầu hoàn tiền độc lập trong hàng chờ phê duyệt. Lớp \texttt{UserLoyalty} theo dõi tổng chi tiêu thực tế để xếp hạng hội viên trong \texttt{MembershipTier} (Hình~\ref{fig:cd_thanhtoan}).
+\hinhuml{cd-04-thanhtoan}{Sơ đồ lớp thực thể: thanh toán, hoàn tiền, khuyến mãi và hạng thành viên}{fig:cd_thanhtoan}
 
-\hinhuml{cd-04-thanhtoan}{Sơ đồ lớp miền dữ liệu: thanh toán, hoàn tiền, khuyến mãi và hạng thành viên}{fig:cd_thanhtoan}
+\subsubsection{Hồ sơ năng lực và gợi ý đối tác}
+Mỗi \mt{User} có một \mt{Profile}. Kỹ năng (\mt{ProfileSkill}, có mức độ 1--5) và sở thích (\mt{ProfileInterest}, có độ ưu tiên) đều tham chiếu tới danh mục thẻ \mt{Tag}. \mt{ProfileMatchScore} lưu điểm tương đồng đã tính (Hình~\ref{fig:cd_goiy}).
 
-\subsubsection{Miền Hồ sơ năng lực và Gợi ý đối tác}
-Lớp \texttt{UserProfile} lưu trữ thông tin chuyên môn, liên kết với kỹ năng (\texttt{UserSkill}) có đánh giá mức độ thành thạo ($1..5$) và sở thích (\texttt{UserInterest}). Kết quả tính toán độ tương đồng giữa hai thành viên được lưu tạm vào \texttt{PartnerMatch} (Hình~\ref{fig:cd_goiy}).
+\hinhuml{cd-05-goiydoitac}{Sơ đồ lớp thực thể: hồ sơ năng lực và gợi ý đối tác}{fig:cd_goiy}
 
-\hinhuml{cd-05-goiydoitac}{Sơ đồ lớp miền dữ liệu: hồ sơ năng lực và gợi ý đối tác}{fig:cd_goiy}
+\subsubsection{Cộng đồng, thông báo và nhật ký kiểm toán}
+Gồm bài viết (\mt{Post}), thẻ của bài viết (\mt{PostTag}), thông báo (\mt{NotificationEntity}) và nhật ký kiểm toán (\mt{AuditLogEntity}) (Hình~\ref{fig:cd_congdong}).
 
-\subsubsection{Miền Cộng đồng và Kiểm toán}
-Quản lý các bài viết trên diễn đàn (\texttt{Post}), thẻ phân loại (\texttt{PostTag}), thông báo trong ứng dụng (\texttt{Notification}) và nhật ký kiểm toán bất biến (\texttt{AuditLog}) (Hình~\ref{fig:cd_congdong}).
+\hinhuml{cd-06-congdong}{Sơ đồ lớp thực thể: bảng tin, thông báo và nhật ký kiểm toán}{fig:cd_congdong}
 
-\hinhuml{cd-06-congdong}{Sơ đồ lớp miền dữ liệu: bảng tin cộng đồng, thông báo và nhật ký kiểm toán}{fig:cd_congdong}
-
-\subsection{Tầng dịch vụ (Service Layer Classes)}
+\subsection{Các lớp dịch vụ}
 \label{ssec:lop_dichvu}
 
-Tầng dịch vụ nghiệp vụ được mô hình hóa qua 5 sơ đồ lớp dịch vụ:
+\subsubsection{Đặt chỗ và tính giá}
+\mt{BookingService} kiểm tra hạn mức đơn chờ, lấy khóa tư vấn, lấy đơn giá từ \mt{PricingService}, áp dụng giảm giá qua \mt{MembershipService} và \mt{PromotionService}, tính giá dịch vụ thêm qua \mt{BookingAddonService}; mọi chuyển trạng thái đi qua \mt{BookingStateMachine} (Hình~\ref{fig:cd_svc_datcho}).
 
-\subsubsection{Dịch vụ Đặt chỗ và Tính giá}
-\texttt{BookingService} giữ vai trò điều phối việc kiểm tra hạn mức, lấy khóa tư vấn, tính đơn giá qua \texttt{PricingService}, áp dụng ưu đãi qua \texttt{LoyaltyService} và chuyển trạng thái qua \texttt{BookingStateMachine} (Hình~\ref{fig:cd_svc_datcho}).
+\hinhumlngang{cd-07-svc-datcho}{Sơ đồ lớp dịch vụ: đặt chỗ, tính giá và ưu đãi}{fig:cd_svc_datcho}
 
-\hinhumlngang{cd-07-svc-datcho}{Sơ đồ lớp tầng nghiệp vụ: đặt chỗ, tính giá và ưu đãi}{fig:cd_svc_datcho}
+\subsubsection{Vòng đời đơn, check-in và bảo trì}
+\mt{BookingExpiryScheduler} (30 giây) giao từng đơn quá hạn cho \mt{BookingExpiryService}; \mt{BookingLifecycleScheduler} (5 phút) giao cho \mt{BookingLifecycleService}. \mt{CheckinService} xử lý check-in, check-out; \mt{StaffMaintenanceService} tạo lịch bảo trì và xử lý các đơn bị ảnh hưởng (Hình~\ref{fig:cd_svc_vongdoi}).
 
-\subsubsection{Dịch vụ Vòng đời tự động và Bảo trì}
-Bao gồm \texttt{BookingLifecycleService}, \texttt{BookingExpiryScheduler} (hủy đơn hết hạn 15 phút), \texttt{CheckinService} (cửa sổ check-in 30 phút) và \texttt{StaffMaintenanceService} (khóa không gian bảo trì và xử lý đơn bị ảnh hưởng) (Hình~\ref{fig:cd_svc_vongdoi}).
+\hinhuml{cd-08-svc-vongdoi}{Sơ đồ lớp dịch vụ: vòng đời đơn, check-in và bảo trì}{fig:cd_svc_vongdoi}
 
-\hinhuml{cd-08-svc-vongdoi}{Sơ đồ lớp tầng nghiệp vụ: vòng đời tự động, check-in và bảo trì}{fig:cd_svc_vongdoi}
+\subsubsection{Thanh toán, hủy và hoàn tiền}
+\mt{PaymentService} điều phối việc tạo giao dịch và xử lý webhook, gọi \mt{PayosService} và \mt{MomoService} để làm việc với cổng thanh toán. \mt{CancellationService} tính tiền hoàn khi hủy; \mt{RefundService} quản lý hàng chờ hoàn tiền; \mt{NotificationService} gửi thông báo cho khách (Hình~\ref{fig:cd_svc_thanhtoan}).
 
-\subsubsection{Dịch vụ Thanh toán và Hoàn tiền}
-Điều phối giao tiếp với cổng PayOS (\texttt{PayosService}), ví MoMo (\texttt{MomoService}), xử lý hủy đơn theo bậc thời gian (\texttt{CancellationService}) và quản lý hàng chờ hoàn tiền (\texttt{RefundService}) (Hình~\ref{fig:cd_svc_thanhtoan}).
+\hinhumlngang{cd-09-svc-thanhtoan}{Sơ đồ lớp dịch vụ: thanh toán, hủy và hoàn tiền}{fig:cd_svc_thanhtoan}
 
-\hinhumlngang{cd-09-svc-thanhtoan}{Sơ đồ lớp tầng nghiệp vụ: thanh toán, hủy và hoàn tiền}{fig:cd_svc_thanhtoan}
+\subsubsection{Xác thực và phân quyền}
+\mt{AuthService} xử lý đăng ký, đăng nhập, làm mới token và liên kết tài khoản Google; \mt{JwtUtil} ký và kiểm tra token HS384; \mt{SupabaseJwtAuthenticationConverter} nạp vai trò từ cơ sở dữ liệu; \mt{BranchAccessGuard} giới hạn truy cập theo chi nhánh (Hình~\ref{fig:cd_svc_xacthuc}).
 
-\subsubsection{Dịch vụ Xác thực và Phân quyền}
-Bao gồm \texttt{AuthService}, \texttt{JwtUtil} (ký và kiểm tra token HS384), \texttt{SupabaseJwtAuthenticationConverter} (nạp quyền động từ CSDL) và \texttt{BranchAccessGuard} (chốt chặn cô lập dữ liệu chi nhánh) (Hình~\ref{fig:cd_svc_xacthuc}).
+\hinhuml{cd-10-svc-xacthuc}{Sơ đồ lớp dịch vụ: xác thực và phân quyền}{fig:cd_svc_xacthuc}
 
-\hinhuml{cd-10-svc-xacthuc}{Sơ đồ lớp tầng nghiệp vụ: xác thực và phân quyền}{fig:cd_svc_xacthuc}
+\subsubsection{Trợ lý ảo, gợi ý đối tác và kiểm toán}
+\mt{ChatbotService} điều phối hội thoại và các lần gọi hàm qua \mt{GeminiClient}; \mt{PartnerMatchingService} tính điểm gợi ý; \mt{AuditLogService} ghi nhật ký kiểm toán trong một giao dịch riêng (\mt{REQUIRES\_NEW}), nên nhật ký vẫn được ghi ngay cả khi thao tác chính bị hoàn tác (Hình~\ref{fig:cd_svc_trolyao}).
 
-\subsubsection{Dịch vụ Trợ lý AI và Kiểm toán}
-Bao gồm \texttt{ChatbotService} (kết nối Gemini API, điều phối Function Calling), \texttt{PartnerMatchingService} (tính điểm Jaccard) và \texttt{AuditLogService} (ghi nhận vết an ninh bất đồng bộ) (Hình~\ref{fig:cd_svc_trolyao}).
+\hinhuml{cd-11-svc-trolyao}{Sơ đồ lớp dịch vụ: trợ lý ảo, gợi ý đối tác và nhật ký kiểm toán}{fig:cd_svc_trolyao}
 
-\hinhuml{cd-11-svc-trolyao}{Sơ đồ lớp tầng nghiệp vụ: trợ lý ảo, gợi ý đối tác và nhật ký kiểm toán}{fig:cd_svc_trolyao}
-
-\section{Thiết kế tương tác động (Sơ đồ tuần tự)}
+\section{Sơ đồ tuần tự}
 \label{sec:sequence}
 
-Hệ thống sử dụng 14 sơ đồ tuần tự (Sequence Diagrams) để chi tiết hóa thứ tự thời gian của các thông điệp, ranh giới giao dịch và cơ chế đồng bộ hóa giữa các lớp Java Backend, cơ sở dữ liệu và dịch vụ bên thứ ba.
+Mười bốn sơ đồ tuần tự dưới đây mô tả các luồng xử lý chính, bám theo mã nguồn phía máy chủ.
 
 \subsection{Xác thực và phân quyền}
 \begin{enumerate}
-    \item \textbf{Đăng nhập và làm mới phiên (Hình \ref{fig:sd_dangnhap}):} Xác thực email/mật khẩu qua hàm băm BCrypt, hoặc xác thực Google SSO qua Supabase JWKS công khai. Cấp phát Access Token (1 giờ) và Refresh Token (30 ngày) ký HS384.
-    \item \textbf{Xác thực và phân quyền mỗi yêu cầu API (Hình \ref{fig:sd_xacthuc_api}):} \texttt{SecurityFilterChain} giải mã token, truy vấn CSDL nạp quyền động và \texttt{BranchAccessGuard} kiểm tra định danh chi nhánh.
+    \item \textbf{Đăng nhập (Hình~\ref{fig:sd_dangnhap}):} với email và mật khẩu, \mt{AuthService} kiểm tra mật khẩu bằng BCrypt và cấp token truy cập (1 giờ), token làm mới (30 ngày). Với Google, giao diện đăng nhập qua Supabase rồi gọi \mt{/api/auth/sync}; hệ thống chỉ tự liên kết với tài khoản khách hàng có cùng email khi token đến từ Google, và không bao giờ tự liên kết với tài khoản nhân viên hay quản trị.
+    \item \textbf{Xác thực mỗi yêu cầu (Hình~\ref{fig:sd_xacthuc_api}):} bộ giải mã chọn cách kiểm tra theo nguồn phát hành token, converter đọc vai trò và trạng thái mới nhất từ cơ sở dữ liệu. Tài khoản bị khóa nhận lỗi 401 ngay ở yêu cầu kế tiếp.
 \end{enumerate}
 
-\hinhuml{sd-01-dangnhap}{Sơ đồ tuần tự đăng nhập bằng email hoặc Google và làm mới phiên}{fig:sd_dangnhap}
-\hinhuml{sd-02-xacthuc-api}{Sơ đồ tuần tự xác thực và phân quyền mỗi yêu cầu API}{fig:sd_xacthuc_api}
+\hinhuml{sd-01-dangnhap}{Sơ đồ tuần tự đăng nhập bằng email hoặc Google và làm mới token}{fig:sd_dangnhap}
+\hinhuml{sd-02-xacthuc-api}{Sơ đồ tuần tự xác thực và phân quyền một yêu cầu API}{fig:sd_xacthuc_api}
 
-\subsection{Đặt chỗ và khóa chống tương tranh hai tầng}
+\subsection{Tạo đơn đặt chỗ}
 \begin{enumerate}
-    \item \textbf{Giai đoạn 1: Kiểm tra hạn mức và khóa chống trùng lịch (Hình \ref{fig:sd_datcho_1}):} Khách hàng gửi yêu cầu tới \texttt{BookingController}. Khóa tư vấn người dùng \texttt{pg\_advisory\_xact\_lock(hashtext('rate\_limit:' || userId))} kiểm tra tối đa 3 đơn chờ. Khóa tư vấn không gian \texttt{pg\_advisory\_xact\_lock(hashtext('booking:' || workspaceId))} kiểm tra trùng lịch và giải phóng đơn quá hạn 15 phút tại chỗ.
-    \item \textbf{Giai đoạn 2: Tính giá và lưu đơn (Hình \ref{fig:sd_datcho_2}):} Gọi \texttt{PricingService} tính giá ở máy chủ, trừ giảm giá (\texttt{LoyaltyService}) và lưu đơn \texttt{PENDING\_PAYMENT} với hạn chót 15 phút.
+    \item \textbf{Kiểm tra và khóa (Hình~\ref{fig:sd_datcho_1}):} trong cùng một giao dịch, \mt{BookingService} lấy khóa \mt{rate\_limit:<userId>} và đếm đơn chờ thanh toán (BR-03); suy ra chi nhánh từ không gian (BR-08); kiểm tra thời điểm và giờ mở cửa (BR-04, BR-05); lấy khóa \mt{booking:<workspaceId>}; tìm đơn chồng lấn, trong đó các đơn chờ đã quá hạn được giải phóng ngay; cuối cùng kiểm tra lịch bảo trì.
+    \item \textbf{Tính giá và lưu (Hình~\ref{fig:sd_datcho_2}):} lấy đơn giá (giá chi nhánh trước, giá chung sau), tính số đơn vị ở máy chủ (BR-06), trừ giảm giá hạng thành viên rồi đến mã khuyến mãi, cộng dịch vụ thêm, lưu đơn \mt{PENDING\_PAYMENT} với hạn thanh toán 15 phút. Nếu tổng tiền bằng 0 (được giảm toàn bộ), đơn được xác nhận ngay.
 \end{enumerate}
 
-\hinhuml{sd-03-datcho-kiemtra}{Sơ đồ tuần tự tạo đơn đặt chỗ (1/2): kiểm tra giới hạn và khóa chống trùng lịch}{fig:sd_datcho_1}
-\hinhuml{sd-04-datcho-luu}{Sơ đồ tuần tự tạo đơn đặt chỗ (2/2): tính giá và lưu đơn}{fig:sd_datcho_2}
+\hinhuml{sd-03-datcho-kiemtra}{Sơ đồ tuần tự tạo đơn (1/2): kiểm tra hạn mức, khóa và kiểm tra chồng lấn}{fig:sd_datcho_1}
+\hinhuml{sd-04-datcho-luu}{Sơ đồ tuần tự tạo đơn (2/2): tính giá và lưu đơn}{fig:sd_datcho_2}
 
-\subsection{Thanh toán và xử lý kết quả thanh toán}
+\subsection{Thanh toán}
 \begin{enumerate}
-    \item \textbf{Khởi tạo thanh toán (Hình \ref{fig:sd_thanhtoan}):} Tiếp nhận yêu cầu kèm tiêu đề \texttt{Idempotency-Key}, gọi \texttt{PayosService} tạo liên kết thanh toán VietQR và trả về mã QR động.
-    \item \textbf{Xử lý Webhook PayOS (Hình \ref{fig:sd_webhook}):} Kiểm tra chữ ký HMAC-SHA256, khóa dòng \texttt{SELECT FOR UPDATE}, xử lý bất biến (bỏ qua nếu đã \texttt{PAID}), xử lý đơn trễ (hoàn tiền $100\%$) hoặc chuyển đơn sang \texttt{CONFIRMED}.
+    \item \textbf{Tạo giao dịch (Hình~\ref{fig:sd_thanhtoan}):} với PayOS hoặc MoMo, nếu đơn đã có một giao dịch đang chờ thì dùng lại giao dịch đó thay vì tạo mới; chỉ đơn \mt{PENDING\_PAYMENT} chưa quá hạn mới được thanh toán. Với tiền mặt, nhân viên xác nhận và giao dịch được tạo ngay ở trạng thái \mt{PAID}.
+    \item \textbf{Xử lý webhook PayOS (Hình~\ref{fig:sd_webhook}):} kiểm tra chữ ký; bỏ qua nếu giao dịch đã \mt{PAID}; nếu thành công thì khóa dòng đơn rồi xác nhận đơn, hoặc tạo yêu cầu hoàn tiền khi tiền về muộn hay khách trả trùng (BR-15).
 \end{enumerate}
 
-\hinhuml{sd-05-thanhtoan}{Sơ đồ tuần tự khởi tạo thanh toán}{fig:sd_thanhtoan}
-\hinhuml{sd-06-webhook}{Sơ đồ tuần tự xử lý webhook thanh toán PayOS}{fig:sd_webhook}
+\hinhuml{sd-05-thanhtoan}{Sơ đồ tuần tự tạo giao dịch thanh toán}{fig:sd_thanhtoan}
+\hinhuml{sd-06-webhook}{Sơ đồ tuần tự xử lý webhook PayOS}{fig:sd_webhook}
 
-\subsection{Hủy đặt chỗ và hoàn tiền}
+\subsection{Hủy đơn và hoàn tiền}
 \begin{enumerate}
-    \item \textbf{Hủy đặt chỗ và tính tiền hoàn (Hình \ref{fig:sd_huy}):} So khớp bậc thời gian chính sách hủy theo phút trên nửa khoảng mở $[min, max)$, tính tiền hoàn và phí phạt theo bất biến tổng tiền, chuyển đơn sang \texttt{CANCELLED}.
-    \item \textbf{Duyệt hoàn tiền (Hình \ref{fig:sd_duyet_hoantien}):} Quản lý chi nhánh đối soát chi trả thực tế ngoài đời, cập nhật trạng thái yêu cầu sang \texttt{APPROVED} và ghi nhật ký kiểm toán.
+    \item \textbf{Hủy đơn (Hình~\ref{fig:sd_huy}):} khóa dòng đơn; chỉ hủy được đơn chưa đến giờ bắt đầu (BR-11); tìm bậc chính sách phù hợp (BR-12); số tiền hoàn bằng phần trăm hoàn nhân tiền thuê cộng dịch vụ đã trả, không vượt số đã thu; phí phạt bằng tổng tiền trừ tiền hoàn (BR-13).
+    \item \textbf{Xử lý hoàn tiền (Hình~\ref{fig:sd_duyet_hoantien}):} quản lý chi nhánh trả tiền cho khách rồi đánh dấu yêu cầu là đã xử lý, hoặc từ chối kèm lý do (BR-14).
 \end{enumerate}
 
-\hinhuml{sd-07-huy}{Sơ đồ tuần tự hủy đặt chỗ và tính hoàn tiền}{fig:sd_huy}
-\hinhuml{sd-08-duyet-hoantien}{Sơ đồ tuần tự duyệt hoặc từ chối yêu cầu hoàn tiền}{fig:sd_duyet_hoantien}
+\hinhuml{sd-07-huy}{Sơ đồ tuần tự hủy đơn và tính tiền hoàn}{fig:sd_huy}
+\hinhuml{sd-08-duyet-hoantien}{Sơ đồ tuần tự xử lý hoặc từ chối yêu cầu hoàn tiền}{fig:sd_duyet_hoantien}
 
-\subsection{Check-in, check-out và các tác vụ tự động}
+\subsection{Check-in, check-out và tác vụ định kỳ}
 \begin{enumerate}
-    \item \textbf{Check-in và Check-out (Hình \ref{fig:sd_checkin}):} Kiểm tra dung sai 30 phút, tạo lượt check-in mở, chặn check-out nếu còn nợ dịch vụ phát sinh.
-    \item \textbf{Tác vụ hết hạn giữ chỗ (Hình \ref{fig:sd_hethan}):} \texttt{BookingExpiryScheduler} chạy mỗi 30 giây giải phóng đơn quá hạn 15 phút.
-    \item \textbf{Tác vụ đóng đơn hết giờ (Hình \ref{fig:sd_dongdon}):} \texttt{BookingLifecycleScheduler} chạy mỗi 5 phút chuyển đơn quá hạn sang \texttt{NO\_SHOW} hoặc \texttt{COMPLETED}.
+    \item \textbf{Check-in và check-out (Hình~\ref{fig:sd_checkin}):} kiểm tra chi nhánh, trạng thái, lượt check-in đang mở và khung giờ (BR-10); khi check-out, chặn nếu còn nợ dịch vụ (BR-18). Gói nhiều ngày quay về \mt{CONFIRMED} sau mỗi lần check-out cho đến khi hết hạn.
+    \item \textbf{Giải phóng đơn quá hạn thanh toán (Hình~\ref{fig:sd_hethan}):} mỗi 30 giây; mỗi đơn được đọc lại dưới khóa dòng, nên đơn vừa được webhook xác nhận sẽ không bị chuyển sang \mt{EXPIRED}.
+    \item \textbf{Đóng đơn hết giờ (Hình~\ref{fig:sd_dongdon}):} mỗi 5 phút; tự check-out khách quá giờ và chuyển đơn chưa từng check-in sang \mt{NO\_SHOW} (BR-17).
 \end{enumerate}
 
 \hinhuml{sd-09-checkin-checkout}{Sơ đồ tuần tự check-in và check-out}{fig:sd_checkin}
-\hinhuml{sd-10-hethan-giucho}{Sơ đồ tuần tự tự động giải phóng chỗ giữ quá 15 phút}{fig:sd_hethan}
-\hinhuml{sd-11-dong-don}{Sơ đồ tuần tự tự động đóng đơn hết giờ: check-out quá hạn và không đến}{fig:sd_dongdon}
+\hinhuml{sd-10-hethan-giucho}{Sơ đồ tuần tự giải phóng đơn quá hạn thanh toán}{fig:sd_hethan}
+\hinhuml{sd-11-dong-don}{Sơ đồ tuần tự đóng đơn hết giờ: tự check-out và đơn không đến}{fig:sd_dongdon}
 
-\subsection{Bảo trì không gian và Trợ lý ảo AI}
+\subsection{Bảo trì và trợ lý ảo}
 \begin{enumerate}
-    \item \textbf{Bảo trì không gian (Hình \ref{fig:sd_baotri}):} Khóa tư vấn tương tranh, quét các đơn bị ảnh hưởng và thực hiện hoàn tiền một phần hoặc hủy hoàn tiền toàn phần.
-    \item \textbf{Trợ lý ảo AI đàm thoại và xác nhận (Hình \ref{fig:sd_chatbot_1} \& \ref{fig:sd_chatbot_2}):} Gọi các công cụ chỉ đọc qua luồng SSE; hiển thị bản đề xuất có nút xác nhận người dùng trước khi ghi vào CSDL.
+    \item \textbf{Tạo lịch bảo trì (Hình~\ref{fig:sd_baotri}):} lấy cùng khóa tư vấn với luồng đặt chỗ (BR-09); với mỗi đơn bị ảnh hưởng: nếu bảo trì chỉ phủ một phần thời gian thì hoàn tiền phần bị mất; nếu phủ toàn bộ và khách đang dùng thì kết thúc đơn và hoàn phần còn lại; nếu phủ toàn bộ và khách chưa dùng thì hủy đơn và hoàn 100\%.
+    \item \textbf{Trợ lý ảo (Hình~\ref{fig:sd_chatbot_1} và Hình~\ref{fig:sd_chatbot_2}):} máy chủ lặp tối đa 6 vòng gọi mô hình; hàm chỉ đọc được thực thi ngay; hàm ghi chỉ tạo đề xuất. Khi người dùng bấm xác nhận, máy chủ gọi đúng dịch vụ nghiệp vụ như khi thao tác trên giao diện, nên vẫn đi qua các khóa và kiểm tra ở trên.
 \end{enumerate}
 
 \hinhuml{sd-12-baotri}{Sơ đồ tuần tự tạo lịch bảo trì và xử lý đơn bị ảnh hưởng}{fig:sd_baotri}
-\hinhuml{sd-13-chatbot-hoithoai}{Sơ đồ tuần tự trợ lý ảo: hội thoại và gọi công cụ}{fig:sd_chatbot_1}
-\hinhuml{sd-14-chatbot-xacnhan}{Sơ đồ tuần tự trợ lý ảo: xác nhận và thực hiện hành động}{fig:sd_chatbot_2}
+\hinhuml{sd-13-chatbot-hoithoai}{Sơ đồ tuần tự trợ lý ảo: hội thoại và gọi hàm}{fig:sd_chatbot_1}
+\hinhuml{sd-14-chatbot-xacnhan}{Sơ đồ tuần tự trợ lý ảo: xác nhận và thực hiện thao tác}{fig:sd_chatbot_2}
 
-\section{Mô hình hóa quy trình và máy trạng thái}
+\section{Sơ đồ hoạt động và máy trạng thái}
 \label{sec:activity_state}
 
-\subsection{Các quy trình nghiệp vụ cốt lõi (Activity Diagrams)}
-Năm quy trình hoạt động được mô hình hóa rõ nét qua các sơ đồ hoạt động:
+\subsection{Sơ đồ hoạt động}
+Năm quy trình nghiệp vụ được mô hình hóa bằng sơ đồ hoạt động có phân làn:
 \begin{itemize}
-    \item Quy trình đặt chỗ và thanh toán trực tuyến (Hình \ref{fig:act_booking}).
-    \item Quy trình đặt chỗ tại quầy và thanh toán tiền mặt (Hình \ref{fig:act_counter}).
-    \item Quy trình check-in và check-out (Hình \ref{fig:act_checkin}).
-    \item Quy trình hủy đặt chỗ và hoàn tiền tự động (Hình \ref{fig:act_cancel}).
-    \item Quy trình bảo trì không gian và xử lý đơn bị ảnh hưởng (Hình \ref{fig:act_maintenance}).
+    \item đặt chỗ và thanh toán trực tuyến (Hình~\ref{fig:act_booking});
+    \item đặt chỗ tại quầy và thanh toán tiền mặt (Hình~\ref{fig:act_counter});
+    \item check-in và check-out (Hình~\ref{fig:act_checkin});
+    \item hủy đơn và hoàn tiền (Hình~\ref{fig:act_cancel});
+    \item bảo trì không gian và xử lý đơn bị ảnh hưởng (Hình~\ref{fig:act_maintenance}).
 \end{itemize}
 
-\hinhdo{Chuong5/act-1-datcho-online}{Sơ đồ hoạt động quy trình đặt chỗ và thanh toán trực tuyến}{fig:act_booking}
-\hinhdo{Chuong5/act-2-datcho-quay}{Sơ đồ hoạt động quy trình đặt chỗ tại quầy và thanh toán tiền mặt}{fig:act_counter}
-\hinhdo{Chuong5/act-3-checkin}{Sơ đồ hoạt động quy trình check-in và check-out}{fig:act_checkin}
-\hinhdo{Chuong5/act-4-huy-hoantien}{Sơ đồ hoạt động quy trình hủy đặt chỗ và hoàn tiền}{fig:act_cancel}
-\hinhdo{Chuong5/act-5-baotri}{Sơ đồ hoạt động quy trình bảo trì không gian và xử lý đơn bị ảnh hưởng}{fig:act_maintenance}
+\hinhdo{Chuong5/act-1-datcho-online}{Sơ đồ hoạt động: đặt chỗ và thanh toán trực tuyến}{fig:act_booking}
+\hinhdo{Chuong5/act-2-datcho-quay}{Sơ đồ hoạt động: đặt chỗ tại quầy và thanh toán tiền mặt}{fig:act_counter}
+\hinhdo{Chuong5/act-3-checkin}{Sơ đồ hoạt động: check-in và check-out}{fig:act_checkin}
+\hinhdo{Chuong5/act-4-huy-hoantien}{Sơ đồ hoạt động: hủy đơn và hoàn tiền}{fig:act_cancel}
+\hinhdo{Chuong5/act-5-baotri}{Sơ đồ hoạt động: bảo trì không gian và xử lý đơn bị ảnh hưởng}{fig:act_maintenance}
 
-\subsection{Máy trạng thái đơn đặt chỗ và thanh toán}
-Vòng đời của đơn đặt chỗ gồm 8 trạng thái được điều phối tập trung duy nhất qua lớp Java \texttt{BookingStateMachine} (Hình \ref{fig:state_booking}). Ma trận chuyển đổi trạng thái được quy định tại Bảng \ref{tab:state_booking_matrix}.
+\subsection{Máy trạng thái của đơn đặt chỗ}
+Trạng thái đơn được khai báo trong kiểu liệt kê \mt{BookingStatus} gồm tám giá trị: \mt{PENDING\_PAYMENT}, \mt{CONFIRMED}, \mt{CHECKED\_IN}, \mt{COMPLETED}, \mt{CANCELLED}, \mt{EXPIRED}, \mt{NO\_SHOW} và \mt{CHECKED\_OUT} (trạng thái cũ, chỉ còn để đóng dữ liệu lịch sử). Mọi thay đổi trạng thái đi qua \mt{BookingStateMachine.transition}; chuyển đổi không hợp lệ làm phát sinh ngoại lệ và trạng thái giữ nguyên. Hình~\ref{fig:state_booking} và Bảng~\ref{tab:state_booking_matrix} mô tả các chuyển đổi hợp lệ; \mt{COMPLETED}, \mt{CANCELLED}, \mt{EXPIRED} và \mt{NO\_SHOW} là trạng thái cuối.
 
-\hinhdo{Chuong5/st-1-dondatcho}{Sơ đồ trạng thái của đơn đặt chỗ (BookingStateMachine)}{fig:state_booking}
+\hinhdo{Chuong5/st-1-dondatcho}{Sơ đồ trạng thái của đơn đặt chỗ}{fig:state_booking}
 
 \begin{table}[H]
 \centering
-\caption{Ma trận chuyển trạng thái của đơn đặt chỗ trong CoSpace}
+\caption{Các chuyển trạng thái hợp lệ của đơn đặt chỗ}
 \label{tab:state_booking_matrix}
 \small
-\renewcommand{\arraystretch}{1.2}
-\begin{tabular}{|p{3.2cm}|p{3.2cm}|p{4.2cm}|p{3.4cm}|}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\linewidth}{|P{3.3cm}|L|P{3.3cm}|}
 \hline
-\textbf{Trạng thái ban đầu} & \textbf{Sự kiện kích hoạt} & \textbf{Điều kiện chuyển đổi} & \textbf{Trạng thái đích} \\
+\textbf{Trạng thái nguồn} & \textbf{Sự kiện và điều kiện} & \textbf{Trạng thái đích} \\
 \hline
-(Khởi tạo mới) & Tạo đơn đặt chỗ & Hợp lệ đầu vào, không xung đột & \texttt{PENDING\_PAYMENT} \\
+(tạo mới) & Tạo đơn hợp lệ, không chồng lấn & \mt{PENDING\_PAYMENT} \\
 \hline
-\texttt{PENDING\_PAYMENT} & Webhook PayOS/MoMo & Thanh toán thành công trong 15 phút & \texttt{CONFIRMED} \\
+(tạo mới) & Tạo đơn có tổng tiền bằng 0 & \mt{CONFIRMED} \\
 \hline
-\texttt{PENDING\_PAYMENT} & Khách hủy đơn & Khách chủ động hủy khi chưa trả tiền & \texttt{CANCELLED} \\
+\mt{PENDING\_PAYMENT} & Thanh toán thành công (webhook, xác nhận tiền mặt) & \mt{CONFIRMED} \\
 \hline
-\texttt{PENDING\_PAYMENT} & Tác vụ nền quét & Quá 15 phút không thanh toán & \texttt{EXPIRED} \\
+\mt{PENDING\_PAYMENT} & Quá hạn thanh toán 15 phút & \mt{EXPIRED} \\
 \hline
-\texttt{CONFIRMED} & Khách hủy đơn & Hủy trước giờ bắt đầu ($now < start\_at$) & \texttt{CANCELLED} \\
+\mt{PENDING\_PAYMENT} & Khách hủy; bảo trì phủ đơn & \mt{CANCELLED} \\
 \hline
-\texttt{CONFIRMED} & Lễ tân Check-in & Đến trong khung giờ hợp lệ & \texttt{CHECKED\_IN} \\
+\mt{CONFIRMED} & Check-in trong khung cho phép & \mt{CHECKED\_IN} \\
 \hline
-\texttt{CONFIRMED} & Tác vụ nền quét & Hết giờ mà khách không đến & \texttt{NO\_SHOW} \\
+\mt{CONFIRMED} & Khách hủy trước giờ bắt đầu; nhân viên hủy thay khách; bảo trì phủ toàn bộ đơn & \mt{CANCELLED} \\
 \hline
-\texttt{CONFIRMED} & Tạo lịch bảo trì & Lịch bảo trì phủ trọn thời gian đơn & \texttt{MAINTENANCE\_CANCELLED} \\
+\mt{CONFIRMED} & Hết giờ, chưa từng check-in & \mt{NO\_SHOW} \\
 \hline
-\texttt{CHECKED\_IN} & Lễ tân Check-out & Đơn 1 ngày và không còn nợ dịch vụ & \texttt{COMPLETED} \\
+\mt{CONFIRMED} & Gói nhiều ngày đã từng check-in, hết hạn & \mt{COMPLETED} \\
 \hline
-\texttt{CHECKED\_IN} & Lễ tân Check-out & Đơn nhiều ngày; hết ca trong ngày & \texttt{CONFIRMED} \\
+\mt{CHECKED\_IN} & Check-out (hoặc tự check-out khi quá giờ); bảo trì cắt ngang & \mt{COMPLETED} \\
 \hline
-\texttt{CHECKED\_IN} & Tác vụ nền quét & Tự động đóng đơn quá hạn & \texttt{COMPLETED} \\
+\mt{CHECKED\_IN} & Check-out giữa kỳ của gói nhiều ngày & \mt{CONFIRMED} \\
 \hline
-\end{tabular}
+\end{tabularx}
 \end{table}
+
+\subsection{Máy trạng thái của giao dịch thanh toán}
+Giao dịch thanh toán (\mt{PaymentStatus}) bắt đầu ở \mt{INITIATED}, chuyển sang \mt{PENDING} khi đã có liên kết thanh toán, sang \mt{PAID} khi thanh toán thành công, hoặc \mt{FAILED}, \mt{EXPIRED}, \mt{CANCELLED}. Giao dịch tiền mặt được tạo thẳng ở \mt{PAID}; giao dịch đã hoàn đủ tiền chuyển sang \mt{REFUNDED} (Hình~\ref{fig:state_payment}). Khác với đơn đặt chỗ, trạng thái thanh toán hiện được gán trực tiếp trong \mt{PaymentService}, chưa có lớp máy trạng thái riêng.
 
 \hinhdo{Chuong5/st-2-thanhtoan}{Sơ đồ trạng thái của giao dịch thanh toán}{fig:state_payment}
 
 \section{Thiết kế cơ sở dữ liệu}
 \label{sec:thietke_csdl}
 
-Cơ sở dữ liệu của CoSpace được xây dựng theo quy trình thiết kế bài bản hai giai đoạn: thiết kế mức quan niệm (Conceptual Data Model) sử dụng mô hình thực thể kết hợp (Entity-Relationship Diagram -- ERD) theo chuẩn Peter Chen, sau đó chuyển đổi và chuẩn hóa sang mô hình quan hệ mức vật lý (Physical Relational Data Model) đạt chuẩn dạng chuẩn 3NF (Third Normal Form) gồm \textbf{30 bảng quan hệ}. Toàn bộ lược đồ cơ sở dữ liệu được quản lý di trú phiên bản tự động bằng Flyway (\texttt{V1\_\_baseline.sql} khởi tạo cấu trúc và \texttt{V2\_\_constraints.sql} bổ sung các ràng buộc toàn vẹn dữ liệu).
+Cơ sở dữ liệu được thiết kế theo hai bước: mô hình thực thể -- kết hợp mức quan niệm theo ký pháp Chen \cite{chen1976er}, sau đó ánh xạ sang mô hình quan hệ.
 
-\subsection{Mô hình thực thể kết hợp mức quan niệm (Chen ERD)}
+\subsection{Mô hình thực thể -- kết hợp (ký pháp Chen)}
 \label{ssec:erd_quan_niem}
 
-Mô hình thực thể kết hợp mức quan niệm sử dụng ký pháp Peter Chen để mô tả thế giới thực của hệ thống CoSpace một cách trực quan, độc lập với bất kỳ hệ quản trị cơ sở dữ liệu cụ thể nào:
-\begin{itemize}
-    \item \textbf{Thực thể (Entities):} Được biểu diễn bằng hình chữ nhật, đại diện cho các đối tượng độc lập có vòng đời riêng trong hệ thống (như Người dùng, Chi nhánh, Không gian làm việc, Đơn đặt chỗ, Giao dịch thanh toán).
-    \item \textbf{Thuộc tính (Attributes):} Được biểu diễn bằng hình elip gắn kết với thực thể tương ứng, bao gồm thuộc tính định danh (khóa chính -- được gạch chân), thuộc tính đơn giá trị, đa trị và thuộc tính dẫn xuất.
-    \item \textbf{Mối kết hợp (Relationships):} Được biểu diễn bằng hình thoi, thể hiện sự tương tác hoặc ràng buộc ngữ nghĩa giữa hai hay nhiều thực thể, đi kèm bản số quan hệ (Cardinality) như $1:1$, $1:N$, $N:M$ và mức độ tham gia (toàn phần hoặc một phần).
-\end{itemize}
+Trong ký pháp Chen, thực thể là hình chữ nhật, mối kết hợp là hình thoi, thuộc tính là hình elip (thuộc tính khóa được gạch chân, thuộc tính dẫn xuất vẽ nét đứt), trên cạnh ghi bản số $1$, $N$, $M$ hoặc $0..1$. Mô hình được chia thành bảy phần.
 
-Nhằm đảm bảo tính tường minh và mạch lạc cho một hệ thống quản lý toàn diện với 30 thực thể quan hệ, nhóm phân rã mô hình Chen thành 7 phân hệ chuyên biệt tương ứng với các luồng nghiệp vụ cốt lõi:
+\subsubsection{Định danh và hồ sơ năng lực}
+\emph{Người dùng} có nhiều \emph{Tài khoản liên kết} (nhà cung cấp đăng nhập) và một \emph{Hồ sơ năng lực}. Hồ sơ có quan hệ nhiều -- nhiều với \emph{Thẻ} qua hai mối kết hợp \emph{Có kỹ năng} (thuộc tính mức độ) và \emph{Quan tâm} (thuộc tính độ ưu tiên). Mối kết hợp đệ quy \emph{Gợi ý} giữa hai hồ sơ mang điểm tương đồng và lý do gợi ý (Hình~\ref{fig:erd_chen_dinhdanh}).
 
-\subsubsection{Phân hệ Định danh và Gợi ý đối tác}
-Phân hệ mô tả cấu trúc định danh người dùng (\texttt{User}) với các phương thức xác thực liên kết (\texttt{ConnectedAccount}), hồ sơ chuyên môn (\texttt{UserProfile}) cùng hệ thống kỹ năng (\texttt{Skill}) và sở thích (\texttt{Interest}). Quan hệ giữa hồ sơ người dùng và kỹ năng/sở thích là quan hệ nhiều--nhiều ($N:M$), đi kèm thuộc tính bổ trợ như mức độ thành thạo (proficiency level từ $1..5$) phục vụ cho thuật toán đối sánh gợi ý đối tác hợp tác (Hình~\ref{fig:erd_chen_dinhdanh}).
+\hinherd{erd-chen-01-dinhdanh.jpg}{ERD ký pháp Chen: định danh, hồ sơ năng lực và gợi ý đối tác}{fig:erd_chen_dinhdanh}
 
-\hinherd{erd-chen-01-dinhdanh.jpg}{Mô hình ERD Peter Chen: Phân hệ Định danh, Hồ sơ cá nhân và Gợi ý đối tác}{fig:erd_chen_dinhdanh}
+\subsubsection{Không gian làm việc}
+\emph{Chi nhánh} có nhiều \emph{Tầng}, mỗi tầng có nhiều \emph{Không gian}. Mỗi không gian thuộc một \emph{Loại không gian}; loại không gian có nhiều \emph{Tiện ích} (nhiều -- nhiều). Lịch \emph{Bảo trì} gắn với từng không gian (Hình~\ref{fig:erd_chen_khonggian}).
 
-\subsubsection{Phân hệ Không gian làm việc và Mặt bằng}
-Phân hệ thể hiện cấu trúc không gian vật lý phân cấp: Chuỗi văn phòng sở hữu nhiều Chi nhánh (\texttt{Branch}), mỗi chi nhánh gồm nhiều Tầng (\texttt{Floor}), và mỗi tầng được chia thành nhiều Không gian làm việc (\texttt{Workspace}) độc lập. Mỗi không gian thuộc một Loại không gian (\texttt{WorkspaceType}) xác định với danh mục các Tiện ích đi kèm (\texttt{Amenity}) thông qua quan hệ nhiều--nhiều. Các đợt bảo dưỡng không gian (\texttt{Maintenance}) được liên kết trực tiếp với từng không gian cụ thể (Hình~\ref{fig:erd_chen_khonggian}).
+\hinherd{erd-chen-02-khonggian.jpg}{ERD ký pháp Chen: không gian làm việc}{fig:erd_chen_khonggian}
 
-\hinherd{erd-chen-02-khonggian.jpg}{Mô hình ERD Peter Chen: Phân hệ Không gian làm việc, Mặt bằng và Cơ sở vật chất}{fig:erd_chen_khonggian}
+\subsubsection{Bảng giá, dịch vụ thêm và hạng thành viên}
+\emph{Bảng giá} tính cho một loại không gian và có thể riêng cho một chi nhánh. \emph{Dịch vụ thêm} do chi nhánh cung cấp (hoặc dùng chung) và có mối kết hợp \emph{Gọi thêm} với \emph{Đặt chỗ}, mang số lượng, đơn giá lúc gọi và trạng thái trả tiền. \emph{Hạng thành viên} được gắn với người dùng qua mã hạng (Hình~\ref{fig:erd_chen_gia}).
 
-\subsubsection{Phân hệ Bảng giá và Dịch vụ bổ sung}
-Phân hệ quy định chính sách giá thuê linh hoạt (\texttt{PricePolicy}) theo giờ, ngày hoặc tháng tương ứng với từng loại không gian hoặc chi nhánh cụ thể. Bên cạnh đó là danh mục các Dịch vụ phát sinh tại quầy (\texttt{ExtraService}) và cơ chế tích lũy chi tiêu để tự động nâng cấp Hạng thành viên thân thiết (\texttt{MembershipTier}) (Hình~\ref{fig:erd_chen_gia}).
+\hinherd{erd-chen-03-gia.jpg}{ERD ký pháp Chen: bảng giá, dịch vụ thêm và hạng thành viên}{fig:erd_chen_gia}
 
-\hinherd{erd-chen-03-gia.jpg}{Mô hình ERD Peter Chen: Phân hệ Bảng giá, Dịch vụ bổ sung và Hạng thành viên}{fig:erd_chen_gia}
+\subsubsection{Chính sách hủy và khuyến mãi}
+\emph{Chính sách hủy} có loại quy tắc, ngưỡng nhỏ nhất, ngưỡng lớn nhất, phần trăm hoàn, độ ưu tiên và thời gian hiệu lực, có thể áp dụng riêng cho một chi nhánh. \emph{Khuyến mãi} có thể giới hạn theo chi nhánh và loại không gian (Hình~\ref{fig:erd_chen_chinhsach}).
 
-\subsubsection{Phân hệ Chính sách hủy và Khuyến mãi}
-Phân hệ quản lý biểu phí phạt hủy đơn theo bậc thang thời gian (\texttt{CancellationPolicy}) và các chiến dịch giảm giá (\texttt{Promotion}). Lịch sử áp dụng khuyến mãi của khách hàng được kiểm soát chặt chẽ thông qua thực thể ghi nhận lượt sử dụng nhằm ngăn chặn hành vi gian lận mã ưu đãi (Hình~\ref{fig:erd_chen_chinhsach}).
+\hinherd{erd-chen-04-chinhsach.jpg}{ERD ký pháp Chen: chính sách hủy và khuyến mãi}{fig:erd_chen_chinhsach}
 
-\hinherd{erd-chen-04-chinhsach.jpg}{Mô hình ERD Peter Chen: Phân hệ Chính sách hủy phòng và Chương trình khuyến mãi}{fig:erd_chen_chinhsach}
+\subsubsection{Đặt chỗ, check-in và hủy đơn}
+\emph{Đặt chỗ} là thực thể trung tâm, nối \emph{Người dùng} với \emph{Không gian} trong một khoảng thời gian. Mỗi đơn có nhiều \emph{Lượt check-in} và tối đa một bản ghi \emph{Hủy đơn} lưu lý do, phần trăm và số tiền hoàn (Hình~\ref{fig:erd_chen_datcho}).
 
-\subsubsection{Phân hệ Đặt chỗ và Check-in}
-Đơn đặt chỗ (\texttt{Booking}) đóng vai trò thực thể trung tâm, gắn kết khách hàng với không gian làm việc trong một khoảng thời gian nhất định. Đi kèm với đơn đặt chỗ là danh mục các dịch vụ gọi thêm (\texttt{BookingAddon}), các phiên ra vào mặt bằng thực tế (\texttt{BookingCheckin}), và biên bản hủy đơn ghi nhận lý do cùng số tiền phạt (\texttt{BookingCancellation}) (Hình~\ref{fig:erd_chen_datcho}).
+\hinherd{erd-chen-05-datcho.jpg}{ERD ký pháp Chen: đặt chỗ, check-in và hủy đơn}{fig:erd_chen_datcho}
 
-\hinherd{erd-chen-05-datcho.jpg}{Mô hình ERD Peter Chen: Phân hệ Đặt chỗ, Lượt check-in và Biên bản hủy đơn}{fig:erd_chen_datcho}
+\subsubsection{Thanh toán và hoàn tiền}
+Mỗi đơn có nhiều \emph{Giao dịch}; mỗi giao dịch có nhiều \emph{Sự kiện thanh toán}. \emph{Hoàn tiền} gắn với đơn và (nếu có) với giao dịch được hoàn (Hình~\ref{fig:erd_chen_thanhtoan}).
 
-\subsubsection{Phân hệ Thanh toán và Hoàn tiền}
-Phân hệ ghi nhận các giao dịch tài chính (\texttt{Payment}) phát sinh từ đơn đặt chỗ qua các cổng VietQR Napas, ví MoMo hoặc tiền mặt tại quầy, chuỗi sự kiện phản hồi tức thời từ Webhook (\texttt{PaymentEvent}), và quy trình thẩm định, giải ngân các khoản tiền hoàn lại cho khách hàng (\texttt{RefundRequest}) (Hình~\ref{fig:erd_chen_thanhtoan}).
+\hinherd{erd-chen-06-thanhtoan.jpg}{ERD ký pháp Chen: thanh toán và hoàn tiền}{fig:erd_chen_thanhtoan}
 
-\hinherd{erd-chen-06-thanhtoan.jpg}{Mô hình ERD Peter Chen: Phân hệ Giao dịch thanh toán và Yêu cầu hoàn tiền}{fig:erd_chen_thanhtoan}
+\subsubsection{Cộng đồng, thông báo và nhật ký kiểm toán}
+\emph{Bài viết} có nhiều \emph{Thẻ}; \emph{Người dùng} nhận nhiều \emph{Thông báo}; mỗi \emph{Nhật ký kiểm toán} ghi người thực hiện, hành động, đối tượng, giá trị cũ và mới (Hình~\ref{fig:erd_chen_congdong}).
 
-\subsubsection{Phân hệ Diễn đàn cộng đồng và Nhật ký hệ thống}
-Phân hệ cung cấp kênh tương tác mạng xã hội nội bộ cho cộng đồng thành viên thông qua Bài viết (\texttt{Post}) được phân loại theo Thẻ (\texttt{Tag}), trung tâm Thông báo đa kênh (\texttt{Notification}), cùng Nhật ký kiểm toán bất biến (\texttt{AuditLog}) theo dõi mọi biến động dữ liệu nhạy cảm của hệ thống (Hình~\ref{fig:erd_chen_congdong}).
+\hinherd{erd-chen-07-congdong.jpg}{ERD ký pháp Chen: cộng đồng, thông báo và nhật ký kiểm toán}{fig:erd_chen_congdong}
 
-\hinherd{erd-chen-07-congdong.jpg}{Mô hình ERD Peter Chen: Phân hệ Cộng đồng, Thông báo và Nhật ký kiểm toán}{fig:erd_chen_congdong}
-
-\subsection{Mô hình cơ sở dữ liệu quan hệ mức vật lý (Physical Relational Model)}
+\subsection{Mô hình quan hệ}
 \label{ssec:erd_vat_ly}
 
-Từ mô hình quan niệm Peter Chen, nhóm thực hiện ánh xạ và chuẩn hóa sang mô hình quan hệ mức vật lý theo các nguyên tắc:
+Mô hình quan niệm được ánh xạ sang mô hình quan hệ theo các nguyên tắc:
 \begin{itemize}
-    \item Mỗi thực thể độc lập được ánh xạ thành một bảng quan hệ với khóa chính kiểu \texttt{UUID} sinh ngẫu nhiên (\texttt{gen\_random\_uuid()}).
-    \item Mối kết hợp $1:N$ được hiện thực hóa bằng khóa ngoại (Foreign Key) đặt tại bảng phía nhiều.
-    \item Mối kết hợp $N:M$ được phân rã thành hai quan hệ $1:N$ qua một bảng liên kết trung gian (như \texttt{workspace\_type\_amenities}, \texttt{user\_skills}, \texttt{user\_interests}, \texttt{post\_tags}).
-    \item Lược đồ dữ liệu đạt chuẩn dạng chuẩn 3NF (Third Normal Form), đảm bảo không tồn tại phụ thuộc hàm bắc cầu và triệt tiêu dư thừa dữ liệu.
+    \item mỗi thực thể thành một bảng, khóa chính kiểu \mt{UUID} (\mt{gen\_random\_uuid()});
+    \item mối kết hợp $1:N$ thành khóa ngoại ở bảng phía nhiều;
+    \item mối kết hợp $N:M$ thành bảng trung gian, ví dụ \mt{workspace\_type\_amenities}, \mt{profile\_skills}, \mt{profile\_interests}, \mt{post\_tags}; mối kết hợp \emph{Gọi thêm} thành bảng \mt{booking\_services}.
 \end{itemize}
 
-Bản đồ phân bổ 30 bảng CSDL theo 6 phân hệ chức năng vật lý được trình bày tại Hình \ref{fig:erd}.
+Lược đồ được quản lý bằng Flyway với ba tệp migration: \mt{V1\_\_baseline.sql} tạo lược đồ gốc gồm 30 bảng, \mt{V2\_\_constraints.sql} bổ sung ràng buộc toàn vẹn, \mt{V3} thêm hai bảng \mt{workspace\_images}, \mt{partner\_connections} và các cột cho phí phát sinh, voucher hoàn tiền. Tổng cộng có 32 bảng. Hình~\ref{fig:erd} là bản đồ 30 bảng của V1--V2 theo bảy nhóm; Bảng~\ref{tab:bang_theo_module} liệt kê đầy đủ 32 bảng.
 
-\hinhdo{Chuong6/erd-00-tongquan}{Bản đồ các module của cơ sở dữ liệu CoSpace (30 bảng)}{fig:erd}
-
-Chi tiết cấu trúc các bảng theo từng phân hệ được thể hiện trong các sơ đồ quan hệ vật lý chuyên sâu:
-\begin{itemize}
-    \item \textbf{Phân hệ Định danh và Gợi ý đối tác (Hình \ref{fig:erd_dinhdanh}):} Gồm các bảng \texttt{users}, \texttt{user\_profiles}, \texttt{skills}, \texttt{user\_skills}, \texttt{interests}, \texttt{user\_interests}, \texttt{partner\_matches} và \texttt{auth\_accounts}.
-    \item \textbf{Phân hệ Không gian làm việc (Hình \ref{fig:erd_khonggian}):} Gồm các bảng \texttt{branches}, \texttt{floors}, \texttt{workspaces}, \texttt{workspace\_types}, \texttt{amenities}, \texttt{workspace\_type\_amenities} và \texttt{workspace\_maintenance}.
-    \item \textbf{Phân hệ Giá, Khuyến mãi và Hội viên (Hình \ref{fig:erd_gia}):} Gồm các bảng \texttt{price\_policies}, \texttt{extra\_services}, \texttt{cancellation\_policies}, \texttt{promotions}, \texttt{promotion\_usages}, \texttt{membership\_tiers} và \texttt{user\_loyalty}.
-    \item \textbf{Phân hệ Đặt chỗ và Vận hành (Hình \ref{fig:erd_datcho}):} Gồm các bảng \texttt{bookings}, \texttt{booking\_addons}, \texttt{booking\_checkins} và \texttt{booking\_cancellations}.
-    \item \textbf{Phân hệ Thanh toán và Hoàn tiền (Hình \ref{fig:erd_thanhtoan}):} Gồm các bảng \texttt{payments}, \texttt{payment\_events} và \texttt{refund\_requests}.
-    \item \textbf{Phân hệ Cộng đồng và Kiểm toán (Hình \ref{fig:erd_congdong}):} Gồm các bảng \texttt{posts}, \texttt{post\_tags}, \texttt{notifications} và \texttt{audit\_logs}.
-\end{itemize}
-
-\hinhdo{Chuong6/erd-01-dinhdanh}{ERD: định danh, hồ sơ và gợi ý đối tác}{fig:erd_dinhdanh}
-\hinhdo{Chuong6/erd-02-khonggian}{ERD: không gian làm việc}{fig:erd_khonggian}
-\hinhdo{Chuong6/erd-03-gia}{ERD: bảng giá, dịch vụ bổ sung, chính sách hủy, khuyến mãi và hạng thành viên}{fig:erd_gia}
-\hinhdo{Chuong6/erd-04-datcho}{ERD: đặt chỗ, dịch vụ gọi thêm, check-in và hủy}{fig:erd_datcho}
-\hinhdo{Chuong6/erd-05-thanhtoan}{ERD: thanh toán và hoàn tiền}{fig:erd_thanhtoan}
-\hinhdo{Chuong6/erd-06-congdong}{ERD: bảng tin cộng đồng, thông báo và nhật ký kiểm toán}{fig:erd_congdong}
-
-Bảng \ref{tab:bang_theo_module} thống kê số lượng bảng, khóa chính và vai trò của từng nhóm trong cơ sở dữ liệu.
+\hinhdo{Chuong6/erd-00-tongquan}{Bản đồ các nhóm bảng của cơ sở dữ liệu (V1--V2)}{fig:erd}
 
 \begin{table}[H]
 \centering
-\caption{Thống kê 30 bảng cơ sở dữ liệu theo các phân hệ chức năng}
+\caption{Các bảng dữ liệu theo nhóm chức năng}
 \label{tab:bang_theo_module}
 \small
 \renewcommand{\arraystretch}{1.2}
-\begin{tabular}{|p{3.8cm}|c|p{8.4cm}|}
+\begin{tabularx}{\linewidth}{|P{3.6cm}|P{1.0cm}|L|}
 \hline
-\textbf{Phân hệ chức năng} & \textbf{Số bảng} & \textbf{Danh sách các bảng cơ sở dữ liệu} \\
+\textbf{Nhóm} & \textbf{Số bảng} & \textbf{Bảng} \\
 \hline
-Định danh \& Gợi ý đối tác & 8 & \texttt{users}, \texttt{user\_profiles}, \texttt{skills}, \texttt{user\_skills}, \texttt{interests}, \texttt{user\_interests}, \texttt{partner\_matches}, \texttt{auth\_accounts} \\
+Định danh và hồ sơ & 3 & \mt{users}, \mt{auth\_accounts}, \mt{profiles} \\
 \hline
-Không gian làm việc & 7 & \texttt{branches}, \texttt{floors}, \texttt{workspaces}, \texttt{workspace\_types}, \texttt{amenities}, \texttt{workspace\_type\_amenities}, \texttt{workspace\_maintenance} \\
+Gợi ý đối tác & 4 & \mt{tags}, \mt{profile\_skills}, \mt{profile\_interests}, \mt{profile\_match\_scores} \\
 \hline
-Giá, Khuyến mãi \& Hội viên & 7 & \texttt{price\_policies}, \texttt{extra\_services}, \texttt{cancellation\_policies}, \texttt{promotions}, \texttt{promotion\_usages}, \texttt{membership\_tiers}, \texttt{user\_loyalty} \\
+Không gian làm việc & 7 & \mt{branches}, \mt{floors}, \mt{workspaces}, \mt{workspace\_types}, \mt{amenities}, \mt{workspace\_type\_amenities}, \mt{workspace\_maintenance} \\
 \hline
-Đặt chỗ \& Vận hành quầy & 4 & \texttt{bookings}, \texttt{booking\_addons}, \texttt{booking\_checkins}, \texttt{booking\_cancellations} \\
+Giá, khuyến mãi, hạng & 5 & \mt{price\_policies}, \mt{extra\_services}, \mt{cancellation\_policies}, \mt{promotions}, \mt{membership\_tiers} \\
 \hline
-Thanh toán \& Hoàn tiền & 3 & \texttt{payments}, \texttt{payment\_events}, \texttt{refund\_requests} \\
+Đặt chỗ & 4 & \mt{bookings}, \mt{booking\_services}, \mt{checkin\_logs}, \mt{booking\_cancellations} \\
 \hline
-Cộng đồng \& Kiểm toán & 4 & \texttt{posts}, \texttt{post\_tags}, \texttt{notifications}, \texttt{audit\_logs} \\
+Thanh toán và hoàn tiền & 3 & \mt{payments}, \mt{payment\_events}, \mt{refunds} \\
 \hline
-\textbf{Tổng cộng} & \textbf{30} & Quản lý bằng Flyway Migration (\texttt{V1}, \texttt{V2}) \\
+Cộng đồng, thông báo, kiểm toán & 4 & \mt{posts}, \mt{post\_tags}, \mt{notifications}, \mt{audit\_logs} \\
 \hline
-\end{tabular}
+Bổ sung ở V3 & 2 & \mt{workspace\_images}, \mt{partner\_connections} \\
+\hline
+\textbf{Tổng cộng} & \textbf{32} & \\
+\hline
+\end{tabularx}
 \end{table}
 
-\subsection{Các ràng buộc toàn vẹn dữ liệu quan trọng}
-\begin{itemize}
-    \item \textbf{Ràng buộc loại trừ khoảng thời gian (EXCLUDE constraint):} Trên bảng \texttt{bookings} và \texttt{workspace\_maintenance}, ràng buộc \texttt{EXCLUDE USING gist (workspace\_id WITH =, tstzrange(start\_at, end\_at) WITH \&\&)} ngăn chặn hoàn toàn việc chèn hai bản ghi có khoảng thời gian giao nhau trên cùng một không gian.
-    \item \textbf{Ràng buộc đẳng thức tổng tiền:} Bảng \texttt{bookings} có ràng buộc kiểm tra \texttt{CHECK (total\_amount = subtotal\_amount - discount\_amount + extra\_services\_amount)} và \texttt{CHECK (total\_amount >= 0)}.
-    \item \textbf{Ràng buộc logic thời gian:} \texttt{CHECK (end\_at > start\_at)} trên toàn bộ các bảng có dữ liệu khoảng thời gian (\texttt{bookings}, \texttt{workspace\_maintenance}, \texttt{price\_policies}, \texttt{promotions}).
-    \item \textbf{Ràng buộc vai trò và chi nhánh:} \texttt{CHECK (role IN ('customer', 'super\_admin') OR branch\_id IS NOT NULL)} trên bảng \texttt{users}.
-\end{itemize}
+Chi tiết các cột của từng nhóm được thể hiện trong các Hình~\ref{fig:erd_dinhdanh}--\ref{fig:erd_congdong}.
 
-\section{Thiết kế giao diện lập trình ứng dụng (API)}
+\hinhdo{Chuong6/erd-01-dinhdanh}{ERD mức vật lý: định danh, hồ sơ và gợi ý đối tác}{fig:erd_dinhdanh}
+\hinhdo{Chuong6/erd-02-khonggian}{ERD mức vật lý: không gian làm việc}{fig:erd_khonggian}
+\hinhdo{Chuong6/erd-03-gia}{ERD mức vật lý: bảng giá, dịch vụ thêm, chính sách hủy, khuyến mãi và hạng thành viên}{fig:erd_gia}
+\hinhdo{Chuong6/erd-04-datcho}{ERD mức vật lý: đặt chỗ, dịch vụ gọi thêm, check-in và hủy}{fig:erd_datcho}
+\hinhdo{Chuong6/erd-05-thanhtoan}{ERD mức vật lý: thanh toán và hoàn tiền}{fig:erd_thanhtoan}
+\hinhdo{Chuong6/erd-06-congdong}{ERD mức vật lý: bảng tin, thông báo và nhật ký kiểm toán}{fig:erd_congdong}
+
+\subsection{Các ràng buộc toàn vẹn chính}
+\begin{itemize}
+    \item \textbf{Ràng buộc loại trừ trên \mt{bookings}:} \mt{EXCLUDE USING gist (workspace\_id WITH =, tstzrange(start\_at, end\_at) WITH \&\&)} chỉ áp dụng cho các đơn ở trạng thái \mt{PENDING\_PAYMENT}, \mt{CONFIRMED}, \mt{CHECKED\_IN} (BR-01). Bảng \mt{workspace\_maintenance} có ràng buộc tương tự cho lịch bảo trì ở trạng thái \mt{scheduled} và \mt{active}.
+    \item \textbf{Công thức tiền của đơn (\mt{check\_booking\_amounts}):} các khoản tiền không âm và \mt{total\_amount = subtotal\_amount - discount\_amount + addon\_amount + tax\_amount + service\_fee\_amount}.
+    \item \textbf{Hạn thanh toán (\mt{check\_payment\_deadline}):} đơn \mt{PENDING\_PAYMENT} phải có \mt{payment\_deadline\_at}.
+    \item \textbf{Vai trò và chi nhánh (\mt{check\_branch\_by\_role}):} \mt{customer}, \mt{super\_admin} không có chi nhánh; \mt{staff}, \mt{branch\_admin} bắt buộc có chi nhánh.
+    \item \textbf{Thời gian:} \mt{end\_at > start\_at} trên \mt{bookings}, \mt{workspace\_maintenance}, \mt{promotions}.
+    \item \textbf{Chính sách hủy:} phần trăm hoàn trong $[0, 100]$ và $0 \le min \le max$.
+    \item \textbf{Duy nhất:} mỗi đơn có tối đa một lượt check-in đang mở (\mt{uq\_checkin\_open}); mỗi giao dịch không được hoàn hai lần cho cùng một lý do (\mt{uq\_refunds\_payment\_reason}); mỗi cặp thành viên chỉ có một lời mời kết nối (\mt{uq\_partner\_connections\_pair}).
+\end{itemize}
+Các ràng buộc \mt{CHECK} của V2 được thêm ở chế độ \mt{NOT VALID}: PostgreSQL kiểm tra mọi dòng ghi mới nhưng không quét lại dữ liệu cũ, để migration chạy được trên cơ sở dữ liệu đang có dữ liệu. Sau khi dọn dữ liệu cũ, quản trị viên chạy \mt{VALIDATE CONSTRAINT} để bật kiểm tra đầy đủ.
+
+\section{Thiết kế API}
 \label{sec:thietke_api}
 
-Hệ thống cung cấp \textbf{133 điểm cuối API} được tổ chức thành 26 lớp điều khiển RESTful, tuân thủ các quy chuẩn thiết kế:
+Máy chủ cung cấp 153 điểm cuối REST (tính theo cặp phương thức HTTP và đường dẫn) trong 28 controller. Quy ước chung:
 \begin{itemize}
-    \item \textbf{Phân nhóm đường dẫn theo cấp độ bảo mật:} \texttt{/api/public/*} (công khai không cần đăng nhập), \texttt{/api/customer/*} (dành cho khách hàng), \texttt{/api/staff/*} (dành cho nhân viên quầy), \texttt{/api/branch-admin/*} (dành cho quản lý cơ sở), \texttt{/api/admin/*} (dành cho quản trị viên tối cao).
-    \item \textbf{Tiêu đề chống lặp (\texttt{Idempotency-Key}):} Bắt buộc áp dụng cho các điểm cuối tạo giao dịch thanh toán để ngăn chặn việc gửi đúp yêu cầu từ máy khách.
-    \item \textbf{Luồng dữ liệu thời gian thực (SSE Stream):} Điểm cuối \texttt{/api/customer/chatbot/stream} sử dụng chuẩn Server-Sent Events để truyền từng phần câu trả lời của mô hình ngôn ngữ lớn đến trình duyệt.
+    \item Dữ liệu trao đổi dạng JSON; thời gian theo ISO-8601 có múi giờ.
+    \item Quyền truy cập được kiểm tra ở hai mức: theo tiền tố đường dẫn trong \mt{SecurityConfig} và theo phương thức bằng \mt{@PreAuthorize}; các thao tác trên dữ liệu chi nhánh còn đi qua \mt{BranchAccessGuard}.
+    \item Các điểm cuối tạo giao dịch PayOS và MoMo nhận tiêu đề tùy chọn \mt{Idempotency-Key}; khi đơn đã có một giao dịch đang chờ, hệ thống trả lại giao dịch đó thay vì tạo giao dịch mới.
+    \item Điểm cuối \mt{POST /api/chatbot/message} trả về luồng SSE gồm các sự kiện tiến trình và sự kiện kết quả.
+    \item Các điểm cuối công khai (không cần token) gồm: đăng ký, đăng nhập, làm mới token, kiểm tra sức khỏe \mt{/api/health}, danh sách chi nhánh và bảng giá tóm tắt, các điểm nhận webhook và trang trả về của PayOS, MoMo.
 \end{itemize}
 
-Bảng \ref{tab:api_nhom} tóm tắt các nhóm điểm cuối API chính và vai trò được phép truy cập tương ứng.
+Bảng~\ref{tab:api_nhom} tóm tắt các nhóm điểm cuối.
 
 \begin{table}[H]
 \centering
-\caption{Các nhóm điểm cuối API và vai trò được phép truy cập trong hệ thống}
+\caption{Các nhóm điểm cuối API}
 \label{tab:api_nhom}
-\small
-\renewcommand{\arraystretch}{1.2}
-\begin{tabular}{|p{4.2cm}|p{4.8cm}|p{4.8cm}|}
+\footnotesize
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\linewidth}{|P{3.4cm}|P{5.0cm}|L|}
 \hline
-\textbf{Nhóm chức năng API} & \textbf{Tiền tố đường dẫn (Base URI)} & \textbf{Vai trò được phép truy cập} \\
+\textbf{Nhóm chức năng} & \textbf{Tiền tố đường dẫn} & \textbf{Vai trò} \\
 \hline
-Xác thực \& Đăng nhập & \texttt{/api/auth/**} & Công khai (Public) \\
+Xác thực & \mt{/api/auth/**} & Công khai (trừ \mt{/sync}) \\
 \hline
-Tra cứu chi nhánh \& Mặt bằng & \texttt{/api/branches/**}, \texttt{/api/spaces/**} & Công khai (chỉ xem thông tin hoạt động) \\
+Hồ sơ người dùng & \mt{/api/users/**} & Người dùng đã đăng nhập; quản trị cho các thao tác quản lý \\
 \hline
-Đặt chỗ của khách hàng & \texttt{/api/customer/bookings/**} & Khách hàng (\texttt{customer}) \\
+Tra cứu chi nhánh, sơ đồ, giá & \mt{/api/customer/spaces/**} & Công khai hoặc đã đăng nhập \\
 \hline
-Thanh toán trực tuyến \& Webhook & \texttt{/api/payments/**} & Khách hàng; Webhook công khai (kiểm tra chữ ký) \\
+Đặt chỗ, báo giá, dịch vụ thêm, gia hạn, hủy & \mt{/api/bookings/**} & Khách hàng; nhân viên cho một số thao tác tại quầy \\
 \hline
-Hồ sơ, Gợi ý đối tác, Bảng tin & \texttt{/api/customer/profile/**}, \texttt{community} & Khách hàng (\texttt{customer}) \\
+Thanh toán và webhook & \mt{/api/payments/**} & Khách hàng; nhân viên (tiền mặt); webhook công khai có kiểm tra chữ ký \\
 \hline
-Trợ lý ảo AI đàm thoại & \texttt{/api/customer/chatbot/**} & Khách hàng (\texttt{customer}) \\
+Cộng đồng, gợi ý, kết nối & \mt{/api/community/**}, \mt{/api/profiles/**}, \mt{/api/matching/**}, \mt{/api/connections/**} & Khách hàng \\
 \hline
-Vận hành quầy (Check-in, Walk-in) & \texttt{/api/staff/**}, \texttt{/api/checkins/**} & Nhân viên, Quản lý chi nhánh, Super Admin \\
+Thẻ chủ đề (kỹ năng, sở thích) & \mt{/api/tags/**} & Xem: người dùng đã đăng nhập; thêm, sửa, xóa: quản trị \\
 \hline
-Cấu hình chi nhánh \& Mặt bằng & \texttt{/api/branch-admin/spaces/**} & Quản lý chi nhánh, Super Admin \\
+Hạng thành viên, khuyến mãi & \mt{/api/membership/**}, \mt{/api/promotions/**} & Khách hàng \\
 \hline
-Hàng chờ phê duyệt hoàn tiền & \texttt{/api/refunds/**} & Quản lý chi nhánh, Super Admin \\
+Trợ lý ảo & \mt{/api/chatbot/**} & Khách hàng \\
 \hline
-Báo cáo doanh thu chi nhánh & \texttt{/api/reports/**} & Quản lý chi nhánh, Super Admin \\
+Thông báo & \mt{/api/notifications/**} & Người dùng đã đăng nhập \\
 \hline
-Quản trị toàn hệ thống \& Kiểm toán & \texttt{/api/admin/**} & Quản trị hệ thống (\texttt{super\_admin}) \\
+Vận hành quầy & \mt{/api/staff/**}, \mt{/api/checkins/**} & Nhân viên, quản lý chi nhánh, quản trị \\
 \hline
-\end{tabular}
+Cấu hình chi nhánh & \mt{/api/branch-admin/**}, \mt{/api/extra-services/**}, \mt{/api/cancellation-policies/**} & Thêm, sửa, xóa: quản lý chi nhánh, quản trị; xem danh mục: người dùng đã đăng nhập \\
+\hline
+Hoàn tiền & \mt{/api/refunds/**} & Quản lý chi nhánh, quản trị \\
+\hline
+Báo cáo, xuất CSV & \mt{/api/reports/**} & Quản lý chi nhánh, quản trị \\
+\hline
+Quản trị hệ thống, nhật ký & \mt{/api/admin/**} & Quản trị hệ thống \\
+\hline
+\end{tabularx}
 \end{table}
 
-\section{Thiết kế an ninh bảo mật}
+\section{Thiết kế bảo mật}
 \label{sec:thietke_baomat}
 
-Kiến trúc bảo mật của CoSpace được thiết kế theo nguyên lý \textbf{phòng thủ theo chiều sâu (Defense-in-Depth)} gồm 7 lớp bảo vệ:
+Các biện pháp bảo mật được áp dụng ở nhiều lớp:
 \begin{enumerate}
-    \item \textbf{Mã hóa đường truyền (Transport Layer Security):} Bắt buộc toàn bộ lưu lượng giao tiếp giữa trình duyệt, máy chủ API và cơ sở dữ liệu đều qua giao thức HTTPS với chuẩn mã hóa TLS 1.3.
-    \item \textbf{Xác thực kép và thu hồi quyền tức thì:} Kết hợp Supabase JWT và JWT nội bộ ký HS384. Tại mỗi yêu cầu, \texttt{SupabaseJwtAuthenticationConverter} truy vấn lại trạng thái tài khoản từ CSDL; nếu tài khoản bị vô hiệu hóa, quyền truy cập bị ngắt ngay lập tức.
-    \item \textbf{Kiểm soát truy cập theo vai trò (RBAC):} Phân quyền kép tại cấu hình bảo mật đường dẫn (\texttt{SecurityConfig}) và tại mức phương thức thông qua các chú thích \texttt{@PreAuthorize}.
-    \item \textbf{Cô lập dữ liệu đa chi nhánh (\texttt{BranchAccessGuard}):} Mọi yêu cầu liên quan đến tài nguyên của một chi nhánh đều phải đi qua bộ chốt chặn \texttt{BranchAccessGuard}. Người dùng chỉ được thao tác trên đúng cơ sở của mình, ngoại trừ Super Admin.
-    \item \textbf{Xác thực chữ ký số Webhook thanh toán:} Thông báo Webhook từ cổng PayOS và MoMo bắt buộc phải đi kèm chữ ký mật mã HMAC-SHA256 được so sánh bằng thuật toán thời gian hằng số (Constant-time comparison) nhằm triệt tiêu nguy cơ tấn công kênh kề (Timing attack).
-    \item \textbf{Phòng thủ tấn công tiêm mã (Injection \& XSS Defense):} Spring Data JPA sử dụng các câu lệnh Parameterized Queries loại trừ hoàn toàn nguy cơ SQL Injection. Phía Front-end sử dụng thư viện DOMPurify để làm sạch mã HTML trước khi hiển thị trên diễn đàn cộng đồng.
-    \item \textbf{Chốt chặn an toàn môi trường phát hành (\texttt{PayosProductionGuard}):} Khi máy chủ khởi động ở cấu hình Production, hệ thống tự động kiểm tra các khóa cấu hình PayOS. Nếu phát hiện hệ thống đang chạy ở chế độ giả lập hoặc thiếu thông tin bảo mật thật, máy chủ sẽ chủ động từ chối khởi động nhằm ngăn ngừa rủi ro thất thoát doanh thu ngoài ý muốn.
+    \item \textbf{Mã hóa đường truyền:} giao diện và máy chủ được phục vụ qua HTTPS (do Vercel và Render cung cấp); kết nối tới cơ sở dữ liệu bắt buộc SSL.
+    \item \textbf{Xác thực:} hai loại JWT như ở Mục~\ref{sec:cn_backend}; token làm mới không dùng được làm token truy cập; vai trò và trạng thái khóa luôn được đọc lại từ cơ sở dữ liệu.
+    \item \textbf{Phân quyền theo vai trò:} quy tắc theo tiền tố đường dẫn trong \mt{SecurityConfig} và \mt{@PreAuthorize} ở từng phương thức.
+    \item \textbf{Cô lập chi nhánh:} \mt{BranchAccessGuard} buộc nhân viên và quản lý chỉ thao tác trên chi nhánh của mình; quản trị viên hệ thống được truy cập mọi chi nhánh.
+    \item \textbf{Xác thực webhook:} chữ ký HMAC-SHA256 của PayOS và MoMo được kiểm tra trước khi xử lý. Ở chế độ demo, PayOS từ chối mọi webhook; \mt{PayosProductionGuard} không cho ứng dụng chạy ở cấu hình production với khóa demo.
+    \item \textbf{Chống tấn công chèn mã:} truy vấn cơ sở dữ liệu dùng tham số (JPA, \mt{JdbcTemplate}); giao diện làm sạch HTML bằng DOMPurify; Vercel trả về tiêu đề Content-Security-Policy có Trusted Types, \mt{X-Frame-Options: DENY} và \mt{X-Content-Type-Options: nosniff}.
+    \item \textbf{CORS:} máy chủ chỉ chấp nhận các nguồn (origin) nằm trong danh sách cấu hình.
 \end{enumerate}
+Các điểm bảo mật còn hạn chế được trình bày ở Mục~\ref{sec:tk-han-che}.

@@ -3,15 +3,21 @@
 %  Đề tài: Phát triển hệ thống quản lý văn phòng chia sẻ (CoSpace)
 %  Trường ĐH Bách khoa - ĐHQG TP.HCM, Khoa KH & KT Máy tính
 %  Hội đồng: Hội đồng 4L Khoa học Máy tính (Cơ sở 2)
-%  Thời gian bảo vệ: 13:30, Ngày 05 tháng 10 năm 2026
+%  Thời gian bảo vệ: 13:30, ngày 05 tháng 10 năm 2026
+%---------------------------------------------------------------------
+%  Biên dịch: pdflatex main (chạy 3 lần) hoặc latexmk -pdf main.tex
 %=====================================================================
-\documentclass[a4paper,13pt,oneside]{report}
+% Lớp report chỉ nhận cỡ chữ 10/11/12pt; cỡ 13pt được đặt qua gói scrextend.
+\documentclass[a4paper,oneside]{report}
+\usepackage[fontsize=13pt]{scrextend}
 \input{preamble}
 
 %---------------------------------------------------------------------
 %  THÔNG TIN ĐỀ TÀI & HỘI ĐỒNG
 %---------------------------------------------------------------------
 \newcommand{\tendetai}{PHÁT TRIỂN HỆ THỐNG QUẢN LÝ VĂN PHÒNG CHIA SẺ}
+% Bản có ngắt dòng dùng cho bìa, tránh để một chữ đứng riêng ở dòng cuối
+\newcommand{\tendetaibia}{PHÁT TRIỂN HỆ THỐNG\\ QUẢN LÝ VĂN PHÒNG CHIA SẺ}
 \newcommand{\tendetaiphu}{(CoSpace -- Co-working Space Management System)}
 \newcommand{\chuyennganh}{HỆ THỐNG THÔNG TIN VÀ BẢO MẬT}
 \newcommand{\nganh}{KHOA HỌC MÁY TÍNH}
@@ -26,7 +32,7 @@
 \hypersetup{pageanchor=false}
 
 %=====================================================================
-%  TRANG BÌA CHÍNH THỨC (CÓ KHUNG VIỀN ĐÔI CHUẨN BÁCH KHOA)
+%  TRANG BÌA
 %=====================================================================
 \begin{titlepage}
 \begin{tikzpicture}[remember picture, overlay]
@@ -50,7 +56,7 @@
 \parbox{0.92\textwidth}{\centering
 \textbf{{\LARGE BÁO CÁO}}\\[0.2cm]
 \textbf{{\LARGE ĐỒ ÁN TỐT NGHIỆP}}\\[0.35cm]
-\textbf{\LARGE \tendetai}\\[0.2cm]
+{\LARGE\bfseries \tendetaibia\par}\vspace{0.2cm}
 {\large \textbf{\tendetaiphu}}\\[0.35cm]
 {\large \textbf{CHUYÊN NGÀNH: \chuyennganh}}\\[0.15cm]
 {\Large \textbf{NGÀNH: \nganh}}
@@ -62,11 +68,11 @@
 \begin{center}
 \renewcommand{\arraystretch}{1.25}
 \begin{tabular}{rll}
-\hspace{1.5cm} & \textbf{\large HỘI ĐỒNG:} & {\large \hoidong} \\[0.15cm]
-\hspace{1.5cm} & \textbf{\large GVHD:}     & {\large \gvhd} \\[0.15cm]
-\hspace{1.5cm} & \multicolumn{2}{l}{\hspace{2.2cm}\textbf{\Large ---o0o---}} \\[0.15cm]
-\hspace{1.5cm} & \textbf{\large SVTH 1:}   & {\large \svmot} \\[0.15cm]
-\hspace{1.5cm} & \textbf{\large SVTH 2:}   & {\large \svhai} \\
+\hspace{0.5cm} & \textbf{\large HỘI ĐỒNG:} & {\large \hoidong} \\[0.15cm]
+\hspace{0.5cm} & \textbf{\large GVHD:}     & {\large \gvhd} \\[0.15cm]
+\hspace{0.5cm} & \multicolumn{2}{l}{\hspace{2.2cm}\textbf{\Large ---o0o---}} \\[0.15cm]
+\hspace{0.5cm} & \textbf{\large SVTH 1:}   & {\large \svmot} \\[0.15cm]
+\hspace{0.5cm} & \textbf{\large SVTH 2:}   & {\large \svhai} \\
 \end{tabular}
 \end{center}
 
@@ -79,7 +85,7 @@
 \end{titlepage}
 
 %=====================================================================
-%  TRANG XÁC NHẬN CỦA GIẢNG VIÊN HƯỚNG DẪN (CHUẨN BÁCH KHOA)
+%  TRANG XÁC NHẬN CỦA GIẢNG VIÊN HƯỚNG DẪN
 %=====================================================================
 \newpage
 \thispagestyle{empty}
@@ -88,7 +94,7 @@
 \textbf{\large KHOA KHOA HỌC VÀ KỸ THUẬT MÁY TÍNH} \\[0.4cm]
 \rule{12cm}{0.5pt} \\[1.5cm]
 \textbf{\LARGE BÁO CÁO ĐỒ ÁN TỐT NGHIỆP} \\[0.5cm]
-\textbf{\LARGE \tendetai} \\[0.3cm]
+{\LARGE\bfseries \tendetaibia\par}\vspace{0.3cm}
 {\large \textbf{\tendetaiphu}} \\[2.0cm]
 \end{center}
 
@@ -103,7 +109,7 @@
 
 \vfill
 \noindent \rule{\textwidth}{0.3pt} \\
-\scriptsize \textbf{Đồ án tốt nghiệp (CO4337) -- HK253 2025 -- 2026}
+{\scriptsize \textbf{Đồ án tốt nghiệp (CO4337) -- Mã đề tài \madoan{} -- HK253, năm học 2025--2026}\par}
 
 %=====================================================================
 %  PHẦN ĐẦU (ĐÁNH SỐ LA MÃ)
@@ -147,15 +153,9 @@
 \input{Contents/Ch08_TongKet}
 
 %=====================================================================
-%  PHẦN CUỐI & PHỤ LỤC
+%  PHẦN CUỐI
 %=====================================================================
 \newpage
 \input{Outro/TaiLieuThamKhao}
-\newpage
-% Tạm đóng phụ lục API chi tiết để giữ dung lượng báo cáo < 150 trang theo quy định
-% \appendix
-% \chapter{Danh mục 133 điểm cuối API RESTful}
-% \label{ch:phu-luc-api}
-% \input{Outro/BangAPI}
 
 \end{document}

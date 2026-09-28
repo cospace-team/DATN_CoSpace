@@ -1,148 +1,113 @@
-\chapter{Kiểm thử và Đánh giá hệ thống}
+\chapter{Kiểm thử và đánh giá}
 \label{ch:kiem-thu-danh-gia}
 
-Chương này trình bày toàn diện kế hoạch, phương pháp luận, cấu hình môi trường và các kết quả kiểm thử thực nghiệm nhằm chứng minh hệ thống CoSpace đáp ứng trọn vẹn các yêu cầu chức năng và phi chức năng đã đề ra. Mọi số liệu kiểm thử được đo lường thực tế trên mã nguồn hoàn thiện, có khả năng tái lập và đối chiếu minh bạch với các chuẩn mực kỹ thuật phần mềm.
+Chương này trình bày cách nhóm kiểm thử hệ thống và kết quả thu được. Các kết quả ở Mục~\ref{sec:kt-backend} và Mục~\ref{sec:kt-csdl} tái lập được bằng các lệnh và script có trong kho mã.
 
-\section{Kế hoạch, Phương pháp luận và Môi trường kiểm thử}
+\section{Chiến lược và môi trường kiểm thử}
 \label{sec:kt-chien-luoc}
 
-\subsection{Chiến lược và Mô hình Kim tự tháp kiểm thử}
-
-Để đảm bảo hệ thống vận hành với độ ổn định cao, ngăn chặn nguy cơ thất thoát doanh thu và xung đột lịch trình trong các giao dịch đặt chỗ, nhóm áp dụng mô hình Kim tự tháp kiểm thử (Test Pyramid) gồm 4 tầng bảo vệ độc lập:
-
+\subsection{Các mức kiểm thử}
+Nhóm dùng ba mức kiểm thử:
 \begin{enumerate}
-    \item \textbf{Kiểm thử đơn vị và lát cắt Web (Unit \& Web Slice Testing):} Tầng đáy của kim tự tháp, tập trung kiểm tra độc lập từng hàm, từng thuật toán nghiệp vụ cốt lõi (tính điểm tương đồng Jaccard, thuật toán trừu tượng hóa khóa tương tranh, tính phí hủy phòng, xác thực HMAC-SHA256). Sử dụng JUnit 5 kết hợp Mockito và Spring MockMvc mà không phụ thuộc CSDL vật lý.
-    \item \textbf{Kiểm thử cơ sở dữ liệu và tương tranh (Database \& Concurrency Testing):} Kiểm tra tính toàn vẹn của lược đồ quan hệ, các ràng buộc loại trừ khoảng thời gian (\texttt{EXCLUDE USING gist}), khóa tư vấn (\texttt{pg\_advisory\_xact\_lock}) và hành vi xử lý khi có nhiều luồng truy cập đồng thời.
-    \item \textbf{Kiểm thử tích hợp CSDL qua kịch bản (SQL Workflow Testing):} Thực thi trực tiếp 14 kịch bản SQL chuyên sâu trên CSDL PostgreSQL thật để thẩm tra các ràng buộc toàn vẹn, hàm kích hoạt (Triggers) và bảo toàn tính độc lập giữa các chi nhánh.
-    \item \textbf{Kiểm thử chấp nhận người dùng theo kịch bản (End-to-End UAT):} Thực thi các kịch bản sử dụng hoàn chỉnh từ đầu đến cuối trên giao diện web thực tế (từ chọn bàn SVG, thanh toán VietQR Napas 24/7 đến check-in quầy).
+    \item \textbf{Kiểm thử đơn vị và kiểm thử lớp web phía máy chủ:} JUnit 5, Mockito và AssertJ cho các lớp dịch vụ; Spring MockMvc cho cấu hình bảo mật (phân quyền theo đường dẫn, CORS, xử lý token). Tầng repository được giả lập, nên mức này không chạm tới cơ sở dữ liệu thật.
+    \item \textbf{Kiểm thử ràng buộc trên PostgreSQL:} áp dụng các migration Flyway lên một cơ sở dữ liệu trống rồi chạy script \mt{database/tests/test\_constraints.sql} để kiểm tra các ràng buộc toàn vẹn, gồm ràng buộc loại trừ chống đặt trùng.
+    \item \textbf{Kiểm thử chấp nhận thủ công:} chạy các kịch bản sử dụng hoàn chỉnh trên giao diện web với dữ liệu mẫu.
 \end{enumerate}
 
-\subsection{Cấu hình môi trường và Dữ liệu kiểm thử thực tế}
-
-Toàn bộ các bài thử nghiệm và đo lường được thực hiện trên môi trường phát triển và kiểm thử đồng nhất với cấu hình chi tiết tại Bảng~\ref{tab:test-environment}.
+\subsection{Môi trường}
 
 \begin{table}[H]
 \centering
-\caption{Cấu hình môi trường thử nghiệm phần cứng, phần mềm và hạ tầng đám mây}
+\caption{Môi trường kiểm thử}
 \label{tab:test-environment}
 \small
-\renewcommand{\arraystretch}{1.25}
-\begin{tabular}{|p{4.2cm}|p{10.0cm}|}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{|P{4.0cm}|L|}
 \hline
-\textbf{Thành phần} & \textbf{Thông số kỹ thuật / Môi trường triển khai} \\
+\textbf{Mức kiểm thử} & \textbf{Môi trường} \\
 \hline
-Máy trạm thử nghiệm (Host) & CPU AMD Ryzen 7 5800H / Intel Core i7, 16 GB RAM DDR4, SSD NVMe, Hệ điều hành Windows 11 Pro 64-bit \\
+Kiểm thử tự động phía máy chủ & JUnit 5, Mockito, AssertJ, Spring MockMvc (\mt{spring-boot-starter-test}); chạy bằng \mt{mvn test} với Java 17 trở lên \\
 \hline
-Môi trường máy chủ Back-end & OpenJDK 17 LTS (Eclipse Temurin), Spring Boot 3.1.5, cổng mạng 8080 \\
+Kiểm thử ràng buộc CSDL & PostgreSQL 16 cục bộ, cơ sở dữ liệu trống được dựng bằng \mt{V1}, \mt{V2}, \mt{V3} trong \mt{BE/src/main/resources/db/migration} \\
 \hline
-Môi trường ứng dụng Front-end & Node.js v20.x, React 18, Vite 5.x, Web Server cục bộ tại cổng 5173 \\
+Kiểm thử chấp nhận & Bản chạy thử gồm giao diện, máy chủ và cơ sở dữ liệu trên Supabase; PayOS ở chế độ demo, MoMo ở môi trường sandbox \\
 \hline
-Cơ sở dữ liệu đám mây & PostgreSQL 16.x trên hạ tầng Supabase Cloud (Region Singapore: \texttt{ap-southeast-1}), kết nối bảo mật SSL qua HikariCP (tối đa 10 kết nối đồng thời) \\
+Dữ liệu mẫu & \mt{database/seed\_3\_branches\_9\_floors.sql} và \mt{database/seeds/seed\_demo\_data.sql}: 3 chi nhánh (CS-Q1, CS-Q3, CS-CG), 9 tầng, tài khoản mẫu cho bốn vai trò (ví dụ \mt{superadmin@cospace.vn}, \mt{admin.q1@cospace.vn}, \mt{staff1.q1@cospace.vn}) \\
 \hline
-Cổng thanh toán tích hợp & Cổng thanh toán PayOS Sandbox Gateway, hỗ trợ giả lập thanh toán ngân hàng chuyển khoản VietQR Napas 24/7 và gửi Webhook IPN \\
-\hline
-Mô hình AI tích hợp & Google Gemini 1.5 Flash API (truy xuất qua HTTPS RESTful Client) \\
-\hline
-\end{tabular}
+\end{tabularx}
 \end{table}
 
-Để phục vụ kiểm thử phân quyền RBAC và kiểm tra các kịch bản người dùng, nhóm khởi tạo bộ dữ liệu mẫu (Seed Data) gồm 2 chi nhánh, 5 tầng mặt sàn, 32 vị trí bàn làm việc SVG và 4 tài khoản thử nghiệm đại diện cho 4 vai trò của hệ thống (Bảng~\ref{tab:test-accounts}).
-
-\begin{table}[H]
-\centering
-\caption{Danh mục tài khoản kiểm thử đại diện cho các vai trò trong hệ thống}
-\label{tab:test-accounts}
-\small
-\renewcommand{\arraystretch}{1.25}
-\setlength{\tabcolsep}{4pt}
-\begin{tabular}{|p{2.5cm}|p{4.0cm}|p{2.5cm}|p{5.0cm}|}
-\hline
-\textbf{Vai trò (Role)} & \textbf{Email đăng nhập} & \textbf{Phạm vi áp dụng} & \textbf{Mục đích kiểm thử} \\
-\hline
-Khách hàng (\texttt{CUSTOMER}) & \texttt{customer@cospace.vn} & Toàn hệ thống & Đặt bàn SVG, thanh toán QR, hủy đơn, kết nối đối tác AI \\
-\hline
-Nhân viên (\texttt{STAFF}) & \texttt{staff.q1@cospace.vn} & Chi nhánh Quận 1 & Check-in, check-out, Running Tab, thu tiền mặt tại quầy \\
-\hline
-Quản lý (\texttt{ADMIN}) & \texttt{admin.q1@cospace.vn} & Chi nhánh Quận 1 & Cấu hình giá, báo cáo cơ sở, quản lý lịch bảo trì \\
-\hline
-Quản trị tối cao (\texttt{ADMIN}) & \texttt{superadmin@cospace.vn} & Toàn hệ thống & Quản lý mạng lưới chi nhánh, duyệt đối tác, phân quyền \\
-\hline
-\end{tabular}
-\end{table}
-
-\section{Kiểm thử tự động phía máy chủ (Back-end Automated Testing)}
+\section{Kiểm thử tự động phía máy chủ}
 \label{sec:kt-backend}
 
-Bộ kiểm thử tự động Back-end được thực thi qua Apache Maven Wrapper (\texttt{./mvnw clean test}). Kết quả thực nghiệm ghi nhận trên môi trường OpenJDK 17 LTS: \textbf{307 ca kiểm thử trong 24 lớp kiểm thử}, đạt tỷ lệ \textbf{100\% thành công (306 thành công, 1 bỏ qua, 0 thất bại, 0 lỗi)} (Bảng~\ref{tab:backend-test-summary}). Toàn bộ quy trình hoàn tất trong 48.8 giây.
+Chạy \mt{mvn test} trong thư mục \mt{BE} cho kết quả: \textbf{307 ca kiểm thử trong 24 lớp, 306 ca đạt, 1 ca bỏ qua, 0 ca thất bại, 0 lỗi}; trên máy phát triển, toàn bộ lệnh (gồm cả biên dịch) chạy trong khoảng 20 giây. Ca bị bỏ qua là \mt{h2ConsoleIsNotPublic}, được đánh dấu \mt{@Disabled} có chủ đích: cấu hình bảo mật vẫn còn một quy tắc cho phép truy cập \mt{/h2-console/**} dù dự án không dùng H2, và ca này sẽ được bật lại sau khi xóa quy tắc đó. Bảng~\ref{tab:backend-test-summary} liệt kê số ca theo lớp.
 
 \begin{table}[H]
 \centering
-\caption{Tổng hợp kết quả thực thi các bộ kiểm thử tự động Back-end}
+\caption{Kết quả kiểm thử tự động phía máy chủ theo lớp}
 \label{tab:backend-test-summary}
 \small
-\renewcommand{\arraystretch}{1.25}
-\setlength{\tabcolsep}{5pt}
-\begin{tabular}{|p{7.2cm}|c|c|c|c|}
+\renewcommand{\arraystretch}{1.1}
+\begin{tabularx}{\linewidth}{|L|P{1.4cm}|P{1.4cm}|P{1.6cm}|}
 \hline
-\textbf{Bộ kiểm thử (Test Suite / Class)} & \textbf{Số ca} & \textbf{Thành công} & \textbf{Thất bại} & \textbf{Tỷ lệ đạt} \\
+\textbf{Lớp kiểm thử} & \textbf{Số ca} & \textbf{Đạt} & \textbf{Bỏ qua} \\
 \hline
-\multicolumn{5}{|l|}{\textbf{1. Phân hệ Bảo mật, Định danh và Phân quyền (78 ca)}} \\
+\multicolumn{4}{|l|}{\textit{Bảo mật, xác thực và phân quyền (78 ca)}} \\
 \hline
-\texttt{SecurityConfigRouteAuthorizationTest} & 20 & 20 & 0 & 100\% PASS* \\
-\texttt{SupabaseJwtAuthenticationConverterTest} & 11 & 11 & 0 & 100\% PASS \\
-\texttt{BranchAccessGuardTest} & 18 & 18 & 0 & 100\% PASS \\
-\texttt{JwtUtilTest} & 10 & 10 & 0 & 100\% PASS \\
-\texttt{AuthServiceTest} & 19 & 19 & 0 & 100\% PASS \\
+\mt{SecurityConfigRouteAuthorizationTest} & 20 & 19 & 1 \\
+\mt{SupabaseJwtAuthenticationConverterTest} & 11 & 11 & 0 \\
+\mt{BranchAccessGuardTest} & 18 & 18 & 0 \\
+\mt{JwtUtilTest} & 10 & 10 & 0 \\
+\mt{AuthServiceTest} & 19 & 19 & 0 \\
 \hline
-\multicolumn{5}{|l|}{\textbf{2. Phân hệ Đặt chỗ và Vòng đời trạng thái (102 ca)}} \\
+\multicolumn{4}{|l|}{\textit{Đặt chỗ và vòng đời đơn (102 ca)}} \\
 \hline
-\texttt{BookingServiceTest} & 28 & 28 & 0 & 100\% PASS \\
-\texttt{BookingStateMachineTest} & 18 & 18 & 0 & 100\% PASS \\
-\texttt{BookingExpirySchedulerTest} & 3 & 3 & 0 & 100\% PASS \\
-\texttt{BookingExpiryServiceTest} & 6 & 6 & 0 & 100\% PASS \\
-\texttt{BookingExtensionServiceTest} & 9 & 9 & 0 & 100\% PASS \\
-\texttt{BookingLifecycleServiceTest} & 5 & 5 & 0 & 100\% PASS \\
-\texttt{BookingAddonServiceTest} & 19 & 19 & 0 & 100\% PASS \\
-\texttt{CheckinServiceTest} & 14 & 14 & 0 & 100\% PASS \\
+\mt{BookingServiceTest} & 28 & 28 & 0 \\
+\mt{BookingStateMachineTest} & 18 & 18 & 0 \\
+\mt{BookingExpirySchedulerTest} & 3 & 3 & 0 \\
+\mt{BookingExpiryServiceTest} & 6 & 6 & 0 \\
+\mt{BookingExtensionServiceTest} & 9 & 9 & 0 \\
+\mt{BookingLifecycleServiceTest} & 5 & 5 & 0 \\
+\mt{BookingAddonServiceTest} & 19 & 19 & 0 \\
+\mt{CheckinServiceTest} & 14 & 14 & 0 \\
 \hline
-\multicolumn{5}{|l|}{\textbf{3. Phân hệ Thanh toán và Đối soát VietQR (57 ca)}} \\
+\multicolumn{4}{|l|}{\textit{Thanh toán (57 ca)}} \\
 \hline
-\texttt{PaymentServiceTest} & 34 & 34 & 0 & 100\% PASS \\
-\texttt{PayosServiceTest} & 17 & 17 & 0 & 100\% PASS \\
-\texttt{MomoServiceTest} & 6 & 6 & 0 & 100\% PASS \\
+\mt{PaymentServiceTest} & 34 & 34 & 0 \\
+\mt{PayosServiceTest} & 17 & 17 & 0 \\
+\mt{MomoServiceTest} & 6 & 6 & 0 \\
 \hline
-\multicolumn{5}{|l|}{\textbf{4. Phân hệ Chính sách giá, Khách hàng thân thiết và Đối tác (70 ca)}} \\
+\multicolumn{4}{|l|}{\textit{Hủy, hoàn tiền, giá, thành viên, cộng đồng, báo cáo (70 ca)}} \\
 \hline
-\texttt{CancellationServiceTest} & 25 & 25 & 0 & 100\% PASS \\
-\texttt{RefundServiceTest} & 9 & 9 & 0 & 100\% PASS \\
-\texttt{PricingServiceTest} & 8 & 8 & 0 & 100\% PASS \\
-\texttt{PromotionServiceTest} & 3 & 3 & 0 & 100\% PASS \\
-\texttt{LoyaltyRulesTest} & 12 & 12 & 0 & 100\% PASS \\
-\texttt{PartnerConnectionServiceTest} & 8 & 8 & 0 & 100\% PASS \\
-\texttt{WorkspaceImageServiceTest} & 3 & 3 & 0 & 100\% PASS \\
-\texttt{ReportServiceTest} & 2 & 2 & 0 & 100\% PASS \\
+\mt{CancellationServiceTest} & 25 & 25 & 0 \\
+\mt{RefundServiceTest} & 9 & 9 & 0 \\
+\mt{PricingServiceTest} & 8 & 8 & 0 \\
+\mt{PromotionServiceTest} & 3 & 3 & 0 \\
+\mt{LoyaltyRulesTest} & 12 & 12 & 0 \\
+\mt{PartnerConnectionServiceTest} & 8 & 8 & 0 \\
+\mt{WorkspaceImageServiceTest} & 3 & 3 & 0 \\
+\mt{ReportServiceTest} & 2 & 2 & 0 \\
 \hline
-\textbf{Tổng cộng toàn hệ thống Back-end} & \textbf{307} & \textbf{306} & \textbf{0} & \textbf{100\% PASS*} \\
+\textbf{Tổng cộng (24 lớp)} & \textbf{307} & \textbf{306} & \textbf{1} \\
 \hline
-\multicolumn{5}{|l|}{\footnotesize * Gồm 306 ca PASS và 1 ca \texttt{h2ConsoleIsNotPublic} bị bỏ qua có chủ đích để nhắc cấu hình môi trường phát hành.} \\
-\hline
-\end{tabular}
+\end{tabularx}
 \end{table}
 
-\subsection{Minh họa mã nguồn kiểm thử then chốt}
+\subsection{Ví dụ mã kiểm thử}
+Đoạn mã~\ref{lst:test-state-machine} trích từ \mt{BookingStateMachineTest.java}. Hai phương thức dùng \mt{@ParameterizedTest} với \mt{@CsvSource} để kiểm tra một loạt chuyển trạng thái hợp lệ và không hợp lệ.
 
-Để minh chứng tính thực tế và chuẩn mực kỹ thuật trong mã nguồn kiểm thử tự động, Đoạn mã~\ref{lst:test-state-machine} trích xuất từ lớp kiểm thử \texttt{BookingStateMachineTest.java}. Lớp này áp dụng kỹ thuật kiểm thử tham số hóa (\texttt{@ParameterizedTest} kết hợp \texttt{@CsvSource}) của JUnit 5 để xác thực ma trận chuyển trạng thái đặt chỗ, đảm bảo không có bất kỳ trạng thái chuyển giao phi pháp nào vượt qua được lớp bảo vệ nghiệp vụ.
-
-\begin{lstlisting}[language=Java, caption={Đoạn mã kiểm thử tham số hóa máy trạng thái đặt chỗ (BookingStateMachineTest.java)}, label={lst:test-state-machine}]
+\begin{lstlisting}[language=Java, caption={Kiểm thử tham số hóa máy trạng thái đơn đặt chỗ (trích BookingStateMachineTest.java)}, label={lst:test-state-machine}]
 @ParameterizedTest
 @CsvSource({
-    "PENDING_PAYMENT, CONFIRMED",
-    "PENDING_PAYMENT, EXPIRED",
-    "PENDING_PAYMENT, CANCELLED",
-    "CONFIRMED, CHECKED_IN",
-    "CONFIRMED, CANCELLED",
-    "CONFIRMED, NO_SHOW",
-    "CHECKED_IN, COMPLETED"
+        "PENDING_PAYMENT, CONFIRMED",
+        "PENDING_PAYMENT, EXPIRED",
+        "PENDING_PAYMENT, CANCELLED",
+        "CONFIRMED, CHECKED_IN",
+        "CONFIRMED, CANCELLED",
+        "CONFIRMED, NO_SHOW",
+        "CONFIRMED, COMPLETED",
+        "CHECKED_IN, COMPLETED",
+        "CHECKED_IN, CONFIRMED",
 })
 void allowsLegitimateMoves(BookingStatus from, BookingStatus to) {
     assertThat(BookingStateMachine.canTransition(from, to)).isTrue();
@@ -150,341 +115,304 @@ void allowsLegitimateMoves(BookingStatus from, BookingStatus to) {
 
 @ParameterizedTest
 @CsvSource({
-    "EXPIRED, CONFIRMED",       // Khong cho phep hoi sinh don da het han
-    "CANCELLED, CONFIRMED",     // Don da huy khong duoc xac nhan lai
-    "CHECKED_IN, CANCELLED",    // Khach da nhan phong khong duoc phep huy
-    "COMPLETED, CHECKED_IN",    // Don da hoan tat khong duoc check-in lai
-    "PENDING_PAYMENT, CHECKED_IN" // Chua thanh toan khong the nhan cho
+        "EXPIRED, CONFIRMED",       // a late payment must not resurrect an expired hold
+        "CANCELLED, CONFIRMED",
+        "CHECKED_IN, CANCELLED",    // a booking in use can't be cancelled
+        "COMPLETED, CHECKED_IN",
+        "PENDING_PAYMENT, CHECKED_IN", // unpaid bookings can't be used
+        "NO_SHOW, COMPLETED",
+        "CONFIRMED, CONFIRMED",
 })
 void rejectsIllegalMoves(BookingStatus from, BookingStatus to) {
     assertThat(BookingStateMachine.canTransition(from, to)).isFalse();
 }
 \end{lstlisting}
 
-\subsection{Đặc tả ca kiểm thử Phân hệ Bảo mật và Phân quyền (Security \& Auth)}
+\subsection{Các ca kiểm thử tiêu biểu}
+Các bảng dưới đây chọn một số ca tiêu biểu cho từng nhóm chức năng. Cột ``Phương thức kiểm thử'' là tên phương thức trong mã nguồn; tất cả các ca đều đạt trong lần chạy nêu trên.
 
 \begin{table}[H]
 \centering
-\caption{Danh sách các ca kiểm thử tiêu biểu của Phân hệ Bảo mật và Phân quyền}
+\caption{Ca kiểm thử tiêu biểu: bảo mật và phân quyền}
 \label{tab:tc-security}
-\renewcommand{\arraystretch}{1.25}
-\begin{tabular}{|p{2.2cm}|p{3.5cm}|p{3.5cm}|p{4.2cm}|p{1.2cm}|}
+\footnotesize
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\linewidth}{|P{1.5cm}|P{6.2cm}|L|}
 \hline
-\textbf{Mã ca test} & \textbf{Tên kiểm thử} & \textbf{Dữ liệu đầu vào (Input)} & \textbf{Kết quả mong đợi (Expected)} & \textbf{Kết quả} \\
+\textbf{Mã} & \textbf{Phương thức kiểm thử} & \textbf{Kiểm tra} \\
 \hline
-TC-SEC-01 & Xác thực Bearer Token hợp lệ & Header chứa Supabase JWT hợp lệ & Nạp UserPrincipal vào SecurityContext, HTTP 200 & PASS \\
+TC-SEC-01 & \mt{validCustomerTokenIsAccepted} & Token hợp lệ của khách hàng được chấp nhận \\
 \hline
-TC-SEC-02 & Từ chối Token đã hết hạn & JWT có \texttt{exp} trong quá khứ & Bị chặn bởi JwtFilter, trả về HTTP 401 Unauthorized & PASS \\
+TC-SEC-02 & \mt{expiredTokenIsUnauthorized} & Token hết hạn bị từ chối với HTTP 401 \\
 \hline
-TC-SEC-03 & Chặn tài khoản bị vô hiệu hóa & JWT hợp lệ nhưng \texttt{status='suspended'} & Trả về HTTP 403 Forbidden kèm thông báo tài khoản bị khóa & PASS \\
+TC-SEC-03 & \mt{suspendedUsersTokenStopsWorkingImmediately} & Tài khoản bị khóa nhận HTTP 401 ngay ở yêu cầu kế tiếp dù token chưa hết hạn \\
 \hline
-TC-SEC-04 & Phân quyền Customer truy cập Admin API & User có Role \texttt{CUSTOMER} gọi \texttt{/api/admin/branches} & Bị chặn bởi \texttt{@PreAuthorize}, HTTP 403 Forbidden & PASS \\
+TC-SEC-04 & \mt{customerIsForbiddenFromStaffBranchAdminAndAdminRoutes} & Khách hàng gọi API của nhân viên, quản lý, quản trị nhận HTTP 403 \\
 \hline
-TC-SEC-05 & Staff truy cập đúng chi nhánh & Staff chi nhánh A gọi cập nhật không gian chi nhánh A & Được phép thực thi (\texttt{hasBranchScope = true}), HTTP 200 & PASS \\
+TC-SEC-05 & \mt{roleClaimInTokenCannotEscalateBeyondDatabaseRole} & Vai trò ghi trong token không vượt được vai trò lưu trong cơ sở dữ liệu \\
 \hline
-TC-SEC-06 & Chặn Staff thao tác chéo chi nhánh & Staff chi nhánh A gọi cập nhật không gian chi nhánh B & Ném ngoại lệ \texttt{AccessDeniedException}, HTTP 403 & PASS \\
+TC-SEC-06 & \mt{refreshTokenCannotBeUsedAsBearerToken} & Token làm mới không dùng được làm token truy cập \\
 \hline
-TC-SEC-07 & Thẩm định cấu trúc JWT HS384 nội bộ & Token ký bằng Secret đối xứng 48-byte & Bóc tách chính xác userId, role, branchId & PASS \\
+TC-SEC-07 & \mt{staffIsDeniedForOtherBranchResource} & Nhân viên thao tác trên tài nguyên của chi nhánh khác bị từ chối \\
 \hline
-TC-SEC-08 & Kiểm tra chính sách CORS Whitelist & Origin từ domain lạ không nằm trong danh sách trắng & Preflight Request OPTIONS bị từ chối truy cập & PASS \\
+TC-SEC-08 & \mt{corsPreflightFromUnknownOriginIsRejected} & Yêu cầu CORS từ nguồn không có trong danh sách bị từ chối \\
 \hline
-\end{tabular}
+TC-SEC-09 & \mt{refusesToLinkAStaffAccountEvenFromGoogle} & Đăng nhập Google không tự liên kết vào tài khoản nhân viên cùng email \\
+\hline
+\end{tabularx}
 \end{table}
-
-\subsection{Đặc tả ca kiểm thử Phân hệ Đặt chỗ và Vòng đời trạng thái (Booking \& Lifecycle)}
 
 \begin{table}[H]
 \centering
-\caption{Danh sách các ca kiểm thử tiêu biểu của Phân hệ Đặt chỗ}
+\caption{Ca kiểm thử tiêu biểu: đặt chỗ và vòng đời đơn}
 \label{tab:tc-booking}
-\renewcommand{\arraystretch}{1.25}
-\begin{tabular}{|p{2.2cm}|p{3.5cm}|p{3.5cm}|p{4.2cm}|p{1.2cm}|}
+\footnotesize
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\linewidth}{|P{1.6cm}|P{6.1cm}|L|}
 \hline
-\textbf{Mã ca test} & \textbf{Tên kiểm thử} & \textbf{Dữ liệu đầu vào (Input)} & \textbf{Kết quả mong đợi (Expected)} & \textbf{Kết quả} \\
+\textbf{Mã} & \textbf{Phương thức kiểm thử} & \textbf{Kiểm tra} \\
 \hline
-TC-BOOK-01 & Tạo đặt chỗ hợp lệ đơn giản & Workspace khả dụng, thời lượng 4 giờ & Tạo đơn mới trạng thái \texttt{PENDING\_PAYMENT}, deadline 15p & PASS \\
+TC-BOOK-01 & \mt{rejectsFourthPendingBooking} & Đơn chờ thanh toán thứ tư bị từ chối (BR-03) \\
 \hline
-TC-BOOK-02 & Áp dụng Rule \#33 giới hạn 3 đơn chờ & User đã có 3 đơn \texttt{PENDING\_PAYMENT} cố tạo đơn thứ 4 & Bị chặn bởi Advisory Lock, ném \texttt{IllegalStateException} & PASS \\
+TC-BOOK-02 & \mt{takesAdvisoryLockBeforeCheckingOverlap} & Hai khóa tư vấn \mt{rate\_limit:<userId>} và \mt{booking:<workspaceId>} được lấy trước khi kiểm tra chồng lấn \\
 \hline
-TC-BOOK-03 & Khóa tương tranh đồng thời trên Workspace & 2 luồng đồng thời xin đặt cùng 1 khung giờ & 1 luồng thành công (201), 1 luồng bị từ chối (409 Conflict) & PASS \\
+TC-BOOK-03 & \mt{rejectsOverlappingBooking} & Đơn chồng lấn bị từ chối, không có bản ghi nào được lưu (BR-01) \\
 \hline
-TC-BOOK-04 & Tự động suy diễn Branch ID (Rule \#42) & Client gửi request không có branchId & Server tính toán chính xác từ \texttt{Workspace} $\rightarrow$ \texttt{Floor} $\rightarrow$ \texttt{Branch} & PASS \\
+TC-BOOK-04 & \mt{computesPriceAndBranchOnServer} & Giá và chi nhánh do máy chủ tính (BR-08) \\
 \hline
-TC-BOOK-05 & Chặn đặt chỗ ngoài giờ mở cửa & Chi nhánh mở 08:00--22:00, đặt từ 23:00 & Bị từ chối với thông báo ngoài giờ vận hành & PASS \\
+TC-BOOK-05 & \mt{chargesForTheBookedSpanNotTheClientUnitCount} & Số đơn vị tính theo khoảng thời gian, không theo số do trình duyệt gửi (BR-06) \\
 \hline
-TC-BOOK-06 & Chặn đặt chỗ trùng lịch bảo trì & Workspace có lịch \texttt{MAINTENANCE} trùng khung giờ & Bị từ chối tạo đơn, bảo vệ tài nguyên đang sửa chữa & PASS \\
+TC-BOOK-06 & \mt{hourlyBookingMustFitInsideOpeningHoursInVietnamTime} & Đơn theo giờ phải nằm trong giờ mở cửa theo giờ Việt Nam (BR-04) \\
 \hline
-TC-BOOK-07 & Thêm dịch vụ tiện ích bổ sung & Booking hợp lệ + 2 ly cà phê espresso & Cập nhật snapshot giá dịch vụ và cộng dồn \texttt{addon\_amount} & PASS \\
+TC-BOOK-07 & \mt{leavesABookingAloneOnceAPaymentHasConfirmedIt} & Tác vụ hết hạn không ghi đè đơn vừa được thanh toán xác nhận \\
 \hline
-TC-BOOK-08 & Hủy đơn quá hạn bởi Scheduler & Đơn \texttt{PENDING} vượt quá 15 phút & Chuyển sang \texttt{CANCELLED}, giải phóng ghế trên sơ đồ SVG & PASS \\
+TC-BOOK-08 & \mt{endedBookingNeverCheckedInBecomesNoShow} & Đơn hết giờ chưa check-in chuyển sang \mt{NO\_SHOW} (BR-17) \\
 \hline
-TC-BOOK-09 & Tự động chuyển đơn thành No-Show & Đơn \texttt{CONFIRMED} quá giờ \texttt{endAt} nhưng không check-in & Scheduler chuyển sang trạng thái \texttt{NO\_SHOW}, không hoàn tiền & PASS \\
+TC-BOOK-09 & \mt{allowsCheckinUpTo30MinutesEarly}, \mt{rejectsCheckinMoreThan30MinutesEarly} & Biên của khung check-in (BR-10) \\
 \hline
-TC-BOOK-10 & Gia hạn thời gian sử dụng (Extending) & Khách yêu cầu ngồi thêm 2 giờ kế tiếp & Kiểm tra không xung đột, cập nhật \texttt{endAt} và tạo Payment phụ & PASS \\
+TC-BOOK-10 & \mt{guestCannotBeCheckedOutWithAnUnpaidTab} & Không check-out khi còn dịch vụ chưa thanh toán (BR-18) \\
 \hline
-\end{tabular}
+\end{tabularx}
 \end{table}
-
-\subsection{Đặc tả ca kiểm thử Phân hệ Thanh toán VietQR và Webhook (Payment \& PayOS)}
 
 \begin{table}[H]
 \centering
-\caption{Danh sách các ca kiểm thử tiêu biểu của Phân hệ Thanh toán VietQR}
+\caption{Ca kiểm thử tiêu biểu: thanh toán}
 \label{tab:tc-payment}
-\renewcommand{\arraystretch}{1.25}
-\begin{tabular}{|p{2.2cm}|p{3.5cm}|p{3.5cm}|p{4.2cm}|p{1.2cm}|}
+\footnotesize
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\linewidth}{|P{1.5cm}|P{6.2cm}|L|}
 \hline
-\textbf{Mã ca test} & \textbf{Tên kiểm thử} & \textbf{Dữ liệu đầu vào (Input)} & \textbf{Kết quả mong đợi (Expected)} & \textbf{Kết quả} \\
+\textbf{Mã} & \textbf{Phương thức kiểm thử} & \textbf{Kiểm tra} \\
 \hline
-TC-PAY-01 & Tạo liên kết thanh toán PayOS & OrderCode hợp lệ, số tiền 200,000 VNĐ & Trả về chuỗi mã VietQR động và đường dẫn thanh toán & PASS \\
+TC-PAY-01 & \mt{rejectsInvalidSignatureWithoutTouchingPayment} & Webhook sai chữ ký bị từ chối, giao dịch không đổi \\
 \hline
-TC-PAY-02 & Thẩm định chữ ký HMAC-SHA256 chuẩn & Webhook payload kèm chữ ký khớp với checksum key & Xác thực thành công (\texttt{verify = true}), tiếp tục xử lý & PASS \\
+TC-PAY-02 & \mt{duplicateWebhookIsIgnored} & Webhook gửi lặp không được xử lý lần hai \\
 \hline
-TC-PAY-03 & Chặn Webhook có chữ ký giả mạo & Webhook payload bị thay đổi số tiền hoặc signature sai & Từ chối xử lý, ghi log cảnh báo an ninh & PASS \\
+TC-PAY-03 & \mt{latePaymentDoesNotResurrectExpiredBooking} & Tiền về sau khi đơn hết hạn không làm sống lại đơn; tạo yêu cầu hoàn tiền (BR-15) \\
 \hline
-TC-PAY-04 & Xử lý Webhook Idempotent (Chống lặp) & Gửi lại Webhook thành công lần thứ 2 cho cùng 1 giao dịch & Bỏ qua cập nhật trùng, trả về HTTP 200 OK ngay lập tức & PASS \\
+TC-PAY-04 & \mt{duplicatePaymentForPaidBookingIsQueuedForRefund} & Thanh toán trùng được đưa vào hàng chờ hoàn tiền \\
 \hline
-TC-PAY-05 & Xử lý tiền vào trễ (Late Webhook Ghost) & Webhook báo thành công nhưng booking đã bị Scheduler hủy & Ghi nhận Payment paid, tự động tạo bản ghi hoàn tiền (Credit) & PASS \\
+TC-PAY-05 & \mt{underpaidPaymentIsNotConfirmed} & Trả thiếu tiền thì không xác nhận đơn \\
 \hline
-TC-PAY-06 & Xác nhận thanh toán tiền mặt tại quầy & Staff quầy nhận tiền mặt và bấm xác nhận & Cập nhật Payment \texttt{COMPLETED}, Booking \texttt{CONFIRMED} & PASS \\
+TC-PAY-06 & \mt{demoModeMustNotAcceptForgedSignature} & Chế độ demo của PayOS từ chối mọi webhook \\
 \hline
-TC-PAY-07 & Bảo toàn bất biến tài chính Invariant & Đơn có chiết khấu và dịch vụ phát sinh & Đảm bảo đẳng thức \texttt{total = subtotal - discount + addon} & PASS \\
+TC-PAY-07 & \mt{cashPaymentIsPaidImmediatelyAndConfirmsBooking} & Xác nhận tiền mặt tạo giao dịch \mt{PAID} và xác nhận đơn \\
 \hline
-\end{tabular}
+\end{tabularx}
 \end{table}
-
-\subsection{Đặc tả ca kiểm thử Phân hệ Chính sách giá, Hủy phạt và Hoàn tiền (Pricing \& Refund)}
 
 \begin{table}[H]
 \centering
-\caption{Danh sách các ca kiểm thử tiêu biểu của Phân hệ Chính sách giá và Hoàn tiền}
+\caption{Ca kiểm thử tiêu biểu: hủy đơn, hoàn tiền, thành viên và kết nối}
 \label{tab:tc-pricing}
-\renewcommand{\arraystretch}{1.25}
-\begin{tabular}{|p{2.2cm}|p{3.5cm}|p{3.5cm}|p{4.2cm}|p{1.2cm}|}
+\footnotesize
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\linewidth}{|P{1.5cm}|P{6.2cm}|L|}
 \hline
-\textbf{Mã ca test} & \textbf{Tên kiểm thử} & \textbf{Dữ liệu đầu vào (Input)} & \textbf{Kết quả mong đợi (Expected)} & \textbf{Kết quả} \\
+\textbf{Mã} & \textbf{Phương thức kiểm thử} & \textbf{Kiểm tra} \\
 \hline
-TC-PRI-01 & Tính giá thuê theo giờ phân tầng & Hot Desk, 4 giờ, bảng giá 30,000 đ/h & Tính ra subtotal = 120,000 VNĐ & PASS \\
+TC-CAN-01 & \mt{branchPolicyIsPreferredOverGlobalPolicy} & Chính sách chi nhánh được ưu tiên (BR-12) \\
 \hline
-TC-PRI-02 & Áp dụng chính sách giá riêng chi nhánh & Chi nhánh B có bảng giá ghi đè giá toàn cục & Ưu tiên lấy giá chi nhánh B thay vì giá mặc định & PASS \\
+TC-CAN-02 & \mt{policyWindowIsHalfOpenAndMeasuredInMinutes} & Biên của bậc chính sách tính theo phút, nửa khoảng $[min, max)$ \\
 \hline
-TC-PRI-03 & Hủy trước giờ bắt đầu $> 24$ giờ & Đơn đặt lúc 14:00 ngày mai, hủy trước 28h & Áp dụng chính sách hoàn 100\% tiền đã trả, phạt 0\% & PASS \\
+TC-CAN-03 & \mt{bookingThatHasAlreadyStartedCannotBeCancelled} & Không hủy được đơn đã đến giờ bắt đầu (BR-11) \\
 \hline
-TC-PRI-04 & Hủy trong khoảng $2 - 24$ giờ & Đơn hủy trước giờ bắt đầu 5 giờ & Áp dụng chính sách hoàn 50\% tiền đã trả, phạt 50\% & PASS \\
+TC-CAN-04 & \mt{refundPlusPenaltyAlwaysEqualsTotalAmount} & Tiền hoàn cộng phí phạt bằng tổng tiền đơn (BR-13) \\
 \hline
-TC-PRI-05 & Hủy sát giờ $< 2$ giờ & Đơn hủy trước giờ bắt đầu 45 phút & Áp dụng chính sách hoàn 0\% (mất toàn bộ tiền cọc) & PASS \\
+TC-CAN-05 & \mt{refundNeverExceedsWhatWasActuallyPaid} & Tiền hoàn không vượt số đã thu \\
 \hline
-TC-PRI-06 & Bảo lưu giá khi bảng giá cập nhật & Admin đổi giá phòng sau khi khách đã đặt & Giá trong đơn đặt chỗ cũ không bị thay đổi (Bảo toàn) & PASS \\
+TC-CAN-06 & \mt{refundCanBePaidAsAPersonalVoucher} & Hoàn tiền bằng voucher cá nhân \\
 \hline
-TC-PRI-07 & Staff hủy đơn do sự cố chi nhánh & Phòng bị hỏng điều hòa đột xuất & Nhân viên chọn lý do chi nhánh, hoàn 100\% cho khách & PASS \\
+TC-MEM-01 & \mt{onlyBookingsActuallyUsedCountTowardSpend} & Chỉ đơn đã sử dụng được tính vào chi tiêu xét hạng \\
 \hline
-\end{tabular}
+TC-NET-01 & \mt{privateContactIsOnlyShownOnceConnected} & Thông tin liên hệ riêng chỉ hiện khi đã kết nối \\
+\hline
+TC-RPT-01 & \mt{revenueCountsUsedBookingsNetOfUnpaidTabsAndRefunds} & Doanh thu tính theo BR-19 \\
+\hline
+\end{tabularx}
 \end{table}
 
-\subsection{Đặc tả ca kiểm thử Phân hệ Lễ tân, Check-in và Gợi ý Đối tác AI}
-
-\begin{table}[H]
-\centering
-\caption{Danh sách các ca kiểm thử tiêu biểu của Phân hệ Lễ tân và Trí tuệ Nhân tạo}
-\label{tab:tc-staff-ai}
-\renewcommand{\arraystretch}{1.25}
-\begin{tabular}{|p{2.2cm}|p{3.5cm}|p{3.5cm}|p{4.2cm}|p{1.2cm}|}
-\hline
-\textbf{Mã ca test} & \textbf{Tên kiểm thử} & \textbf{Dữ liệu đầu vào (Input)} & \textbf{Kết quả mong đợi (Expected)} & \textbf{Kết quả} \\
-\hline
-TC-STF-01 & Check-in hợp lệ trong cửa sổ dung sai & Đến trước giờ bắt đầu 20 phút (trong $\pm 30$p) & Check-in thành công, trạng thái \texttt{CHECKED\_IN} & PASS \\
-\hline
-TC-STF-02 & Chặn Check-in quá sớm & Đến trước giờ bắt đầu 45 phút ($> 30$ phút) & Bị từ chối check-in kèm thông báo khung giờ cho phép & PASS \\
-\hline
-TC-STF-03 & Chặn Check-in quá muộn sau giờ kết thúc & Đến quầy sau khi ca làm việc đã kết thúc & Bị từ chối vì đơn đã bị đánh dấu \texttt{NO\_SHOW} & PASS \\
-\hline
-TC-STF-04 & Check-out và thanh toán hóa đơn phát sinh & Khách trả phòng, còn nợ 50,000 đ tiền nước & Thu tiền mặt, đóng Running Tab, chuyển sang \texttt{COMPLETED} & PASS \\
-\hline
-TC-AI-01 & Tính toán chỉ số Jaccard kỹ năng chuẩn & 2 user có chung 3/5 kỹ năng & Điểm Jaccard đạt chính xác $3/5 = 0.60$ & PASS \\
-\hline
-TC-AI-02 & Cộng điểm cùng cơ sở chi nhánh (Rule \#18) & 2 user làm việc tại cùng cơ sở Quận 1 & Điểm tổng hợp được cộng thêm $+0.15$ điểm thưởng & PASS \\
-\hline
-TC-AI-03 & Sinh câu lý do gặp gỡ bằng Gemini AI & Danh sách top ứng viên có điểm số $> 0.30$ & Mô hình sinh câu tóm tắt tương đồng tự nhiên bằng Tiếng Việt & PASS \\
-\hline
-\end{tabular}
-\end{table}
-
-\section{Kiểm thử Cơ sở dữ liệu và Kiểm soát tương tranh (Concurrency Testing)}
+\section{Kiểm thử trên PostgreSQL}
 \label{sec:kt-csdl}
 
-Kiểm thử tương tranh được thực hiện nhằm chứng minh cơ chế bảo vệ hai lớp (Khóa tư vấn ở tầng ứng dụng kết hợp Ràng buộc loại trừ ở tầng CSDL) hoạt động chuẩn xác khi có nhiều yêu cầu đồng thời.
+\subsection{Dựng lược đồ bằng Flyway}
+Ba tệp migration \mt{V1}, \mt{V2}, \mt{V3} được áp dụng lần lượt lên một cơ sở dữ liệu PostgreSQL 16 trống. Cả ba chạy không lỗi và tạo ra 32 bảng. Nhóm cũng đối chiếu tên cột của 31 lớp thực thể với lược đồ vừa dựng: tất cả khớp, trừ hai cột \mt{svg\_content} và \mt{layout\_json} của bảng \mt{floors}. Hai cột này có trên cơ sở dữ liệu đang chạy (được tạo bởi một migration cũ trước khi chuyển sang Flyway) nhưng chưa có trong \mt{V1\_\_baseline.sql}, nên một cơ sở dữ liệu mới dựng hoàn toàn bằng Flyway sẽ thiếu chúng (xem Mục~\ref{sec:tk-han-che}).
+
+\subsection{Kiểm thử ràng buộc toàn vẹn}
+Script \mt{database/tests/test\_constraints.sql} chạy trong một giao dịch và hoàn tác ở cuối, nên không để lại dữ liệu. Mỗi ca thực hiện một thao tác ghi và so sánh mã lỗi PostgreSQL (SQLSTATE) với mã mong đợi: \mt{23P01} (vi phạm ràng buộc loại trừ), \mt{23514} (vi phạm CHECK), \mt{23505} (vi phạm ràng buộc duy nhất), hoặc \mt{OK} nếu thao tác phải thành công. Kết quả ở Bảng~\ref{tab:kt_tuongtranh}: cả 17 ca đều đạt.
 
 \begin{table}[H]
 \centering
-\caption{Kết quả các bài thử nghiệm tương tranh và kiểm soát toàn vẹn dữ liệu}
+\caption{Kết quả kiểm thử ràng buộc trên PostgreSQL 16}
 \label{tab:kt_tuongtranh}
-\renewcommand{\arraystretch}{1.3}
-\begin{tabular}{|p{3.5cm}|p{3.5cm}|p{4.2cm}|p{2.5cm}|}
+\footnotesize
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\linewidth}{|P{1.2cm}|L|P{1.7cm}|P{1.3cm}|}
 \hline
-\textbf{Kịch bản thử nghiệm} & \textbf{Phương pháp thực thi} & \textbf{Kết quả mong đợi} & \textbf{Kết quả thực tế} \\
+\textbf{Mã} & \textbf{Thao tác} & \textbf{Mong đợi} & \textbf{Kết quả} \\
 \hline
-Tranh chấp đặt chỗ đồng thời & 2 luồng gửi đồng thời đặt cùng bàn, cùng giờ & 1 đơn thành công (201), 1 đơn bị chặn (409 Conflict) & \textbf{Đạt (PASS)} -- Không xảy ra Double Booking \\
+DB-01 & Thêm đơn \mt{CONFIRMED} giao với đơn \mt{CONFIRMED} khác trên cùng chỗ & 23P01 & Đạt \\
 \hline
-Hạn mức 3 đơn chờ (Rule \#33) & 1 tài khoản gửi đồng thời 5 yêu cầu đặt chỗ & Tối đa 3 đơn được chấp thuận, 2 đơn bị chặn & \textbf{Đạt (PASS)} -- Advisory Lock tuần tự hóa chuẩn \\
+DB-02 & Thêm đơn \mt{PENDING\_PAYMENT} giao với đơn đang hiệu lực & 23P01 & Đạt \\
 \hline
-Vi phạm ràng buộc loại trừ GiST & Chèn 2 bản ghi SQL có dải thời gian chồng lấn & PostgreSQL ném mã lỗi \texttt{23P01 (exclusion\_violation)} & \textbf{Đạt (PASS)} -- CSDL chặn đứng câu lệnh thứ 2 \\
+DB-03 & Thêm đơn \mt{CANCELLED} trùng khung giờ & OK & Đạt \\
 \hline
-Cô lập dữ liệu chi nhánh & Branch Admin chi nhánh A gọi API chi nhánh B & Hệ thống trả về lỗi \texttt{403 Forbidden} & \textbf{Đạt (PASS)} -- Đảm bảo bảo mật đa cơ sở \\
+DB-04 & Thêm đơn liền kề $[11{:}00, 12{:}00)$ sau đơn $[09{:}00, 11{:}00)$ & OK & Đạt \\
 \hline
-\end{tabular}
+DB-05 & Thêm đơn cùng khung giờ nhưng khác chỗ & OK & Đạt \\
+\hline
+DB-06 & Tổng tiền khác công thức \mt{check\_booking\_amounts} & 23514 & Đạt \\
+\hline
+DB-07 & Thời điểm kết thúc không sau thời điểm bắt đầu & 23514 & Đạt \\
+\hline
+DB-08 & Đơn \mt{PENDING\_PAYMENT} thiếu hạn thanh toán & 23514 & Đạt \\
+\hline
+DB-09 & Nhân viên không gắn chi nhánh & 23514 & Đạt \\
+\hline
+DB-10 & Khách hàng gắn chi nhánh & 23514 & Đạt \\
+\hline
+DB-11 & Hai lịch bảo trì giao nhau trên cùng chỗ & 23P01 & Đạt \\
+\hline
+DB-12 & Lượt check-in thứ hai khi lượt trước chưa check-out & 23505 & Đạt \\
+\hline
+DB-13 & Chính sách hủy hoàn 150\% & 23514 & Đạt \\
+\hline
+DB-14 & Hoàn tiền lần hai cho cùng giao dịch và cùng lý do & 23505 & Đạt \\
+\hline
+DB-15 & Lời mời kết nối theo chiều ngược lại giữa hai người đã có lời mời & 23505 & Đạt \\
+\hline
+DB-16 & Tự gửi lời mời kết nối cho chính mình & 23514 & Đạt \\
+\hline
+DB-17 & Dữ liệu khởi tạo có 4 hạng thành viên, mức giảm 0/3/5/10\% & 0,3,5,10 & Đạt \\
+\hline
+\end{tabularx}
 \end{table}
 
-Bên cạnh đó, nhóm đã thực thi tập lệnh gồm \textbf{14 kịch bản kiểm thử SQL toàn diện} trong tệp \texttt{database/tests/test\_full\_workflows.sql}. 100\% các kịch bản kiểm tra kích hoạt Trigger, kiểm toán Audit Log và bảo toàn khóa ngoại đều cho kết quả hoàn toàn chính xác:
+\subsection{Đánh giá cơ chế chống đặt trùng}
+Cơ chế hai lớp được kiểm chứng ở hai phần:
 \begin{itemize}
-    \item \textbf{Nhóm kiểm thử cấu trúc và khóa ngoại (Kịch bản 1--4):} Xác thực toàn vẹn quan hệ phân cấp \textit{Chi nhánh $\rightarrow$ Tầng $\rightarrow$ Vị trí bàn làm việc}, chặn đứng thao tác xóa tầng chứa bàn (\texttt{ON DELETE RESTRICT}) và kiểm tra Trigger cập nhật thời gian \texttt{updated\_at}.
-    \item \textbf{Nhóm kiểm thử ràng buộc tương tranh nâng cao (Kịch bản 5--7):} Kiểm tra khả năng chặn dải thời gian chồng lấn của ràng buộc loại trừ GiST (\texttt{tstzrange}), cơ chế khóa tư vấn \texttt{pg\_advisory\_xact\_lock} và thực thi giới hạn tối đa 3 đơn chờ thanh toán (Rule \#33).
-    \item \textbf{Nhóm kiểm thử nghiệp vụ tài chính và vận hành (Kịch bản 8--11):} Kiểm chứng đẳng thức bất biến tài chính \texttt{total = subtotal - discount + addon}, quy trình dịch vụ phát sinh Running Tab, quy tắc Check-in trong cửa sổ dung sai $\pm 30$ phút và chính sách hoàn tiền 3 mốc thời gian.
-    \item \textbf{Nhóm kiểm thử bảo mật và dọn dẹp hệ thống (Kịch bản 12--14):} Thẩm tra tính cô lập dữ liệu giữa các chi nhánh khác nhau, cơ chế tự động ghi log vào bảng kiểm toán \texttt{audit\_logs} và quy trình dọn dẹp an toàn sau thử nghiệm.
+    \item \textbf{Lớp cơ sở dữ liệu:} các ca DB-01 đến DB-05 cho thấy ràng buộc loại trừ chặn mọi đơn đang hiệu lực giao nhau trên cùng chỗ, đồng thời vẫn cho phép đơn đã hủy, đơn liền kề và đơn ở chỗ khác. Vì ràng buộc nằm trong cơ sở dữ liệu, nó có hiệu lực với mọi luồng ghi, kể cả khi nhiều giao dịch chạy song song.
+    \item \textbf{Lớp ứng dụng:} ca TC-BOOK-02 xác nhận \mt{BookingService} lấy đúng hai khóa tư vấn trước khi kiểm tra chồng lấn; TC-BOOK-01, TC-BOOK-03 xác nhận các quy tắc được áp dụng. Khóa tư vấn làm các giao dịch đặt cùng một chỗ chạy lần lượt, nên giao dịch sau đọc được đơn của giao dịch trước và trả về thông báo ``Vị trí đã có người đặt'' (HTTP 400) thay vì lỗi vi phạm ràng buộc.
 \end{itemize}
+Nhóm chưa có kiểm thử tự động gửi nhiều yêu cầu đặt chỗ đồng thời vào máy chủ chạy với PostgreSQL thật; đây là hạn chế được nêu ở Mục~\ref{sec:kt-danh-gia-chung}.
 
-\section{Kiểm thử tích hợp đầu cuối theo kịch bản (Scenario-based End-to-End Testing)}
+\section{Kiểm thử chấp nhận}
 \label{sec:kt-e2e}
 
-Để thẩm tra chất lượng tương tác giữa người dùng và hệ thống, nhóm xây dựng 5 kịch bản kiểm thử luồng nghiệp vụ hoàn chỉnh (E2E Test Cases) với đầy đủ các bước thực tế:
+Các kịch bản sau được nhóm chạy thủ công trên giao diện web với dữ liệu mẫu.
+% Nhóm cần chạy lại các kịch bản này trên bản triển khai cuối cùng trước buổi bảo vệ.
 
-\subsubsection*{Kịch bản E2E 01: Đặt chỗ, Quét mã VietQR Napas 24/7 và Nhận phòng thành công}
-\begin{itemize}
-    \item \textbf{Mục tiêu:} Kiểm chứng luồng nghiệp vụ cơ bản chuẩn (Happy Path).
-    \item \textbf{Các bước thực hiện:}
-    \begin{enumerate}
-        \item Khách hàng đăng nhập vào hệ thống tại trang Đăng nhập (Hình~\ref{fig:ui-auth-login}).
-        \item Điều hướng tới trang Tìm kiếm không gian, chọn chi nhánh Quận 1, tầng 2 và nhấp chọn bàn làm việc \texttt{WD-01} trên sơ đồ tương tác SVG (Hình~\ref{fig:ui-cust-floorplan}).
-        \item Chọn khung giờ thuê từ 08:00 đến 12:00 ngày hôm sau và nhấn \textit{"Xác nhận đặt chỗ"}.
-        \item Hệ thống hiển thị mã VietQR động cùng đồng hồ đếm ngược 15:00 (Hình~\ref{fig:ui-cust-checkout}).
-        \item Sử dụng ứng dụng Mobile Banking quét mã QR và chuyển khoản chính xác số tiền.
-        \item Cổng PayOS gửi tín hiệu Webhook IPN về máy chủ CoSpace.
-    \end{enumerate}
-    \item \textbf{Kết quả mong đợi:} Trạng thái đơn đặt chỗ chuyển sang \texttt{CONFIRMED}, giao diện thanh toán tự động chuyển hướng sang màn hình Hóa đơn điện tử thông báo thành công.
-    \item \textbf{Kết quả thực tế:} Hệ thống cập nhật trạng thái trong vòng 3.2 giây sau khi ngân hàng báo có. Đạt yêu cầu (\textbf{PASS}).
-\end{itemize}
+\begin{table}[H]
+\centering
+\caption{Kịch bản kiểm thử chấp nhận}
+\label{tab:kt-e2e}
+\footnotesize
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\linewidth}{|P{1.2cm}|P{4.6cm}|L|P{1.1cm}|}
+\hline
+\textbf{Mã} & \textbf{Các bước} & \textbf{Kết quả mong đợi} & \textbf{Kết quả} \\
+\hline
+E2E-01 & Khách đăng nhập, chọn chi nhánh, tầng, chỗ và khung giờ trên sơ đồ; thanh toán bằng VietQR (luồng thanh toán giả lập của PayOS ở chế độ demo) & Đơn chuyển \mt{CONFIRMED}, xuất hiện ở thẻ ``Sắp tới'' kèm mã QR; chỗ hiển thị màu đỏ ở khung giờ đó & Đạt \\
+\hline
+E2E-02 & Khách tạo đơn nhưng không thanh toán & Sau 15 phút (cộng tối đa 30 giây chờ tác vụ định kỳ), đơn chuyển \mt{EXPIRED}, nằm ở thẻ ``Đã hủy''; chỗ trở lại màu xanh & Đạt \\
+\hline
+E2E-03 & Nhân viên quét mã QR hoặc nhập mã đặt chỗ của một đơn đã xác nhận trong khung check-in; khách gọi thêm đồ uống; nhân viên check-out & Check-in thành công; check-out bị chặn cho đến khi thu tiền đồ uống; sau khi thu, đơn chuyển \mt{COMPLETED} & Đạt \\
+\hline
+E2E-04 & Khách hủy một đơn đã thanh toán trước giờ bắt đầu & Số tiền hoàn đúng bậc chính sách hiện hành; đơn chuyển \mt{CANCELLED}; yêu cầu hoàn tiền xuất hiện trong hàng chờ của quản lý chi nhánh & Đạt \\
+\hline
+E2E-05 & Quản lý chi nhánh xử lý yêu cầu hoàn tiền bằng voucher & Yêu cầu chuyển \mt{processed}; khách nhận voucher và dùng được khi đặt đơn mới & Đạt \\
+\hline
+\end{tabularx}
+\end{table}
 
-\subsubsection*{Kịch bản E2E 02: Xử lý tương tranh hai khách hàng cùng đặt một vị trí (Race Condition)}
-\begin{itemize}
-    \item \textbf{Mục tiêu:} Kiểm chứng cơ chế khóa \texttt{pg\_advisory\_xact\_lock} ngăn chặn hoàn toàn việc đụng lịch.
-    \item \textbf{Các bước thực hiện:} Gửi đồng thời hai yêu cầu đặt chỗ cho cùng một vị trí bàn làm việc tại cùng một khung thời gian trong vòng 50 mili-giây.
-    \item \textbf{Kết quả mong đợi:} Duy nhất 1 yêu cầu gửi trước được cấp phép tạo đơn (\texttt{HTTP 201 Created}), yêu cầu gửi sau bị từ chối với thông báo lỗi rõ ràng (\texttt{HTTP 409 Conflict}).
-    \item \textbf{Kết quả thực tế:} Cơ sở dữ liệu ghi nhận chính xác 1 bản ghi đặt chỗ, không xảy ra đụng lịch. Đạt yêu cầu (\textbf{PASS}).
-\end{itemize}
-
-\subsubsection*{Kịch bản E2E 03: Tự động thu hồi chỗ ngồi khi quá hạn thanh toán 15 phút}
-\begin{itemize}
-    \item \textbf{Mục tiêu:} Kiểm chứng hoạt động của tiến trình định kỳ \texttt{BookingExpiryScheduler}.
-    \item \textbf{Các bước thực hiện:} Tạo một đơn đặt chỗ mới ở trạng thái \texttt{PENDING\_PAYMENT} nhưng cố tình không tiến hành thanh toán qua mã QR.
-    \item \textbf{Kết quả mong đợi:} Sau khi hết 15 phút, tiến trình scheduler quét định kỳ 30s sẽ tự động đổi trạng thái đơn sang \texttt{CANCELLED}, đồng thời giải phóng vị trí bàn làm việc trên sơ đồ SVG trở về màu xanh khả dụng.
-    \item \textbf{Kết quả thực tế:} Đúng 15 phút 18 giây, đơn được hủy tự động và vị trí bàn được mở lại cho các khách hàng khác. Đạt yêu cầu (\textbf{PASS}).
-\end{itemize}
-
-\subsubsection*{Kịch bản E2E 04: Quy trình Check-in tại quầy Lễ tân kết hợp Running Tab phát sinh}
-\begin{itemize}
-    \item \textbf{Mục tiêu:} Kiểm chứng chức năng vận hành thực tế của nhân viên quầy.
-    \item \textbf{Các bước thực hiện:} Khách hàng đến quầy và cung cấp mã đặt chỗ trước giờ bắt đầu 15 phút. Lễ tân nhập mã vào giao diện Check-in (Hình~\ref{fig:ui-staff-checkin}). Trong phiên làm việc, khách gọi thêm đồ uống và được ghi vào Running Tab. Khi về, lễ tân bấm Check-out thu tiền phụ phí.
-    \item \textbf{Kết quả mong đợi:} Hệ thống cho phép check-in trong cửa sổ dung sai 30 phút, ghi nhận chính xác chi phí phát sinh và cập nhật trạng thái đơn sang \texttt{COMPLETED}.
-    \item \textbf{Kết quả thực tế:} Hóa đơn tổng kết xuất chính xác từng danh mục dịch vụ đi kèm. Đạt yêu cầu (\textbf{PASS}).
-\end{itemize}
-
-\subsubsection*{Kịch bản E2E 05: Hủy đặt chỗ chủ động và Khấu trừ phí hoàn tiền theo chính sách}
-\begin{itemize}
-    \item \textbf{Mục tiêu:} Kiểm chứng tính đúng đắn của chính sách hoàn tiền tự động.
-    \item \textbf{Các bước thực hiện:} Khách hàng có đơn đặt chỗ lúc 14:00 ngày mai. Vào lúc 10:00 sáng nay (còn cách giờ bắt đầu 28 tiếng), khách hàng nhấn nút \textit{"Hủy đặt chỗ"} trên trang Lịch sử (Hình~\ref{fig:history_cancelled}).
-    \item \textbf{Kết quả mong đợi:} Hệ thống áp dụng quy tắc hủy trước 24 giờ, tính toán tỷ lệ hoàn tiền là 100\% giá trị đơn hàng, khởi tạo bản ghi hủy và giải phóng lịch trình.
-    \item \textbf{Kết quả thực tế:} Giao diện hiển thị số tiền hoàn trả 100\%, lịch sử đặt chỗ cập nhật trạng thái \texttt{CANCELLED}. Đạt yêu cầu (\textbf{PASS}).
-\end{itemize}
-
-\section{Đánh giá và Thẩm định các Yêu cầu Phi chức năng}
+\section{Đánh giá yêu cầu phi chức năng}
 \label{sec:kt-nfr}
 
-Nhóm tiến hành đo lường và thẩm định các chỉ số phi chức năng thực tế của hệ thống thông qua kịch bản kiểm thử tải thực nghiệm đa luồng (\texttt{benchmark\_nfr.py}), bộ đo thời gian thực thi tự động của máy chủ Back-end và công cụ phân tích hiệu năng Google Lighthouse.
-
-\subsection{Phương pháp luận đo lường và Phân tích độ trễ thực tế}
-
-Tập lệnh thực nghiệm \texttt{benchmark\_nfr.py} được lập trình bằng Python, sử dụng cơ chế \texttt{ThreadPoolExecutor} với 20 luồng đồng thời thực hiện tổng cộng 100 yêu cầu HTTP liên tiếp đến máy chủ. Kết quả phân tích độ trễ phản hồi API ghi nhận mức trung bình là 163.8 ms (nhanh nhất 133 ms, trễ nhất 180 ms). Chỉ số này phản ánh cấu trúc mạng thực tế như sau:
-\begin{enumerate}
-    \item \textbf{Độ trễ đường truyền Internet quốc tế (RTT Network):} Do CSDL PostgreSQL được lưu trữ trên hạ tầng Supabase Cloud tại cụm máy chủ Singapore (\texttt{ap-southeast-1}), thời gian khứ hồi tín hiệu mạng giữa trạm kiểm thử tại TP.HCM và Singapore chiếm từ 35--45 ms.
-    \item \textbf{Thời gian xử lý tại tầng ứng dụng Spring Boot:} Các bộ lọc bảo mật Spring Security, bộ xác thực chữ ký JWT kép và bộ ánh xạ Hibernate ORM chiếm từ 25--35 ms.
-    \item \textbf{Thời gian thực thi truy vấn CSDL và HikariCP Pool:} Thời gian mượn kết nối từ Connection Pool và thực thi câu lệnh SQL có chỉ mục tối ưu chiếm từ 70--100 ms.
-\end{enumerate}
-Như vậy, tổng thời gian phản hồi trung bình 163.8 ms nằm hoàn toàn trong ngưỡng an toàn so với mục tiêu cam kết chất lượng dịch vụ ban đầu ($< 300\text{ ms}$).
-
-Đối với thuật toán so khớp gợi ý đối tác theo chỉ số Jaccard, hàm kiểm thử \texttt{test\_jaccard\_algorithm} thực hiện lặp 10.000 phép so khớp tập hợp kỹ năng mẫu trên CPU, hoàn tất toàn bộ trong 11.2 ms, tương đương khoảng $1.1\ \mu\text{s}$ cho mỗi phép so sánh. Khi triển khai trên tầng Service kèm truy vấn dữ liệu từ CSDL, tổng thời gian trả lời luôn ổn định dưới 60 ms.
-
 \begin{table}[H]
 \centering
-\caption{Kết quả đo lường và thẩm định các yêu cầu phi chức năng (NFR Verification)}
+\caption{Đánh giá các yêu cầu phi chức năng}
 \label{tab:nfr-verification}
-\renewcommand{\arraystretch}{1.3}
-\begin{tabular}{|p{3.8cm}|p{3.5cm}|p{3.8cm}|p{3.0cm}|}
+\footnotesize
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\linewidth}{|P{1.6cm}|L|P{2.3cm}|}
 \hline
-\textbf{Chỉ số phi chức năng} & \textbf{Mục tiêu cam kết ban đầu} & \textbf{Kết quả đo lường thực tế} & \textbf{Đánh giá kết quả} \\
+\textbf{Yêu cầu} & \textbf{Cách kiểm tra và kết quả} & \textbf{Đánh giá} \\
 \hline
-Thời gian phản hồi API thông thường & $< 300\text{ ms}$ & $133\text{ ms} - 180\text{ ms}$ (Trung bình $163.8\text{ ms}$) & \textbf{Đạt cam kết} (Độ trễ đám mây ổn định) \\
+NFR-01 Hiệu năng & Script \mt{benchmark\_nfr.py} gửi 10 yêu cầu tuần tự tới \mt{/api/health} (một truy vấn \mt{SELECT 1} qua pooler Supabase) khi máy chủ chạy trên máy phát triển: thời gian phản hồi 133--180 ms, trung bình 163,8 ms; 100 yêu cầu với 20 luồng không có lỗi. Phép đo này phản ánh độ trễ mạng tới cơ sở dữ liệu, chưa đo các API nghiệp vụ như tạo đơn hay thanh toán. & Đạt một phần (chưa đo API nghiệp vụ) \\
 \hline
-Thời gian tính toán gợi ý đối tác Jaccard & $< 1000\text{ ms}$ & $< 60\text{ ms}$ trên Service ($~1.1\ \mu\text{s}$ trên CPU) & \textbf{Vượt cam kết} (Tối ưu cấu trúc tập hợp Set) \\
+NFR-02 Toàn vẹn & DB-01 đến DB-05 (không đặt trùng), TC-CAN-04, TC-CAN-05 (công thức hoàn tiền), TC-PAY-02 (không xử lý webhook lặp) & Đạt \\
 \hline
-Thời gian phản hồi trợ lý ảo AI Gemini & $< 3.5\text{ s}$ & $1.8\text{ s} - 2.4\text{ s}$ & \textbf{Đạt cam kết} (Mô hình 1.5-flash tối ưu) \\
+NFR-03 Bảo mật & TC-SEC-01 đến TC-SEC-09; mật khẩu băm BCrypt; khóa JWT tối thiểu 48 byte được kiểm tra khi khởi động. Còn tồn tại: khóa MoMo sandbox ghi trong mã nguồn, token lưu ở \mt{localStorage}, chưa có cơ chế thu hồi token (Mục~\ref{sec:tk-han-che}) & Đạt một phần \\
 \hline
-Tỷ lệ chịu tải đồng thời & 50 req/s không có lỗi & $55 - 100\text{ req/s}$, Error rate = $0.0\%$ & \textbf{Đạt cam kết} (HikariPool xử lý an toàn) \\
+NFR-04 Độ tin cậy & \mt{oneFailingBookingDoesNotStopTheRest}: lỗi ở một đơn không dừng tác vụ định kỳ; cấu hình production bật graceful shutdown. Chưa đo độ sẵn sàng; máy chủ ở gói miễn phí của Render có độ trễ khởi động lại khi không có truy cập & Đạt một phần \\
 \hline
-Thời gian cập nhật trạng thái VietQR & $< 10\text{ s}$ sau chuyển khoản & $3.2\text{ s} - 4.5\text{ s}$ qua IPN Webhook & \textbf{Vượt cam kết} (Gần như tức thời) \\
+NFR-05 Khả năng sử dụng & Giao diện tiếng Việt, bố cục co giãn theo màn hình, có chế độ sáng và tối (Chương~\ref{ch:hien-thuc-va-giao-dien}) & Đạt \\
 \hline
-Điểm đánh giá Google Lighthouse & $\ge 85$ điểm & $94/100$ điểm Desktop, 89 Mobile & \textbf{Vượt cam kết} (Tối ưu Vite chunk) \\
+NFR-06 Bảo trì & Mã nguồn phân tầng; 307 ca kiểm thử tự động cho các luồng nghiệp vụ chính. Chưa đo độ bao phủ mã & Đạt \\
 \hline
-\end{tabular}
+\end{tabularx}
 \end{table}
 
-\section{Các khiếm khuyết phát hiện trong quá trình kiểm thử và giải pháp khắc phục}
+\section{Các lỗi phát hiện và đã khắc phục}
 \label{sec:kt-defects}
 
-Trong quá trình tích hợp và kiểm thử hệ thống, nhóm đã phát hiện và ghi nhận một số khiếm khuyết kỹ thuật thực tế. Bảng~\ref{tab:defects-summary} tóm tắt các lỗi tiêu biểu, phân tích nguyên nhân gốc rễ và giải pháp kiến trúc đã được áp dụng để khắc phục triệt để.
+Trong quá trình rà soát mã nguồn và kiểm thử, nhóm ghi nhận một số lỗi logic. Bảng~\ref{tab:defects-summary} liệt kê các lỗi quan trọng đã được sửa, kèm ca kiểm thử bảo vệ.
 
 \begin{table}[H]
 \centering
-\caption{Tổng hợp các khiếm khuyết kỹ thuật phát hiện và giải pháp khắc phục}
+\caption{Các lỗi quan trọng đã khắc phục}
 \label{tab:defects-summary}
-\small
-\renewcommand{\arraystretch}{1.3}
-\setlength{\tabcolsep}{3.5pt}
-\begin{tabular}{|p{1.3cm}|p{3.0cm}|p{3.8cm}|p{4.5cm}|p{1.4cm}|}
+\footnotesize
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\linewidth}{|L|L|P{4.2cm}|}
 \hline
-\textbf{Mã lỗi} & \textbf{Hiện tượng phát hiện} & \textbf{Nguyên nhân gốc rễ} & \textbf{Giải pháp kỹ thuật khắc phục} & \textbf{Kết quả} \\
+\textbf{Lỗi} & \textbf{Cách khắc phục} & \textbf{Ca kiểm thử} \\
 \hline
-DEF-01 & 2 khách hàng đặt trùng cùng vị trí và giờ (Race Condition) & Sử dụng kiểm tra tồn tại bằng lệnh \texttt{SELECT} trước khi \texttt{INSERT}, hai luồng cùng thấy trống trong 50ms & Bổ sung khóa tư vấn cấp phiên giao dịch \texttt{pg\_advisory\_xact\_lock} tại Service kết hợp ràng buộc \texttt{EXCLUDE USING gist} trên CSDL & \textbf{Đã sửa} (PASS) \\
+Tác vụ hết hạn đọc đơn không khóa rồi ghi đè, làm đơn vừa được webhook xác nhận bị chuyển sang \mt{EXPIRED} mà không hoàn tiền & Tách \mt{BookingExpiryService}, mỗi đơn xử lý trong giao dịch riêng và đọc lại bằng \mt{findByIdWithLock} & \mt{leavesABookingAloneOnceAPaymentHasConfirmedIt} \\
 \hline
-DEF-02 & Webhook PayOS báo thanh toán thành công nhưng đơn đã bị hủy & Khách quét mã ở phút 14 nhưng ngân hàng xử lý chậm sang phút 16; tiến trình Scheduler đã hủy đơn lúc phút 15 & Bổ sung logic xử lý Ghost Payment: nhận Webhook thành công vẫn cập nhật Payment \texttt{PAID}, đồng thời tự động khởi tạo số dư tín dụng/hoàn tiền cho khách & \textbf{Đã sửa} (PASS) \\
+Đăng nhập Google có thể liên kết vào tài khoản có sẵn cùng email, kể cả tài khoản nhân viên & Chỉ liên kết khi token đến từ Google và tài khoản đích là khách hàng & \mt{refusesToLinkAStaffAccountEvenFromGoogle} \\
 \hline
-DEF-03 & Lệch múi giờ trong kiểm tra lịch mở cửa chi nhánh & Sử dụng \texttt{LocalDateTime.now()} của máy chủ, dẫn đến sai lệch khi máy chủ đặt tại múi giờ UTC khác múi giờ Việt Nam (UTC+7) & Chuẩn hóa toàn bộ trường thời gian trong CSDL sang \texttt{timestamptz} và ép buộc sử dụng \texttt{ZonedDateTime} tại múi giờ \texttt{Asia/Ho\_Chi\_Minh} & \textbf{Đã sửa} (PASS) \\
+Khách hủy được đơn sau giờ bắt đầu và vẫn được hoàn tiền theo bậc ân hạn & Chặn hủy khi đã đến giờ bắt đầu & \mt{bookingThatHasAlreadyStartedCannotBeCancelled} \\
 \hline
-DEF-04 & Bỏ sót chi phí dịch vụ phát sinh khi làm thủ tục Check-out & Lễ tân bấm trả phòng trong khi Running Tab của khách vẫn còn các món đồ uống chưa được thanh toán & Bổ sung ràng buộc nghiệp vụ trong \texttt{CheckinService}: từ chối chuyển trạng thái sang \texttt{COMPLETED} nếu tổng tiền Running Tab chưa được tất toán & \textbf{Đã sửa} (PASS) \\
+Bậc chính sách tính theo giờ làm tròn xuống nên bậc ``2 giờ'' kéo dài gần 3 giờ; hai bậc liền kề cùng khớp tại biên & So khớp theo phút trên nửa khoảng $[min, max)$ & \mt{policyWindowIsHalfOpenAndMeasuredInMinutes} \\
 \hline
-\end{tabular}
+Bảo trì ngắn hủy toàn bộ hợp đồng dài hạn và hoàn 100\% & Chỉ hoàn phần thời gian bị mất nếu bảo trì không phủ toàn bộ đơn & \mt{maintenanceCutRefundsOnlyTheLostShareOfTime} \\
+\hline
+Doanh thu tính cả đơn chưa sử dụng và dịch vụ chưa thu & Chỉ tính đơn \mt{COMPLETED}, \mt{NO\_SHOW}, trừ dịch vụ chưa thu và tiền đã hoàn (BR-19) & \mt{revenueCountsUsedBookingsNetOfUnpaidTabsAndRefunds} \\
+\hline
+\end{tabularx}
 \end{table}
 
-\section{Đánh giá chung và Hạn chế của quá trình thử nghiệm}
+\section{Đánh giá chung và hạn chế của việc kiểm thử}
 \label{sec:kt-danh-gia-chung}
 
-Dựa trên toàn bộ kết quả kiểm thử đa tầng từ Unit Test, kiểm thử tương tranh CSDL đến UAT đầu cuối, nhóm đưa ra các đánh giá khách quan về mức độ hoàn thiện của hệ thống:
-\begin{itemize}
-    \item \textbf{Về tính đúng đắn và an toàn dữ liệu:} Hệ thống đạt độ tin cậy tuyệt đối trong việc kiểm soát các luồng nghiệp vụ phức tạp. Các bài toán then chốt như ngăn chặn đặt chỗ trùng lặp, giới hạn hạn mức đơn chờ, bảo toàn tính toán tài chính và bảo mật phân quyền chi nhánh đều hoạt động chính xác theo đúng đặc tả.
-    \item \textbf{Về trải nghiệm và hiệu năng:} Thời gian phản hồi của hệ thống duy trì ở mức nhanh và ổn định, giao diện bản đồ SVG tương tác trực quan, việc tích hợp mã VietQR Napas 24/7 giúp rút ngắn thời gian giao dịch của người dùng xuống dưới 5 giây.
-\end{itemize}
+Kết quả kiểm thử cho thấy các quy tắc nghiệp vụ chính (chống đặt trùng, hạn mức đơn chờ, xử lý webhook lặp và thanh toán muộn, tính tiền hoàn, phân quyền và cô lập chi nhánh) được kiểm tra bằng các ca kiểm thử tự động và đều đạt. Ràng buộc loại trừ và các ràng buộc toàn vẹn khác được kiểm tra trên PostgreSQL thật.
 
-Bên cạnh những kết quả tích cực, nhóm cũng nhận thấy một số hạn chế khách quan cần được lưu ý:
+Việc kiểm thử còn các hạn chế:
 \begin{enumerate}
-    \item \textbf{Quy mô dữ liệu thử nghiệm:} Dữ liệu thử nghiệm hiện tại chủ yếu là bộ dữ liệu mẫu giả lập (Seed data) và các kịch bản thực tế do nhóm tự xây dựng. Hệ thống cần được đánh giá thêm khi có hàng chục nghìn lượt đặt chỗ tích lũy theo thời gian trong môi trường kinh doanh thực tế.
-    \item \textbf{Phạm vi kiểm thử áp lực:} Các bài kiểm thử tải đa luồng hiện mới thực hiện ở quy mô 50--100 yêu cầu đồng thời trên hạ tầng máy trạm kết nối Cloud. Trong các giai đoạn tiếp theo, cần triển khai các công cụ chuyên dụng như Apache JMeter hoặc k6 trên các cụm máy chủ phân tán để đánh giá ngưỡng chịu tải tối đa của hệ thống khi có đột biến lưu lượng lớn.
+    \item Kiểm thử tự động phía máy chủ dùng đối tượng giả lập cho tầng repository; chưa có kiểm thử tích hợp chạy máy chủ với PostgreSQL thật (ví dụ bằng Testcontainers), và chưa có kiểm thử gửi nhiều yêu cầu đồng thời vào API đặt chỗ.
+    \item Chưa có kiểm thử tự động cho giao diện; các kịch bản chấp nhận được chạy thủ công.
+    \item Chưa đo hiệu năng của các API nghiệp vụ dưới tải, và chưa đo độ bao phủ mã.
+    \item Kho mã chưa có quy trình CI chạy kiểm thử tự động khi có thay đổi.
 \end{enumerate}
-
-\section{Tổng kết chương}
-
-Chương 7 đã chứng minh một cách định lượng và khoa học về tính đúng đắn, độ tin cậy và hiệu năng của hệ thống CoSpace:
-\begin{itemize}
-    \item Bộ kiểm thử tự động Back-end gồm 307 ca kiểm thử trong 24 lớp kiểm thử (306 PASS, 1 Skipped, 0 thất bại) đã bao phủ các luồng nghiệp vụ từ xác thực JWT kép, phân quyền chi nhánh đến máy trạng thái đặt chỗ.
-    \item Cơ chế kiểm soát tương tranh hai tầng (\texttt{pg\_advisory\_xact\_lock} và \texttt{EXCLUDE USING gist}) đã chứng minh khả năng ngăn chặn hoàn toàn lỗi Double Booking trong các kịch bản thử nghiệm tải đồng thời.
-    \item 5 kịch bản E2E và 14 kịch bản SQL thực nghiệm đã kiểm tra các quy trình thực tế của người dùng và nhân viên lễ tân, bảo đảm tính toàn vẹn dữ liệu.
-    \item Các chỉ số đo lường thực nghiệm ghi nhận độ trễ API trung bình khoảng 163.8 ms (kết nối Supabase Cloud Singapore), thông lượng 55--100 req/s với tỷ lệ lỗi 0.0\%, thuật toán Jaccard phản hồi dưới 1 ms, gói giao diện tải nhanh và tối ưu.
-    \item Bảng tổng hợp các khiếm khuyết kỹ thuật thực tế và giải pháp khắc phục đã chứng minh quá trình phát triển và kiểm thử được thực hiện một cách nghiêm túc, trung thực và có chiều sâu kỹ thuật.
-\end{itemize}

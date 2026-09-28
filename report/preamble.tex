@@ -1,36 +1,37 @@
 %=====================================================================
-%  preamble.tex — Cấu hình chuẩn cho Báo cáo Đồ án Tốt nghiệp Bách Khoa
-%  Biên dịch: pdflatex (chạy 2-3 lần để cập nhật mục lục / tham chiếu)
+%  preamble.tex -- Cấu hình chung cho báo cáo Đồ án tốt nghiệp
+%  Biên dịch: pdflatex main (chạy 3 lần để cập nhật mục lục, tham chiếu)
 %=====================================================================
 
 %---------------------- Ngôn ngữ & phông chữ -------------------------
 \usepackage[utf8]{vntex}
-\usepackage{mathptmx}          % Times New Roman cho cả văn bản và công thức
+\usepackage{mathptmx}          % Times cho văn bản và công thức
 
 %---------------------- Trình bày trang ------------------------------
 \usepackage{geometry}
 \geometry{a4paper, left=30mm, right=20mm, top=25mm, bottom=25mm}
 \usepackage{setspace}
-\onehalfspacing                % Giãn dòng 1.5 theo quy định báo cáo
+\onehalfspacing
 \setlength{\parindent}{1cm}
+\setlength{\emergencystretch}{3em}
 \usepackage{indentfirst}
 \usepackage{lastpage}
 \usepackage{emptypage}
 
 %---------------------- Bảng biểu & hình ảnh -------------------------
 \usepackage{graphicx}
-\graphicspath{{Images/}{Images/Chuong2/}{Images/Chuong3/}{Images/Chuong4/}{Images/Chuong5/}{Images/Chuong6/}{Images/GiaoDien/}}
-\usepackage{array, multirow, multicol, longtable, tabularx, booktabs, hhline}
+\graphicspath{{Images/}{Images/Chuong2/}{Images/Chuong3/}{Images/Chuong5/}{Images/Chuong6/}{Images/GiaoDien/}}
+\usepackage{array, multirow, longtable, tabularx, booktabs}
+\newcolumntype{L}{>{\raggedright\arraybackslash}X}
+\newcolumntype{P}[1]{>{\raggedright\arraybackslash}p{#1}}
 \usepackage{float}
 \usepackage{caption, subcaption}
-\usepackage{rotating}
-\usepackage{diagbox}
+\captionsetup{font=small}
 \usepackage{tikz}
-\usetikzlibrary{arrows, arrows.meta, backgrounds, calc, positioning, shapes.geometric}
+\usetikzlibrary{calc}
 
-%---------------------- Toán học & thuật toán ------------------------
-\usepackage{amsmath, amssymb, amsthm}
-\usepackage[lined, boxed, commentsnumbered]{algorithm2e}
+%---------------------- Toán học -------------------------------------
+\usepackage{amsmath, amssymb}
 
 %---------------------- Mã nguồn -------------------------------------
 \usepackage{xcolor}
@@ -44,207 +45,151 @@
     frame=single, rulecolor=\color{gray!50},
     backgroundcolor=\color{gray!5},
     breaklines=true, breakatwhitespace=false,
-    showstringspaces=false, tabsize=2, captionpos=b,
-    extendedchars=true, literate={ă}{{\u a}}1 {â}{{\^a}}1 {đ}{{\dj}}1 {ê}{{\^e}}1 {ô}{{\^o}}1 {ơ}{{\ohorn}}1 {ư}{{\uhorn}}1
+    showstringspaces=false, tabsize=2, captionpos=b
 }
 \lstset{style=cospace}
 
 %---------------------- Danh mục & liên kết --------------------------
+\usepackage{xurl}
 \usepackage[unicode]{hyperref}
 \hypersetup{
     colorlinks=true,
     linkcolor=black, citecolor=black, urlcolor=blue,
-    pdftitle={Bao cao Do an Tot nghiep - He thong quan ly Co-working Space CoSpace},
-    pdfauthor={Vuong Song Toan - Le Dang Khoa}
+    pdftitle={Báo cáo Đồ án tốt nghiệp - Phát triển hệ thống quản lý văn phòng chia sẻ CoSpace},
+    pdfauthor={Vương Song Toàn, Lê Đăng Khoa}
 }
 \usepackage[nottoc]{tocbibind}   % đưa Tài liệu tham khảo vào mục lục
 
 %---------------------- Việt hóa tên mục ----------------------------
-\renewcommand{\chaptername}{Chương}
-\renewcommand{\contentsname}{Mục lục}
-\renewcommand{\listfigurename}{Danh sách hình vẽ}
-\renewcommand{\listtablename}{Danh sách bảng}
-\renewcommand{\bibname}{\texorpdfstring{Tài liệu tham khảo}{Tai lieu tham khao}}
-\renewcommand{\appendixname}{Phụ lục}
-\renewcommand{\figurename}{Hình}
-\renewcommand{\tablename}{Bảng}
-\renewcommand{\lstlistingname}{Đoạn mã}
+% Đặt lại ở \begin{document} vì vntex ghi đè các tên này bằng dạng lệnh
+% dấu (\h{a}, \d{\^e}), làm bookmark PDF bị mất dấu.
+\AtBeginDocument{%
+  \renewcommand{\chaptername}{Chương}%
+  \renewcommand{\contentsname}{Mục lục}%
+  \renewcommand{\listfigurename}{Danh sách hình vẽ}%
+  \renewcommand{\listtablename}{Danh sách bảng}%
+  \renewcommand{\bibname}{Tài liệu tham khảo}%
+  \renewcommand{\appendixname}{Phụ lục}%
+  \renewcommand{\figurename}{Hình}%
+  \renewcommand{\tablename}{Bảng}%
+  \renewcommand{\lstlistingname}{Đoạn mã}%
+}
 
 %---------------------- Đầu trang / chân trang -----------------------
 \usepackage{fancyhdr}
 \setlength{\headheight}{40pt}
+\newcommand{\dautrang}{%
+  \begin{tabular}{rl}
+    \begin{picture}(25,15)(0,0)\put(0,-8){\includegraphics[width=10mm,height=10mm]{hcmut.png}}\end{picture} &
+    \begin{tabular}{l}
+      \textbf{\small Trường Đại học Bách khoa -- Đại học Quốc gia TP.HCM}\\
+      \textbf{\small Khoa Khoa học \& Kỹ thuật Máy tính}
+    \end{tabular}
+  \end{tabular}}
+\newcommand{\chantrang}{\scriptsize Báo cáo Đồ án tốt nghiệp -- Hệ thống quản lý văn phòng chia sẻ CoSpace}
+
 \pagestyle{fancy}
 \fancyhf{}
-\fancyhead[L]{%
- \begin{tabular}{rl}
-    \begin{picture}(25,15)(0,0)
-    \put(0,-8){\includegraphics[width=10mm, height=10mm]{hcmut.png}}
-   \end{picture}&
-	\begin{tabular}{l}
-		\textbf{\small Trường Đại học Bách khoa -- Đại học Quốc gia TP.HCM}\\
-		\textbf{\small Khoa Khoa học \& Kỹ thuật Máy tính}
-	\end{tabular}
- \end{tabular}%
-}
-\fancyfoot[L]{\scriptsize Báo cáo Đồ án Tốt nghiệp -- Hệ thống quản lý văn phòng chia sẻ CoSpace}
-\fancyfoot[R]{\scriptsize Trang {\thepage}}
+\fancyhead[L]{\dautrang}
+\fancyfoot[L]{\chantrang}
+\fancyfoot[R]{\scriptsize Trang \thepage}
 \renewcommand{\headrulewidth}{0.3pt}
 \renewcommand{\footrulewidth}{0.3pt}
-\fancypagestyle{plain}{%   % trang đầu mỗi chương vẫn giữ header/footer
+\fancypagestyle{plain}{%
   \fancyhf{}
-  \fancyhead[L]{%
-    \begin{tabular}{rl}
-      \begin{picture}(25,15)(0,0)\put(0,-8){\includegraphics[width=10mm, height=10mm]{hcmut.png}}\end{picture}&
-      \begin{tabular}{l}
-        \textbf{\small Trường Đại học Bách khoa -- Đại học Quốc gia TP.HCM}\\
-        \textbf{\small Khoa Khoa học \& Kỹ thuật Máy tính}
-      \end{tabular}
-    \end{tabular}%
-  }
-  \fancyfoot[L]{\scriptsize Báo cáo Đồ án Tốt nghiệp -- Hệ thống quản lý văn phòng chia sẻ CoSpace}
-  \fancyfoot[R]{\scriptsize Trang {\thepage}}
+  \fancyhead[L]{\dautrang}
+  \fancyfoot[L]{\chantrang}
+  \fancyfoot[R]{\scriptsize Trang \thepage}
 }
 
-% Cấu hình footer riêng cho phần nội dung chính (Đánh số Ả Rập: Trang x/y)
+% Phần nội dung chính (đánh số Ả Rập): chân trang dạng "Trang x/y"
 \newcommand{\setupArabicFooters}{%
-  \fancyfoot[R]{\scriptsize Trang {\thepage}/\pageref{LastPage}}%
+  \fancyfoot[R]{\scriptsize Trang \thepage/\pageref{LastPage}}%
   \fancypagestyle{plain}{%
     \fancyhf{}%
-    \fancyhead[L]{%
-      \begin{tabular}{rl}%
-        \begin{picture}(25,15)(0,0)\put(0,-8){\includegraphics[width=10mm, height=10mm]{hcmut.png}}\end{picture}&%
-        \begin{tabular}{l}%
-          \textbf{\small Trường Đại học Bách khoa -- Đại học Quốc gia TP.HCM}\\%
-          \textbf{\small Khoa Khoa học \& Kỹ thuật Máy tính}%
-        \end{tabular}%
-      \end{tabular}%
-    }%
-    \fancyfoot[L]{\scriptsize Báo cáo Đồ án Tốt nghiệp -- Hệ thống quản lý văn phòng chia sẻ CoSpace}%
-    \fancyfoot[R]{\scriptsize Trang {\thepage}/\pageref{LastPage}}%
+    \fancyhead[L]{\dautrang}%
+    \fancyfoot[L]{\chantrang}%
+    \fancyfoot[R]{\scriptsize Trang \thepage/\pageref{LastPage}}%
   }%
 }
 
 %---------------------- Cấp mục & đánh số ---------------------------
-\setcounter{secnumdepth}{4}
-\setcounter{tocdepth}{3}
-\makeatletter
-\newcounter{subsubsubsection}[subsubsection]
-\renewcommand\thesubsubsubsection{\thesubsubsection.\@alph\c@subsubsubsection}
-\newcommand\subsubsubsection{\@startsection{subsubsubsection}{4}{\z@}%
-    {-3.25ex\@plus -1ex \@minus -.2ex}{1.5ex \@plus .2ex}{\normalfont\normalsize\bfseries}}
-\newcommand*\l@subsubsubsection{\@dottedtocline{4}{10.0em}{4.1em}}
-\providecommand*{\toclevel@subsubsubsection}{4}
-\newcommand*{\subsubsubsectionmark}[1]{}
-\makeatother
-
-%---------------------- Định lý / định nghĩa -------------------------
-\newtheorem{definition}{\bf Định nghĩa}[chapter]
-\newtheorem{theorem}{\bf Định lý}[chapter]
-\newtheorem{property}{\bf Tính chất}[chapter]
+\setcounter{secnumdepth}{3}
+\setcounter{tocdepth}{2}
 
 %=====================================================================
-%  CÁC LỆNH TIỆN ÍCH DÙNG TRONG BÁO CÁO
+%  LỆNH TIỆN ÍCH
 %=====================================================================
 
-% Bật/tắt khung ghi chú (mặc định tắt khi hoàn thiện)
-\newif\ifhienghichu
-\hienghichufalse
-
-\newcommand{\ghichu}[1]{%
-  \ifhienghichu
-    \par\vspace{2pt}
-    \noindent\begin{tikzpicture}
-      \node[draw=gray!55, fill=gray!8, rounded corners=3pt, line width=0.4pt,
-            inner sep=7pt, text width=\dimexpr\linewidth-18pt\relax, align=justify]
-        {\small\itshape\color{black!72}\textbf{[Ghi chú]}~#1};
-    \end{tikzpicture}
-    \par\vspace{4pt}
-  \fi
-}
-
+% \mt{tenDinhDanh}: như \texttt nhưng cho phép ngắt dòng trong tên dài:
+% sau dấu gạch dưới, giữa chữ thường và chữ hoa (camelCase), trước dấu mở
+% ngoặc, sau các dấu . , : - /
 \newcommand{\mtund}{\textunderscore\allowbreak}
-\newcommand{\mt}[1]{{\let\_\mtund\texttt{#1}}}
+\ExplSyntaxOn
+\tl_new:N \l__mt_tl
+\NewDocumentCommand{\mt}{m}
+  {
+    \group_begin:
+    \tl_set:Nn \l__mt_tl {#1}
+    \regex_replace_all:nnN { ([a-z0-9])([A-Z]) } { \1\c{allowbreak}\2 } \l__mt_tl
+    \regex_replace_all:nnN { (\() } { \c{allowbreak}\1 } \l__mt_tl
+    \regex_replace_all:nnN { ([\.\,\:\-\/]) } { \1\c{allowbreak} } \l__mt_tl
+    \cs_set_eq:NN \_ \mtund
+    \texttt{\l__mt_tl}
+    \group_end:
+  }
+\ExplSyntaxOff
 
-\makeatletter
-\def\nguon@bs#1/#2\nguon@stop{%
-  #1%
-  \ifx\relax#2\relax\else /\allowbreak\nguon@bs#2\nguon@stop\fi}
-\newcommand{\nguon@brk}[1]{\nguon@bs#1/\nguon@stop}
-
-\newcommand{\nguon}[1]{%
-  \ifhienghichu
-    \par\noindent{\raggedright\footnotesize\color{blue!45!black}\textbf{Nguồn dữ liệu:} \texttt{\let\_\mtund\nguon@brk{#1}}\par}\vspace{4pt}
-  \fi
-}
-\makeatother
-
-% Chèn sơ đồ UML thẳng đứng
+% Sơ đồ UML theo chiều dọc trang
 \newcommand{\hinhuml}[3]{%
   \begin{figure}[H]
     \centering
     \includegraphics[width=\linewidth,height=0.72\textheight,keepaspectratio]{#1.png}
     \caption{#2}
     \label{#3}
-  \end{figure}
-}
+  \end{figure}}
 
-% Chèn sơ đồ UML hiển thị xuôi chiều trang (phù hợp đọc trên màn hình máy tính)
+% Sơ đồ UML rộng (không xoay trang)
 \newcommand{\hinhumlngang}[3]{%
   \begin{figure}[H]
     \centering
     \includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{#1.png}
     \caption{#2}
     \label{#3}
-  \end{figure}
-}
+  \end{figure}}
 
-% \hinhui{tên_file_không_đuôi}{tiêu đề màn hình}{nhãn}
-% Tự động phát hiện ảnh chụp trong thư mục Images/GiaoDien/, nếu chưa có ảnh sẽ hiển thị hộp placeholder nhắc nhở tên file.
-\newcommand{\hinhui}[3]{%
-  \begin{figure}[H]
-    \centering
-    \IfFileExists{Images/GiaoDien/#1.png}{%
-      \includegraphics[width=0.92\linewidth,keepaspectratio]{Images/GiaoDien/#1.png}%
-    }{%
-      \begin{tikzpicture}
-        \node[draw=blue!60, dashed, fill=blue!5, rounded corners=4pt,
-              minimum height=4.2cm, text width=0.88\linewidth, align=center]
-          {\textbf{\color{blue!80!black}ẢNH GIAO DIỆN: #1.png}\\[0.25cm]
-           \small\color{gray!80}Vui lòng chụp màn hình và lưu vào: \texttt{report/Images/GiaoDien/#1.png}\\[0.15cm]
-           \textit{#2}};
-      \end{tikzpicture}%
-    }
-    \caption{#2}
-    \label{#3}
-  \end{figure}
-}
-
-% \hinhdo{ChuongX/ten_file_khong_duoi}{chú thích}{nhãn}
+% \hinhdo{ChuongX/ten_tep}{chú thích}{nhãn}
 \newcommand{\hinhdo}[3]{%
   \begin{figure}[H]
     \centering
-    \includegraphics[width=\linewidth,height=0.82\textheight,keepaspectratio]{#1.png}
+    \includegraphics[width=\linewidth,height=0.80\textheight,keepaspectratio]{#1.png}
     \caption{#2}
     \label{#3}
-  \end{figure}%
-}
+  \end{figure}}
 
-% \hinhdongang{ChuongX/ten_file_khong_duoi}{chú thích}{nhãn} (hiển thị xuôi chiều trang, không xoay 90 độ)
+% \hinhdongang{ChuongX/ten_tep}{chú thích}{nhãn}: hình rộng
 \newcommand{\hinhdongang}[3]{%
   \begin{figure}[H]
     \centering
     \includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{#1.png}
     \caption{#2}
     \label{#3}
-  \end{figure}%
-}
+  \end{figure}}
 
-% \hinherd{duong_dan_file}{chú thích}{nhãn} (dành cho các sơ đồ ERD Chen)
+% \hinherd{ten_tep.jpg}{chú thích}{nhãn}: sơ đồ ERD ký pháp Chen
 \newcommand{\hinherd}[3]{%
   \begin{figure}[H]
     \centering
     \includegraphics[width=0.96\linewidth,height=0.76\textheight,keepaspectratio]{#1}
     \caption{#2}
     \label{#3}
-  \end{figure}%
-}
+  \end{figure}}
+
+% \hinhgd{ten_tep}{chú thích}{nhãn}: ảnh chụp giao diện
+\newcommand{\hinhgd}[3]{%
+  \begin{figure}[H]
+    \centering
+    \includegraphics[width=0.92\linewidth,height=0.40\textheight,keepaspectratio]{#1.png}
+    \caption{#2}
+    \label{#3}
+  \end{figure}}
