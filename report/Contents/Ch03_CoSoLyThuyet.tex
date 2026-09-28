@@ -57,7 +57,7 @@ EXCLUDE USING gist (workspace_id WITH =,
                     tstzrange(start_at, end_at) WITH &&)
 WHERE (status IN ('PENDING_PAYMENT','CONFIRMED','CHECKED_IN'))
 \end{verbatim}
-    Ràng buộc này bảo đảm không có hai đơn đang hiệu lực cùng chỗ mà khoảng thời gian giao nhau. Nó là lớp chặn cuối cùng nếu một luồng xử lý nào đó bỏ qua khóa tư vấn.
+    Với ràng buộc này, cơ sở dữ liệu từ chối thao tác ghi làm cho hai đơn đang hiệu lực trên cùng chỗ có khoảng thời gian giao nhau. Đây là lớp chặn cuối nếu một luồng xử lý nào đó bỏ qua khóa tư vấn.
 \end{enumerate}
 
 \subsection{Tính lũy đẳng khi xử lý webhook thanh toán}
@@ -87,7 +87,7 @@ Mỗi tín hiệu $k$ có trọng số $w_1 = 0{,}5$, $w_2 = 0{,}2$, $w_3 = 0{,}
     S(u, c) = \min\left(1,\ \frac{\sum_k w_k\, \delta_k\, s_k}{\sum_k w_k\, \delta_k} + 0{,}15 \cdot b(u, c)\right)
     \label{eq:weighted_jaccard}
 \end{equation}
-trong đó $b(u, c) = 1$ nếu hai người có cùng chi nhánh làm việc chính, ngược lại bằng 0. Việc chia cho tổng trọng số của các tín hiệu có dữ liệu giúp một thành viên chưa khai báo kỹ năng vẫn nhận được điểm có ý nghĩa từ các tín hiệu còn lại.
+trong đó $b(u, c) = 1$ nếu hai người có cùng chi nhánh làm việc chính, ngược lại bằng 0. Vì chỉ chia cho tổng trọng số của các tín hiệu có dữ liệu, thành viên chưa khai báo kỹ năng vẫn được tính điểm từ các tín hiệu còn lại.
 
 \subsection{Mô hình ngôn ngữ lớn và gọi hàm}
 Trợ lý ảo dùng Google Gemini qua cơ chế gọi hàm (function calling) \cite{gemini_function_calling}. Máy chủ gửi kèm danh sách hàm dưới dạng lược đồ JSON; thay vì chỉ trả lời bằng văn bản, mô hình có thể trả về yêu cầu gọi một hàm với tham số trích từ câu hỏi của người dùng. Máy chủ thực thi hàm, gửi kết quả lại cho mô hình và lặp cho đến khi mô hình đưa ra câu trả lời.
@@ -98,13 +98,13 @@ Trợ lý ảo dùng Google Gemini qua cơ chế gọi hàm (function calling) \
 \label{sec:cn_frontend}
 
 \subsection{React 18 và TypeScript 5}
-Giao diện dùng React 18.3 \cite{react_docs} và TypeScript 5.6. React chia màn hình thành các thành phần (component) tái sử dụng được; TypeScript kiểm tra kiểu ở thời điểm biên dịch (dự án bật chế độ \mt{strict}). Định tuyến dùng React Router 7, các trang được tải lười bằng \mt{React.lazy} để giảm dung lượng tải ban đầu.
+Giao diện dùng React 18.3 \cite{react_docs} và TypeScript 5.6 ở chế độ \mt{strict}. Định tuyến dùng React Router 7; các trang được tải lười bằng \mt{React.lazy} để giảm dung lượng tải ban đầu.
 
 \subsection{Vite và Tailwind CSS}
 Vite 5.4 \cite{vite_docs} dùng ES module gốc của trình duyệt khi phát triển và dùng Rollup khi đóng gói. Cấu hình \mt{manualChunks} tách các thư viện dùng chung (React, Supabase, Framer Motion, react-icons) thành các tệp riêng để trình duyệt lưu đệm độc lập với mã ứng dụng. Giao diện dùng Tailwind CSS 3.4 \cite{tailwind_docs} và hỗ trợ chế độ sáng/tối qua lớp \mt{dark} trên phần tử gốc.
 
 \subsection{Hiển thị sơ đồ mặt bằng}
-Bố cục mỗi tầng được lưu dưới dạng JSON gồm kích thước khung vẽ, kích thước ô lưới và danh sách phần tử (bàn, phòng, tường, cửa, thang máy\ldots). Mỗi phần tử có vị trí, kích thước, góc xoay và có thể gắn với một không gian (\mt{workspaceId}). Thành phần \mt{FloorPlanViewer} vẽ bố cục này thành SVG và tô màu các phần tử có gắn không gian theo tình trạng tại khung giờ đang chọn: xanh lá là còn trống, đỏ là đã có người đặt, xám là đang bảo trì. Người dùng có thể phóng to, thu nhỏ và kéo sơ đồ. Vì là đồ họa vector, sơ đồ hiển thị rõ ở mọi độ phân giải.
+Bố cục mỗi tầng được lưu dưới dạng JSON gồm kích thước khung vẽ, kích thước ô lưới và danh sách phần tử (bàn, phòng, tường, cửa, thang máy\ldots). Mỗi phần tử có vị trí, kích thước, góc xoay và có thể gắn với một không gian (\mt{workspaceId}). Thành phần \mt{FloorPlanViewer} vẽ bố cục này thành SVG và tô màu các phần tử có gắn không gian theo tình trạng tại khung giờ đang chọn: xanh lá là còn trống, đỏ là đã có người đặt, xám là đang bảo trì. Người dùng có thể phóng to, thu nhỏ và kéo sơ đồ.
 
 \subsection{Các thư viện khác}
 \begin{itemize}
@@ -119,7 +119,7 @@ Bố cục mỗi tầng được lưu dưới dạng JSON gồm kích thước k
 \label{sec:cn_backend}
 
 \subsection{Spring Boot 3 và Spring Security}
-Máy chủ dùng Spring Boot 3.1.12 \cite{spring_boot_docs}, mã nguồn biên dịch cho Java 17 và chạy trên JRE 21 trong container. Spring Security 6 được cấu hình như một máy chủ tài nguyên OAuth 2.0: mỗi yêu cầu được xác thực từ token, không dùng phiên đăng nhập. Bộ giải mã token (\mt{JwtDecoder}) đọc trường \mt{iss} để chọn cách kiểm tra: token của Supabase được kiểm tra bằng JWKS, token của CoSpace được kiểm tra bằng khóa HS384. Sau đó lớp \mt{SupabaseJwtAuthenticationConverter} đọc lại vai trò, chi nhánh và trạng thái tài khoản từ cơ sở dữ liệu, nên vai trò ghi trong token không thể dùng để leo thang quyền và tài khoản bị khóa mất quyền truy cập ngay ở yêu cầu tiếp theo.
+Máy chủ dùng Spring Boot 3.1.12 \cite{spring_boot_docs}, mã nguồn biên dịch cho Java 17 và chạy trên JRE 21 trong container. Spring Security 6 được cấu hình như một máy chủ tài nguyên OAuth 2.0: mỗi yêu cầu được xác thực từ token, không dùng phiên đăng nhập. Bộ giải mã token (\mt{JwtDecoder}) đọc trường \mt{iss} để chọn cách kiểm tra: token của Supabase được kiểm tra bằng JWKS, token của CoSpace được kiểm tra bằng khóa HS384. Sau đó lớp \mt{SupabaseJwtAuthenticationConverter} đọc lại vai trò, chi nhánh và trạng thái tài khoản từ cơ sở dữ liệu. Nhờ bước này, vai trò ghi trong token không dùng được để leo thang quyền, và tài khoản bị khóa mất quyền truy cập từ yêu cầu tiếp theo.
 
 \subsection{Spring Data JPA và bộ nhớ đệm Caffeine}
 Tầng truy cập dữ liệu dùng Spring Data JPA với Hibernate 6. Các thực thể tham chiếu nhau bằng trường khóa ngoại kiểu UUID thay vì các quan hệ \mt{@ManyToOne}/\mt{@OneToMany}; cách làm này tránh truy vấn N+1 và lỗi nạp lười ngoài giao dịch, đổi lại các truy vấn cần dữ liệu liên quan phải được viết tường minh.
@@ -177,7 +177,7 @@ Cơ sở dữ liệu & PostgreSQL (Supabase) & MySQL, MongoDB & Có kiểu kho�
 \hline
 Chống đặt trùng & Khóa tư vấn và ràng buộc EXCLUDE & Khóa phân tán Redis, khóa lạc quan & Không cần thêm hạ tầng; khóa và ràng buộc nằm cùng giao dịch với thao tác ghi \\
 \hline
-Thanh toán & PayOS (VietQR), MoMo & VNPay, Stripe & VietQR phổ biến ở Việt Nam; PayOS có webhook ký HMAC và tài liệu tích hợp rõ ràng \\
+Thanh toán & PayOS (VietQR), MoMo & VNPay, Stripe & VietQR phổ biến ở Việt Nam; PayOS có webhook ký HMAC và tài liệu tích hợp \\
 \hline
 Trợ lý ảo & Google Gemini API & OpenAI API, mô hình chạy cục bộ & Hỗ trợ gọi hàm; có hạn mức miễn phí phù hợp quy mô đồ án \\
 \hline

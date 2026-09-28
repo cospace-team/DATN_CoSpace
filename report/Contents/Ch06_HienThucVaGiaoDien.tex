@@ -174,7 +174,7 @@ Hủy trong vòng 24 giờ trước giờ bắt đầu & \mt{BEFORE\_START\_DAYS
 \end{itemize}
 
 \subsection{Tác vụ định kỳ}
-\mt{BookingExpiryScheduler} (\mt{@Scheduled(fixedRate = 30000)}) tìm đơn bằng \mt{findAllByStatusAndPaymentDeadlineAtBefore(PENDING\_PAYMENT, now)} và giao từng đơn cho \mt{BookingExpiryService.expire}. Phương thức này đọc lại đơn bằng \mt{findByIdWithLock}; chỉ khi đơn vẫn chờ thanh toán và đã quá hạn thì mới chuyển sang \mt{EXPIRED}, hủy các dịch vụ chưa trả và chuyển các giao dịch đang chờ sang \mt{EXPIRED}. Nhờ bước đọc lại dưới khóa, một đơn vừa được webhook xác nhận sẽ không bị ghi đè thành \mt{EXPIRED}. \mt{BookingLifecycleScheduler} chạy mỗi 5 phút theo cách tương tự.
+\mt{BookingExpiryScheduler} (\mt{@Scheduled(fixedRate = 30000)}) tìm đơn bằng \mt{findAllByStatusAndPaymentDeadlineAtBefore(PENDING\_PAYMENT, now)} và giao từng đơn cho \mt{BookingExpiryService.expire}. Phương thức này đọc lại đơn bằng \mt{findByIdWithLock}; chỉ khi đơn vẫn chờ thanh toán và đã quá hạn thì mới chuyển sang \mt{EXPIRED}, hủy các dịch vụ chưa trả và chuyển các giao dịch đang chờ sang \mt{EXPIRED}. Vì đơn được đọc lại dưới khóa, một đơn vừa được webhook xác nhận không bị ghi đè thành \mt{EXPIRED}. \mt{BookingLifecycleScheduler} chạy mỗi 5 phút theo cách tương tự.
 
 \subsection{Gợi ý và kết nối đối tác}
 \mt{PartnerMatchingService.suggestPartners(userId)} xét các khách hàng đang hoạt động (không gồm nhân viên, quản lý và tài khoản khách vãng lai), tính điểm theo công thức~(\ref{eq:weighted_jaccard}), loại các ứng viên có điểm bằng 0 và sắp xếp giảm dần. Với các gợi ý đầu danh sách, Gemini được gọi để viết một câu giải thích vì sao hai người nên kết nối; nếu Gemini không phản hồi, hệ thống dùng lý do ghép từ các thẻ chung.

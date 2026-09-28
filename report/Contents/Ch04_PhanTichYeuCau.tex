@@ -98,8 +98,8 @@ Các yêu cầu chức năng được đánh mã \mt{FR-xx}.
     \item \textbf{NFR-02 (Toàn vẹn dữ liệu):} không có hai đơn đang hiệu lực giao nhau trên cùng một chỗ, kể cả khi có yêu cầu đồng thời; với mọi đơn bị hủy, số tiền hoàn cộng phí phạt bằng tổng tiền đơn.
     \item \textbf{NFR-03 (Bảo mật):} giao tiếp qua HTTPS; mật khẩu băm bằng BCrypt; token nội bộ ký HS384 với khóa tối thiểu 384 bit; khóa bí mật được cấp qua biến môi trường, không ghi trong mã nguồn.
     \item \textbf{NFR-04 (Độ tin cậy):} các tác vụ định kỳ xử lý lỗi của từng đơn riêng lẻ, không làm dừng cả lượt xử lý; máy chủ tắt có kiểm soát (graceful shutdown) để không cắt ngang giao dịch đang chạy.
-    \item \textbf{NFR-05 (Khả năng sử dụng):} giao diện tiếng Việt, hiển thị tốt từ màn hình điện thoại (375 px) đến màn hình máy tính (1920 px), có chế độ sáng và tối.
-    \item \textbf{NFR-06 (Khả năng bảo trì):} mã nguồn phân tầng rõ ràng; các luồng nghiệp vụ cốt lõi (đặt chỗ, thanh toán, hủy, check-in, phân quyền) có kiểm thử tự động.
+    \item \textbf{NFR-05 (Khả năng sử dụng):} giao diện tiếng Việt, dùng được trên màn hình rộng từ 375 px (điện thoại) đến 1920 px (máy tính), có chế độ sáng và tối.
+    \item \textbf{NFR-06 (Khả năng bảo trì):} mã nguồn chia thành các tầng controller, service, repository; các luồng nghiệp vụ chính (đặt chỗ, thanh toán, hủy, check-in, phân quyền) có kiểm thử tự động.
 \end{enumerate}
 
 \section{Quy tắc nghiệp vụ}

@@ -249,9 +249,9 @@ DB-17 & Dữ liệu khởi tạo có 4 hạng thành viên, mức giảm 0/3/5/1
 \end{table}
 
 \subsection{Đánh giá cơ chế chống đặt trùng}
-Cơ chế hai lớp được kiểm chứng ở hai phần:
+Hai lớp của cơ chế chống đặt trùng được kiểm tra riêng:
 \begin{itemize}
-    \item \textbf{Lớp cơ sở dữ liệu:} các ca DB-01 đến DB-05 cho thấy ràng buộc loại trừ chặn mọi đơn đang hiệu lực giao nhau trên cùng chỗ, đồng thời vẫn cho phép đơn đã hủy, đơn liền kề và đơn ở chỗ khác. Vì ràng buộc nằm trong cơ sở dữ liệu, nó có hiệu lực với mọi luồng ghi, kể cả khi nhiều giao dịch chạy song song.
+    \item \textbf{Lớp cơ sở dữ liệu:} các ca DB-01 đến DB-05 cho thấy ràng buộc loại trừ chặn đơn đang hiệu lực giao nhau với một đơn khác trên cùng chỗ, đồng thời vẫn cho phép đơn đã hủy, đơn liền kề và đơn ở chỗ khác. Vì ràng buộc nằm trong cơ sở dữ liệu, nó có hiệu lực với mọi luồng ghi, kể cả khi nhiều giao dịch chạy song song.
     \item \textbf{Lớp ứng dụng:} ca TC-BOOK-02 xác nhận \mt{BookingService} lấy đúng hai khóa tư vấn trước khi kiểm tra chồng lấn; TC-BOOK-01, TC-BOOK-03 xác nhận các quy tắc được áp dụng. Khóa tư vấn làm các giao dịch đặt cùng một chỗ chạy lần lượt, nên giao dịch sau đọc được đơn của giao dịch trước và trả về thông báo ``Vị trí đã có người đặt'' (HTTP 400) thay vì lỗi vi phạm ràng buộc.
 \end{itemize}
 Nhóm chưa có kiểm thử tự động gửi nhiều yêu cầu đặt chỗ đồng thời vào máy chủ chạy với PostgreSQL thật; đây là hạn chế được nêu ở Mục~\ref{sec:kt-danh-gia-chung}.
@@ -316,11 +316,11 @@ NFR-06 Bảo trì & Mã nguồn phân tầng; 307 ca kiểm thử tự động c
 \section{Các lỗi phát hiện và đã khắc phục}
 \label{sec:kt-defects}
 
-Trong quá trình rà soát mã nguồn và kiểm thử, nhóm ghi nhận một số lỗi logic. Bảng~\ref{tab:defects-summary} liệt kê các lỗi quan trọng đã được sửa, kèm ca kiểm thử bảo vệ.
+Trong quá trình rà soát mã nguồn và kiểm thử, nhóm ghi nhận một số lỗi logic. Bảng~\ref{tab:defects-summary} liệt kê một số lỗi đã được sửa và ca kiểm thử tương ứng.
 
 \begin{table}[!htbp]
 \centering
-\caption{Các lỗi quan trọng đã khắc phục}
+\caption{Một số lỗi đã khắc phục}
 \label{tab:defects-summary}
 \footnotesize
 \renewcommand{\arraystretch}{1.15}
@@ -346,7 +346,7 @@ Doanh thu tính cả đơn chưa sử dụng và dịch vụ chưa thu & Chỉ t
 \section{Đánh giá chung và hạn chế của việc kiểm thử}
 \label{sec:kt-danh-gia-chung}
 
-Kết quả kiểm thử cho thấy các quy tắc nghiệp vụ chính (chống đặt trùng, hạn mức đơn chờ, xử lý webhook lặp và thanh toán muộn, tính tiền hoàn, phân quyền và cô lập chi nhánh) được kiểm tra bằng các ca kiểm thử tự động và đều đạt. Ràng buộc loại trừ và các ràng buộc toàn vẹn khác được kiểm tra trên PostgreSQL thật.
+Các quy tắc nghiệp vụ chính (chống đặt trùng, hạn mức đơn chờ, xử lý webhook lặp và thanh toán muộn, tính tiền hoàn, phân quyền và cô lập chi nhánh) đều có ca kiểm thử tự động, và các ca này đều đạt. Ràng buộc loại trừ và các ràng buộc toàn vẹn khác được kiểm tra trên PostgreSQL thật.
 
 Việc kiểm thử còn các hạn chế:
 \begin{enumerate}

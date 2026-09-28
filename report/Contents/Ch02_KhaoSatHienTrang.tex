@@ -5,7 +5,7 @@
 \label{sec:khainiem}
 
 \subsection{Văn phòng chia sẻ}
-Văn phòng chia sẻ (co-working space) là không gian làm việc chung có sẵn tiện nghi, được nhiều cá nhân và doanh nghiệp độc lập cùng sử dụng. Mô hình này hình thành ở Mỹ vào giữa những năm 2000 và hiện phổ biến ở nhiều thành phố lớn. Các loại chỗ thường gặp gồm:
+Văn phòng chia sẻ (co-working space) là không gian làm việc chung có sẵn tiện nghi, được nhiều cá nhân và doanh nghiệp độc lập cùng sử dụng. Mô hình này hình thành ở Mỹ vào giữa những năm 2000 và hiện có ở nhiều thành phố lớn. Các loại chỗ thường gặp gồm:
 \begin{itemize}
     \item \textbf{Chỗ ngồi linh hoạt (hot desk):} khách dùng bất kỳ bàn trống nào trong khu vực chung; giá thấp, phù hợp người làm việc tự do.
     \item \textbf{Chỗ ngồi cố định (dedicated desk):} một bàn dành riêng cho khách trong thời hạn thuê, thường kèm tủ cá nhân.
@@ -18,7 +18,7 @@ Trong CoSpace, các loại không gian được khai báo trong danh mục \mt{w
 \subsection{Đặc điểm vận hành}
 Các đặc điểm sau ảnh hưởng trực tiếp đến thiết kế phần mềm quản lý:
 \begin{itemize}
-    \item \textbf{Tài nguyên hữu hạn theo thời gian:} số chỗ cố định nhưng được cho thuê lại theo từng khoảng thời gian. Một khoảng thời gian bỏ trống là doanh thu mất đi, nên hệ thống phải theo dõi tình trạng từng chỗ theo thời gian.
+    \item \textbf{Tài nguyên hữu hạn theo thời gian:} số chỗ cố định nhưng được cho thuê lại theo từng khoảng thời gian, nên hệ thống phải theo dõi tình trạng của từng chỗ theo thời gian.
     \item \textbf{Nhiều đơn vị tính giá:} giá theo giờ, ngày, tuần hoặc tháng; thuê dài thường có đơn giá thấp hơn.
     \item \textbf{Dịch vụ phát sinh:} trong lúc làm việc, khách có thể gọi thêm đồ uống, in ấn, thuê thiết bị. Các khoản này được ghi vào hóa đơn của lượt đặt chỗ và thanh toán trước khi trả chỗ.
     \item \textbf{Tính cộng đồng:} khách muốn gặp đối tác, chuyên gia làm việc trong cùng không gian.
@@ -54,7 +54,7 @@ Kết nối cộng đồng & Ít giao lưu giữa các doanh nghiệp & Dễ g�
 
 \subsection{Các khái niệm kỹ thuật dùng trong đề tài}
 \begin{itemize}
-    \item \textbf{Đặt chỗ theo khoảng thời gian:} mỗi đơn có thời điểm bắt đầu và kết thúc, biểu diễn bằng khoảng nửa mở $[start\_at, end\_at)$. Nhờ vậy đơn kết thúc lúc 10:00 không xung đột với đơn bắt đầu lúc 10:00.
+    \item \textbf{Đặt chỗ theo khoảng thời gian:} mỗi đơn có thời điểm bắt đầu và kết thúc, biểu diễn bằng khoảng nửa mở $[start\_at, end\_at)$. Với cách biểu diễn này, đơn kết thúc lúc 10:00 không xung đột với đơn bắt đầu lúc 10:00.
     \item \textbf{Xung đột lịch:} hai đơn $A$ và $B$ trên cùng một không gian xung đột khi và chỉ khi
     \begin{equation}
         start\_at_A < end\_at_B \quad \text{và} \quad end\_at_A > start\_at_B
@@ -104,7 +104,7 @@ Nhóm khảo sát bốn nhóm giải pháp: các chuỗi co-working trong nướ
 \begin{itemize}
     \item \textbf{Nexudus:} nền tảng quản lý co-working có quản lý thành viên, sơ đồ mặt bằng, thanh toán, ứng dụng di động và tích hợp khóa cửa.
     \item \textbf{OfficeRnD:} nền tảng quản lý không gian làm việc linh hoạt, tích hợp với các bộ công cụ văn phòng và hệ thống CRM.
-    \item \textbf{Cobot:} giải pháp gọn nhẹ cho không gian nhỏ, tập trung vào thu phí thành viên và đặt phòng họp.
+    \item \textbf{Cobot:} phần mềm dành cho không gian nhỏ, tập trung vào thu phí thành viên và đặt phòng họp.
 \end{itemize}
 Các nền tảng này có nhiều chức năng nhưng khó áp dụng cho chuỗi co-working nhỏ tại Việt Nam vì ba lý do: chi phí thuê bao tính theo số thành viên hoặc số chỗ, cổng thanh toán tích hợp sẵn chủ yếu là các cổng quốc tế (chưa hỗ trợ VietQR), và quy trình khó tùy biến cho thói quen thanh toán tiền mặt tại quầy.
 
@@ -145,7 +145,7 @@ Trợ lý ảo & Chưa ghi nhận & Chưa ghi nhận & Chưa ghi nhận & Không
 \end{tabularx}
 \end{table}
 
-\noindent\textbf{Nhận xét:} các chuỗi trong nước mới dừng ở mức giới thiệu và nhận yêu cầu đặt chỗ, phụ thuộc nhiều vào nhân viên. Chuỗi quốc tế và phần mềm SaaS có quy trình hoàn chỉnh hơn nhưng chi phí cao và chưa phù hợp với cách thanh toán phổ biến ở Việt Nam. Cách quản lý thủ công rẻ nhưng không mở rộng được khi số chi nhánh tăng.
+\noindent\textbf{Nhận xét:} các chuỗi trong nước mới dừng ở mức giới thiệu và nhận yêu cầu đặt chỗ, phụ thuộc nhiều vào nhân viên. Chuỗi quốc tế và phần mềm SaaS có quy trình hoàn chỉnh hơn nhưng chi phí cao và chưa hỗ trợ các cách thanh toán thường dùng ở Việt Nam như VietQR hay tiền mặt tại quầy. Cách quản lý thủ công rẻ nhưng không mở rộng được khi số chi nhánh tăng.
 
 \section{Khoảng trống và định hướng giải pháp}
 \label{sec:gap}
@@ -209,7 +209,7 @@ Hệ thống gồm tám phân hệ:
 
 \begin{enumerate}
     \item \textbf{Hiển thị và chỉnh sửa sơ đồ mặt bằng:} lưu bố cục tầng, vẽ lại trên trình duyệt ở mọi kích thước màn hình và gắn từng phần tử với một không gian trong cơ sở dữ liệu để tô màu theo tình trạng.
-    \item \textbf{Chống đặt trùng khi có yêu cầu đồng thời:} bảo đảm hai đơn đang hiệu lực không bao giờ giao nhau trên cùng một không gian.
+    \item \textbf{Chống đặt trùng khi có yêu cầu đồng thời:} không để hai đơn đang hiệu lực giao nhau trên cùng một không gian.
     \item \textbf{Xử lý thanh toán tự động:} kiểm tra chữ ký webhook, không ghi nhận lặp, xử lý tiền về sau khi đơn đã hết hạn giữ chỗ và trường hợp khách trả hai lần.
     \item \textbf{Chính sách hủy theo chi nhánh:} chọn đúng bậc chính sách theo phút, ưu tiên chính sách của chi nhánh và bảo đảm tiền hoàn cộng phí phạt bằng tổng tiền đơn.
     \item \textbf{Gợi ý đối tác:} tính điểm tương đồng từ kỹ năng, sở thích và chủ đề bài viết, cộng điểm khi cùng chi nhánh.

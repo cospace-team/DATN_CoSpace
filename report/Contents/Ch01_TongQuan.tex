@@ -10,7 +10,7 @@ Văn phòng chia sẻ (co-working space) cho thuê chỗ làm việc theo giờ,
 \subsection{Thực trạng vận hành}
 Qua khảo sát (Chương~\ref{ch:khaosat}), nhóm nhận thấy nhiều chuỗi co-working quy mô vừa và nhỏ vẫn vận hành bán thủ công và gặp các vấn đề sau:
 \begin{itemize}
-    \item \textbf{Không có sơ đồ trực quan:} tình trạng chỗ ngồi được ghi trên bảng tính, khách không biết vị trí cụ thể trước khi đến.
+    \item \textbf{Không có sơ đồ chỗ ngồi:} tình trạng chỗ ngồi được ghi trên bảng tính, khách không biết vị trí cụ thể trước khi đến.
     \item \textbf{Đặt trùng lịch:} đặt chỗ đến từ nhiều kênh (Zalo, Fanpage, điện thoại, tại quầy) không đồng bộ nên hai khách có thể cùng đặt một chỗ.
     \item \textbf{Đối soát thanh toán thủ công:} nhân viên phải đối chiếu sao kê chuyển khoản; việc tính phí hủy và hoàn tiền chậm và dễ sai.
     \item \textbf{Chính sách hủy không thống nhất:} mỗi chi nhánh áp dụng một cách, không có công cụ cấu hình biểu phí theo thời gian.
@@ -71,7 +71,7 @@ Khó điều hành nhiều chi nhánh & Phân quyền, báo cáo theo chi nhánh
 \begin{enumerate}
     \item \textbf{Kiến trúc phân tầng:} ứng dụng React/TypeScript, máy chủ Spring Boot 3, cơ sở dữ liệu PostgreSQL; phía máy chủ chia thành các tầng controller, service và repository.
     \item \textbf{Chống đặt trùng lịch:} kết hợp khóa ở tầng ứng dụng và ràng buộc ở tầng cơ sở dữ liệu.
-    \item \textbf{Xử lý webhook thanh toán an toàn:} kiểm tra chữ ký và không ghi nhận lặp khi cổng thanh toán gửi lại.
+    \item \textbf{Xử lý webhook thanh toán:} kiểm tra chữ ký và không ghi nhận lặp khi cổng thanh toán gửi lại.
     \item \textbf{Bảo mật và phân quyền:} hỗ trợ hai loại JWT (của Supabase khi đăng nhập Google và của hệ thống khi đăng nhập bằng email, ký HS384), phân quyền theo vai trò và cô lập dữ liệu chi nhánh.
     \item \textbf{Trợ lý ảo có kiểm soát:} dùng Google Gemini với cơ chế gọi hàm; thao tác ghi dữ liệu phải được người dùng xác nhận.
     \item \textbf{Triển khai trên nền tảng đám mây:} đóng gói máy chủ bằng Docker và chạy trên Render, giao diện trên Vercel, cơ sở dữ liệu trên Supabase.
@@ -101,7 +101,7 @@ Khó điều hành nhiều chi nhánh & Phân quyền, báo cáo theo chi nhánh
 \subsection{Phương pháp}
 \begin{itemize}
     \item \textbf{Nghiên cứu tài liệu:} đặc tả JWT (RFC 7519), OAuth 2.0 (RFC 6749), tài liệu Spring, PostgreSQL, PayOS, MoMo và Gemini API.
-    \item \textbf{Khảo sát thực tế:} tìm hiểu quy trình đặt chỗ tại một số chuỗi co-working ở TP. Hồ Chí Minh và các phần mềm quản lý co-working phổ biến (Chương~\ref{ch:khaosat}).
+    \item \textbf{Khảo sát thực tế:} tìm hiểu quy trình đặt chỗ tại một số chuỗi co-working ở TP. Hồ Chí Minh và một số phần mềm quản lý co-working dạng SaaS (Chương~\ref{ch:khaosat}).
     \item \textbf{Phát triển lặp:} chia công việc thành các vòng lặp ngắn, mỗi vòng có phần phát triển, kiểm thử và rà soát với giảng viên hướng dẫn.
 \end{itemize}
 
@@ -153,6 +153,6 @@ Tuần 15 & Triển khai, báo cáo & Dockerfile, Render, Supabase, báo cáo & 
 
 \subsection{Ý nghĩa thực tiễn}
 \begin{itemize}
-    \item Cung cấp một công cụ cho các chuỗi co-working vừa và nhỏ: giảm thao tác thủ công của lễ tân, tránh đặt trùng chỗ, thống nhất chính sách hủy giữa các chi nhánh.
-    \item Giúp khách hàng chọn chỗ trên sơ đồ, thanh toán bằng mã VietQR và tìm người cộng tác trong cùng không gian làm việc.
+    \item Hệ thống có thể dùng cho các chuỗi co-working vừa và nhỏ để giảm thao tác thủ công của lễ tân, tránh đặt trùng chỗ và tính phí hủy tự động theo chính sách đã cấu hình cho từng chi nhánh.
+    \item Khách hàng chọn được chỗ trên sơ đồ, thanh toán bằng mã VietQR và tìm người cộng tác trong cùng không gian làm việc.
 \end{itemize}

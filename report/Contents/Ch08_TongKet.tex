@@ -65,7 +65,7 @@ Kiến trúc phân tầng & Controller -- service -- repository phía máy chủ
 \hline
 Chống đặt trùng lịch & Khóa tư vấn \mt{pg\_advisory\_xact\_lock} và ràng buộc \mt{EXCLUDE USING gist}; đã kiểm thử ở mức đơn vị và trên PostgreSQL, chưa kiểm thử tải đồng thời qua API & Đạt \\
 \hline
-Xử lý webhook an toàn & Kiểm tra chữ ký, bỏ qua webhook lặp, xử lý thanh toán muộn và thanh toán trùng. Khóa MoMo đang là khóa sandbox & Đạt một phần \\
+Xử lý webhook thanh toán & Kiểm tra chữ ký, bỏ qua webhook lặp, xử lý thanh toán muộn và thanh toán trùng. Khóa MoMo đang là khóa sandbox & Đạt một phần \\
 \hline
 Bảo mật và phân quyền & Hai loại JWT, phân quyền theo vai trò, \mt{BranchAccessGuard}; còn các điểm tồn đọng ở Mục~\ref{sec:tk-han-che} & Đạt một phần \\
 \hline
@@ -76,7 +76,7 @@ Triển khai đám mây & Máy chủ đóng gói Docker chạy trên Render, gia
 \end{tabularx}
 \end{table}
 
-Về kỹ thuật, những phần nhóm đã làm và kiểm chứng được gồm:
+Các phần kỹ thuật đã hiện thực và có kiểm thử đi kèm:
 \begin{itemize}
     \item \textbf{Chống đặt trùng hai lớp:} khóa tư vấn làm các giao dịch đặt cùng một chỗ chạy lần lượt; ràng buộc loại trừ trong cơ sở dữ liệu là lớp chặn cuối cùng. Luồng tạo lịch bảo trì dùng chung khóa với luồng đặt chỗ.
     \item \textbf{Tính toán phía máy chủ:} giá, số đơn vị thời gian, chi nhánh của đơn và tiền dịch vụ đều do máy chủ tính; giao diện chỉ hiển thị báo giá lấy từ API.
@@ -145,6 +145,6 @@ Các việc sau khắc phục trực tiếp những hạn chế ở Mục~\ref{s
 \section{Kết luận}
 \label{sec:tk-ket-luan}
 
-Đồ án đã xây dựng được một hệ thống quản lý văn phòng chia sẻ nhiều chi nhánh chạy được trên môi trường đám mây, bao phủ các luồng chính: đặt chỗ, thanh toán trực tuyến, hủy và hoàn tiền, vận hành tại quầy, kết nối cộng đồng và báo cáo. Các quy tắc nghiệp vụ quan trọng, đặc biệt là chống đặt trùng lịch và xử lý webhook thanh toán, được kiểm thử bằng các ca tự động ở mức đơn vị và trên cơ sở dữ liệu.
+Đồ án đã xây dựng được một hệ thống quản lý văn phòng chia sẻ nhiều chi nhánh chạy được trên môi trường đám mây, bao phủ các luồng chính: đặt chỗ, thanh toán trực tuyến, hủy và hoàn tiền, vận hành tại quầy, kết nối cộng đồng và báo cáo. Các quy tắc nghiệp vụ chính, nhất là chống đặt trùng lịch và xử lý webhook thanh toán, được kiểm thử bằng các ca tự động ở mức đơn vị và trên cơ sở dữ liệu.
 
 Hệ thống chưa sẵn sàng cho vận hành thương mại: cần xử lý các điểm bảo mật tồn đọng (đặc biệt là cấu hình MoMo), bổ sung migration còn thiếu, kiểm thử tích hợp và CI trước khi đưa vào sử dụng thật. Qua đồ án, nhóm có thêm kinh nghiệm về thiết kế cơ sở dữ liệu có ràng buộc toàn vẹn, xử lý tương tranh, tích hợp cổng thanh toán và rà soát lỗi logic trong một hệ thống có nhiều vai trò người dùng.
