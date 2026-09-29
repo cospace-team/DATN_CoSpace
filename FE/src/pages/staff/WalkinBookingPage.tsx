@@ -49,19 +49,22 @@ const WalkinBookingPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingSpaces, setIsLoadingSpaces] = useState(true);
   const [isSearchingUser, setIsSearchingUser] = useState(false);
+  const [pricePolicies, setPricePolicies] = useState<any[]>([]);
 
   const fetchData = async () => {
     setIsLoadingSpaces(true);
     try {
-      const [floorsRes, statusRes] = await Promise.all([
+      const [floorsRes, statusRes, policiesRes] = await Promise.all([
         staffApi.getFloors(currentBranchId),
-        staffApi.getWorkspaceBookingStatus(currentBranchId)
+        staffApi.getWorkspaceBookingStatus(currentBranchId),
+        staffApi.getPricePolicies().catch(() => [])
       ]);
       setFloors(floorsRes);
       if (floorsRes.length > 0 && !selectedFloorId) {
         setSelectedFloorId(floorsRes[0].id);
       }
       setWorkspacesStatus(statusRes);
+      setPricePolicies(policiesRes || []);
     } catch (err: any) {
       showToast(err.message || 'Lỗi khi tải dữ liệu', 'error');
     } finally {
@@ -138,16 +141,36 @@ const WalkinBookingPage: React.FC = () => {
   const wsPrice = React.useMemo(() => {
     if (!selectedWsInfo) return 0;
     const typeId = (selectedWsInfo.workspaceTypeId || '').toLowerCase();
+    
+    // Look up in price policies: first matching branch override for 'hour', then global
+    if (pricePolicies && pricePolicies.length > 0) {
+      const branchPolicy = pricePolicies.find((p: any) => 
+        p.branchId === currentBranchId && 
+        p.workspaceTypeId?.toLowerCase() === typeId && 
+        p.durationUnit === 'hour' && 
+        p.isActive !== false
+      );
+      if (branchPolicy && branchPolicy.price) return Number(branchPolicy.price);
+
+      const globalPolicy = pricePolicies.find((p: any) => 
+        !p.branchId && 
+        p.workspaceTypeId?.toLowerCase() === typeId && 
+        p.durationUnit === 'hour' && 
+        p.isActive !== false
+      );
+      if (globalPolicy && globalPolicy.price) return Number(globalPolicy.price);
+    }
+
+    // Default rate lookup matching database seed if policy not yet loaded
     const wsName = (selectedWsInfo.name || '').toLowerCase();
-    if (typeId.includes('meeting') || typeId === 'a1000000-0000-0000-0000-000000000002' || wsName.includes('meeting') || wsName.includes('phòng họp')) {
+    if (typeId.includes('meeting') || typeId === 'a1000000-0000-0000-0000-000000000002' || wsName.includes('meeting') || wsName.includes('phòng họp') || wsName.includes('boardroom')) {
+      return 150000;
+    }
+    if (typeId.includes('private') || typeId === 'a1000000-0000-0000-0000-000000000003' || wsName.includes('private') || wsName.includes('suite') || wsName.includes('văn phòng')) {
       return 200000;
     }
-    if (typeId.includes('private') || typeId === 'a1000000-0000-0000-0000-000000000003' || wsName.includes('private')) {
-      return 100000;
-    }
-    // Standard desk
-    return 60000;
-  }, [selectedWsInfo, currentBranchId]);
+    return 30000;
+  }, [selectedWsInfo, currentBranchId, pricePolicies]);
 
   const subtotal = wsPrice * duration;
   const total = subtotal;
