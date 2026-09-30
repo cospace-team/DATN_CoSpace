@@ -70,6 +70,7 @@ public class PartnerMatchingService {
         } else {
             SUGGESTIONS_CACHE.clear();
         }
+        CommunityPostService.clearFeedCache();
     }
 
     private final ProfileRepository profileRepository;

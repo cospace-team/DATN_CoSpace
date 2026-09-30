@@ -67,17 +67,22 @@ const CommunityPage: React.FC = () => {
   const [posting, setPosting] = useState(false);
   const [composerOpen, setComposerOpen] = useState(false);
 
-  const loadFeed = async (nextSort = sort, nextTag = tagFilter) => {
-    setLoading(true);
+  const loadFeed = async (nextSort = sort, nextTag = tagFilter, forceRefresh = false) => {
+    if (posts.length === 0 || forceRefresh) {
+      setLoading(true);
+    }
     try {
-      const data = await communityApi.listFeed({
-        sort: nextSort,
-        tagId: nextTag ?? undefined,
-      });
+      const data = await communityApi.listFeed(
+        {
+          sort: nextSort,
+          tagId: nextTag ?? undefined,
+        },
+        forceRefresh
+      );
       setPosts(data);
     } catch (err) {
       showToast(err instanceof Error ? err.message : "Không tải được bảng tin cộng đồng", "error");
-      setPosts([]);
+      if (posts.length === 0) setPosts([]);
     } finally {
       setLoading(false);
     }

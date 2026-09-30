@@ -90,30 +90,70 @@ async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
 let cachedPartners: { data: PartnerSuggestion[]; timestamp: number } | null = null;
 const PARTNER_CACHE_TTL_MS = 60_000; // 60 seconds
 
+const feedCache = new Map<string, { data: CommunityPost[]; timestamp: number }>();
+const FEED_CACHE_TTL_MS = 30_000; // 30 seconds
+
+let cachedTags: { data: CommunityTag[]; timestamp: number } | null = null;
+const TAGS_CACHE_TTL_MS = 10 * 60_000; // 10 minutes
+
 export const invalidateSuggestedPartners = () => {
   cachedPartners = null;
 };
 
+export const invalidateCommunityFeed = () => {
+  feedCache.clear();
+};
+
+export const invalidateCommunityTags = () => {
+  cachedTags = null;
+};
+
 export const communityApi = {
-  listFeed: (params: { tagId?: string; type?: string; sort?: "relevant" | "recent" } = {}) => {
+  listFeed: (
+    params: { tagId?: string; type?: string; sort?: "relevant" | "recent" } = {},
+    forceRefresh = false
+  ): Promise<CommunityPost[]> => {
+    const key = `${params.tagId || ""}:${params.type || ""}:${params.sort || "relevant"}`;
+    if (!forceRefresh) {
+      const entry = feedCache.get(key);
+      if (entry && Date.now() - entry.timestamp < FEED_CACHE_TTL_MS) {
+        return Promise.resolve(entry.data);
+      }
+    }
     const query = new URLSearchParams();
     if (params.tagId) query.set("tagId", params.tagId);
     if (params.type) query.set("type", params.type);
     query.set("sort", params.sort ?? "relevant");
     return apiFetch<{ data: CommunityPost[] }>(`${API}/api/community/posts?${query.toString()}`)
-      .then((r) => r.data ?? []);
+      .then((r) => {
+        const posts = r.data ?? [];
+        feedCache.set(key, { data: posts, timestamp: Date.now() });
+        return posts;
+      });
   },
 
-  createPost: (body: { title: string; content: string; postType: PostType; tagIds?: string[] }) =>
-    apiFetch<CommunityPost>(`${API}/api/community/posts`, {
+  createPost: (body: { title: string; content: string; postType: PostType; tagIds?: string[] }) => {
+    feedCache.clear();
+    return apiFetch<CommunityPost>(`${API}/api/community/posts`, {
       method: "POST",
       body: JSON.stringify(body),
-    }),
+    });
+  },
 
-  deletePost: (postId: string) =>
-    apiFetch<{ success: boolean }>(`${API}/api/community/posts/${postId}`, { method: "DELETE" }),
+  deletePost: (postId: string) => {
+    feedCache.clear();
+    return apiFetch<{ success: boolean }>(`${API}/api/community/posts/${postId}`, { method: "DELETE" });
+  },
 
-  listTags: () => apiFetch<CommunityTag[]>(`${API}/api/community/tags`),
+  listTags: (forceRefresh = false): Promise<CommunityTag[]> => {
+    if (!forceRefresh && cachedTags && Date.now() - cachedTags.timestamp < TAGS_CACHE_TTL_MS) {
+      return Promise.resolve(cachedTags.data);
+    }
+    return apiFetch<CommunityTag[]>(`${API}/api/community/tags`).then((tags) => {
+      cachedTags = { data: tags, timestamp: Date.now() };
+      return tags;
+    });
+  },
 
   suggestedPartners: (forceRefresh = false): Promise<PartnerSuggestion[]> => {
     if (!forceRefresh && cachedPartners && Date.now() - cachedPartners.timestamp < PARTNER_CACHE_TTL_MS) {
@@ -127,5 +167,8 @@ export const communityApi = {
   },
 
   invalidateSuggestedPartners,
+  invalidateFeed: invalidateCommunityFeed,
+  invalidateTags: invalidateCommunityTags,
 };
+
 
