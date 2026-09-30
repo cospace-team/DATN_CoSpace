@@ -97,8 +97,23 @@ async function getAuthHeader(): Promise<HeadersInit> {
   };
 }
 
-const CACHE_KEY = "coSpace_myBookingsCache";
-const CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes
+const CACHE_KEY_PREFIX = "coSpace_myBookingsCache_";
+const CACHE_DURATION_MS = 3 * 60 * 1000; // 3 minutes
+
+function invalidateBookingCache() {
+  try {
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const key = sessionStorage.key(i);
+      if (key && key.startsWith(CACHE_KEY_PREFIX)) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach(k => sessionStorage.removeItem(k));
+  } catch {
+    // Ignore storage errors
+  }
+}
 
 export const bookingApi = {
   /**
@@ -123,7 +138,7 @@ export const bookingApi = {
       throw new Error(errorData.message || `Lỗi tạo đơn đặt chỗ (${res.status})`);
     }
     const data = await res.json();
-    sessionStorage.removeItem(CACHE_KEY); // Invalidate cache
+    invalidateBookingCache();
     return data;
   },
 
@@ -131,8 +146,11 @@ export const bookingApi = {
    * List my bookings
    */
   async getMyBookings(forceRefresh = false): Promise<BookingResponse[]> {
+    const token = localStorage.getItem("workhub_access_token") || "anon";
+    const cacheKey = `${CACHE_KEY_PREFIX}${token.slice(-16)}`;
+
     if (!forceRefresh) {
-      const cached = sessionStorage.getItem(CACHE_KEY);
+      const cached = sessionStorage.getItem(cacheKey);
       if (cached) {
         try {
           const parsed = JSON.parse(cached);
@@ -153,7 +171,7 @@ export const bookingApi = {
 
       if (res.ok) {
         const data = await res.json();
-        sessionStorage.setItem(CACHE_KEY, JSON.stringify({ data, timestamp: Date.now() }));
+        sessionStorage.setItem(cacheKey, JSON.stringify({ data, timestamp: Date.now() }));
         return data;
       }
       const errorData = await res.json().catch(() => ({}));
@@ -190,7 +208,7 @@ export const bookingApi = {
       throw new Error(errorData.message || `Failed to cancel booking: ${response.statusText}`);
     }
 
-    sessionStorage.removeItem(CACHE_KEY); // Invalidate cache
+    invalidateBookingCache();
     return response.json();
   },
 
@@ -208,7 +226,7 @@ export const bookingApi = {
     if (res.ok) {
       const data = await res.json();
       if (data.payUrl) {
-        sessionStorage.removeItem(CACHE_KEY); // Invalidate cache
+        invalidateBookingCache();
         return {
           payUrl: data.payUrl,
           qrCodeUrl: `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(data.payUrl)}`,
@@ -236,7 +254,7 @@ export const bookingApi = {
 
     if (res.ok) {
       const data = await res.json();
-      sessionStorage.removeItem(CACHE_KEY); // Invalidate cache
+      invalidateBookingCache();
       return data;
     }
 
@@ -257,7 +275,7 @@ export const bookingApi = {
       });
 
       if (res.ok) {
-        sessionStorage.removeItem(CACHE_KEY); // Invalidate cache
+        invalidateBookingCache();
         return { success: true, message: 'Thanh toán tiền mặt thành công' };
       }
       const errorData = await res.json().catch(() => ({}));

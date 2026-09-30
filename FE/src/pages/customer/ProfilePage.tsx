@@ -128,7 +128,6 @@ const ProfilePage: React.FC = () => {
     email: '',
     website: '',
   });
-  const [isEditingSocial, setIsEditingSocial] = useState(false);
   const [isSavingSocial, setIsSavingSocial] = useState(false);
 
   // Networking list display filters
@@ -349,21 +348,26 @@ const ProfilePage: React.FC = () => {
     // 4. Calculate real stats from user bookings
     const loadRealStats = async () => {
       try {
-        const bookings = await bookingApi.getMyBookings();
+        const bookings = await bookingApi.getMyBookings(true);
         if (bookings && Array.isArray(bookings)) {
-          const valid = bookings.filter(
-            b => b.status === 'confirmed' || b.status === 'checked_in' || b.status === 'completed'
-          );
+          const valid = bookings.filter(b => {
+            const s = (b.status || '').toLowerCase();
+            return ['confirmed', 'checked_in', 'checked_out', 'completed'].includes(s);
+          });
           const totalBookings = valid.length;
           let totalHours = 0;
           valid.forEach(b => {
-            if (b.unit === 'hour') totalHours += b.unitCount || 1;
-            else if (b.unit === 'day') totalHours += (b.unitCount || 1) * 8;
-            else if (b.unit === 'week') totalHours += (b.unitCount || 1) * 40;
-            else if (b.unit === 'month') totalHours += (b.unitCount || 1) * 160;
+            const u = (b.unit || '').toLowerCase();
+            const count = Number(b.unitCount) || 0;
+            if (u === 'hour' && count > 0) totalHours += count;
+            else if (u === 'day' && count > 0) totalHours += count * 8;
+            else if (u === 'week' && count > 0) totalHours += count * 40;
+            else if (u === 'month' && count > 0) totalHours += count * 160;
             else if (b.startAt && b.endAt) {
               const diff = new Date(b.endAt).getTime() - new Date(b.startAt).getTime();
               totalHours += Math.max(1, Math.round(diff / 3600000));
+            } else {
+              totalHours += Math.max(1, count || 1);
             }
           });
 
@@ -700,7 +704,6 @@ const ProfilePage: React.FC = () => {
         });
       }
 
-      setIsEditingSocial(false);
       showToast('Cập nhật liên kết mạng xã hội thành công!', 'success');
     } catch {
       showToast('Lỗi khi lưu liên kết mạng xã hội', 'error');
@@ -1347,7 +1350,7 @@ const ProfilePage: React.FC = () => {
               </div>
             </section>
 
-            {/* Bento Card 4: Social Links & Portfolio */}
+            {/* Bento Card 4: Social Links & Portfolio (Direct Inline Editing) */}
             <section className="bg-card rounded-3xl border border-border p-6 shadow-sm">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
@@ -1355,285 +1358,184 @@ const ProfilePage: React.FC = () => {
                     <FiGlobe className="h-5 w-5" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-bold text-foreground">Liên kết mạng xã hội</h2>
-                    <p className="text-xs text-muted-foreground">Portfolio và kênh kết nối chuyên nghiệp</p>
+                    <h2 className="text-lg font-bold text-foreground">Liên kết mạng xã hội & Portfolio</h2>
+                    <p className="text-xs text-muted-foreground">Chỉnh sửa trực tiếp kênh kết nối và portfolio của bạn</p>
                   </div>
                 </div>
-                {!isEditing && !isEditingSocial && (
-                  <button
-                    type="button"
-                    onClick={() => setIsEditingSocial(true)}
-                    className="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1 cursor-pointer"
-                  >
-                    <FiEdit2 className="h-3.5 w-3.5" /> Chỉnh sửa
-                  </button>
-                )}
+                <button
+                  type="button"
+                  disabled={isSavingSocial}
+                  onClick={handleSaveSocialLinks}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-xs cursor-pointer disabled:opacity-60"
+                >
+                  {isSavingSocial ? (
+                    <Spinner className="h-3.5 w-3.5 text-white" />
+                  ) : (
+                    <FiCheck className="h-3.5 w-3.5" />
+                  )}
+                  <span>Lưu liên kết</span>
+                </button>
               </div>
 
-              {isEditing || isEditingSocial ? (
-                <div className="space-y-3.5">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
-                      LinkedIn Profile URL
-                    </label>
-                    <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border rounded-xl focus-within:ring-2 focus-within:ring-blue-500/30">
-                      <FiLinkedin className="h-4 w-4 text-blue-600 shrink-0" />
-                      <input
-                        type="url"
-                        value={socialLinks.linkedin}
-                        onChange={e => setSocialLinks({ ...socialLinks, linkedin: e.target.value })}
-                        placeholder="https://linkedin.com/in/username"
-                        className="bg-transparent text-xs w-full focus:outline-none font-medium text-foreground"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
-                      GitHub Profile URL
-                    </label>
-                    <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border rounded-xl focus-within:ring-2 focus-within:ring-gray-500/30">
-                      <FiGithub className="h-4 w-4 text-foreground shrink-0" />
-                      <input
-                        type="url"
-                        value={socialLinks.github}
-                        onChange={e => setSocialLinks({ ...socialLinks, github: e.target.value })}
-                        placeholder="https://github.com/username"
-                        className="bg-transparent text-xs w-full focus:outline-none font-medium text-foreground"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
-                      Facebook Profile URL
-                    </label>
-                    <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border rounded-xl focus-within:ring-2 focus-within:ring-blue-600/30">
-                      <FiFacebook className="h-4 w-4 text-blue-600 shrink-0" />
-                      <input
-                        type="url"
-                        value={socialLinks.facebook}
-                        onChange={e => setSocialLinks({ ...socialLinks, facebook: e.target.value })}
-                        placeholder="https://facebook.com/username"
-                        className="bg-transparent text-xs w-full focus:outline-none font-medium text-foreground"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
-                      Email / Gmail liên hệ công việc
-                    </label>
-                    <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border rounded-xl focus-within:ring-2 focus-within:ring-rose-500/30">
-                      <FiMail className="h-4 w-4 text-rose-500 shrink-0" />
-                      <input
-                        type="email"
-                        value={socialLinks.email}
-                        onChange={e => setSocialLinks({ ...socialLinks, email: e.target.value })}
-                        placeholder="name@example.com"
-                        className="bg-transparent text-xs w-full focus:outline-none font-medium text-foreground"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
-                      Website / Portfolio cá nhân
-                    </label>
-                    <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border rounded-xl focus-within:ring-2 focus-within:ring-emerald-500/30">
-                      <FiGlobe className="h-4 w-4 text-emerald-600 shrink-0" />
-                      <input
-                        type="url"
-                        value={socialLinks.website}
-                        onChange={e => setSocialLinks({ ...socialLinks, website: e.target.value })}
-                        placeholder="https://yourportfolio.dev"
-                        className="bg-transparent text-xs w-full focus:outline-none font-medium text-foreground"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Direct Action buttons for Social Links editing */}
-                  {isEditingSocial && !isEditing && (
-                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/60">
-                      <button
-                        type="button"
-                        onClick={() => setIsEditingSocial(false)}
-                        className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-muted hover:bg-muted/80 text-foreground transition-colors cursor-pointer"
+              <div className="space-y-3">
+                {/* LinkedIn */}
+                <div>
+                  <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
+                    LinkedIn Profile URL
+                  </label>
+                  <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border rounded-xl focus-within:ring-2 focus-within:ring-blue-500/30 transition-all">
+                    <FiLinkedin className="h-4 w-4 text-blue-600 shrink-0" />
+                    <input
+                      type="url"
+                      value={socialLinks.linkedin}
+                      onChange={e => setSocialLinks({ ...socialLinks, linkedin: e.target.value })}
+                      placeholder="https://linkedin.com/in/username"
+                      className="bg-transparent text-xs w-full focus:outline-none font-medium text-foreground"
+                    />
+                    {socialLinks.linkedin.trim() && (
+                      <a
+                        href={
+                          socialLinks.linkedin.startsWith('http')
+                            ? socialLinks.linkedin
+                            : `https://${socialLinks.linkedin}`
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Mở liên kết"
+                        className="p-1 text-muted-foreground hover:text-blue-600 rounded-lg hover:bg-blue-500/10 transition-colors shrink-0"
                       >
-                        Hủy
-                      </button>
-                      <button
-                        type="button"
-                        disabled={isSavingSocial}
-                        onClick={handleSaveSocialLinks}
-                        className="px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                      >
-                        {isSavingSocial ? (
-                          <Spinner className="h-3 w-3 text-white" />
-                        ) : (
-                          <FiCheck className="h-3.5 w-3.5" />
-                        )}
-                        <span>Lưu liên kết</span>
-                      </button>
-                    </div>
-                  )}
+                        <FiExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    )}
+                  </div>
                 </div>
-              ) : (
-                <div className="space-y-2.5">
-                  {socialLinks.linkedin || socialLinks.github || socialLinks.facebook || socialLinks.email || socialLinks.website ? (
-                    <>
-                      {socialLinks.linkedin && (
-                        <a
-                          href={
-                            socialLinks.linkedin.startsWith('http')
-                              ? socialLinks.linkedin
-                              : `https://${socialLinks.linkedin}`
-                          }
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center justify-between p-3 rounded-2xl bg-muted/30 border border-border/60 hover:bg-blue-500/5 hover:border-blue-500/30 transition-all text-xs font-semibold text-foreground group"
-                        >
-                          <div className="flex items-center gap-2.5">
-                            <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-600">
-                              <FiLinkedin className="h-4 w-4" />
-                            </div>
-                            <div>
-                              <p className="font-semibold text-foreground">LinkedIn</p>
-                              <p className="text-[11px] text-muted-foreground truncate max-w-[180px]">
-                                {socialLinks.linkedin
-                                  .replace(/^https?:\/\/(www\.)?linkedin\.com\/in\/?/, '@')
-                                  .replace(/\/$/, '')}
-                              </p>
-                            </div>
-                          </div>
-                          <FiExternalLink className="h-3.5 w-3.5 text-muted-foreground group-hover:text-blue-600 transition-colors" />
-                        </a>
-                      )}
 
-                      {socialLinks.github && (
-                        <a
-                          href={
-                            socialLinks.github.startsWith('http')
-                              ? socialLinks.github
-                              : `https://${socialLinks.github}`
-                          }
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center justify-between p-3 rounded-2xl bg-muted/30 border border-border/60 hover:bg-foreground/5 hover:border-foreground/20 transition-all text-xs font-semibold text-foreground group"
-                        >
-                          <div className="flex items-center gap-2.5">
-                            <div className="p-1.5 rounded-lg bg-foreground/10 text-foreground">
-                              <FiGithub className="h-4 w-4" />
-                            </div>
-                            <div>
-                              <p className="font-semibold text-foreground">GitHub</p>
-                              <p className="text-[11px] text-muted-foreground truncate max-w-[180px]">
-                                {socialLinks.github
-                                  .replace(/^https?:\/\/(www\.)?github\.com\/?/, '@')
-                                  .replace(/\/$/, '')}
-                              </p>
-                            </div>
-                          </div>
-                          <FiExternalLink className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
-                        </a>
-                      )}
-
-                      {socialLinks.facebook && (
-                        <a
-                          href={
-                            socialLinks.facebook.startsWith('http')
-                              ? socialLinks.facebook
-                              : `https://${socialLinks.facebook}`
-                          }
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center justify-between p-3 rounded-2xl bg-muted/30 border border-border/60 hover:bg-blue-600/5 hover:border-blue-600/30 transition-all text-xs font-semibold text-foreground group"
-                        >
-                          <div className="flex items-center gap-2.5">
-                            <div className="p-1.5 rounded-lg bg-blue-600/10 text-blue-600">
-                              <FiFacebook className="h-4 w-4" />
-                            </div>
-                            <div>
-                              <p className="font-semibold text-foreground">Facebook</p>
-                              <p className="text-[11px] text-muted-foreground truncate max-w-[180px]">
-                                {socialLinks.facebook
-                                  .replace(/^https?:\/\/(www\.)?facebook\.com\/?/, '@')
-                                  .replace(/\/$/, '')}
-                              </p>
-                            </div>
-                          </div>
-                          <FiExternalLink className="h-3.5 w-3.5 text-muted-foreground group-hover:text-blue-600 transition-colors" />
-                        </a>
-                      )}
-
-                      {socialLinks.email && (
-                        <a
-                          href={`mailto:${socialLinks.email}`}
-                          className="flex items-center justify-between p-3 rounded-2xl bg-muted/30 border border-border/60 hover:bg-rose-500/5 hover:border-rose-500/30 transition-all text-xs font-semibold text-foreground group"
-                        >
-                          <div className="flex items-center gap-2.5">
-                            <div className="p-1.5 rounded-lg bg-rose-500/10 text-rose-500">
-                              <FiMail className="h-4 w-4" />
-                            </div>
-                            <div>
-                              <p className="font-semibold text-foreground">Email / Gmail</p>
-                              <p className="text-[11px] text-muted-foreground truncate max-w-[180px]">
-                                {socialLinks.email}
-                              </p>
-                            </div>
-                          </div>
-                          <FiExternalLink className="h-3.5 w-3.5 text-muted-foreground group-hover:text-rose-500 transition-colors" />
-                        </a>
-                      )}
-
-                      {socialLinks.website && (
-                        <a
-                          href={
-                            socialLinks.website.startsWith('http')
-                              ? socialLinks.website
-                              : `https://${socialLinks.website}`
-                          }
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center justify-between p-3 rounded-2xl bg-muted/30 border border-border/60 hover:bg-emerald-500/5 hover:border-emerald-500/30 transition-all text-xs font-semibold text-foreground group"
-                        >
-                          <div className="flex items-center gap-2.5">
-                            <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600">
-                              <FiGlobe className="h-4 w-4" />
-                            </div>
-                            <div>
-                              <p className="font-semibold text-foreground">Portfolio / Website</p>
-                              <p className="text-[11px] text-muted-foreground truncate max-w-[180px]">
-                                {socialLinks.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}
-                              </p>
-                            </div>
-                          </div>
-                          <FiExternalLink className="h-3.5 w-3.5 text-muted-foreground group-hover:text-emerald-600 transition-colors" />
-                        </a>
-                      )}
-                    </>
-                  ) : (
-                    <div className="p-4 rounded-2xl bg-muted/20 border border-dashed border-border/80 text-center flex flex-col items-center justify-center">
-                      <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground mb-2">
-                        <FiGlobe className="h-5 w-5 opacity-60" />
-                      </div>
-                      <p className="text-xs font-semibold text-foreground mb-1">
-                        Chưa có liên kết mạng xã hội
-                      </p>
-                      <p className="text-[11px] text-muted-foreground max-w-xs mb-3">
-                        Thêm LinkedIn, GitHub, Facebook, Gmail hoặc Portfolio cá nhân để đối tác và đồng nghiệp dễ dàng kết nối với bạn.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => setIsEditingSocial(true)}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-primary/10 text-primary hover:bg-primary/20 transition-colors cursor-pointer"
+                {/* GitHub */}
+                <div>
+                  <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
+                    GitHub Profile URL
+                  </label>
+                  <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border rounded-xl focus-within:ring-2 focus-within:ring-gray-500/30 transition-all">
+                    <FiGithub className="h-4 w-4 text-foreground shrink-0" />
+                    <input
+                      type="url"
+                      value={socialLinks.github}
+                      onChange={e => setSocialLinks({ ...socialLinks, github: e.target.value })}
+                      placeholder="https://github.com/username"
+                      className="bg-transparent text-xs w-full focus:outline-none font-medium text-foreground"
+                    />
+                    {socialLinks.github.trim() && (
+                      <a
+                        href={
+                          socialLinks.github.startsWith('http')
+                            ? socialLinks.github
+                            : `https://${socialLinks.github}`
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Mở liên kết"
+                        className="p-1 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted transition-colors shrink-0"
                       >
-                        <FiPlus className="h-3.5 w-3.5" /> Thêm liên kết ngay
-                      </button>
-                    </div>
-                  )}
+                        <FiExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    )}
+                  </div>
                 </div>
-              )}
+
+                {/* Facebook */}
+                <div>
+                  <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
+                    Facebook Profile URL
+                  </label>
+                  <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border rounded-xl focus-within:ring-2 focus-within:ring-blue-600/30 transition-all">
+                    <FiFacebook className="h-4 w-4 text-blue-600 shrink-0" />
+                    <input
+                      type="url"
+                      value={socialLinks.facebook}
+                      onChange={e => setSocialLinks({ ...socialLinks, facebook: e.target.value })}
+                      placeholder="https://facebook.com/username"
+                      className="bg-transparent text-xs w-full focus:outline-none font-medium text-foreground"
+                    />
+                    {socialLinks.facebook.trim() && (
+                      <a
+                        href={
+                          socialLinks.facebook.startsWith('http')
+                            ? socialLinks.facebook
+                            : `https://${socialLinks.facebook}`
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Mở liên kết"
+                        className="p-1 text-muted-foreground hover:text-blue-600 rounded-lg hover:bg-blue-500/10 transition-colors shrink-0"
+                      >
+                        <FiExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+                {/* Email */}
+                <div>
+                  <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
+                    Email / Gmail liên hệ công việc
+                  </label>
+                  <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border rounded-xl focus-within:ring-2 focus-within:ring-rose-500/30 transition-all">
+                    <FiMail className="h-4 w-4 text-rose-500 shrink-0" />
+                    <input
+                      type="email"
+                      value={socialLinks.email}
+                      onChange={e => setSocialLinks({ ...socialLinks, email: e.target.value })}
+                      placeholder="name@example.com"
+                      className="bg-transparent text-xs w-full focus:outline-none font-medium text-foreground"
+                    />
+                    {socialLinks.email.trim() && (
+                      <a
+                        href={`mailto:${socialLinks.email}`}
+                        title="Gửi email"
+                        className="p-1 text-muted-foreground hover:text-rose-500 rounded-lg hover:bg-rose-500/10 transition-colors shrink-0"
+                      >
+                        <FiExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+                {/* Website / Portfolio */}
+                <div>
+                  <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
+                    Website / Portfolio cá nhân
+                  </label>
+                  <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border rounded-xl focus-within:ring-2 focus-within:ring-emerald-500/30 transition-all">
+                    <FiGlobe className="h-4 w-4 text-emerald-600 shrink-0" />
+                    <input
+                      type="url"
+                      value={socialLinks.website}
+                      onChange={e => setSocialLinks({ ...socialLinks, website: e.target.value })}
+                      placeholder="https://yourportfolio.dev"
+                      className="bg-transparent text-xs w-full focus:outline-none font-medium text-foreground"
+                    />
+                    {socialLinks.website.trim() && (
+                      <a
+                        href={
+                          socialLinks.website.startsWith('http')
+                            ? socialLinks.website
+                            : `https://${socialLinks.website}`
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Mở liên kết"
+                        className="p-1 text-muted-foreground hover:text-emerald-600 rounded-lg hover:bg-emerald-500/10 transition-colors shrink-0"
+                      >
+                        <FiExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-3.5 pt-3 border-t border-border/60 flex items-center justify-between text-[11px] text-muted-foreground">
+                <span>💡 Nhập hoặc dán liên kết trực tiếp và bấm <strong>Lưu liên kết</strong>.</span>
+              </div>
             </section>
           </div>
         </div>

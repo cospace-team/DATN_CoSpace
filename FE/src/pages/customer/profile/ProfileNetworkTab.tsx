@@ -66,7 +66,7 @@ export const ProfileNetworkTab: React.FC<ProfileNetworkTabProps> = ({
             <FiUsers className="text-indigo-500" /> Mạng lưới Đối tác & Đồng nghiệp
           </h2>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Thuật toán đối sánh Jaccard dựa trên kỹ năng & lĩnh vực thực tế từ Database
+            Gợi ý đối tác tiềm năng dựa trên kỹ năng, lĩnh vực quan tâm và không gian làm việc chung
           </p>
         </div>
 

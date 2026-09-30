@@ -45,6 +45,7 @@ public class PartnerMatchingService {
     private static final int REASONED_SUGGESTIONS = 6;
     private static final java.util.regex.Pattern REASON_LINE =
             java.util.regex.Pattern.compile("^(\\d+)\\s*[.)-]\\s*(.+)$");
+    private static final Map<String, String> MATCH_REASON_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
 
     private final ProfileRepository profileRepository;
     private final ProfileSkillRepository profileSkillRepository;
@@ -194,8 +195,15 @@ public class PartnerMatchingService {
     @Transactional
     public List<PartnerSuggestionDto> suggestPartners(UUID currentUserId) {
         Profile currentProfile = profileRepository.findById(currentUserId).orElse(null);
-        List<ProfileSkill> mySkills = profileSkillRepository.findByProfileUserId(currentUserId);
-        List<ProfileInterest> myInterests = profileInterestRepository.findByProfileUserId(currentUserId);
+
+        // Batch preload skills and interests grouped by userId (replaces N+1 queries)
+        Map<UUID, List<ProfileSkill>> skillsByUserId = profileSkillRepository.findAll().stream()
+                .collect(Collectors.groupingBy(ProfileSkill::getProfileUserId));
+        Map<UUID, List<ProfileInterest>> interestsByUserId = profileInterestRepository.findAll().stream()
+                .collect(Collectors.groupingBy(ProfileInterest::getProfileUserId));
+
+        List<ProfileSkill> mySkills = skillsByUserId.getOrDefault(currentUserId, List.of());
+        List<ProfileInterest> myInterests = interestsByUserId.getOrDefault(currentUserId, List.of());
 
         Set<UUID> mySkillTagIds = mySkills.stream().map(ProfileSkill::getTagId).collect(Collectors.toSet());
         Set<UUID> myInterestTagIds = myInterests.stream().map(ProfileInterest::getTagId).collect(Collectors.toSet());
@@ -204,13 +212,10 @@ public class PartnerMatchingService {
                 .collect(Collectors.toMap(Tag::getId, Function.identity(), (a, b) -> a));
         Map<UUID, com.cospace.app.entity.PartnerConnection> connections = partnerConnectionService.connectionsByMember(currentUserId);
 
-        // Only fellow customers are suggested as partners. Staff and admins work here, they did not
-        // sign up for networking, and a same-branch bonus alone was enough to surface every
-        // colleague of the viewer's branch by name. Walk-in guests never signed up at all.
-        List<User> allCandidates = userRepository.findAll().stream()
+        // Only fellow customers are suggested as partners.
+        List<User> allCandidates = userRepository.findByRole(User.Role.customer).stream()
                 .filter(u -> !u.getId().equals(currentUserId)
                         && u.getStatus() == User.Status.active
-                        && u.getRole() == User.Role.customer
                         && (u.getEmail() == null || !u.getEmail().endsWith(UserService.WALKIN_EMAIL_DOMAIN)))
                 .toList();
 
@@ -221,8 +226,7 @@ public class PartnerMatchingService {
         Map<UUID, Profile> profileMap = profileRepository.findAll().stream()
                 .collect(Collectors.toMap(Profile::getUserId, Function.identity(), (a, b) -> a));
 
-        // What each member has publicly written about, pulled in one query. A post is the freshest
-        // signal of what someone is working on right now, so it counts alongside their static tags.
+        // What each member has publicly written about, pulled in one query.
         Map<UUID, Set<UUID>> postTagsByAuthor = new HashMap<>();
         for (Object[] pair : postTagRepository.findAuthorTagPairs()) {
             UUID authorId = (UUID) pair[0];
@@ -236,13 +240,14 @@ public class PartnerMatchingService {
         myTopicTagIds.addAll(postTagsByAuthor.getOrDefault(currentUserId, Set.of()));
 
         List<PartnerSuggestionDto> suggestions = new ArrayList<>();
+        List<ProfileMatchScore> matchScoresToSave = new ArrayList<>();
 
         for (User candidate : allCandidates) {
             UUID candidateId = candidate.getId();
             Profile candProfile = profileMap.get(candidateId);
 
-            List<ProfileSkill> candSkills = profileSkillRepository.findByProfileUserId(candidateId);
-            List<ProfileInterest> candInterests = profileInterestRepository.findByProfileUserId(candidateId);
+            List<ProfileSkill> candSkills = skillsByUserId.getOrDefault(candidateId, List.of());
+            List<ProfileInterest> candInterests = interestsByUserId.getOrDefault(candidateId, List.of());
 
             Set<UUID> candSkillTagIds = candSkills.stream().map(ProfileSkill::getTagId).collect(Collectors.toSet());
             Set<UUID> candInterestTagIds = candInterests.stream().map(ProfileInterest::getTagId).collect(Collectors.toSet());
@@ -274,8 +279,7 @@ public class PartnerMatchingService {
 
             double branchBonus = isSameBranch ? 0.15 : 0.0;
 
-            // 4. Post affinity: what this candidate has actually written about, against everything
-            // I care about (my skills, interests and my own posts).
+            // 4. Post affinity
             Set<UUID> candPostTagIds = postTagsByAuthor.getOrDefault(candidateId, Set.of());
             Set<UUID> sharedPostTags = new HashSet<>(candPostTagIds);
             sharedPostTags.retainAll(myTopicTagIds);
@@ -283,9 +287,7 @@ public class PartnerMatchingService {
                     ? 0.0
                     : (double) sharedPostTags.size() / Math.min(candPostTagIds.size(), myTopicTagIds.size());
 
-            // Weights: skills 0.5, interests 0.2, posts 0.2 — but only over the signals both sides
-            // actually have. A member who hasn't filled in skills yet still gets a meaningful score
-            // from what they've written, instead of being capped at the posts weight alone.
+            // Weights: skills 0.5, interests 0.2, posts 0.2
             double weightedSum = 0.0;
             double availableWeight = 0.0;
             if (!mySkillTagIds.isEmpty() && !candSkillTagIds.isEmpty()) {
@@ -311,8 +313,6 @@ public class PartnerMatchingService {
                 continue;
             }
 
-            // The score is reported as it is: a floor of 10% made unrelated members look like a
-            // partial match, which is exactly what this screen is supposed to tell apart.
             int scorePercent = (int) Math.round(totalScore * 100);
 
             // Extract common tags
@@ -326,8 +326,6 @@ public class PartnerMatchingService {
                 if (tag != null && !commonTags.contains(tag.getName())) commonTags.add(tag.getName());
             }
 
-            // Topics they've posted about that I also care about — surfaced separately so the UI
-            // can say "đã viết về ..." rather than lumping it in with static profile tags.
             List<String> sharedPostTagNames = new ArrayList<>();
             for (UUID tagId : sharedPostTags) {
                 Tag tag = tagMap.get(tagId);
@@ -336,7 +334,6 @@ public class PartnerMatchingService {
                 if (!commonTags.contains(tag.getName())) commonTags.add(tag.getName());
             }
 
-            // Also include candidate's primary tags if common tags empty
             if (commonTags.isEmpty()) {
                 for (UUID tagId : candSkillTagIds) {
                     Tag tag = tagMap.get(tagId);
@@ -349,7 +346,6 @@ public class PartnerMatchingService {
             com.cospace.app.entity.PartnerConnection connection = connections.get(candidateId);
             String connectionState = connection == null ? com.cospace.app.dto.api.ConnectionDto.STATE_NONE
                     : PartnerConnectionService.stateFor(currentUserId, connection);
-            // Connected members see each other's contact details even when they are not public.
             boolean contactVisible = contactPublic || com.cospace.app.dto.api.ConnectionDto.STATE_CONNECTED.equals(connectionState);
             String email = (candProfile != null && contactVisible) ? (candProfile.getContactEmail() != null ? candProfile.getContactEmail() : candidate.getEmail()) : null;
             String phone = (candProfile != null && contactVisible) ? (candProfile.getContactPhone() != null ? candProfile.getContactPhone() : candidate.getPhone()) : null;
@@ -391,32 +387,32 @@ public class PartnerMatchingService {
                     .postTags(sharedPostTagNames)
                     .build());
 
-            // Save match score record
-            // profile_match_scores FKs both sides to profiles, and a member only gets a profiles
-            // row once they save a networking profile. Skipping the cache write for members
-            // without one keeps suggestions working for everyone else — a constraint violation
-            // here would poison the whole transaction and fail the request at commit, where the
-            // catch below can no longer help.
+            // Collect match score record for batch save
             if (profileMap.containsKey(currentUserId) && profileMap.containsKey(candidateId)) {
-                try {
-                    Map<String, Object> reasons = new HashMap<>();
-                    reasons.put("sharedSkillsCount", sharedSkills.size());
-                    reasons.put("sharedInterestsCount", sharedInterests.size());
-                    reasons.put("sharedPostTagsCount", sharedPostTags.size());
-                    reasons.put("isSameBranch", isSameBranch);
-                    reasons.put("scorePercent", scorePercent);
+                Map<String, Object> reasons = new HashMap<>();
+                reasons.put("sharedSkillsCount", sharedSkills.size());
+                reasons.put("sharedInterestsCount", sharedInterests.size());
+                reasons.put("sharedPostTagsCount", sharedPostTags.size());
+                reasons.put("isSameBranch", isSameBranch);
+                reasons.put("scorePercent", scorePercent);
 
-                    ProfileMatchScore matchScoreRecord = ProfileMatchScore.builder()
-                            .profileUserId(currentUserId)
-                            .matchedUserId(candidateId)
-                            .score(BigDecimal.valueOf(totalScore).setScale(4, RoundingMode.HALF_UP))
-                            .reasonsJson(reasons)
-                            .computedAt(OffsetDateTime.now(ZoneOffset.UTC))
-                            .build();
-                    profileMatchScoreRepository.save(matchScoreRecord);
-                } catch (Exception e) {
-                    log.warn("Failed to persist profile_match_scores: {}", e.getMessage());
-                }
+                ProfileMatchScore matchScoreRecord = ProfileMatchScore.builder()
+                        .profileUserId(currentUserId)
+                        .matchedUserId(candidateId)
+                        .score(BigDecimal.valueOf(totalScore).setScale(4, RoundingMode.HALF_UP))
+                        .reasonsJson(reasons)
+                        .computedAt(OffsetDateTime.now(ZoneOffset.UTC))
+                        .build();
+                matchScoresToSave.add(matchScoreRecord);
+            }
+        }
+
+        // Batch save match scores in one roundtrip
+        if (!matchScoresToSave.isEmpty()) {
+            try {
+                profileMatchScoreRepository.saveAll(matchScoresToSave);
+            } catch (Exception e) {
+                log.warn("Failed to persist profile_match_scores: {}", e.getMessage());
             }
         }
 
@@ -430,21 +426,35 @@ public class PartnerMatchingService {
     }
 
     /**
-     * Writes the one-line "why you two should meet" shown on each suggestion. Gemini gets the whole
-     * shortlist in a single call (per-person calls would multiply latency and quota), and every
-     * suggestion falls back to a sentence built from the shared tags if AI is unavailable.
+     * Writes the one-line "why you two should meet" shown on each suggestion.
+     * Uses in-memory cache to return instantly on subsequent requests, and only queries
+     * Gemini for un-cached candidates with tag-based fallbacks.
      */
     private void attachMatchReasons(List<PartnerSuggestionDto> suggestions) {
-        for (PartnerSuggestionDto s : suggestions) {
-            s.setMatchReason(fallbackReason(s));
-        }
-        if (suggestions.isEmpty() || !geminiClient.isConfigured()) {
+        if (suggestions == null || suggestions.isEmpty()) {
             return;
         }
 
-        List<PartnerSuggestionDto> shortlist = suggestions.size() > REASONED_SUGGESTIONS
-                ? suggestions.subList(0, REASONED_SUGGESTIONS)
-                : suggestions;
+        List<PartnerSuggestionDto> needsAiGeneration = new ArrayList<>();
+        for (PartnerSuggestionDto s : suggestions) {
+            String cacheKey = getReasonCacheKey(s);
+            String cached = MATCH_REASON_CACHE.get(cacheKey);
+            if (cached != null) {
+                s.setMatchReason(cached);
+            } else {
+                s.setMatchReason(fallbackReason(s));
+                needsAiGeneration.add(s);
+            }
+        }
+
+        if (!geminiClient.isConfigured() || needsAiGeneration.isEmpty()) {
+            return;
+        }
+
+        List<PartnerSuggestionDto> shortlist = needsAiGeneration.size() > REASONED_SUGGESTIONS
+                ? needsAiGeneration.subList(0, REASONED_SUGGESTIONS)
+                : needsAiGeneration;
+
         try {
             StringBuilder prompt = new StringBuilder();
             for (int i = 0; i < shortlist.size(); i++) {
@@ -482,12 +492,20 @@ public class PartnerMatchingService {
                 int index = Integer.parseInt(m.group(1)) - 1;
                 String text = m.group(2).trim();
                 if (index >= 0 && index < shortlist.size() && !text.isEmpty()) {
-                    shortlist.get(index).setMatchReason(text);
+                    PartnerSuggestionDto s = shortlist.get(index);
+                    s.setMatchReason(text);
+                    MATCH_REASON_CACHE.put(getReasonCacheKey(s), text);
                 }
             }
         } catch (Exception e) {
             log.warn("Gemini match-reason generation failed, keeping tag-based reasons: {}", e.getMessage());
         }
+    }
+
+    private String getReasonCacheKey(PartnerSuggestionDto s) {
+        String common = s.getCommonTags() != null ? String.join(",", s.getCommonTags()) : "";
+        String post = s.getPostTags() != null ? String.join(",", s.getPostTags()) : "";
+        return s.getId() + "_" + s.isSameBranch() + "_" + common + "_" + post;
     }
 
     private String fallbackReason(PartnerSuggestionDto s) {
