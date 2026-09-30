@@ -103,6 +103,8 @@ public class PartnerConnectionService {
                 displayName(requester) + " muốn kết nối với bạn." + (note != null ? " Lời nhắn: \"" + note + "\"" : "")
                         + " Xem hồ sơ và phản hồi trong mục Mạng lưới kết nối.",
                 "PARTNER_MATCH", connection.getId(), "CONNECTION");
+        PartnerMatchingService.clearCache(requesterId);
+        PartnerMatchingService.clearCache(addresseeId);
         return profileFor(requesterId, addresseeId);
     }
 
@@ -125,6 +127,8 @@ public class PartnerConnectionService {
             connection.setRespondedAt(now);
             connectionRepository.save(connection);
         }
+        PartnerMatchingService.clearCache(connection.getRequesterId());
+        PartnerMatchingService.clearCache(connection.getAddresseeId());
         return profileFor(userId, connection.getRequesterId());
     }
 
@@ -140,6 +144,8 @@ public class PartnerConnectionService {
         if (!ownRequest && !connected) {
             throw new AccessDeniedException("Bạn không thể xóa kết nối này.");
         }
+        PartnerMatchingService.clearCache(connection.getRequesterId());
+        PartnerMatchingService.clearCache(connection.getAddresseeId());
         connectionRepository.delete(connection);
     }
 

@@ -46,6 +46,7 @@ import { membershipApi, type MyMembershipDto } from '../../api/loyaltyApi';
 import { formatVND } from '../../utils/formatters';
 import { API_BASE_URL } from '../../config/api';
 import type { PartnerSuggestion } from './profile/partnerTypes';
+import { communityApi, invalidateSuggestedPartners } from '../../lib/communityApi';
 import MemberProfileModal, { type MemberPreview } from '../../components/network/MemberProfileModal';
 import { AvatarModal } from './profile/AvatarModal';
 import { ProfileSecurityTab } from './profile/ProfileSecurityTab';
@@ -406,20 +407,12 @@ const ProfilePage: React.FC = () => {
     loadRealStats();
     membershipApi.me().then(setMembership).catch(() => setMembership(null));
 
-    // 5. Fetch partner matching suggestions
+    // 5. Fetch partner matching suggestions (uses cached suggestions when available for 0ms transition)
     const fetchPartners = async () => {
       setIsLoadingPartners(true);
       try {
-        const res = await fetch(`${API_BASE_URL}/api/matching/suggestions`, {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        if (res.ok) {
-          const json = await res.json();
-          setPartnersList(Array.isArray(json.data) ? json.data : []);
-        }
+        const list = await communityApi.suggestedPartners();
+        setPartnersList(list);
       } catch (err) {
         console.warn('Cannot fetch partner suggestions:', err);
       } finally {
@@ -430,22 +423,13 @@ const ProfilePage: React.FC = () => {
   }, [user]);
 
   // Re-fetch partners helper
-  const reloadPartnerSuggestions = async () => {
+  const reloadPartnerSuggestions = async (forceRefresh = false) => {
     try {
-      const token = localStorage.getItem('workhub_access_token');
-      if (!token) return;
-      const res = await fetch(`${API_BASE_URL}/api/matching/suggestions`, {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (res.ok) {
-        const json = await res.json();
-        if (json.data && Array.isArray(json.data)) {
-          setPartnersList(json.data);
-        }
+      if (forceRefresh) {
+        invalidateSuggestedPartners();
       }
+      const list = await communityApi.suggestedPartners(forceRefresh);
+      setPartnersList(list);
     } catch {
       // quiet
     }
@@ -503,7 +487,7 @@ const ProfilePage: React.FC = () => {
         });
 
         // 3. Refresh partner suggestions in background
-        void reloadPartnerSuggestions().catch(e => console.warn('Partner suggestions background refresh:', e));
+        void reloadPartnerSuggestions(true).catch(e => console.warn('Partner suggestions background refresh:', e));
       }
 
       setIsEditingPersonalInfo(false);
@@ -585,7 +569,7 @@ const ProfilePage: React.FC = () => {
             interests: [],
           }),
         });
-        void reloadPartnerSuggestions().catch(e => console.warn('Partner suggestions background refresh:', e));
+        void reloadPartnerSuggestions(true).catch(e => console.warn('Partner suggestions background refresh:', e));
       }
 
       setIsEditingPersonalInfo(false);
@@ -663,7 +647,7 @@ const ProfilePage: React.FC = () => {
             interests: [],
           }),
         });
-        void reloadPartnerSuggestions().catch(e => console.warn('Partner suggestions background refresh:', e));
+        void reloadPartnerSuggestions(true).catch(e => console.warn('Partner suggestions background refresh:', e));
       }
 
       setIsEditingProfessionalInfo(false);
@@ -765,7 +749,7 @@ const ProfilePage: React.FC = () => {
 
   const handleConnectionChanged = () => {
     setConnectionsReloadKey(k => k + 1);
-    void reloadPartnerSuggestions();
+    void reloadPartnerSuggestions(true);
   };
 
   // ── Auto-save or Manual-save Skills into Database (Optimized & Non-blocking) ──
@@ -811,7 +795,7 @@ const ProfilePage: React.FC = () => {
 
       if (res.ok) {
         // Run partner suggestions in the background so tag editing feels instantaneous
-        void reloadPartnerSuggestions().catch(e => console.warn('Partner suggestions background refresh:', e));
+        void reloadPartnerSuggestions(true).catch(e => console.warn('Partner suggestions background refresh:', e));
       } else {
         showToast('Không thể lưu kỹ năng lên máy chủ', 'error');
       }

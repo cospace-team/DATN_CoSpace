@@ -47,6 +47,31 @@ public class PartnerMatchingService {
             java.util.regex.Pattern.compile("^(\\d+)\\s*[.)-]\\s*(.+)$");
     private static final Map<String, String> MATCH_REASON_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
 
+    private static class CacheEntry {
+        final List<PartnerSuggestionDto> data;
+        final long expiresAt;
+
+        CacheEntry(List<PartnerSuggestionDto> data, long ttlMillis) {
+            this.data = data;
+            this.expiresAt = System.currentTimeMillis() + ttlMillis;
+        }
+
+        boolean isExpired() {
+            return System.currentTimeMillis() > expiresAt;
+        }
+    }
+
+    private static final Map<UUID, CacheEntry> SUGGESTIONS_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final long SUGGESTIONS_CACHE_TTL = 3 * 60 * 1000L; // 3 minutes
+
+    public static void clearCache(UUID userId) {
+        if (userId != null) {
+            SUGGESTIONS_CACHE.remove(userId);
+        } else {
+            SUGGESTIONS_CACHE.clear();
+        }
+    }
+
     private final ProfileRepository profileRepository;
     private final ProfileSkillRepository profileSkillRepository;
     private final ProfileInterestRepository profileInterestRepository;
@@ -189,11 +214,17 @@ public class PartnerMatchingService {
             profileInterestRepository.saveAll(newInterests);
         }
 
+        clearCache(userId);
         return getNetworkingProfile(userId);
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public List<PartnerSuggestionDto> suggestPartners(UUID currentUserId) {
+        CacheEntry cached = SUGGESTIONS_CACHE.get(currentUserId);
+        if (cached != null && !cached.isExpired()) {
+            return cached.data;
+        }
+
         Profile currentProfile = profileRepository.findById(currentUserId).orElse(null);
 
         // Batch preload skills and interests grouped by userId (replaces N+1 queries)
@@ -407,13 +438,15 @@ public class PartnerMatchingService {
             }
         }
 
-        // Batch save match scores in one roundtrip
+        // Batch save match scores asynchronously without blocking user request
         if (!matchScoresToSave.isEmpty()) {
-            try {
-                profileMatchScoreRepository.saveAll(matchScoresToSave);
-            } catch (Exception e) {
-                log.warn("Failed to persist profile_match_scores: {}", e.getMessage());
-            }
+            java.util.concurrent.CompletableFuture.runAsync(() -> {
+                try {
+                    profileMatchScoreRepository.saveAll(matchScoresToSave);
+                } catch (Exception e) {
+                    log.warn("Async persist profile_match_scores failed: {}", e.getMessage());
+                }
+            });
         }
 
         // Sort descending by matchScore
@@ -422,13 +455,15 @@ public class PartnerMatchingService {
         // Limit top 20
         List<PartnerSuggestionDto> top = suggestions.size() > 20 ? suggestions.subList(0, 20) : suggestions;
         attachMatchReasons(top);
+
+        SUGGESTIONS_CACHE.put(currentUserId, new CacheEntry(top, SUGGESTIONS_CACHE_TTL));
         return top;
     }
 
     /**
      * Writes the one-line "why you two should meet" shown on each suggestion.
-     * Uses in-memory cache to return instantly on subsequent requests, and only queries
-     * Gemini for un-cached candidates with tag-based fallbacks.
+     * Uses in-memory cache and immediate fallback reasons so the HTTP response is instantaneous,
+     * while enriching with Gemini in the background asynchronously if configured.
      */
     private void attachMatchReasons(List<PartnerSuggestionDto> suggestions) {
         if (suggestions == null || suggestions.isEmpty()) {
@@ -455,51 +490,53 @@ public class PartnerMatchingService {
                 ? needsAiGeneration.subList(0, REASONED_SUGGESTIONS)
                 : needsAiGeneration;
 
-        try {
-            StringBuilder prompt = new StringBuilder();
-            for (int i = 0; i < shortlist.size(); i++) {
-                PartnerSuggestionDto s = shortlist.get(i);
-                prompt.append(i + 1).append(". ").append(s.getName())
-                        .append(" — ").append(s.getProfession()).append(" tại ").append(s.getCompany())
-                        .append("; điểm chung: ").append(String.join(", ", s.getCommonTags()));
-                if (s.getPostTags() != null && !s.getPostTags().isEmpty()) {
-                    prompt.append("; đã viết bài về: ").append(String.join(", ", s.getPostTags()));
+        // Run Gemini enrichment asynchronously so user request returns immediately without blocking
+        java.util.concurrent.CompletableFuture.runAsync(() -> {
+            try {
+                StringBuilder prompt = new StringBuilder();
+                for (int i = 0; i < shortlist.size(); i++) {
+                    PartnerSuggestionDto s = shortlist.get(i);
+                    prompt.append(i + 1).append(". ").append(s.getName())
+                            .append(" — ").append(s.getProfession()).append(" tại ").append(s.getCompany())
+                            .append("; điểm chung: ").append(String.join(", ", s.getCommonTags()));
+                    if (s.getPostTags() != null && !s.getPostTags().isEmpty()) {
+                        prompt.append("; đã viết bài về: ").append(String.join(", ", s.getPostTags()));
+                    }
+                    prompt.append('\n');
                 }
-                prompt.append('\n');
-            }
 
-            String systemPrompt = "Bạn giúp thành viên CoSpace hiểu vì sao nên kết nối với từng người được gợi ý. "
-                    + "Với mỗi người trong danh sách, viết đúng MỘT câu tiếng Việt ngắn (tối đa 20 từ) "
-                    + "nêu lý do nên kết nối, dựa trên điểm chung và chủ đề họ đã viết. "
-                    + "Trả về mỗi người một dòng theo đúng thứ tự, bắt đầu bằng số thứ tự và dấu chấm. "
-                    + "Không thêm tiêu đề hay giải thích nào khác.";
+                String systemPrompt = "Bạn giúp thành viên CoSpace hiểu vì sao nên kết nối với từng người được gợi ý. "
+                        + "Với mỗi người trong danh sách, viết đúng MỘT câu tiếng Việt ngắn (tối đa 20 từ) "
+                        + "nêu lý do nên kết nối, dựa trên điểm chung và chủ đề họ đã viết. "
+                        + "Trả về mỗi người một dòng theo đúng thứ tự, bắt đầu bằng số thứ tự và dấu chấm. "
+                        + "Không thêm tiêu đề hay giải thích nào khác.";
 
-            JsonNode response = geminiClient.generateContent(
-                    systemPrompt,
-                    List.of(Map.of("role", "user", "parts", List.of(Map.of("text", prompt.toString())))),
-                    null);
+                JsonNode response = geminiClient.generateContent(
+                        systemPrompt,
+                        List.of(Map.of("role", "user", "parts", List.of(Map.of("text", prompt.toString())))),
+                        null);
 
-            StringBuilder reply = new StringBuilder();
-            for (JsonNode part : response.path("candidates").path(0).path("content").path("parts")) {
-                if (part.has("text")) reply.append(part.get("text").asText()).append('\n');
-            }
-
-            for (String line : reply.toString().split("\\R")) {
-                String trimmed = line.trim();
-                if (trimmed.isEmpty()) continue;
-                java.util.regex.Matcher m = REASON_LINE.matcher(trimmed);
-                if (!m.matches()) continue;
-                int index = Integer.parseInt(m.group(1)) - 1;
-                String text = m.group(2).trim();
-                if (index >= 0 && index < shortlist.size() && !text.isEmpty()) {
-                    PartnerSuggestionDto s = shortlist.get(index);
-                    s.setMatchReason(text);
-                    MATCH_REASON_CACHE.put(getReasonCacheKey(s), text);
+                StringBuilder reply = new StringBuilder();
+                for (JsonNode part : response.path("candidates").path(0).path("content").path("parts")) {
+                    if (part.has("text")) reply.append(part.get("text").asText()).append('\n');
                 }
+
+                for (String line : reply.toString().split("\\R")) {
+                    String trimmed = line.trim();
+                    if (trimmed.isEmpty()) continue;
+                    java.util.regex.Matcher m = REASON_LINE.matcher(trimmed);
+                    if (!m.matches()) continue;
+                    int index = Integer.parseInt(m.group(1)) - 1;
+                    String text = m.group(2).trim();
+                    if (index >= 0 && index < shortlist.size() && !text.isEmpty()) {
+                        PartnerSuggestionDto s = shortlist.get(index);
+                        MATCH_REASON_CACHE.put(getReasonCacheKey(s), text);
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Async Gemini match-reason generation failed: {}", e.getMessage());
             }
-        } catch (Exception e) {
-            log.warn("Gemini match-reason generation failed, keeping tag-based reasons: {}", e.getMessage());
-        }
+        });
     }
 
     private String getReasonCacheKey(PartnerSuggestionDto s) {

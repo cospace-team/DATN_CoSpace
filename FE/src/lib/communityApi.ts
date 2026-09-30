@@ -51,9 +51,11 @@ export interface PartnerSuggestion {
   phone: string | null;
   bio: string;
   linkedin: string | null;
+  github?: string | null;
   isSameBranch: boolean;
   matchReason: string | null;
   postTags: string[] | null;
+  [key: string]: any;
 }
 
 async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
@@ -85,6 +87,13 @@ async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
   return data as T;
 }
 
+let cachedPartners: { data: PartnerSuggestion[]; timestamp: number } | null = null;
+const PARTNER_CACHE_TTL_MS = 60_000; // 60 seconds
+
+export const invalidateSuggestedPartners = () => {
+  cachedPartners = null;
+};
+
 export const communityApi = {
   listFeed: (params: { tagId?: string; type?: string; sort?: "relevant" | "recent" } = {}) => {
     const query = new URLSearchParams();
@@ -106,6 +115,17 @@ export const communityApi = {
 
   listTags: () => apiFetch<CommunityTag[]>(`${API}/api/community/tags`),
 
-  suggestedPartners: () =>
-    apiFetch<{ data: PartnerSuggestion[] }>(`${API}/api/matching/suggestions`).then((r) => r.data ?? []),
+  suggestedPartners: (forceRefresh = false): Promise<PartnerSuggestion[]> => {
+    if (!forceRefresh && cachedPartners && Date.now() - cachedPartners.timestamp < PARTNER_CACHE_TTL_MS) {
+      return Promise.resolve(cachedPartners.data);
+    }
+    return apiFetch<{ data: PartnerSuggestion[] }>(`${API}/api/matching/suggestions`).then((r) => {
+      const list = r.data ?? [];
+      cachedPartners = { data: list, timestamp: Date.now() };
+      return list;
+    });
+  },
+
+  invalidateSuggestedPartners,
 };
+
