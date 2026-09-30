@@ -20,8 +20,6 @@ import jakarta.persistence.Enumerated;
 import io.hypersistence.utils.hibernate.type.basic.PostgreSQLEnumType;
 import org.hibernate.annotations.Type;
 
-import java.math.BigDecimal;
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

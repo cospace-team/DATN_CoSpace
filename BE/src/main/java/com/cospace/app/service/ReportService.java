@@ -277,8 +277,6 @@ public class ReportService {
                 months.add(label);
 
                 final YearMonth currentYm = ym;
-                OffsetDateTime ymStart = vnStartOfDay(ym.atDay(1));
-                OffsetDateTime ymEnd = vnEndOfDay(ym.atEndOfMonth());
 
                 List<Booking> monthBookings = branchBookings.stream()
                         .filter(b -> {
@@ -322,7 +320,6 @@ public class ReportService {
         for (Map.Entry<String, List<Booking>> entry : groupedByType.entrySet()) {
             String typeName = entry.getKey();
             int count = entry.getValue().size();
-            Set<UUID> typeBookingIds = entry.getValue().stream().map(Booking::getId).collect(Collectors.toSet());
             long rev = computeRevenue(entry.getValue(), recognisedRevenue);
             String color = colors[colorIdx % colors.length];
             colorIdx++;

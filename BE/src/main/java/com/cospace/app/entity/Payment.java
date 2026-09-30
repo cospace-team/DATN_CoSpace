@@ -15,13 +15,8 @@ import lombok.NoArgsConstructor;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.UUID;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
-
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import org.hibernate.annotations.Type;
-import io.hypersistence.utils.hibernate.type.basic.PostgreSQLEnumType;
 
 
 @Data

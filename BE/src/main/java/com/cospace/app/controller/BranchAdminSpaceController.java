@@ -7,7 +7,6 @@ import com.cospace.app.dto.api.SpaceDto.UpdateFloorRequest;
 import com.cospace.app.dto.api.SpaceDto.UpdateWorkspaceRequest;
 import com.cospace.app.dto.api.SpaceDto.WorkspaceResponse;
 import com.cospace.app.dto.api.SpaceDto.WorkspaceTypeResponse;
-import com.cospace.app.dto.api.UserProfileDto;
 import com.cospace.app.entity.DurationUnit;
 import com.cospace.app.entity.PricePolicy;
 import com.cospace.app.entity.User;
@@ -27,7 +26,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;

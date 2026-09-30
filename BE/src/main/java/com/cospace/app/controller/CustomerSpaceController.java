@@ -3,7 +3,6 @@ package com.cospace.app.controller;
 import com.cospace.app.dto.api.PublicWorkspaceAvailabilityDto;
 import com.cospace.app.dto.api.SpaceDto.FloorResponse;
 import com.cospace.app.dto.api.SpaceDto.WorkspaceResponse;
-import com.cospace.app.entity.BranchEntity;
 import com.cospace.app.entity.BranchEntity.BranchStatus;
 import com.cospace.app.entity.PricePolicy;
 import com.cospace.app.entity.WorkspaceType;

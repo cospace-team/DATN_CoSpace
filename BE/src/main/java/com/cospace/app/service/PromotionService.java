@@ -3,7 +3,6 @@ package com.cospace.app.service;
 import com.cospace.app.dto.api.MembershipDto.TierResponse;
 import com.cospace.app.dto.api.PromotionDto.PromotionRequest;
 import com.cospace.app.dto.api.PromotionDto.PromotionResponse;
-import com.cospace.app.entity.BookingStatus;
 import com.cospace.app.entity.BranchEntity;
 import com.cospace.app.entity.Promotion;
 import com.cospace.app.entity.WorkspaceType;

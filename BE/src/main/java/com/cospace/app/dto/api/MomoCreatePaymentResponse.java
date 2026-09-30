@@ -1,7 +1,6 @@
 package com.cospace.app.dto.api;
 
 import com.cospace.app.entity.PaymentStatus;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 import lombok.Data;
 

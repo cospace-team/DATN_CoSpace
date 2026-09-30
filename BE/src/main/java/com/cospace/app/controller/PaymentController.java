@@ -7,7 +7,6 @@ import com.cospace.app.dto.api.PayosCreatePaymentResponse;
 import com.cospace.app.dto.api.PayosWebhookDto;
 import com.cospace.app.dto.api.PaymentDto;
 import com.cospace.app.service.PaymentService;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -31,7 +30,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/payments")
