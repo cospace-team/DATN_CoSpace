@@ -103,7 +103,10 @@ const ProfilePage: React.FC = () => {
   const [selectedTheme, setSelectedTheme] = useState('indigo');
 
   // ── Tab 1: Personal & Professional Profile States ──
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditingPersonalInfo, setIsEditingPersonalInfo] = useState(false);
+  const [isEditingProfessionalInfo, setIsEditingProfessionalInfo] = useState(false);
+  const [isSavingPersonal, setIsSavingPersonal] = useState(false);
+  const [isSavingProfessional, setIsSavingProfessional] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   const [profileForm, setProfileForm] = useState({
@@ -503,7 +506,8 @@ const ProfilePage: React.FC = () => {
         void reloadPartnerSuggestions().catch(e => console.warn('Partner suggestions background refresh:', e));
       }
 
-      setIsEditing(false);
+      setIsEditingPersonalInfo(false);
+      setIsEditingProfessionalInfo(false);
       initialProfileRef.current = { ...profileForm };
       showToast('Cập nhật toàn bộ thông tin hồ sơ và kỹ năng thành công!', 'success');
     } catch (e) {
@@ -513,32 +517,190 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-  const handleStartEdit = () => {
+  // ── Personal Info Handlers ──
+  const handleStartEditPersonal = () => {
     initialProfileRef.current = { ...profileForm };
-    setIsEditing(true);
+    setIsEditingPersonalInfo(true);
   };
 
-  const handleCancelEdit = () => {
-    setProfileForm({ ...initialProfileRef.current });
-    setIsEditing(false);
+  const handleCancelEditPersonal = () => {
+    setProfileForm(prev => ({
+      ...prev,
+      fullName: initialProfileRef.current.fullName,
+      phone: initialProfileRef.current.phone,
+    }));
+    setIsEditingPersonalInfo(false);
+  };
+
+  const handleSavePersonalInfo = async () => {
+    if (!profileForm.fullName.trim()) {
+      showToast('Họ và tên không được để trống', 'error');
+      return;
+    }
+    setIsSavingPersonal(true);
+    try {
+      const contactLinkJson = JSON.stringify({
+        linkedin: (socialLinks.linkedin || '').trim(),
+        github: (socialLinks.github || '').trim(),
+        facebook: (socialLinks.facebook || '').trim(),
+        email: (socialLinks.email || '').trim(),
+        website: (socialLinks.website || '').trim(),
+      });
+
+      // 1. Update basic user profile
+      await updateProfile({
+        fullName: profileForm.fullName.trim(),
+        email: profileForm.email,
+        phone: profileForm.phone.trim(),
+        avatarUrl: customAvatarUrl || user?.avatarUrl,
+        bio: profileForm.bio,
+        profession: profileForm.profession,
+        company: profileForm.company,
+        contactPublic: profileForm.contactPublic,
+        contactLink: contactLinkJson,
+      });
+
+      // 2. Persist networking profile into database
+      const token = localStorage.getItem('workhub_access_token');
+      if (token) {
+        await fetch(`${API_BASE_URL}/api/profiles/me/networking`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            bio: profileForm.bio,
+            profession: profileForm.profession,
+            company: profileForm.company,
+            contactEmail: profileForm.email,
+            contactPhone: profileForm.phone.trim(),
+            contactLink: contactLinkJson,
+            contactPublic: profileForm.contactPublic,
+            skills: skills.map(s => ({
+              tagId: s.tagId || null,
+              tagName: s.tagName,
+              level: s.level || 3,
+            })),
+            interests: [],
+          }),
+        });
+        void reloadPartnerSuggestions().catch(e => console.warn('Partner suggestions background refresh:', e));
+      }
+
+      setIsEditingPersonalInfo(false);
+      initialProfileRef.current = { ...profileForm };
+      showToast('Cập nhật thông tin cá nhân thành công!', 'success');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Có lỗi xảy ra khi lưu thông tin', 'error');
+    } finally {
+      setIsSavingPersonal(false);
+    }
+  };
+
+  // ── Professional & Bio Handlers ──
+  const handleStartEditProfessional = () => {
+    initialProfileRef.current = { ...profileForm };
+    setIsEditingProfessionalInfo(true);
+  };
+
+  const handleCancelEditProfessional = () => {
+    setProfileForm(prev => ({
+      ...prev,
+      profession: initialProfileRef.current.profession,
+      company: initialProfileRef.current.company,
+      bio: initialProfileRef.current.bio,
+    }));
+    setIsEditingProfessionalInfo(false);
+  };
+
+  const handleSaveProfessionalInfo = async () => {
+    setIsSavingProfessional(true);
+    try {
+      const contactLinkJson = JSON.stringify({
+        linkedin: (socialLinks.linkedin || '').trim(),
+        github: (socialLinks.github || '').trim(),
+        facebook: (socialLinks.facebook || '').trim(),
+        email: (socialLinks.email || '').trim(),
+        website: (socialLinks.website || '').trim(),
+      });
+
+      // 1. Update basic user profile
+      await updateProfile({
+        fullName: profileForm.fullName,
+        email: profileForm.email,
+        phone: profileForm.phone,
+        avatarUrl: customAvatarUrl || user?.avatarUrl,
+        bio: profileForm.bio.trim(),
+        profession: profileForm.profession.trim(),
+        company: profileForm.company.trim(),
+        contactPublic: profileForm.contactPublic,
+        contactLink: contactLinkJson,
+      });
+
+      // 2. Persist networking profile into database
+      const token = localStorage.getItem('workhub_access_token');
+      if (token) {
+        await fetch(`${API_BASE_URL}/api/profiles/me/networking`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            bio: profileForm.bio.trim(),
+            profession: profileForm.profession.trim(),
+            company: profileForm.company.trim(),
+            contactEmail: profileForm.email,
+            contactPhone: profileForm.phone,
+            contactLink: contactLinkJson,
+            contactPublic: profileForm.contactPublic,
+            skills: skills.map(s => ({
+              tagId: s.tagId || null,
+              tagName: s.tagName,
+              level: s.level || 3,
+            })),
+            interests: [],
+          }),
+        });
+        void reloadPartnerSuggestions().catch(e => console.warn('Partner suggestions background refresh:', e));
+      }
+
+      setIsEditingProfessionalInfo(false);
+      initialProfileRef.current = { ...profileForm };
+      showToast('Cập nhật nghề nghiệp & giới thiệu thành công!', 'success');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Có lỗi xảy ra khi lưu thông tin', 'error');
+    } finally {
+      setIsSavingProfessional(false);
+    }
   };
 
   // Keyboard shortcuts for profile editing (Escape = Cancel, Ctrl/Cmd + Enter = Save)
   useEffect(() => {
-    if (!isEditing) return;
+    if (!isEditingPersonalInfo && !isEditingProfessionalInfo) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        handleCancelEdit();
+        if (isEditingPersonalInfo) handleCancelEditPersonal();
+        if (isEditingProfessionalInfo) handleCancelEditProfessional();
       } else if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
         e.preventDefault();
-        void handleSaveProfile();
+        if (isEditingPersonalInfo) void handleSavePersonalInfo();
+        if (isEditingProfessionalInfo) void handleSaveProfessionalInfo();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isEditing, profileForm, socialLinks, skills, customAvatarUrl]);
+  }, [
+    isEditingPersonalInfo,
+    isEditingProfessionalInfo,
+    profileForm,
+    socialLinks,
+    skills,
+    customAvatarUrl,
+  ]);
 
   // ── Save Password Handler ──
   const handlePasswordChange = async (e: React.FormEvent) => {
@@ -948,42 +1110,16 @@ const ProfilePage: React.FC = () => {
 
             {/* Top Action Buttons */}
             <div className="flex items-center justify-center lg:justify-end gap-3 shrink-0">
-              {activeTab === 'profile' && !isEditing && (
-                <button
-                  onClick={handleStartEdit}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm bg-primary text-primary-foreground shadow-md hover:bg-primary/90 hover:shadow-lg transition-all active:scale-95 cursor-pointer"
-                >
-                  <FiEdit2 className="h-4 w-4" />
-                  Chỉnh sửa hồ sơ
-                </button>
-              )}
-              {activeTab === 'profile' && isEditing && (
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={handleCancelEdit}
-                    className="px-4 py-2.5 rounded-xl font-medium text-sm border border-border bg-card hover:bg-muted text-foreground transition-all cursor-pointer"
-                  >
-                    Hủy
-                  </button>
-                  <button
-                    onClick={handleSaveProfile}
-                    disabled={isSavingProfile}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm bg-emerald-600 text-white shadow-md hover:bg-emerald-700 transition-all disabled:opacity-50 cursor-pointer"
-                  >
-                    {isSavingProfile ? <Spinner size="sm" /> : <FiCheck className="h-4 w-4" />}
-                    {isSavingProfile ? 'Đang lưu...' : 'Lưu thay đổi'}
-                  </button>
-                </div>
-              )}
               <button
                 onClick={() => {
                   navigator.clipboard.writeText(window.location.href);
                   showToast('Đã sao chép liên kết hồ sơ vào clipboard!', 'success');
                 }}
-                className="p-2.5 rounded-xl border border-border bg-card hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-card hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer text-sm font-medium"
                 title="Chia sẻ hồ sơ"
               >
                 <FiShare2 className="h-4 w-4" />
+                <span>Chia sẻ hồ sơ</span>
               </button>
             </div>
           </div>
@@ -1121,9 +1257,9 @@ const ProfilePage: React.FC = () => {
                     <p className="text-xs text-muted-foreground">Thông tin tài khoản và liên hệ trực tiếp của bạn</p>
                   </div>
                 </div>
-                {!isEditing && (
+                {!isEditingPersonalInfo && (
                   <button
-                    onClick={handleStartEdit}
+                    onClick={handleStartEditPersonal}
                     className="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1 cursor-pointer"
                   >
                     <FiEdit2 className="h-3.5 w-3.5" /> Sửa
@@ -1131,7 +1267,7 @@ const ProfilePage: React.FC = () => {
                 )}
               </div>
 
-              {isEditing ? (
+              {isEditingPersonalInfo ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="sm:col-span-2">
                     <label className="block text-xs font-semibold text-foreground mb-1.5">
@@ -1174,19 +1310,19 @@ const ProfilePage: React.FC = () => {
                   <div className="sm:col-span-2 flex items-center justify-end gap-2 pt-2 border-t border-border/60">
                     <button
                       type="button"
-                      onClick={handleCancelEdit}
+                      onClick={handleCancelEditPersonal}
                       className="px-3.5 py-1.5 rounded-xl text-xs font-medium border border-border bg-card hover:bg-muted text-foreground transition-all cursor-pointer"
                     >
                       Hủy
                     </button>
                     <button
                       type="button"
-                      onClick={handleSaveProfile}
-                      disabled={isSavingProfile}
+                      onClick={handleSavePersonalInfo}
+                      disabled={isSavingPersonal}
                       className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
                     >
-                      {isSavingProfile ? <Spinner size="sm" /> : <FiCheck className="h-3.5 w-3.5" />}
-                      <span>{isSavingProfile ? 'Đang lưu...' : 'Lưu thay đổi'}</span>
+                      {isSavingPersonal ? <Spinner size="sm" /> : <FiCheck className="h-3.5 w-3.5" />}
+                      <span>{isSavingPersonal ? 'Đang lưu...' : 'Lưu thay đổi'}</span>
                     </button>
                   </div>
                 </div>
@@ -1234,9 +1370,9 @@ const ProfilePage: React.FC = () => {
                     <p className="text-xs text-muted-foreground">Chia sẻ về công việc và chuyên môn để kết nối với đối tác</p>
                   </div>
                 </div>
-                {!isEditing && (
+                {!isEditingProfessionalInfo && (
                   <button
-                    onClick={handleStartEdit}
+                    onClick={handleStartEditProfessional}
                     className="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1 cursor-pointer"
                   >
                     <FiEdit2 className="h-3.5 w-3.5" /> Sửa
@@ -1244,7 +1380,7 @@ const ProfilePage: React.FC = () => {
                 )}
               </div>
 
-              {isEditing ? (
+              {isEditingProfessionalInfo ? (
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
@@ -1290,19 +1426,19 @@ const ProfilePage: React.FC = () => {
                   <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/60">
                     <button
                       type="button"
-                      onClick={handleCancelEdit}
+                      onClick={handleCancelEditProfessional}
                       className="px-3.5 py-1.5 rounded-xl text-xs font-medium border border-border bg-card hover:bg-muted text-foreground transition-all cursor-pointer"
                     >
                       Hủy
                     </button>
                     <button
                       type="button"
-                      onClick={handleSaveProfile}
-                      disabled={isSavingProfile}
+                      onClick={handleSaveProfessionalInfo}
+                      disabled={isSavingProfessional}
                       className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
                     >
-                      {isSavingProfile ? <Spinner size="sm" /> : <FiCheck className="h-3.5 w-3.5" />}
-                      <span>{isSavingProfile ? 'Đang lưu...' : 'Lưu thay đổi'}</span>
+                      {isSavingProfessional ? <Spinner size="sm" /> : <FiCheck className="h-3.5 w-3.5" />}
+                      <span>{isSavingProfessional ? 'Đang lưu...' : 'Lưu thay đổi'}</span>
                     </button>
                   </div>
                 </div>
