@@ -168,7 +168,7 @@ INSERT INTO bookings (
   start_at, end_at, unit, unit_count, is_contract, status,
   price_per_unit, subtotal_amount, discount_amount, addon_amount, total_amount, source
 ) VALUES (
-  'b261002-0000-0000-0000-000000000001'::uuid, 'CS-BK-2610-0201',
+  'b0261002-0000-0000-0000-000000000001'::uuid, 'CS-BK-2610-0201',
   'd1000001-0000-0000-0000-000000000001'::uuid, 'c1010001-0000-0000-0000-000000000001'::uuid, -- HD-101 (Q1)
   'b1000000-0000-0000-0000-000000000001'::uuid, 'desk',
   '2026-10-02 08:30:00+07'::timestamptz, '2026-10-02 17:30:00+07'::timestamptz,
@@ -178,7 +178,7 @@ INSERT INTO bookings (
 
 INSERT INTO payments (id, booking_id, user_id, provider, method, order_id, amount, status, paid_at, created_at, purpose)
 VALUES (
-  'e261002-0000-0000-0000-000000000001'::uuid, 'b261002-0000-0000-0000-000000000001'::uuid,
+  'ea261002-0000-0000-0000-000000000001'::uuid, 'b0261002-0000-0000-0000-000000000001'::uuid,
   'd1000001-0000-0000-0000-000000000001'::uuid, 'payos', 'vietqr', 'PAY-261002-01',
   200000, 'PAID', '2026-10-02 07:15:00+07'::timestamptz, '2026-10-02 07:10:00+07'::timestamptz, 'booking'
 ) ON CONFLICT (id) DO NOTHING;
@@ -189,7 +189,7 @@ INSERT INTO bookings (
   start_at, end_at, unit, unit_count, is_contract, status,
   price_per_unit, subtotal_amount, discount_amount, addon_amount, total_amount, source
 ) VALUES (
-  'b261002-0000-0000-0000-000000000002'::uuid, 'CS-BK-2610-0202',
+  'b0261002-0000-0000-0000-000000000002'::uuid, 'CS-BK-2610-0202',
   'd1000001-0000-0000-0000-000000000002'::uuid, 'c1010006-0000-0000-0000-000000000006'::uuid, -- MR-101 (Q1)
   'b1000000-0000-0000-0000-000000000001'::uuid, 'meeting_room',
   '2026-10-02 08:00:00+07'::timestamptz, '2026-10-02 12:00:00+07'::timestamptz,
@@ -199,22 +199,22 @@ INSERT INTO bookings (
 
 INSERT INTO payments (id, booking_id, user_id, provider, method, order_id, amount, status, paid_at, created_at, purpose)
 VALUES (
-  'e261002-0000-0000-0000-000000000002'::uuid, 'b261002-0000-0000-0000-000000000002'::uuid,
+  'ea261002-0000-0000-0000-000000000002'::uuid, 'b0261002-0000-0000-0000-000000000002'::uuid,
   'd1000001-0000-0000-0000-000000000002'::uuid, 'payos', 'vietqr', 'PAY-261002-02',
   600000, 'PAID', '2026-10-02 07:30:00+07'::timestamptz, '2026-10-02 07:25:00+07'::timestamptz, 'booking'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO checkin_logs (id, booking_id, staff_user_id, checkin_at, checkout_at, note)
 VALUES (
-  'c261002-0000-0000-0000-000000000002'::uuid, 'b261002-0000-0000-0000-000000000002'::uuid,
+  'ca261002-0000-0000-0000-000000000002'::uuid, 'b0261002-0000-0000-0000-000000000002'::uuid,
   'd3000001-0000-0000-0000-000000000001'::uuid, '2026-10-02 08:02:00+07'::timestamptz,
   NULL, 'Nhóm thiết kế 6 người vào phòng đúng giờ'
 ) ON CONFLICT (id) DO NOTHING;
 
-DELETE FROM booking_services WHERE booking_id = 'b261002-0000-0000-0000-000000000002'::uuid;
+DELETE FROM booking_services WHERE booking_id = 'b0261002-0000-0000-0000-000000000002'::uuid;
 INSERT INTO booking_services (id, booking_id, service_id, quantity, unit_price, subtotal, status, line_type, description, created_at) VALUES 
-  ('s261002-0000-0000-0000-000000000001'::uuid, 'b261002-0000-0000-0000-000000000002'::uuid, 'e0000001-0000-0000-0000-000000000001'::uuid, 2, 35000, 70000, 'unpaid', 'service', 'Cà Phê Latte Sữa Tươi (2 ly)', '2026-10-02 09:15:00+07'::timestamptz),
-  ('s261002-0000-0000-0000-000000000002'::uuid, 'b261002-0000-0000-0000-000000000002'::uuid, 'e0000001-0000-0000-0000-000000000006'::uuid, 1, 30000, 30000, 'unpaid', 'service', 'Bánh Mì Thịt Nguội & Pate', '2026-10-02 09:30:00+07'::timestamptz);
+  ('ba261002-0000-0000-0000-000000000001'::uuid, 'b0261002-0000-0000-0000-000000000002'::uuid, 'e0000001-0000-0000-0000-000000000001'::uuid, 2, 35000, 70000, 'unpaid', 'service', 'Cà Phê Latte Sữa Tươi (2 ly)', '2026-10-02 09:15:00+07'::timestamptz),
+  ('ba261002-0000-0000-0000-000000000002'::uuid, 'b0261002-0000-0000-0000-000000000002'::uuid, 'e0000001-0000-0000-0000-000000000006'::uuid, 1, 30000, 30000, 'unpaid', 'service', 'Bánh Mì Thịt Nguội & Pate', '2026-10-02 09:30:00+07'::timestamptz);
 
 -- 5.3 Đơn 3 — CHECKED_IN SẮP HẾT GIỜ (Khách Lê Quốc Cường HD-103 sắp hết giờ để demo Gia Hạn)
 INSERT INTO bookings (
@@ -222,7 +222,7 @@ INSERT INTO bookings (
   start_at, end_at, unit, unit_count, is_contract, status,
   price_per_unit, subtotal_amount, discount_amount, addon_amount, total_amount, source
 ) VALUES (
-  'b261002-0000-0000-0000-000000000003'::uuid, 'CS-BK-2610-0203',
+  'b0261002-0000-0000-0000-000000000003'::uuid, 'CS-BK-2610-0203',
   'd1000001-0000-0000-0000-000000000003'::uuid, 'c1010003-0000-0000-0000-000000000003'::uuid, -- HD-103
   'b1000000-0000-0000-0000-000000000001'::uuid, 'desk',
   '2026-10-02 08:30:00+07'::timestamptz, '2026-10-02 11:30:00+07'::timestamptz,
@@ -232,14 +232,14 @@ INSERT INTO bookings (
 
 INSERT INTO payments (id, booking_id, user_id, provider, method, order_id, amount, status, paid_at, created_at, purpose)
 VALUES (
-  'e261002-0000-0000-0000-000000000003'::uuid, 'b261002-0000-0000-0000-000000000003'::uuid,
+  'ea261002-0000-0000-0000-000000000003'::uuid, 'b0261002-0000-0000-0000-000000000003'::uuid,
   'd1000001-0000-0000-0000-000000000003'::uuid, 'payos', 'vietqr', 'PAY-261002-03',
   90000, 'PAID', '2026-10-02 08:15:00+07'::timestamptz, '2026-10-02 08:10:00+07'::timestamptz, 'booking'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO checkin_logs (id, booking_id, staff_user_id, checkin_at, checkout_at, note)
 VALUES (
-  'c261002-0000-0000-0000-000000000003'::uuid, 'b261002-0000-0000-0000-000000000003'::uuid,
+  'ca261002-0000-0000-0000-000000000003'::uuid, 'b0261002-0000-0000-0000-000000000003'::uuid,
   'd3000001-0000-0000-0000-000000000001'::uuid, '2026-10-02 08:35:00+07'::timestamptz,
   NULL, 'Freelancer Marketing checkin'
 ) ON CONFLICT (id) DO NOTHING;
@@ -250,7 +250,7 @@ INSERT INTO bookings (
   start_at, end_at, unit, unit_count, is_contract, status,
   price_per_unit, subtotal_amount, discount_amount, addon_amount, total_amount, source
 ) VALUES (
-  'b261002-0000-0000-0000-000000000004'::uuid, 'CS-BK-2610-0204',
+  'b0261002-0000-0000-0000-000000000004'::uuid, 'CS-BK-2610-0204',
   'd1000001-0000-0000-0000-000000000007'::uuid, 'c1010002-0000-0000-0000-000000000002'::uuid, -- HD-102
   'b1000000-0000-0000-0000-000000000001'::uuid, 'desk',
   '2026-10-02 07:00:00+07'::timestamptz, '2026-10-02 10:00:00+07'::timestamptz,
@@ -260,14 +260,14 @@ INSERT INTO bookings (
 
 INSERT INTO payments (id, booking_id, user_id, provider, method, order_id, amount, status, paid_at, created_at, purpose)
 VALUES (
-  'e261002-0000-0000-0000-000000000004'::uuid, 'b261002-0000-0000-0000-000000000004'::uuid,
+  'ea261002-0000-0000-0000-000000000004'::uuid, 'b0261002-0000-0000-0000-000000000004'::uuid,
   'd1000001-0000-0000-0000-000000000007'::uuid, 'cash', 'cash', 'PAY-261002-04',
   90000, 'PAID', '2026-10-02 07:00:00+07'::timestamptz, '2026-10-02 07:00:00+07'::timestamptz, 'booking'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO checkin_logs (id, booking_id, staff_user_id, checkin_at, checkout_at, note)
 VALUES (
-  'c261002-0000-0000-0000-000000000004'::uuid, 'b261002-0000-0000-0000-000000000004'::uuid,
+  'ca261002-0000-0000-0000-000000000004'::uuid, 'b0261002-0000-0000-0000-000000000004'::uuid,
   'd3000001-0000-0000-0000-000000000001'::uuid, '2026-10-02 07:05:00+07'::timestamptz,
   NULL, 'Khách vãng lai đăng ký tại quầy'
 ) ON CONFLICT (id) DO NOTHING;
@@ -278,7 +278,7 @@ INSERT INTO bookings (
   start_at, end_at, unit, unit_count, is_contract, status,
   price_per_unit, subtotal_amount, discount_amount, addon_amount, total_amount, source
 ) VALUES (
-  'b261002-0000-0000-0000-000000000005'::uuid, 'CS-BK-2610-0205',
+  'b0261002-0000-0000-0000-000000000005'::uuid, 'CS-BK-2610-0205',
   'd1000001-0000-0000-0000-000000000004'::uuid, 'c1020001-0000-0000-0000-000000000001'::uuid, -- MR-201
   'b1000000-0000-0000-0000-000000000001'::uuid, 'meeting_room',
   '2026-10-02 06:30:00+07'::timestamptz, '2026-10-02 08:30:00+07'::timestamptz,
@@ -288,14 +288,14 @@ INSERT INTO bookings (
 
 INSERT INTO payments (id, booking_id, user_id, provider, method, order_id, amount, status, paid_at, created_at, purpose)
 VALUES (
-  'e261002-0000-0000-0000-000000000005'::uuid, 'b261002-0000-0000-0000-000000000005'::uuid,
+  'ea261002-0000-0000-0000-000000000005'::uuid, 'b0261002-0000-0000-0000-000000000005'::uuid,
   'd1000001-0000-0000-0000-000000000004'::uuid, 'payos', 'vietqr', 'PAY-261002-05',
   300000, 'PAID', '2026-10-01 20:00:00+07'::timestamptz, '2026-10-01 19:50:00+07'::timestamptz, 'booking'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO checkin_logs (id, booking_id, staff_user_id, checkin_at, checkout_at, note)
 VALUES (
-  'c261002-0000-0000-0000-000000000005'::uuid, 'b261002-0000-0000-0000-000000000005'::uuid,
+  'ca261002-0000-0000-0000-000000000005'::uuid, 'b0261002-0000-0000-0000-000000000005'::uuid,
   'd3000001-0000-0000-0000-000000000001'::uuid, '2026-10-02 06:32:00+07'::timestamptz,
   '2026-10-02 08:30:00+07'::timestamptz, 'Họp giao ban hoàn tất'
 ) ON CONFLICT (id) DO NOTHING;
@@ -306,7 +306,7 @@ INSERT INTO bookings (
   start_at, end_at, unit, unit_count, is_contract, status,
   price_per_unit, subtotal_amount, discount_amount, addon_amount, total_amount, source
 ) VALUES (
-  'b261002-0000-0000-0000-000000000006'::uuid, 'CS-BK-2610-0206',
+  'b0261002-0000-0000-0000-000000000006'::uuid, 'CS-BK-2610-0206',
   'd1000001-0000-0000-0000-000000000009'::uuid, 'c1020002-0000-0000-0000-000000000002'::uuid, -- MR-202
   'b1000000-0000-0000-0000-000000000001'::uuid, 'meeting_room',
   '2026-10-02 14:00:00+07'::timestamptz, '2026-10-02 17:00:00+07'::timestamptz,
@@ -316,14 +316,14 @@ INSERT INTO bookings (
 
 INSERT INTO payments (id, booking_id, user_id, provider, method, order_id, amount, status, paid_at, created_at, purpose)
 VALUES (
-  'e261002-0000-0000-0000-000000000006'::uuid, 'b261002-0000-0000-0000-000000000006'::uuid,
+  'ea261002-0000-0000-0000-000000000006'::uuid, 'b0261002-0000-0000-0000-000000000006'::uuid,
   'd1000001-0000-0000-0000-000000000009'::uuid, 'payos', 'vietqr', 'PAY-261002-06',
   450000, 'PAID', '2026-10-01 15:00:00+07'::timestamptz, '2026-10-01 14:50:00+07'::timestamptz, 'booking'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO booking_cancellations (id, booking_id, user_id, reason, refund_percent, refund_amount, penalty_amount, refund_status, applied_rule_json, created_at)
 VALUES (
-  'bc261002-0000-0000-0000-000000000001'::uuid, 'b261002-0000-0000-0000-000000000006'::uuid,
+  'bc261002-0000-0000-0000-000000000001'::uuid, 'b0261002-0000-0000-0000-000000000006'::uuid,
   'd1000001-0000-0000-0000-000000000009'::uuid, 'Đối tác chuyển lịch họp online qua Google Meet',
   100.00, 450000, 0, 'pending', '{"policyName": "Tiêu chuẩn: Hủy trước 24h hoàn 100%", "refundPercent": 100}'::jsonb, '2026-10-01 18:30:00+07'::timestamptz
 ) ON CONFLICT (id) DO NOTHING;
@@ -334,8 +334,8 @@ INSERT INTO bookings (
   start_at, end_at, unit, unit_count, is_contract, status,
   price_per_unit, subtotal_amount, discount_amount, addon_amount, total_amount, source
 ) VALUES (
-  'b261002-0000-0000-0000-000000000007'::uuid, 'CS-BK-2610-0207',
-  'd1000001-0000-0000-0000-000000000008'::uuid, 'c1030001-0000-0000-0000-000000000001'::uuid, -- PO-301
+  'b0261002-0000-0000-0000-000000000007'::uuid, 'CS-BK-2610-0207',
+  'd1000001-0000-0000-0000-000000000008'::uuid, 'c1030002-0000-0000-0000-000000000002'::uuid, -- PO-302
   'b1000000-0000-0000-0000-000000000001'::uuid, 'private_office',
   '2026-10-01 08:00:00+07'::timestamptz, '2026-11-01 18:00:00+07'::timestamptz,
   'month', 1, true, 'CHECKED_IN',
@@ -344,7 +344,7 @@ INSERT INTO bookings (
 
 INSERT INTO payments (id, booking_id, user_id, provider, method, order_id, amount, status, paid_at, created_at, purpose)
 VALUES (
-  'e261002-0000-0000-0000-000000000007'::uuid, 'b261002-0000-0000-0000-000000000007'::uuid,
+  'ea261002-0000-0000-0000-000000000007'::uuid, 'b0261002-0000-0000-0000-000000000007'::uuid,
   'd1000001-0000-0000-0000-000000000008'::uuid, 'payos', 'vietqr', 'PAY-261002-07',
   18000000, 'PAID', '2026-09-28 10:00:00+07'::timestamptz, '2026-09-28 09:40:00+07'::timestamptz, 'booking'
 ) ON CONFLICT (id) DO NOTHING;
@@ -355,7 +355,7 @@ INSERT INTO bookings (
   start_at, end_at, unit, unit_count, is_contract, status,
   price_per_unit, subtotal_amount, discount_amount, addon_amount, total_amount, source
 ) VALUES (
-  'b261002-0000-0000-0000-000000000008'::uuid, 'CS-BK-2610-0208',
+  'b0261002-0000-0000-0000-000000000008'::uuid, 'CS-BK-2610-0208',
   'd1000001-0000-0000-0000-000000000005'::uuid, 'c2010001-0000-0000-0000-000000000001'::uuid,
   'b2000000-0000-0000-0000-000000000002'::uuid, 'desk',
   '2026-10-02 08:30:00+07'::timestamptz, '2026-10-02 17:30:00+07'::timestamptz,
@@ -365,7 +365,7 @@ INSERT INTO bookings (
 
 INSERT INTO payments (id, booking_id, user_id, provider, method, order_id, amount, status, paid_at, created_at, purpose)
 VALUES (
-  'e261002-0000-0000-0000-000000000008'::uuid, 'b261002-0000-0000-0000-000000000008'::uuid,
+  'ea261002-0000-0000-0000-000000000008'::uuid, 'b0261002-0000-0000-0000-000000000008'::uuid,
   'd1000001-0000-0000-0000-000000000005'::uuid, 'payos', 'vietqr', 'PAY-261002-08',
   180000, 'PAID', '2026-10-02 08:20:00+07'::timestamptz, '2026-10-02 08:15:00+07'::timestamptz, 'booking'
 ) ON CONFLICT (id) DO NOTHING;
@@ -381,7 +381,7 @@ INSERT INTO bookings (
   start_at, end_at, unit, unit_count, is_contract, status,
   price_per_unit, subtotal_amount, discount_amount, addon_amount, total_amount, source
 ) VALUES (
-  'b261005-0000-0000-0000-000000000001'::uuid, 'CS-BK-2610-0501',
+  'b0261005-0000-0000-0000-000000000001'::uuid, 'CS-BK-2610-0501',
   'd1000001-0000-0000-0000-000000000004'::uuid, 'c1020002-0000-0000-0000-000000000002'::uuid, -- MR-202 (Boardroom 10 chỗ)
   'b1000000-0000-0000-0000-000000000001'::uuid, 'meeting_room',
   '2026-10-05 09:00:00+07'::timestamptz, '2026-10-05 12:00:00+07'::timestamptz,
@@ -391,7 +391,7 @@ INSERT INTO bookings (
 
 INSERT INTO payments (id, booking_id, user_id, provider, method, order_id, amount, status, paid_at, created_at, purpose)
 VALUES (
-  'e261005-0000-0000-0000-000000000001'::uuid, 'b261005-0000-0000-0000-000000000001'::uuid,
+  'ea261005-0000-0000-0000-000000000001'::uuid, 'b0261005-0000-0000-0000-000000000001'::uuid,
   'd1000001-0000-0000-0000-000000000004'::uuid, 'payos', 'vietqr', 'PAY-261005-01',
   400000, 'PAID', '2026-10-05 08:10:00+07'::timestamptz, '2026-10-05 08:05:00+07'::timestamptz, 'booking'
 ) ON CONFLICT (id) DO NOTHING;
@@ -402,7 +402,7 @@ INSERT INTO bookings (
   start_at, end_at, unit, unit_count, is_contract, status,
   price_per_unit, subtotal_amount, discount_amount, addon_amount, total_amount, source
 ) VALUES (
-  'b261005-0000-0000-0000-000000000002'::uuid, 'CS-BK-2610-0502',
+  'b0261005-0000-0000-0000-000000000002'::uuid, 'CS-BK-2610-0502',
   'd1000001-0000-0000-0000-000000000005'::uuid, 'c2010002-0000-0000-0000-000000000002'::uuid, -- FL-102 (Q3)
   'b2000000-0000-0000-0000-000000000002'::uuid, 'desk',
   '2026-10-05 08:00:00+07'::timestamptz, '2026-10-05 17:00:00+07'::timestamptz,
@@ -412,22 +412,22 @@ INSERT INTO bookings (
 
 INSERT INTO payments (id, booking_id, user_id, provider, method, order_id, amount, status, paid_at, created_at, purpose)
 VALUES (
-  'e261005-0000-0000-0000-000000000002'::uuid, 'b261005-0000-0000-0000-000000000002'::uuid,
+  'ea261005-0000-0000-0000-000000000002'::uuid, 'b0261005-0000-0000-0000-000000000002'::uuid,
   'd1000001-0000-0000-0000-000000000005'::uuid, 'payos', 'vietqr', 'PAY-261005-02',
   180000, 'PAID', '2026-10-05 07:45:00+07'::timestamptz, '2026-10-05 07:40:00+07'::timestamptz, 'booking'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO checkin_logs (id, booking_id, staff_user_id, checkin_at, checkout_at, note)
 VALUES (
-  'c261005-0000-0000-0000-000000000002'::uuid, 'b261005-0000-0000-0000-000000000002'::uuid,
+  'ca261005-0000-0000-0000-000000000002'::uuid, 'b0261005-0000-0000-0000-000000000002'::uuid,
   'd3000001-0000-0000-0000-000000000002'::uuid, '2026-10-05 08:05:00+07'::timestamptz,
   NULL, 'Thành viên checkin làm việc cả ngày'
 ) ON CONFLICT (id) DO NOTHING;
 
-DELETE FROM booking_services WHERE booking_id = 'b261005-0000-0000-0000-000000000002'::uuid;
+DELETE FROM booking_services WHERE booking_id = 'b0261005-0000-0000-0000-000000000002'::uuid;
 INSERT INTO booking_services (id, booking_id, service_id, quantity, unit_price, subtotal, status, line_type, description, created_at) VALUES 
-  ('s261005-0000-0000-0000-000000000001'::uuid, 'b261005-0000-0000-0000-000000000002'::uuid, 'e0000001-0000-0000-0000-000000000003'::uuid, 1, 45000, 45000, 'unpaid', 'service', 'Nước Ép Trái Cây Tươi (Cam vắt)', '2026-10-05 09:30:00+07'::timestamptz),
-  ('s261005-0000-0000-0000-000000000002'::uuid, 'b261005-0000-0000-0000-000000000002'::uuid, 'e0000001-0000-0000-0000-000000000007'::uuid, 1, 55000, 55000, 'unpaid', 'service', 'Cơm Trưa Văn Phòng Healthy (Set gà áp chảo)', '2026-10-05 10:15:00+07'::timestamptz);
+  ('ba261005-0000-0000-0000-000000000001'::uuid, 'b0261005-0000-0000-0000-000000000002'::uuid, 'e0000001-0000-0000-0000-000000000003'::uuid, 1, 45000, 45000, 'unpaid', 'service', 'Nước Ép Trái Cây Tươi (Cam vắt)', '2026-10-05 09:30:00+07'::timestamptz),
+  ('ba261005-0000-0000-0000-000000000002'::uuid, 'b0261005-0000-0000-0000-000000000002'::uuid, 'e0000001-0000-0000-0000-000000000007'::uuid, 1, 55000, 55000, 'unpaid', 'service', 'Cơm Trưa Văn Phòng Healthy (Set gà áp chảo)', '2026-10-05 10:15:00+07'::timestamptz);
 
 -- 6.3 Đơn 3 — CHECKED_IN Cụm bàn Dedicated Q1 (DD-201)
 INSERT INTO bookings (
@@ -435,7 +435,7 @@ INSERT INTO bookings (
   start_at, end_at, unit, unit_count, is_contract, status,
   price_per_unit, subtotal_amount, discount_amount, addon_amount, total_amount, source
 ) VALUES (
-  'b261005-0000-0000-0000-000000000003'::uuid, 'CS-BK-2610-0503',
+  'b0261005-0000-0000-0000-000000000003'::uuid, 'CS-BK-2610-0503',
   'd1000001-0000-0000-0000-000000000003'::uuid, 'c1020003-0000-0000-0000-000000000003'::uuid,
   'b1000000-0000-0000-0000-000000000001'::uuid, 'desk',
   '2026-10-05 08:30:00+07'::timestamptz, '2026-10-12 18:00:00+07'::timestamptz,
@@ -445,7 +445,7 @@ INSERT INTO bookings (
 
 INSERT INTO payments (id, booking_id, user_id, provider, method, order_id, amount, status, paid_at, created_at, purpose)
 VALUES (
-  'e261005-0000-0000-0000-000000000003'::uuid, 'b261005-0000-0000-0000-000000000003'::uuid,
+  'ea261005-0000-0000-0000-000000000003'::uuid, 'b0261005-0000-0000-0000-000000000003'::uuid,
   'd1000001-0000-0000-0000-000000000003'::uuid, 'payos', 'vietqr', 'PAY-261005-03',
   850000, 'PAID', '2026-10-04 16:00:00+07'::timestamptz, '2026-10-04 15:50:00+07'::timestamptz, 'booking'
 ) ON CONFLICT (id) DO NOTHING;
@@ -456,7 +456,7 @@ INSERT INTO bookings (
   start_at, end_at, unit, unit_count, is_contract, status,
   price_per_unit, subtotal_amount, discount_amount, addon_amount, total_amount, source
 ) VALUES (
-  'b261005-0000-0000-0000-000000000004'::uuid, 'CS-BK-2610-0504',
+  'b0261005-0000-0000-0000-000000000004'::uuid, 'CS-BK-2610-0504',
   'd1000001-0000-0000-0000-000000000006'::uuid, 'c3010001-0000-0000-0000-000000000001'::uuid,
   'b3000000-0000-0000-0000-000000000003'::uuid, 'desk',
   '2026-10-05 13:00:00+07'::timestamptz, '2026-10-05 18:00:00+07'::timestamptz,
@@ -466,7 +466,7 @@ INSERT INTO bookings (
 
 INSERT INTO payments (id, booking_id, user_id, provider, method, order_id, amount, status, paid_at, created_at, purpose)
 VALUES (
-  'e261005-0000-0000-0000-000000000004'::uuid, 'b261005-0000-0000-0000-000000000004'::uuid,
+  'ea261005-0000-0000-0000-000000000004'::uuid, 'b0261005-0000-0000-0000-000000000004'::uuid,
   'd1000001-0000-0000-0000-000000000006'::uuid, 'cash', 'cash', 'PAY-261005-04',
   100000, 'PAID', '2026-10-05 12:45:00+07'::timestamptz, '2026-10-05 12:45:00+07'::timestamptz, 'booking'
 ) ON CONFLICT (id) DO NOTHING;
