@@ -12,4 +12,7 @@ public class CreatePaymentRequest {
     @JsonProperty("booking_id")
     @NotNull
     private UUID bookingId;
+
+    @JsonProperty("method")
+    private String method;
 }

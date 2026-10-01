@@ -22,6 +22,7 @@ public class WorkspaceBookingStatusDto {
     private WorkspaceEntity.Status workspaceStatus;
     
     private String workspaceTypeId;
+    private UUID floorId;
     
     // If there is an active maintenance, include its info
     private MaintenanceResponseDto activeMaintenance;

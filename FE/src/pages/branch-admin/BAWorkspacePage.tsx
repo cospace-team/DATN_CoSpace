@@ -45,6 +45,7 @@ const BAWorkspacePage: React.FC<BAWorkspacePageProps> = ({ isSuperAdminView = fa
   const [selectedWsId, setSelectedWsId] = useState<string | null>(null);
   const [modal, setModal] = useState<ModalMode>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingWorkspaces, setLoadingWorkspaces] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [showEditorPopup, setShowEditorPopup] = useState(false);
@@ -125,15 +126,26 @@ const BAWorkspacePage: React.FC<BAWorkspacePageProps> = ({ isSuperAdminView = fa
   }, [activeBranchId, isSuperAdminView, selectedBranchId]);
 
   const fetchWorkspaces = useCallback(
-    async (floorId: string) => {
+    async (floorId: string, branchId?: string) => {
+      if (!floorId) {
+        setWorkspaces([]);
+        return;
+      }
       try {
-        const data = await workspaceApi.listByFloor(floorId, activeBranchId);
+        setLoadingWorkspaces(true);
+        const data = await workspaceApi.listByFloor(floorId, branchId);
         setWorkspaces(data);
       } catch (e: any) {
+        if (e.message?.includes('Tầng không thuộc chi nhánh')) {
+          setWorkspaces([]);
+          return;
+        }
         showError(e.message);
+      } finally {
+        setLoadingWorkspaces(false);
       }
     },
-    [activeBranchId]
+    []
   );
 
   const fetchWsTypes = useCallback(async () => {
@@ -166,8 +178,19 @@ const BAWorkspacePage: React.FC<BAWorkspacePageProps> = ({ isSuperAdminView = fa
   }, [fetchFloors, fetchWsTypes, isSuperAdminView, selectedBranchId]);
 
   useEffect(() => {
-    if (selectedFloorId) fetchWorkspaces(selectedFloorId);
-  }, [selectedFloorId, fetchWorkspaces]);
+    if (selectedFloorId) {
+      const floorBelongsToBranch = floors.some(
+        (f) => f.id === selectedFloorId && (!activeBranchId || f.branchId === activeBranchId)
+      );
+      if (floorBelongsToBranch) {
+        fetchWorkspaces(selectedFloorId, activeBranchId);
+      } else {
+        setWorkspaces([]);
+      }
+    } else {
+      setWorkspaces([]);
+    }
+  }, [selectedFloorId, activeBranchId, floors, fetchWorkspaces]);
 
   /* ── SVG file reader ── */
   const handleSvgFileRead = (file: File, callback: (content: string) => void) => {
@@ -194,14 +217,14 @@ const BAWorkspacePage: React.FC<BAWorkspacePageProps> = ({ isSuperAdminView = fa
   const [syncing, setSyncing] = useState(false);
 
   const orphanWorkspaceElements = useMemo(() => {
-    if (!currentLayout) return [];
+    if (!currentLayout || loading || loadingWorkspaces) return [];
     return currentLayout.elements.filter(
       (el) =>
         ['desk', 'chair', 'standing_desk', 'meeting_room', 'private_office'].includes(el.type) &&
         el.workspaceId &&
         !workspaces.some((ws) => ws.id === el.workspaceId)
     );
-  }, [currentLayout, workspaces]);
+  }, [currentLayout, workspaces, loading, loadingWorkspaces]);
 
   const handleSyncOrphans = async () => {
     if (!currentFloor || !currentLayout) return;
@@ -597,12 +620,12 @@ const BAWorkspacePage: React.FC<BAWorkspacePageProps> = ({ isSuperAdminView = fa
   const getFloorAvailability = useCallback(
     (wsId: string) => {
       const ws = workspaces.find((w) => w.id === wsId);
-      if (!ws) return 'unassigned';
+      if (!ws) return (loading || loadingWorkspaces) ? 'available' : 'unassigned';
       if (ws.status === 'maintenance') return 'maintenance';
       if (ws.status === 'inactive') return 'booked';
       return 'available';
     },
-    [workspaces]
+    [workspaces, loading, loadingWorkspaces]
   );
 
   const getFloorWorkspaceInfo = useCallback(
@@ -749,7 +772,7 @@ const BAWorkspacePage: React.FC<BAWorkspacePageProps> = ({ isSuperAdminView = fa
       </div>
 
       {/* Sync Orphans Banner */}
-      {currentFloor && orphanWorkspaceElements.length > 0 && (
+      {currentFloor && !loading && !loadingWorkspaces && orphanWorkspaceElements.length > 0 && (
         <div className="p-4 bg-warning/15 border border-warning/30 rounded-xl text-warning flex items-center justify-between flex-wrap gap-4 shadow-sm mb-6 animate-fade-in">
           <div className="flex items-center gap-3">
             <FiAlertCircle className="h-5 w-5 shrink-0 animate-bounce" />

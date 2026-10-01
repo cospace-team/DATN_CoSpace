@@ -22,14 +22,18 @@ const Modal: React.FC<{ title: string; onClose: () => void; children: React.Reac
 const STATUS_BADGE: Record<MaintenanceResponseDto['status'], "badge-warning" | "badge-info" | "badge-success" | "badge-neutral"> = {
   scheduled: 'badge-warning',
   active: 'badge-info',
+  in_progress: 'badge-info',
   done: 'badge-success',
+  completed: 'badge-success',
   canceled: 'badge-neutral',
 };
 
 const STATUS_LABEL: Record<MaintenanceResponseDto['status'], string> = {
   scheduled: 'Lên lịch',
   active: 'Đang thực hiện',
+  in_progress: 'Đang thực hiện',
   done: 'Hoàn thành',
+  completed: 'Hoàn thành',
   canceled: 'Đã hủy',
 };
 
@@ -139,9 +143,9 @@ const BAMaintenancePage: React.FC = () => {
   };
 
   // ─── Render Helpers ─────────────────────────────────────────────────────────
-  const active = maintenances.filter((m) => m.status === 'active');
+  const active = maintenances.filter((m) => m.status === 'active' || m.status === 'in_progress');
   const scheduled = maintenances.filter((m) => m.status === 'scheduled');
-  const past = maintenances.filter((m) => m.status === 'done' || m.status === 'canceled');
+  const past = maintenances.filter((m) => m.status === 'done' || m.status === 'completed' || m.status === 'canceled');
 
   const renderRow = (m: MaintenanceResponseDto) => (
     <tr key={m.id} className="border-b border-border hover:bg-muted/50 transition-colors bg-card">
@@ -154,7 +158,7 @@ const BAMaintenancePage: React.FC = () => {
       </td>
       <td className="px-4 py-3 align-middle text-right">
         <div className="flex items-center gap-2 justify-end">
-          {(m.status === 'scheduled' || m.status === 'active') && (
+          {(m.status === 'scheduled' || m.status === 'active' || m.status === 'in_progress') && (
             <button className="btn btn-outline btn-sm" onClick={() => completeMaintenance(m.id)}>
               Hoàn thành
             </button>

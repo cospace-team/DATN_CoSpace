@@ -189,7 +189,7 @@ const BookingHistoryPage: React.FC = () => {
     const fetchBookings = async () => {
       setLoading(true);
       try {
-        const apiBookings = await bookingApi.getMyBookings(true);
+        const apiBookings = await bookingApi.getMyBookings(reloadKey > 0);
         // Always replace with API data (even empty array) so real state is shown
         const mapped = (apiBookings || []).map((b) => {
           return {

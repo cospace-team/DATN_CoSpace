@@ -59,7 +59,9 @@ const LoginPage: React.FC = () => {
 
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fullName || !email || !password || !confirmPassword) { 
+    const cleanEmail = email.trim();
+    const cleanName = fullName.trim();
+    if (!cleanName || !cleanEmail || !password || !confirmPassword) { 
       setErrorMessage("Vui lòng điền đầy đủ thông tin."); 
       return; 
     }
@@ -79,10 +81,13 @@ const LoginPage: React.FC = () => {
     setSuccessMessage(null); 
     setIsSubmittingRegister(true);
     try {
-      await registerWithEmail(email, password, fullName, confirmPassword, phone);
+      await registerWithEmail(cleanEmail, password, cleanName, confirmPassword, phone.trim());
       setSuccessMessage("Đăng ký thành công! Đang đăng nhập...");
     } catch (error) {
-      setErrorMessage(error instanceof Error && error.message ? error.message : "Đăng ký thất bại.");
+      const msg = error instanceof Error && error.message && error.message !== "No message available"
+        ? error.message
+        : "Đăng ký thất bại. Vui lòng kiểm tra lại thông tin.";
+      setErrorMessage(msg);
     } finally {
       setIsSubmittingRegister(false);
     }
@@ -90,16 +95,20 @@ const LoginPage: React.FC = () => {
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) { 
+    const cleanEmail = email.trim();
+    if (!cleanEmail || !password) { 
       setErrorMessage("Vui lòng nhập email và mật khẩu."); 
       return; 
     }
     setErrorMessage(null); 
     setIsSubmittingEmail(true);
     try {
-      await loginWithEmail(email, password);
+      await loginWithEmail(cleanEmail, password);
     } catch (error) {
-      setErrorMessage(error instanceof Error && error.message ? error.message : "Đăng nhập thất bại.");
+      const msg = error instanceof Error && error.message && error.message !== "No message available"
+        ? error.message
+        : "Đăng nhập thất bại. Vui lòng kiểm tra lại email và mật khẩu.";
+      setErrorMessage(msg);
     } finally {
       setIsSubmittingEmail(false);
     }

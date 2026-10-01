@@ -73,7 +73,11 @@ public class StaffMaintenanceService {
                 .getSingleResult();
 
         // 2. Check for Overlapping Active/Scheduled Maintenances
-        List<MaintenanceStatus> activeMaintenanceStatuses = Arrays.asList(MaintenanceStatus.active, MaintenanceStatus.scheduled);
+        List<MaintenanceStatus> activeMaintenanceStatuses = Arrays.asList(
+                MaintenanceStatus.active,
+                MaintenanceStatus.in_progress,
+                MaintenanceStatus.scheduled
+        );
         List<WorkspaceMaintenanceEntity> overlappingMaintenances = maintenanceRepository.findOverlappingMaintenances(
                 request.getWorkspaceId(), request.getStartAt(), request.getEndAt(), activeMaintenanceStatuses);
         if (!overlappingMaintenances.isEmpty()) {
@@ -190,7 +194,9 @@ public class StaffMaintenanceService {
         
         // Fetch all ACTIVE/SCHEDULED maintenances for this branch
         List<WorkspaceMaintenanceEntity> activeMaintenances = maintenanceRepository.findAllByBranchIdOrderByCreatedAtDesc(branchId).stream()
-                .filter(m -> m.getStatus() == MaintenanceStatus.active || m.getStatus() == MaintenanceStatus.scheduled)
+                .filter(m -> m.getStatus() == MaintenanceStatus.active 
+                        || m.getStatus() == MaintenanceStatus.in_progress 
+                        || m.getStatus() == MaintenanceStatus.scheduled)
                 .collect(Collectors.toList());
                 
         return workspaces.stream().map(ws -> {
@@ -198,6 +204,9 @@ public class StaffMaintenanceService {
             dto.setWorkspaceId(ws.getId());
             dto.setName(ws.getName());
             dto.setCode(ws.getCode());
+            dto.setCapacity(ws.getCapacity());
+            dto.setFloorId(ws.getFloorId());
+            dto.setWorkspaceTypeId(ws.getWorkspaceTypeId());
             dto.setWorkspaceStatus(ws.getStatus());
             
             // Find active maintenance for this workspace if any

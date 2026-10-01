@@ -75,7 +75,7 @@ public class PaymentService {
         Payment payment = Payment.builder()
                 .id(UUID.randomUUID())
                 .bookingId(booking.getId())
-                .userId(userId)
+                .userId(booking.getUserId())
                 .provider("momo")
                 .method("ewallet")
                 .orderId(generateGatewayOrderId()) // Improvement #3: Decoupled Order ID
@@ -124,7 +124,7 @@ public class PaymentService {
         Payment payment = Payment.builder()
                 .id(UUID.randomUUID())
                 .bookingId(booking.getId())
-                .userId(userId)
+                .userId(booking.getUserId())
                 .provider("payos")
                 .method("vietqr")
                 .orderId(orderId)
@@ -219,6 +219,11 @@ public class PaymentService {
 
     @Transactional
     public CashCreatePaymentResponse createCashPayment(UUID staffId, UUID bookingId) {
+        return createCounterPayment(staffId, bookingId, "cash");
+    }
+
+    @Transactional
+    public CashCreatePaymentResponse createCounterPayment(UUID staffId, UUID bookingId, String method) {
         Booking booking = bookingRepository.findByIdWithLock(bookingId)
                 .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
         requirePayable(booking.getStatus(), booking.getPaymentDeadlineAt(), booking.getTotalAmount());
@@ -226,12 +231,15 @@ public class PaymentService {
             throw new IllegalStateException("Đơn đặt chỗ này đã được thanh toán.");
         }
 
+        String normalizedMethod = (method == null || method.isBlank()) ? "cash" : method.trim().toLowerCase();
+        String provider = "cash".equals(normalizedMethod) ? "cash" : "bank_transfer";
+
         Payment payment = Payment.builder()
                 .id(UUID.randomUUID())
                 .bookingId(booking.getId())
                 .userId(booking.getUserId()) // Assign payment to the customer
-                .provider("cash")
-                .method("cash")
+                .provider(provider)
+                .method(normalizedMethod)
                 .orderId(generateGatewayOrderId())
                 .requestId(UUID.randomUUID().toString())
                 .amount(booking.getTotalAmount())
@@ -397,7 +405,12 @@ public class PaymentService {
         Payment payment = paymentRepository.findByOrderId(orderId)
                 .or(() -> paymentRepository.findByOrderId(orderCode))
                 .orElseThrow(() -> new IllegalArgumentException("Payment not found for orderCode: " + orderCode));
-        if (!payment.getUserId().equals(callerId)) {
+        boolean isOwner = payment.getUserId().equals(callerId);
+        boolean isStaffOrAdmin = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication() != null &&
+                org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
+                        .anyMatch(a -> a.getAuthority().toLowerCase().contains("staff")
+                                || a.getAuthority().toLowerCase().contains("admin"));
+        if (!isOwner && !isStaffOrAdmin) {
             throw new org.springframework.security.access.AccessDeniedException("Bạn không có quyền xác nhận giao dịch này.");
         }
         if (payment.getStatus() == PaymentStatus.PAID) {

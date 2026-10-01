@@ -132,23 +132,6 @@ const ExplorePage: React.FC = () => {
     const saved = sessionStorage.getItem("selectedEndHour");
     return saved ? Number(saved) : null;
   });
-  
-  const [availableServices, setAvailableServices] = useState<ExtraServiceResponse[]>([]);
-
-  // Load available extra services when branch changes
-  useEffect(() => {
-    const loadServices = async () => {
-      try {
-        const resolvedBranchId = resolveBranchId(selectedBranch);
-        const data = await customerSpaceApi.listExtraServices(resolvedBranchId);
-        setAvailableServices(data || []);
-      } catch (err) {
-        console.error("Failed to load extra services:", err);
-      }
-    };
-    loadServices();
-  }, [selectedBranch]);
-
   // Persist selectedBranch to sessionStorage
   useEffect(() => {
     sessionStorage.setItem("selectedBranch", selectedBranch);
@@ -201,7 +184,7 @@ const ExplorePage: React.FC = () => {
 
   const [apiBranches, setApiBranches] = useState<BranchResponse[]>([]);
   const [branchPrices, setBranchPrices] = useState<BranchPriceResponse[]>([]);
-  const [addonServices, setAddonServices] = useState<ExtraServiceDto[]>([]);
+  const [extraServices, setExtraServices] = useState<ExtraServiceResponse[]>([]);
 
   // Database-loaded floors, workspaces and user bookings
   const [dbFloors, setDbFloors] = useState<FloorResponse[]>([]);
@@ -253,19 +236,19 @@ const ExplorePage: React.FC = () => {
     else if (selectedHour >= closeHour) setSelectedHour(Math.max(openHour, closeHour - 1));
   }, [openHour, closeHour]);
 
-  // Real prices and add-on services of the selected branch.
+  // Real prices and extra services of the selected branch.
   useEffect(() => {
     let active = true;
     const resolvedId = resolveBranchId(selectedBranch);
     setBranchPrices([]);
-    setAddonServices([]);
+    setExtraServices([]);
     if (!resolvedId) return;
     customerSpaceApi.listPrices(resolvedId)
       .then((data) => { if (active) setBranchPrices(data); })
       .catch((err) => console.error("Failed to load branch prices", err));
-    addonApi.listServices(resolvedId)
-      .then((data) => { if (active) setAddonServices(data); })
-      .catch((err) => console.error("Failed to load add-on services", err));
+    customerSpaceApi.listExtraServices(resolvedId)
+      .then((data) => { if (active) setExtraServices(data); })
+      .catch((err) => console.error("Failed to load extra services", err));
     return () => { active = false; };
   }, [selectedBranch]);
 
@@ -383,7 +366,7 @@ const ExplorePage: React.FC = () => {
   const getWsAvailability = useCallback(
     (wsId: string, checkDate?: Date, checkHour?: number, checkEndDate?: Date, checkEndHour?: number) => {
       const ws = mappedWorkspaces.find((w) => w.id === wsId);
-      if (!ws) return "unassigned";
+      if (!ws) return workspacesLoading ? "available" : "unassigned";
       if (
         ws.status.toLowerCase() === "maintenance" ||
         ws.status.toLowerCase() === "inactive"
@@ -430,7 +413,7 @@ const ExplorePage: React.FC = () => {
       }
       return "available";
     },
-    [mappedWorkspaces, selectedDate, selectedHour, branchAvailability],
+    [mappedWorkspaces, selectedDate, selectedHour, branchAvailability, workspacesLoading],
   );
 
   // Stable adapter for the memoized FloorPlanViewer — an inline arrow would re-render the whole
@@ -540,7 +523,7 @@ const ExplorePage: React.FC = () => {
     }
     const branchObj = apiBranches.find((b) => b.id === resolveBranchId(selectedBranch));
     const branchName = branchObj ? branchObj.name : "CoSpace Chi nhánh";
-    const allAddonsList = (addonServices && addonServices.length > 0) ? addonServices : availableServices;
+    const allAddonsList = extraServices;
     const addons = Object.entries(services)
       .map(([serviceId, quantity]) => {
         const s = allAddonsList.find((x: any) => x.id === serviceId);
@@ -1082,13 +1065,13 @@ const ExplorePage: React.FC = () => {
                 initialEndHour={selectedEndHour || Math.min(selectedHour + 1, closeHour)}
                 selectedDate={selectedDate}
                 getPrice={(unit) => getPrice(selectedWsData.workspace_type_id, unit)}
-                addonServices={addonServices}
+                addonServices={extraServices as any}
                 openHour={openHour}
                 closeHour={closeHour}
                 onClose={() => setSelectedWs(null)}
                 onChangeStartHour={(h) => setSelectedHour(h)}
                 checkAvailability={(stH, endH, endD, unit) => getWsAvailability(selectedWs, selectedDate, stH, endD, unit === 'hour' ? endH : undefined)}
-                availableServices={availableServices}
+                availableServices={extraServices}
                 onBookNow={handleBookNow}
               />
             </div>
@@ -1110,13 +1093,13 @@ const ExplorePage: React.FC = () => {
                   initialEndHour={selectedEndHour || Math.min(selectedHour + 1, closeHour)}
                   selectedDate={selectedDate}
                   getPrice={(unit) => getPrice(selectedWsData.workspace_type_id, unit)}
-                  addonServices={addonServices}
+                  addonServices={extraServices as any}
                   openHour={openHour}
                   closeHour={closeHour}
                   onClose={() => setSelectedWs(null)}
                   onChangeStartHour={(h) => setSelectedHour(h)}
                   checkAvailability={(stH, endH, endD, unit) => getWsAvailability(selectedWs, selectedDate, stH, endD, unit === 'hour' ? endH : undefined)}
-                  availableServices={availableServices}
+                  availableServices={extraServices}
                   onBookNow={handleBookNow}
                 />
               </div>

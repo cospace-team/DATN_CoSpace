@@ -34,7 +34,7 @@ server:
   shutdown: graceful
   error:
     include-stacktrace: never
-    include-message: never
+    include-message: always
     include-exception: false
 
 payos:

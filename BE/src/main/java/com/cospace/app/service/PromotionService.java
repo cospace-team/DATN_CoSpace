@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -53,9 +54,33 @@ public class PromotionService {
     public List<PromotionResponse> listAll() {
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         List<Promotion> promotions = promotionRepository.findAllByOrderByCreatedAtDesc();
+        if (promotions.isEmpty()) return List.of();
+
         Map<UUID, String> owners = ownerNames(promotions);
+
+        // Pre-fetch branch names in single query
+        java.util.Set<UUID> branchIds = promotions.stream().map(Promotion::getBranchId).filter(Objects::nonNull).collect(java.util.stream.Collectors.toSet());
+        Map<UUID, String> branchNames = branchRepository.findAllById(branchIds).stream()
+                .collect(java.util.stream.Collectors.toMap(BranchEntity::getId, BranchEntity::getName));
+
+        // Pre-fetch workspace type names in single query
+        java.util.Set<UUID> typeIds = promotions.stream().map(Promotion::getWorkspaceTypeId).filter(Objects::nonNull).collect(java.util.stream.Collectors.toSet());
+        Map<UUID, String> typeNames = workspaceTypeRepository.findAllById(typeIds).stream()
+                .collect(java.util.stream.Collectors.toMap(WorkspaceType::getId, WorkspaceType::getName));
+
+        // Pre-fetch membership tier names in single query
+        Map<String, String> tierNames = membershipTierRepository.findAll().stream()
+                .collect(java.util.stream.Collectors.toMap(com.cospace.app.entity.MembershipTier::getCode, com.cospace.app.entity.MembershipTier::getName, (a, b) -> a));
+
+        // Batch count promotion usages in single query
+        List<UUID> promoIds = promotions.stream().map(Promotion::getId).toList();
+        Map<UUID, Long> usages = new HashMap<>();
+        for (Object[] row : bookingRepository.countPromotionUsageBatch(promoIds)) {
+            usages.put((UUID) row[0], ((Number) row[1]).longValue());
+        }
+
         return promotions.stream()
-                .map(p -> toResponse(p, bookingRepository.countPromotionUsage(p.getId()), now, owners))
+                .map(p -> toResponse(p, usages.getOrDefault(p.getId(), 0L), now, owners, branchNames, typeNames, tierNames))
                 .toList();
     }
 
@@ -338,6 +363,24 @@ public class PromotionService {
     }
 
     private PromotionResponse toResponse(Promotion p, Long usedCount, OffsetDateTime now, Map<UUID, String> ownerNames) {
+        String branchName = p.getBranchId() == null ? null
+                : branchRepository.findById(p.getBranchId()).map(BranchEntity::getName).orElse(null);
+        String typeName = p.getWorkspaceTypeId() == null ? null
+                : workspaceTypeRepository.findById(p.getWorkspaceTypeId()).map(WorkspaceType::getName).orElse(null);
+        String tierName = p.getMinTierCode() == null ? null
+                : membershipTierRepository.findByCode(p.getMinTierCode()).map(t -> t.getName()).orElse(p.getMinTierCode());
+
+        return toResponse(p, usedCount, now, ownerNames,
+                p.getBranchId() != null && branchName != null ? Map.of(p.getBranchId(), branchName) : Map.of(),
+                p.getWorkspaceTypeId() != null && typeName != null ? Map.of(p.getWorkspaceTypeId(), typeName) : Map.of(),
+                p.getMinTierCode() != null && tierName != null ? Map.of(p.getMinTierCode(), tierName) : Map.of());
+    }
+
+    private PromotionResponse toResponse(Promotion p, Long usedCount, OffsetDateTime now,
+                                         Map<UUID, String> ownerNames,
+                                         Map<UUID, String> branchNames,
+                                         Map<UUID, String> typeNames,
+                                         Map<String, String> tierNames) {
         String state;
         if (!p.isActive()) state = "inactive";
         else if (now.isBefore(p.getStartAt())) state = "scheduled";
@@ -359,14 +402,11 @@ public class PromotionService {
                 .usageLimit(p.getUsageLimit())
                 .perUserLimit(p.getPerUserLimit())
                 .branchId(p.getBranchId())
-                .branchName(p.getBranchId() == null ? null
-                        : branchRepository.findById(p.getBranchId()).map(BranchEntity::getName).orElse(null))
+                .branchName(p.getBranchId() == null ? null : branchNames.get(p.getBranchId()))
                 .workspaceTypeId(p.getWorkspaceTypeId())
-                .workspaceTypeName(p.getWorkspaceTypeId() == null ? null
-                        : workspaceTypeRepository.findById(p.getWorkspaceTypeId()).map(WorkspaceType::getName).orElse(null))
+                .workspaceTypeName(p.getWorkspaceTypeId() == null ? null : typeNames.get(p.getWorkspaceTypeId()))
                 .minTierCode(p.getMinTierCode())
-                .minTierName(p.getMinTierCode() == null ? null
-                        : membershipTierRepository.findByCode(p.getMinTierCode()).map(t -> t.getName()).orElse(p.getMinTierCode()))
+                .minTierName(p.getMinTierCode() == null ? null : tierNames.getOrDefault(p.getMinTierCode(), p.getMinTierCode()))
                 .isPublic(p.isPublic())
                 .isActive(p.isActive())
                 .usedCount(usedCount)

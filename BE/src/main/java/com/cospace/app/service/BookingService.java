@@ -157,6 +157,7 @@ public class BookingService {
         
         List<com.cospace.app.entity.MaintenanceStatus> activeMaintenances = java.util.Arrays.asList(
                 com.cospace.app.entity.MaintenanceStatus.active,
+                com.cospace.app.entity.MaintenanceStatus.in_progress,
                 com.cospace.app.entity.MaintenanceStatus.scheduled
         );
         
@@ -423,9 +424,21 @@ public class BookingService {
 
     @Transactional(readOnly = true)
     public BookingDto getMyBooking(UUID userId, UUID bookingId) {
-        return bookingRepository.findByIdAndUserId(bookingId, userId)
-                .map(this::toDto)
-                .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
+        Booking booking = bookingRepository.findByIdAndUserId(bookingId, userId).orElse(null);
+        if (booking == null) {
+            boolean isStaffOrAdmin = userRepository.findById(userId)
+                    .map(u -> u.getRole() == com.cospace.app.entity.User.Role.staff 
+                            || u.getRole() == com.cospace.app.entity.User.Role.branch_admin 
+                            || u.getRole() == com.cospace.app.entity.User.Role.super_admin)
+                    .orElse(false);
+            if (isStaffOrAdmin) {
+                booking = bookingRepository.findById(bookingId).orElse(null);
+            }
+        }
+        if (booking == null) {
+            throw new IllegalArgumentException("Booking not found");
+        }
+        return toDto(booking);
     }
 
     @Transactional(readOnly = true)
@@ -466,7 +479,9 @@ public class BookingService {
 
         // Fetch all active/scheduled maintenances for this branch
         List<com.cospace.app.entity.WorkspaceMaintenanceEntity> activeMaintenances = workspaceMaintenanceRepository.findAllByBranchIdOrderByCreatedAtDesc(branchId).stream()
-                .filter(m -> m.getStatus() == com.cospace.app.entity.MaintenanceStatus.active || m.getStatus() == com.cospace.app.entity.MaintenanceStatus.scheduled)
+                .filter(m -> m.getStatus() == com.cospace.app.entity.MaintenanceStatus.active 
+                        || m.getStatus() == com.cospace.app.entity.MaintenanceStatus.in_progress 
+                        || m.getStatus() == com.cospace.app.entity.MaintenanceStatus.scheduled)
                 .collect(Collectors.toList());
 
         // Fetch all bookings for this branch overlapping the requested date interval
@@ -478,6 +493,7 @@ public class BookingService {
             dto.setName(ws.getName());
             dto.setCode(ws.getCode());
             dto.setCapacity(ws.getCapacity());
+            dto.setFloorId(ws.getFloorId());
             dto.setWorkspaceStatus(ws.getStatus());
             dto.setWorkspaceTypeId(ws.getWorkspaceTypeId() != null ? ws.getWorkspaceTypeId().toString() : null);
 
@@ -518,6 +534,7 @@ public class BookingService {
         List<com.cospace.app.entity.WorkspaceMaintenanceEntity> maintenances =
                 workspaceMaintenanceRepository.findAllByBranchIdOrderByCreatedAtDesc(branchId).stream()
                         .filter(m -> m.getStatus() == com.cospace.app.entity.MaintenanceStatus.active
+                                || m.getStatus() == com.cospace.app.entity.MaintenanceStatus.in_progress
                                 || m.getStatus() == com.cospace.app.entity.MaintenanceStatus.scheduled)
                         .filter(m -> m.getStartAt().toOffsetDateTime().isBefore(to)
                                 && m.getEndAt().toOffsetDateTime().isAfter(from))
@@ -602,6 +619,70 @@ public class BookingService {
                 .build();
     }
 
+    /**
+     * Batch conversion for BookingWithDetailsDto to eliminate N+1 queries in CheckinService and staff dashboards.
+     */
+    public List<com.cospace.app.dto.api.BookingWithDetailsDto> toBookingWithDetailsDtoList(List<Booking> bookings, List<com.cospace.app.entity.CheckinLog> checkinLogs) {
+        if (bookings == null || bookings.isEmpty()) return List.of();
+
+        List<BookingDto> bookingDtos = toDtoList(bookings);
+        java.util.Map<UUID, BookingDto> dtoMap = bookingDtos.stream()
+                .collect(java.util.stream.Collectors.toMap(BookingDto::getId, java.util.function.Function.identity()));
+
+        java.util.Set<UUID> userIds = bookings.stream().map(Booking::getUserId).collect(java.util.stream.Collectors.toSet());
+        java.util.Map<UUID, com.cospace.app.dto.api.UserProfileDto> customerMap = userRepository.findAllById(userIds).stream()
+                .collect(java.util.stream.Collectors.toMap(com.cospace.app.entity.User::getId, u -> com.cospace.app.dto.api.UserProfileDto.builder()
+                        .id(u.getId())
+                        .email(u.getEmail())
+                        .fullName(u.getFullName())
+                        .phone(u.getPhone())
+                        .build()));
+
+        java.util.Set<UUID> wsIds = bookings.stream().map(Booking::getWorkspaceId).collect(java.util.stream.Collectors.toSet());
+        java.util.Map<UUID, com.cospace.app.dto.api.SpaceDto.WorkspaceResponse> wsMap = workspaceEntityRepository.findAllById(wsIds).stream()
+                .collect(java.util.stream.Collectors.toMap(WorkspaceEntity::getId, w -> com.cospace.app.dto.api.SpaceDto.WorkspaceResponse.builder()
+                        .id(w.getId())
+                        .code(w.getCode())
+                        .name(w.getName())
+                        .workspaceTypeId(w.getWorkspaceTypeId() != null ? w.getWorkspaceTypeId().toString() : null)
+                        .capacity(w.getCapacity())
+                        .svgElementId(w.getSvgElementId())
+                        .status(w.getStatus() != null ? w.getStatus().name() : "active")
+                        .build()));
+
+        java.util.Map<UUID, com.cospace.app.entity.CheckinLog> activeLogsMap = new java.util.HashMap<>();
+        if (checkinLogs != null) {
+            for (com.cospace.app.entity.CheckinLog log : checkinLogs) {
+                if (log.getCheckoutAt() == null) {
+                    activeLogsMap.put(log.getBookingId(), log);
+                }
+            }
+        }
+
+        List<com.cospace.app.dto.api.BookingWithDetailsDto> result = new java.util.ArrayList<>();
+        for (Booking b : bookings) {
+            BookingDto dto = dtoMap.get(b.getId());
+            com.cospace.app.entity.CheckinLog log = activeLogsMap.get(b.getId());
+            com.cospace.app.dto.api.CheckinLogDto checkinLogDto = log != null ? com.cospace.app.dto.api.CheckinLogDto.builder()
+                    .id(log.getId())
+                    .bookingId(log.getBookingId())
+                    .staffUserId(log.getStaffUserId())
+                    .checkinAt(log.getCheckinAt().toString())
+                    .checkoutAt(log.getCheckoutAt() != null ? log.getCheckoutAt().toString() : null)
+                    .note(log.getNote())
+                    .build() : null;
+
+            result.add(com.cospace.app.dto.api.BookingWithDetailsDto.builder()
+                    .booking(dto)
+                    .customer(customerMap.get(b.getUserId()))
+                    .workspace(wsMap.get(b.getWorkspaceId()))
+                    .alreadyCheckedIn(log != null)
+                    .activeCheckin(checkinLogDto)
+                    .build());
+        }
+        return result;
+    }
+
     public BookingDto toDto(Booking b) {
         Optional<Payment> latestPaymentOpt = paymentRepository.findTopByBookingIdOrderByCreatedAtDesc(b.getId());
         
@@ -648,17 +729,24 @@ public class BookingService {
         java.util.Map<UUID, com.cospace.app.entity.User> users = userRepository.findAllById(userIds)
                 .stream().collect(java.util.stream.Collectors.toMap(com.cospace.app.entity.User::getId, u -> u));
 
-        // Batch fetch latest payments per booking
+        // Batch fetch latest payments per booking (single query instead of N)
         java.util.Map<UUID, Payment> latestPayments = new java.util.HashMap<>();
-        for (UUID bid : bookingIds) {
-            paymentRepository.findTopByBookingIdOrderByCreatedAtDesc(bid).ifPresent(p -> latestPayments.put(bid, p));
+        if (!bookingIds.isEmpty()) {
+            for (Payment p : paymentRepository.findByBookingIdInOrderByCreatedAtDesc(bookingIds)) {
+                // Since ordered by createdAt DESC, the first encounter per bookingId is the latest
+                latestPayments.putIfAbsent(p.getBookingId(), p);
+            }
         }
 
-        // Batch fetch cancellations for cancelled bookings
+        // Batch fetch cancellations for cancelled bookings (single query instead of N)
         java.util.Map<UUID, com.cospace.app.entity.BookingCancellation> cancellations = new java.util.HashMap<>();
-        for (Booking b : bookings) {
-            if (b.getStatus() == BookingStatus.CANCELLED) {
-                bookingCancellationRepository.findByBookingId(b.getId()).ifPresent(c -> cancellations.put(b.getId(), c));
+        java.util.Set<UUID> cancelledBookingIds = bookings.stream()
+                .filter(b -> b.getStatus() == BookingStatus.CANCELLED)
+                .map(Booking::getId)
+                .collect(java.util.stream.Collectors.toSet());
+        if (!cancelledBookingIds.isEmpty()) {
+            for (com.cospace.app.entity.BookingCancellation c : bookingCancellationRepository.findByBookingIdIn(cancelledBookingIds)) {
+                cancellations.put(c.getBookingId(), c);
             }
         }
 

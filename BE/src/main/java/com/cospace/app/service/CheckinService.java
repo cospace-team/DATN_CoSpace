@@ -161,15 +161,16 @@ public class CheckinService {
     @Transactional(readOnly = true)
     public List<BookingWithDetailsDto> getActiveCheckins(UUID branchId) {
         List<CheckinLog> activeLogs = checkinLogRepository.findActiveCheckinsByBranchId(branchId);
-        
-        return activeLogs.stream()
-                .map(log -> {
-                    Booking b = bookingRepository.findById(log.getBookingId()).orElse(null);
-                    if (b == null) return null;
-                    return bookingService.toBookingWithDetailsDto(b);
-                })
+        if (activeLogs.isEmpty()) return List.of();
+
+        List<UUID> bookingIds = activeLogs.stream()
+                .map(CheckinLog::getBookingId)
                 .filter(Objects::nonNull)
-                .collect(Collectors.toList());
+                .distinct()
+                .toList();
+
+        List<Booking> bookings = bookingRepository.findAllById(bookingIds);
+        return bookingService.toBookingWithDetailsDtoList(bookings, activeLogs);
     }
 
     private CheckinLogDto toDto(CheckinLog c) {

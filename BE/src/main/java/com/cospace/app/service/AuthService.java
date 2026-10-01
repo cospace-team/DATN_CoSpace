@@ -24,7 +24,8 @@ public class AuthService {
     private final JwtUtil jwtUtil;
 
     public AuthResponse register(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
+        String email = request.getEmail() != null ? request.getEmail().trim() : "";
+        if (userRepository.existsByEmail(email) || userRepository.existsByEmailIgnoreCase(email)) {
             throw new IllegalArgumentException("Email này đã được đăng ký.");
         }
 
@@ -33,10 +34,10 @@ public class AuthService {
         }
 
         User user = User.builder()
-                .email(request.getEmail())
+                .email(email)
                 .password(passwordEncoder.encode(request.getPassword()))
-                .fullName(request.getFullName())
-                .phone(request.getPhone())
+                .fullName(request.getFullName() != null ? request.getFullName().trim() : "")
+                .phone(request.getPhone() != null && !request.getPhone().isBlank() ? request.getPhone().trim() : null)
                 .role(User.Role.customer)
                 .status(User.Status.active)
                 .build();
@@ -46,8 +47,14 @@ public class AuthService {
     }
 
     public AuthResponse login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.getEmail())
+        String email = request.getEmail() != null ? request.getEmail().trim() : "";
+        User user = userRepository.findByEmail(email)
+                .or(() -> userRepository.findByEmailIgnoreCase(email))
                 .orElseThrow(() -> new IllegalArgumentException("Email hoặc mật khẩu không đúng."));
+
+        if (user.getPassword() == null || user.getPassword().isBlank()) {
+            throw new IllegalArgumentException("Tài khoản này được đăng ký bằng Google. Vui lòng chọn 'Đăng nhập với Google'.");
+        }
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new IllegalArgumentException("Email hoặc mật khẩu không đúng.");

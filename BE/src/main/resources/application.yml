@@ -3,6 +3,8 @@ server:
   port: ${PORT:8080}
   servlet:
     context-path: /
+  error:
+    include-message: always
 
 spring:
   config:

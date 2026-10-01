@@ -58,7 +58,7 @@ export interface MaintenanceResponseDto {
   startAt: string;
   endAt: string;
   reason: string;
-  status: 'scheduled' | 'active' | 'done' | 'canceled';
+  status: 'scheduled' | 'active' | 'in_progress' | 'done' | 'completed' | 'canceled';
   impactedBookingsCount?: number;
 }
 
@@ -67,6 +67,8 @@ export interface WorkspaceMaintenanceStatusDto {
   name: string;
   code: string;
   capacity?: number;
+  floorId?: string;
+  workspaceTypeId?: string;
   workspaceStatus: 'active' | 'maintenance' | 'inactive';
   activeMaintenance?: MaintenanceResponseDto;
 }
@@ -76,6 +78,7 @@ export interface WorkspaceBookingStatusDto {
   name: string;
   code: string;
   capacity?: number;
+  floorId?: string;
   workspaceStatus: 'active' | 'maintenance' | 'inactive';
   workspaceTypeId?: string;
   activeMaintenance?: MaintenanceResponseDto;
@@ -196,11 +199,11 @@ export const staffApi = {
     return res.json();
   },
 
-  createCashPayment: async (bookingId: string): Promise<any> => {
+  createCashPayment: async (bookingId: string, method?: string): Promise<any> => {
     const res = await fetch(`${API_BASE_URL}/api/payments/cash/create`, {
       method: 'POST',
       headers: getAuthHeaders(),
-      body: JSON.stringify({ booking_id: bookingId })
+      body: JSON.stringify({ booking_id: bookingId, method: method || 'cash' })
     });
     if (!res.ok) {
       const errorData = await res.json().catch(() => ({}));
@@ -274,6 +277,7 @@ export const staffApi = {
   },
 
   getMaintenances: async (branchId: string): Promise<MaintenanceResponseDto[]> => {
+    if (!branchId) return [];
     const res = await fetch(`${API_BASE_URL}/api/staff/branches/${branchId}/maintenance`, {
       headers: getAuthHeaders()
     });
@@ -282,28 +286,40 @@ export const staffApi = {
   },
 
   getWorkspaceMaintenances: async (branchId: string): Promise<WorkspaceMaintenanceStatusDto[]> => {
+    if (!branchId) return [];
     const res = await fetch(`${API_BASE_URL}/api/staff/branches/${branchId}/workspaces-maintenance`, {
       headers: getAuthHeaders()
     });
-    if (!res.ok) throw new Error('Failed to fetch workspaces');
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || 'Không thể tải danh sách không gian bảo trì');
+    }
     return res.json();
   },
 
   getWorkspaceBookingStatus: async (branchId: string, date?: string): Promise<WorkspaceBookingStatusDto[]> => {
+    if (!branchId) return [];
     let url = `${API_BASE_URL}/api/staff/bookings/branches/${branchId}/workspaces-booking-status`;
     if (date) url += `?date=${date}`;
     const res = await fetch(url, {
       headers: getAuthHeaders()
     });
-    if (!res.ok) throw new Error('Failed to fetch workspace booking status');
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || 'Không thể tải trạng thái chỗ ngồi của chi nhánh');
+    }
     return res.json();
   },
 
   getFloors: async (branchId: string): Promise<FloorResponse[]> => {
+    if (!branchId) return [];
     const res = await fetch(`${API_BASE_URL}/api/customer/spaces/branches/${branchId}/floors`, {
       headers: getAuthHeaders()
     });
-    if (!res.ok) throw new Error('Failed to fetch floors');
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || 'Không thể tải danh sách tầng của chi nhánh');
+    }
     return res.json();
   },
 

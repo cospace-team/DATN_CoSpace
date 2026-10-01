@@ -66,13 +66,14 @@ public class PaymentController {
     }
 
     @PostMapping("/cash/create")
-    @PreAuthorize("hasAnyRole('staff', 'branch_admin')")
+    @PreAuthorize("hasAnyRole('staff', 'branch_admin', 'super_admin', 'admin', 'STAFF', 'BRANCH_ADMIN', 'SUPER_ADMIN', 'ADMIN')")
     public CashCreatePaymentResponse createCashPayment(
             @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody CreatePaymentRequest req) {
         UUID userId = requireSubject(jwt);
         branchAccessGuard.requireAccessToBranch(jwt, paymentService.getBookingBranchId(req.getBookingId()));
-        return paymentService.createCashPayment(userId, req.getBookingId());
+        String method = req.getMethod() != null && !req.getMethod().isBlank() ? req.getMethod() : "cash";
+        return paymentService.createCounterPayment(userId, req.getBookingId(), method);
     }
 
     @GetMapping("/booking/{bookingId}")

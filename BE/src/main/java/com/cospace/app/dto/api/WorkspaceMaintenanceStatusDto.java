@@ -16,6 +16,9 @@ public class WorkspaceMaintenanceStatusDto {
     private UUID workspaceId;
     private String name;
     private String code;
+    private Integer capacity;
+    private UUID floorId;
+    private UUID workspaceTypeId;
     private WorkspaceEntity.Status workspaceStatus;
     
     // If there is an active maintenance, include its info

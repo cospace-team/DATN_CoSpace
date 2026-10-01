@@ -52,7 +52,7 @@ public class StaffBookingController {
      * only way to waive the penalty when the fault is the branch's. Every call is audited.
      */
     @PostMapping("/{bookingId}/cancel")
-    @PreAuthorize("hasAnyRole('staff', 'branch_admin')")
+    @PreAuthorize("hasAnyRole('staff', 'branch_admin', 'super_admin', 'admin', 'STAFF', 'BRANCH_ADMIN', 'SUPER_ADMIN', 'ADMIN')")
     public com.cospace.app.entity.BookingCancellation cancelForCustomer(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID bookingId,
@@ -77,7 +77,7 @@ public class StaffBookingController {
 
     @PostMapping("/walkin")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('staff', 'branch_admin')")
+    @PreAuthorize("hasAnyRole('staff', 'branch_admin', 'super_admin', 'admin', 'STAFF', 'BRANCH_ADMIN', 'SUPER_ADMIN', 'ADMIN')")
     public BookingDto createWalkinBooking(
             @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody StaffBookingCreateRequest req) {
@@ -101,7 +101,7 @@ public class StaffBookingController {
     }
 
     @GetMapping("/branches/{branchId}/workspaces-booking-status")
-    @PreAuthorize("hasAnyRole('staff', 'branch_admin')")
+    @PreAuthorize("hasAnyRole('staff', 'branch_admin', 'super_admin', 'admin', 'STAFF', 'BRANCH_ADMIN', 'SUPER_ADMIN', 'ADMIN')")
     public org.springframework.http.ResponseEntity<java.util.List<com.cospace.app.dto.api.WorkspaceBookingStatusDto>> getWorkspaceBookingStatus(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID branchId,

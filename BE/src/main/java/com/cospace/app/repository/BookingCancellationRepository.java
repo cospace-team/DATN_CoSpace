@@ -13,5 +13,7 @@ public interface BookingCancellationRepository extends JpaRepository<BookingCanc
 
     Optional<BookingCancellation> findByBookingId(UUID bookingId);
 
+    List<BookingCancellation> findByBookingIdIn(java.util.Collection<UUID> bookingIds);
+
     List<BookingCancellation> findByUserIdOrderByCreatedAtDesc(UUID userId);
 }

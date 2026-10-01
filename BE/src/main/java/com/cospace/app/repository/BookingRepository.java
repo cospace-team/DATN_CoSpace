@@ -59,6 +59,9 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
     @org.springframework.data.jpa.repository.Query("SELECT COUNT(b) FROM Booking b WHERE " + PROMOTION_STILL_REDEEMED)
     long countPromotionUsage(@org.springframework.data.repository.query.Param("promotionId") UUID promotionId);
 
+    @org.springframework.data.jpa.repository.Query("SELECT b.promotionId, COUNT(b) FROM Booking b WHERE b.promotionId IN :promotionIds AND " + PROMOTION_STILL_REDEEMED + " GROUP BY b.promotionId")
+    List<Object[]> countPromotionUsageBatch(@org.springframework.data.repository.query.Param("promotionIds") Collection<UUID> promotionIds);
+
     @org.springframework.data.jpa.repository.Query("SELECT COUNT(b) FROM Booking b WHERE " + PROMOTION_STILL_REDEEMED
             + " AND b.userId = :userId")
     long countPromotionUsageByUser(@org.springframework.data.repository.query.Param("promotionId") UUID promotionId,

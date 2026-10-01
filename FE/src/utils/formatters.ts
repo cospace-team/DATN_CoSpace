@@ -82,6 +82,8 @@ export const workspaceTypeLabel: Record<string, string> = {
 export const maintenanceStatusLabel: Record<string, string> = {
   scheduled: 'Đã lên lịch',
   active: 'Đang bảo trì',
+  in_progress: 'Đang bảo trì',
   done: 'Hoàn tất',
+  completed: 'Hoàn tất',
   canceled: 'Đã hủy',
 };
