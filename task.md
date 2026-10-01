@@ -151,3 +151,11 @@ Sử dụng ký hiệu: `[ ]` Chưa làm | `[/]` Đang làm | `[x]` Đã xong.
 - [x] **Trang trí thừa**: bỏ avatar gradient tím–chàm, đốm blur, watermark chữ viền, sọc chéo, nhãn xiên, hiệu ứng nhấc/phóng khi rê chuột, chấm nhấp nháy/nảy không mang thông tin.
 - [x] **Chữ & emoji**: tiêu đề tiếng Việt viết sentence case thay vì Title Case, bỏ chữ IN HOA tràn lan ở trang chủ; thay emoji trong nhãn trạng thái/menu bằng chữ hoặc icon `react-icons` (`ServiceIcon`).
 - [x] **Sửa kèm**: navbar trang chủ luôn nền đặc (logo/menu trước đây chìm trên hero tối); tab lọc "Khách đến hôm nay" không còn tràn; thanh tiến độ báo cáo theo loại không gian trước đây không hiện màu.
+
+## 🎨 15. Thiết kế lại trình chỉnh sửa sơ đồ tầng
+- [x] **Một thanh công cụ duy nhất** (thay hai header chồng nhau): tên tầng + trạng thái lưu bên trái; chọn/di chuyển, hoàn tác, thu phóng, lưới ở giữa; "Xem trước" và "Lưu sơ đồ" bên phải. Nút lưu bị khóa khi chưa có thay đổi.
+- [x] **Thư viện phần tử dạng danh sách** với icon nét mảnh tô theo màu phần tử, ô tìm kiếm, nhóm thu gọn được; bấm vào phần tử để thêm vào giữa khung nhìn (ngoài kéo-thả như trước).
+- [x] **Bảng thuộc tính chia mục**: "Chỗ đặt" lên đầu (cho biết đã gán, mồ côi, hay sẽ tự tạo khi lưu), rồi Thông tin, Vị trí & kích thước, Màu sắc. Khi chưa chọn gì thì hiện tóm tắt sơ đồ (số chỗ chưa gán) và danh sách phím tắt thu gọn.
+- [x] **Ẩn/hiện hai bảng bên** để khung vẽ chiếm toàn bộ chiều ngang; thanh trạng thái mỏng ở đáy (số phần tử, đã gán, kích thước khung, lưới).
+- [x] **Đóng có xác nhận** khi còn thay đổi chưa lưu; trình chỉnh sửa mở toàn màn hình qua portal (trước đây lệch 24px do kế thừa `space-y-6`).
+- [x] Nhãn mặc định trong danh mục chuyển sang tiếng Việt đầy đủ: "Văn phòng riêng", "Cabin cách âm", "Không gian khác".

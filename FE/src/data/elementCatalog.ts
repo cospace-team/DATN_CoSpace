@@ -57,7 +57,7 @@ export const ELEMENT_CATALOG: ElementCatalogItem[] = [
   },
   {
     type: 'private_office',
-    label: 'VP riêng',
+    label: 'Văn phòng riêng',
     icon: '🏢',
     category: 'workspace',
     defaultWidth: 160,
@@ -69,7 +69,7 @@ export const ELEMENT_CATALOG: ElementCatalogItem[] = [
   },
   {
     type: 'phone_booth',
-    label: 'Phone Booth',
+    label: 'Cabin cách âm',
     icon: '📞',
     category: 'workspace',
     defaultWidth: 60,
@@ -93,7 +93,7 @@ export const ELEMENT_CATALOG: ElementCatalogItem[] = [
   },
   {
     type: 'custom_workspace',
-    label: 'Không gian mở rộng',
+    label: 'Không gian khác',
     icon: '✨',
     category: 'workspace',
     defaultWidth: 100,

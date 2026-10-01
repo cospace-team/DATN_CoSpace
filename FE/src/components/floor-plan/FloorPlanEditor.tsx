@@ -1,13 +1,11 @@
 /**
- * FloorPlanEditor — Main orchestrator component.
- * Composes Toolbar + ElementLibrary + EditorCanvas + PropertiesPanel
- * into a modern 3-panel layout with collapsible side panels, fully theme-aware
- * (light/dark) using the app's semantic design tokens.
+ * FloorPlanEditor — composes the toolbar, element library, canvas and properties panel.
+ * Both side panels can be hidden from the toolbar to give the canvas the full width.
  */
 
 import React, { useState, useCallback } from 'react';
-import { FiChevronLeft, FiChevronRight, FiEye, FiArrowLeft, FiGrid } from 'react-icons/fi';
-import type { FloorLayout, ElementCatalogItem } from '../../types/floorPlan';
+import { FiArrowLeft } from 'react-icons/fi';
+import type { FloorLayout, ElementCatalogItem, ElementType } from '../../types/floorPlan';
 import type { WorkspaceResponse } from '../../lib/spaceApi';
 import { useFloorPlanEditor } from '../../hooks/useFloorPlanEditor';
 import EditorToolbar from './EditorToolbar';
@@ -21,6 +19,8 @@ interface Props {
   floorName: string;
   workspaces: WorkspaceResponse[];
   onSave: (layout: FloorLayout) => Promise<void>;
+  /** Shows a close button; the user is asked to confirm when there are unsaved changes. */
+  onClose?: () => void;
 }
 
 const FloorPlanEditor: React.FC<Props> = ({
@@ -28,14 +28,13 @@ const FloorPlanEditor: React.FC<Props> = ({
   floorName,
   workspaces,
   onSave,
+  onClose,
 }) => {
   const editor = useFloorPlanEditor(initialLayout);
   const [saving, setSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
-
-  // Collapse states for side panels
-  const [isLeftCollapsed, setIsLeftCollapsed] = useState(false);
-  const [isRightCollapsed, setIsRightCollapsed] = useState(false);
+  const [libraryOpen, setLibraryOpen] = useState(true);
+  const [propertiesOpen, setPropertiesOpen] = useState(true);
 
   const handleSave = useCallback(async () => {
     setSaving(true);
@@ -49,37 +48,49 @@ const FloorPlanEditor: React.FC<Props> = ({
     }
   }, [editor, onSave]);
 
+  const handleClose = useCallback(() => {
+    if (!onClose) return;
+    if (editor.isDirty && !window.confirm('Sơ đồ có thay đổi chưa lưu. Đóng mà không lưu?')) return;
+    onClose();
+  }, [editor.isDirty, onClose]);
+
   const handleLibraryDragStart = useCallback((_item: ElementCatalogItem) => {
-    // Optional drag ghost handling
+    // The drop target reads the item from the drag payload; nothing else to track here.
   }, []);
 
-  const linkedCount = editor.layout.elements.filter(
-    (e) => e.workspaceId
-  ).length;
+  // Clicking a library item drops it in the middle of what is on screen, nudged a little for each
+  // element already there so repeated clicks do not stack exactly on top of each other.
+  const { layout, panOffset, addElement } = editor;
+  const handleLibraryAdd = useCallback(
+    (item: ElementCatalogItem) => {
+      const { width, height, gridSize } = layout.canvas;
+      const step = (layout.elements.length % 6) * gridSize;
+      addElement(
+        item.type as ElementType,
+        width / 2 - panOffset.x - item.defaultWidth / 2 + step,
+        height / 2 - panOffset.y - item.defaultHeight / 2 + step,
+      );
+    },
+    [layout.canvas, layout.elements.length, panOffset, addElement],
+  );
+
+  const linkedCount = editor.layout.elements.filter((e) => e.workspaceId).length;
 
   if (showPreview) {
     return (
-      <div className="flex flex-col h-full bg-background text-foreground animate-fade-scale-in">
-        {/* Preview Topbar */}
-        <div className="flex items-center justify-between px-6 py-3 border-b border-border bg-card/90 shadow-sm">
-          <div className="flex items-center gap-2.5">
-            <FiEye className="h-4 w-4 text-primary" />
-            <span className="text-sm font-bold font-heading">
-              Chế độ Xem trước Sơ đồ — {floorName}
-            </span>
-          </div>
+      <div className="flex flex-col h-full bg-background text-foreground">
+        <div className="flex h-14 items-center gap-3 px-3 border-b border-border bg-card shrink-0">
           <button
+            type="button"
             onClick={() => setShowPreview(false)}
-            className="px-4 py-1.5 rounded-xl text-xs font-semibold bg-muted border border-border hover:bg-muted/70 text-foreground flex items-center gap-2 transition-all shadow-sm active:scale-95"
+            className="h-9 px-3 rounded-lg text-sm font-medium text-foreground hover:bg-muted flex items-center gap-2"
           >
-            <FiArrowLeft className="h-4 w-4" />
-            <span>Quay lại Thiết kế</span>
+            <FiArrowLeft className="h-4 w-4" /> Quay lại chỉnh sửa
           </button>
+          <span className="text-sm text-muted-foreground truncate">Xem trước · {floorName}</span>
         </div>
-
-        {/* Preview Viewport */}
-        <div className="flex-1 overflow-auto flex items-center justify-center bg-background p-8">
-          <div className="w-full max-w-5xl rounded-3xl border border-border bg-card p-8 shadow-2xl relative overflow-hidden">
+        <div className="flex-1 overflow-auto flex items-center justify-center bg-muted/40 p-8">
+          <div className="w-full max-w-5xl rounded-xl border border-border bg-card p-6">
             <FloorPlanPreview layout={editor.layout} workspaces={workspaces} />
           </div>
         </div>
@@ -88,60 +99,33 @@ const FloorPlanEditor: React.FC<Props> = ({
   }
 
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-background font-sans relative z-0">
-
-      {/* Toolbar */}
+    <div className="flex flex-col h-full overflow-hidden bg-background">
       <EditorToolbar
         editor={editor}
         floorName={floorName}
         onSave={handleSave}
         saving={saving}
         onPreview={() => setShowPreview(true)}
+        onClose={onClose ? handleClose : undefined}
+        libraryOpen={libraryOpen}
+        onToggleLibrary={() => setLibraryOpen((v) => !v)}
+        propertiesOpen={propertiesOpen}
+        onToggleProperties={() => setPropertiesOpen((v) => !v)}
       />
 
-      {/* 3-Panel Layout */}
-      <div className="flex flex-1 overflow-hidden relative">
-        {/* Left Sidebar: Element Library */}
-        <div
-          className={`border-r border-border bg-card shrink-0 overflow-hidden transition-all duration-300 flex flex-col relative z-20 ${
-            isLeftCollapsed ? 'w-0' : 'w-[230px]'
-          }`}
-        >
-          {!isLeftCollapsed && <ElementLibrary onDragStart={handleLibraryDragStart} />}
-        </div>
+      <div className="flex flex-1 overflow-hidden">
+        {libraryOpen && (
+          <aside className="w-60 shrink-0 border-r border-border" aria-label="Thư viện phần tử">
+            <ElementLibrary onDragStart={handleLibraryDragStart} onAdd={handleLibraryAdd} />
+          </aside>
+        )}
 
-        {/* Center: Canvas Area & Collapse Handles */}
-        <div className="flex-1 flex flex-col relative h-full overflow-hidden">
-
-          {/* Toggle Left Sidebar Button */}
-          <button
-            onClick={() => setIsLeftCollapsed(!isLeftCollapsed)}
-            className="absolute left-3 top-1/2 -translate-y-1/2 z-30 w-5 h-12 rounded-r-xl bg-card/90 backdrop-blur-md border-y border-r border-border hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center shadow-lg transition-all active:scale-95"
-            title={isLeftCollapsed ? "Hiện danh mục" : "Ẩn danh mục"}
-          >
-            {isLeftCollapsed ? <FiChevronRight className="h-3.5 w-3.5 text-primary" /> : <FiChevronLeft className="h-3.5 w-3.5" />}
-          </button>
-
-          {/* Canvas Component */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden" role="region" aria-label="Khung vẽ sơ đồ">
           <EditorCanvas editor={editor} />
-
-          {/* Toggle Right Sidebar Button */}
-          <button
-            onClick={() => setIsRightCollapsed(!isRightCollapsed)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 z-30 w-5 h-12 rounded-l-xl bg-card/90 backdrop-blur-md border-y border-l border-border hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center shadow-lg transition-all active:scale-95"
-            title={isRightCollapsed ? "Hiện thuộc tính" : "Ẩn thuộc tính"}
-          >
-            {isRightCollapsed ? <FiChevronLeft className="h-3.5 w-3.5 text-primary" /> : <FiChevronRight className="h-3.5 w-3.5" />}
-          </button>
         </div>
 
-        {/* Right Sidebar: Properties Panel */}
-        <div
-          className={`border-l border-border bg-card shrink-0 overflow-hidden transition-all duration-300 flex flex-col relative z-20 ${
-            isRightCollapsed ? 'w-0' : 'w-[330px]'
-          }`}
-        >
-          {!isRightCollapsed && (
+        {propertiesOpen && (
+          <aside className="w-80 shrink-0 border-l border-border" aria-label="Thuộc tính phần tử">
             <PropertiesPanel
               element={editor.selectedElement}
               workspaces={workspaces}
@@ -154,103 +138,49 @@ const FloorPlanEditor: React.FC<Props> = ({
               linkedCount={linkedCount}
               elements={editor.layout.elements}
             />
-          )}
-        </div>
+          </aside>
+        )}
       </div>
 
-      {/* Bottom Telemetry Status Bar */}
-      <div className="px-5 py-2 border-t border-border bg-card/80 backdrop-blur-md text-[11px] text-muted-foreground flex items-center gap-4 shrink-0 select-none font-mono z-30">
-        <span className="flex items-center gap-1.5">
-          <span className="font-bold text-foreground">{editor.layout.elements.length}</span>
-          <span>phần tử</span>
+      {/* Status bar */}
+      <div className="h-8 px-4 border-t border-border bg-card text-xs text-muted-foreground flex items-center gap-4 shrink-0 select-none">
+        <span>
+          <span className="font-medium text-foreground tabular-nums">{editor.layout.elements.length}</span> phần tử
         </span>
-
-        <div className="w-px h-3.5 bg-border" />
-
-        <span className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-success shadow-sm shadow-success/50" />
-          <span className="font-bold text-success">{linkedCount}</span>
-          <span>đã gán workspace</span>
+        <span>
+          <span className="font-medium text-foreground tabular-nums">{linkedCount}</span> đã gán chỗ đặt
         </span>
-
-        <div className="w-px h-3.5 bg-border" />
-
-        <span className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-muted-foreground/50" />
-          <span className="font-bold text-foreground">
-            {editor.layout.elements.filter((e) => !e.workspaceId).length}
+        {editor.selectedIds.length > 1 && (
+          <span>
+            Đang chọn <span className="font-medium text-foreground tabular-nums">{editor.selectedIds.length}</span>
           </span>
-          <span>chưa gán</span>
+        )}
+        <span className="ml-auto tabular-nums">
+          Khung {editor.layout.canvas.width} × {editor.layout.canvas.height}
         </span>
-
-        <span className="ml-auto text-muted-foreground">
-          Canvas: <strong className="text-foreground font-bold">{editor.layout.canvas.width}×{editor.layout.canvas.height}px</strong>
-        </span>
-
-        <div className="w-px h-3.5 bg-border" />
-
-        <span className="text-muted-foreground flex items-center gap-1">
-          <FiGrid className="h-3 w-3 text-primary" />
-          <span>Grid:</span>
-          <strong className="text-foreground font-bold">{editor.snapToGrid ? `${editor.layout.canvas.gridSize}px` : 'TẮT'}</strong>
+        <span>
+          Lưới {editor.snapToGrid ? `${editor.layout.canvas.gridSize}px` : 'tắt'}
         </span>
       </div>
     </div>
   );
 };
 
-/* ── Simple Read-Only Floor Plan Preview ── */
+/* ── Read-only preview ── */
 
 const FloorPlanPreview: React.FC<{
   layout: FloorLayout;
   workspaces: WorkspaceResponse[];
 }> = ({ layout }) => {
-  const { width, height, gridSize } = layout.canvas;
+  const { width, height } = layout.canvas;
 
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full max-h-[520px]">
-      <defs>
-        <pattern
-          id="preview-dots"
-          width={gridSize}
-          height={gridSize}
-          patternUnits="userSpaceOnUse"
-        >
-          <circle
-            cx={gridSize}
-            cy={gridSize}
-            r={1}
-            fill="hsl(var(--muted-foreground))"
-            opacity={0.4}
-          />
-        </pattern>
-      </defs>
-
-      <rect
-        width={width}
-        height={height}
-        fill="url(#preview-dots)"
-        rx={12}
-      />
-      <rect
-        width={width}
-        height={height}
-        fill="none"
-        stroke="hsl(var(--border))"
-        strokeWidth={1.5}
-        strokeDasharray="6 4"
-        rx={12}
-      />
-
+    <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full max-h-[560px]">
+      <rect width={width} height={height} fill="hsl(var(--card))" stroke="hsl(var(--border))" strokeWidth={1.5} rx={8} />
       {layout.elements
         .filter((el) => el.visible)
         .map((el) => (
-          <ElementRenderer
-            key={el.id}
-            element={el}
-            isSelected={false}
-            isHovered={false}
-          />
+          <ElementRenderer key={el.id} element={el} isSelected={false} isHovered={false} />
         ))}
     </svg>
   );

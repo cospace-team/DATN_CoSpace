@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import {
   FiLayers, FiPlus, FiEdit2, FiAlertCircle,
-  FiTrash2, FiUploadCloud, FiCheckCircle, FiLayout, FiMap, FiMapPin, FiX,
+  FiTrash2, FiUploadCloud, FiCheckCircle, FiMap, FiMapPin,
 } from 'react-icons/fi';
 import FloorPlanEditor from '../../components/floor-plan/FloorPlanEditor';
 import FloorPlanViewer from '../../components/floor-plan/FloorPlanViewer';
@@ -836,7 +837,7 @@ const BAWorkspacePage: React.FC<BAWorkspacePageProps> = ({ isSuperAdminView = fa
                 onClick={() => setShowEditorPopup(true)}
                 className="btn btn-primary btn-sm flex items-center gap-2"
               >
-                <FiEdit2 className="h-3.5 w-3.5" /> Chỉnh sửa Layout
+                <FiEdit2 className="h-3.5 w-3.5" /> Chỉnh sửa sơ đồ
               </button>
             </div>
           </div>
@@ -982,32 +983,13 @@ const BAWorkspacePage: React.FC<BAWorkspacePageProps> = ({ isSuperAdminView = fa
       )}
 
       {/* ── Fullscreen Editor Popup ── */}
-      {showEditorPopup && currentFloor && (
-        <div className="fixed inset-0 z-[60] flex flex-col bg-background animate-fade-in">
-          {/* Popup Header */}
-          <div className="flex items-center justify-between px-6 py-3 border-b border-border bg-card shadow-sm shrink-0 text-foreground">
-            <div className="flex items-center gap-3">
-              <FiLayout className="h-5 w-5 text-primary" />
-              <div>
-                <h2 className="text-sm font-bold font-heading text-foreground">
-                  Chỉnh sửa Layout — {currentFloor.name}
-                </h2>
-                <p className="text-xs text-muted-foreground">
-                  Kéo thả elements từ panel trái để thiết kế, gán workspace từ panel phải
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => setShowEditorPopup(false)}
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-muted border border-border hover:bg-muted/70 text-foreground flex items-center gap-2 transition-all shadow-sm active:scale-95"
-            >
-              <FiX className="h-4 w-4" /> Đóng Editor
-            </button>
-          </div>
-          {/* Editor */}
+      {/* Portal to <body>: inside the page it inherited the list's top margin and left a gap above the editor. */}
+      {showEditorPopup && currentFloor && createPortal(
+        <div className="fixed inset-0 z-[60] flex flex-col bg-background" role="dialog" aria-modal="true" aria-label={`Thiết kế sơ đồ ${currentFloor.name}`}>
           <div className="flex-1 overflow-hidden">
             <FloorPlanEditor
               key={`floor-editor-${currentFloor.id}`}
+              onClose={() => setShowEditorPopup(false)}
               initialLayout={
                 currentFloor.layoutJson
                   ? (JSON.parse(currentFloor.layoutJson) as FloorLayout)
@@ -1191,7 +1173,8 @@ const BAWorkspacePage: React.FC<BAWorkspacePageProps> = ({ isSuperAdminView = fa
               }}
             />
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
