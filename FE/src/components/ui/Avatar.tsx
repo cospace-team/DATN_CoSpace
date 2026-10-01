@@ -38,7 +38,7 @@ export const Avatar: React.FC<AvatarProps> = ({
   return (
     <div 
       className={cn(
-        "relative flex shrink-0 overflow-hidden rounded-full items-center justify-center bg-gradient-to-br from-primary/80 to-primary text-primary-foreground font-semibold",
+        "relative flex shrink-0 overflow-hidden rounded-full items-center justify-center bg-primary/10 text-primary font-semibold",
         sizeClasses[size],
         className
       )}

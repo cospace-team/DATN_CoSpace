@@ -75,10 +75,9 @@ const PublicNavbar: React.FC = () => {
     to.startsWith("/#") ? false : location.pathname === to;
 
   return (
+    // Always solid: a transparent bar over the dark hero left the logo and links unreadable.
     <header
-      className={`fixed top-0 w-full z-50 transition-all duration-300 ${
-        scrolled ? "bg-card/80 backdrop-blur-md border-b border-border shadow-sm py-2" : "bg-transparent py-4"
-      }`}
+      className={`fixed top-0 w-full z-50 bg-card border-b border-border transition-[padding] duration-300 ${scrolled ? "py-2" : "py-4"}`}
     >
       <nav className="flex justify-between items-center px-6 md:px-8 max-w-7xl mx-auto">
         {/* ── Logo ── */}
@@ -87,7 +86,7 @@ const PublicNavbar: React.FC = () => {
         </Link>
 
         {/* ── Desktop nav links ── */}
-        <div className="hidden md:flex items-center gap-1 bg-card/50 backdrop-blur-md border border-border rounded-full px-2 py-1 shadow-sm">
+        <div className="hidden md:flex items-center gap-1">
           {navLinks.map((link) => (
             <Link
               key={link.to}
@@ -117,7 +116,7 @@ const PublicNavbar: React.FC = () => {
                 onClick={handleDashboard}
                 className="rounded-full font-medium px-5 py-2"
               >
-                Vào Dashboard
+                Vào trang quản lý
               </Button>
               <Button
                 variant="ghost"
@@ -184,7 +183,7 @@ const PublicNavbar: React.FC = () => {
                 </p>
                 <div className="flex gap-2">
                   <Button onClick={handleDashboard} className="flex-1 rounded-full py-5 font-medium">
-                    Vào Dashboard
+                    Vào trang quản lý
                   </Button>
                   <Button
                     variant="outline"

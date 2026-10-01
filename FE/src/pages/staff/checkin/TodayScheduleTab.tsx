@@ -227,7 +227,7 @@ export const TodayScheduleTab: React.FC<TodayScheduleTabProps> = ({
                   {b.status === 'CONFIRMED' ? (
                     <button
                       onClick={() => onSelectBookingForCheckin(b.bookingCode)}
-                      className="btn btn-primary btn-sm rounded-xl px-3.5 py-1.5 text-xs font-bold shadow-sm flex items-center gap-1.5 hover:scale-[1.02] transition-transform cursor-pointer"
+                      className="btn btn-primary btn-sm rounded-xl px-3.5 py-1.5 text-xs font-bold shadow-sm flex items-center gap-1.5  transition-transform cursor-pointer"
                       title="Điền mã và chuẩn bị Check-in"
                     >
                       <FiCheckCircle className="w-3.5 h-3.5" />
@@ -235,7 +235,7 @@ export const TodayScheduleTab: React.FC<TodayScheduleTabProps> = ({
                     </button>
                   ) : b.status === 'CHECKED_IN' ? (
                     <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> Đang
+                      <span className="w-2 h-2 rounded-full bg-emerald-500" /> Đang
                       ngồi
                     </span>
                   ) : (

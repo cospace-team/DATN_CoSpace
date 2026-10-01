@@ -206,7 +206,7 @@ const CheckInPage: React.FC = () => {
 
     try {
       await staffApi.checkin(searchedBooking.booking.id, 'Check-in tại quầy');
-      setSuccessMessage(`✅ Check-in thành công! Mời khách hàng ${searchedBooking.customer?.fullName || ''} vào vị trí ${searchedBooking.workspace?.name || ''}.`);
+      setSuccessMessage(`Check-in thành công. Mời khách hàng ${searchedBooking.customer?.fullName || ''} vào vị trí ${searchedBooking.workspace?.name || ''}.`);
       setSearchedBooking(null);
       setCode('');
       await fetchActiveCheckins();
@@ -232,7 +232,7 @@ const CheckInPage: React.FC = () => {
 
     try {
       await staffApi.checkout(selectedCheckoutItem.activeCheckin.id, checkoutNote);
-      setSuccessMessage(`✅ Đã Check-out và giải phóng vị trí "${selectedCheckoutItem.workspace?.name}" thành công!`);
+      setSuccessMessage(`Đã check-out và giải phóng vị trí "${selectedCheckoutItem.workspace?.name}" thành công!`);
       setTimeout(() => setSuccessMessage(null), 4000);
       setSelectedCheckoutItem(null);
       setCheckoutNote('');
@@ -377,20 +377,19 @@ const CheckInPage: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in pb-24 lg:pb-6">
       {/* Header */}
-      <div className="rounded-2xl border border-border bg-card p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-sm">
+      <div className="rounded-xl border border-border bg-card p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold font-heading">Kiểm tra & Xác nhận Check-in</h1>
+            <h1 className="text-2xl font-bold font-heading">Check-in</h1>
             <span className="text-xs bg-primary/10 text-primary px-3 py-1 rounded-full font-semibold border border-primary/20 flex items-center gap-1.5">
               <FiMapPin className="h-3.5 w-3.5" /> {branchName}
             </span>
           </div>
-          <p className="text-xs text-muted-foreground mt-1">Theo dõi khách hàng đang có mặt tại không gian và quản lý ra vào theo thời gian thực</p>
+          <p className="text-xs text-muted-foreground mt-1">Tra mã đặt chỗ để check-in, theo dõi khách đang ngồi và check-out.</p>
         </div>
 
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 bg-muted/60 border border-border px-3.5 py-2 rounded-xl text-xs font-mono font-bold shadow-inner">
-            <span className="h-2 w-2 rounded-full bg-green-500 animate-ping" />
             <FiClock className="h-4 w-4 text-primary" />
             <span>{currentClockStr}</span>
           </div>
@@ -548,14 +547,14 @@ const CheckInPage: React.FC = () => {
                   <button 
                     onClick={handleConfirmCheckin} 
                     disabled={loading}
-                    className="btn btn-primary w-full justify-center !h-14 text-lg font-bold shadow-lg shadow-primary/30 transition-all hover:scale-[1.01]"
+                    className="btn btn-primary w-full justify-center !h-14 text-lg font-bold shadow-lg shadow-primary/30 transition-all "
                   >
                     {loading ? (
                       <span className="h-6 w-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     ) : (
                       <>
                         <FiCheck className="h-6 w-6 mr-2" /> 
-                        {isMultiDay ? 'Xác nhận Check-in ca hôm nay' : 'Xác nhận Cho Khách Vào (Check-in)'}
+                        {isMultiDay ? 'Xác nhận Check-in ca hôm nay' : 'Xác nhận check-in'}
                       </>
                     )}
                   </button>
@@ -563,8 +562,8 @@ const CheckInPage: React.FC = () => {
                   <div className="rounded-xl bg-destructive/10 border border-destructive/20 p-4 text-center">
                     <p className="text-sm font-semibold text-destructive">
                       {searchedBooking.alreadyCheckedIn 
-                        ? '⚠️ Khách hàng này đang sử dụng không gian, không thể Check-in thêm.' 
-                        : '⚠️ Vé chưa được thanh toán hoặc không ở trạng thái hợp lệ để Check-in.'}
+                        ? 'Khách hàng này đang sử dụng không gian, không thể Check-in thêm.' 
+                        : 'Vé chưa được thanh toán hoặc không ở trạng thái hợp lệ để Check-in.'}
                     </p>
                   </div>
                 )}
@@ -722,7 +721,7 @@ const CheckInPage: React.FC = () => {
                               </div>
                             </td>
 
-                            {/* Mã Vé & Vị trí */}
+                            {/* Mã vé & vị trí */}
                             <td className="py-4">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <span className="font-bold text-primary text-sm">{ci.workspace?.name}</span>
@@ -772,7 +771,7 @@ const CheckInPage: React.FC = () => {
                                 </span>
                               ) : ci.meta.timeStatus === 'near_expiry' ? (
                                 <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-950/50 px-2.5 py-1 rounded-full border border-amber-200 dark:border-amber-800">
-                                  <FiClock className="h-3.5 w-3.5 animate-spin-slow" /> {ci.meta.remainingFormatted}
+                                  <FiClock className="h-3.5 w-3.5" /> {ci.meta.remainingFormatted}
                                 </span>
                               ) : (
                                 <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/50 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-800">

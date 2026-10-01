@@ -25,6 +25,9 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     java.util.List<User> findByBranchIdAndRole(UUID branchId, User.Role role);
 
+    /** The oldest walk-in account (email ending in {@code emailSuffix}) with this phone and name. */
+    Optional<User> findFirstByPhoneAndFullNameIgnoreCaseAndEmailEndingWithOrderByCreatedAtAsc(String phone, String fullName, String emailSuffix);
+
     boolean existsByEmailAndIdNot(String email, UUID id);
 
     java.util.List<User> findByRole(User.Role role);

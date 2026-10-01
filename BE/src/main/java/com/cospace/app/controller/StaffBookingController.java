@@ -78,6 +78,9 @@ public class StaffBookingController {
     @PostMapping("/walkin")
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('staff', 'branch_admin', 'super_admin', 'admin', 'STAFF', 'BRANCH_ADMIN', 'SUPER_ADMIN', 'ADMIN')")
+    // One transaction for the guest account and the booking: when the booking is refused (seat
+    // taken, outside opening hours…) the guest account created for it is rolled back too.
+    @org.springframework.transaction.annotation.Transactional
     public BookingDto createWalkinBooking(
             @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody StaffBookingCreateRequest req) {

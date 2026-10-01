@@ -129,3 +129,33 @@ Sử dụng ký hiệu: `[ ]` Chưa làm | `[/]` Đang làm | `[x]` Đã xong.
 - [x] **Hình ảnh không gian**: Branch admin tải tối đa 10 ảnh/không gian (JPG/PNG/WebP/GIF ≤ 5MB, kiểm tra theo chữ ký tệp) lên Supabase Storage qua backend (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`); khách xem gallery khi chọn chỗ.
 - [x] **Kết nối đối tác thật**: Gửi lời mời (kèm lời nhắn) → chấp nhận / từ chối / thu hồi / hủy kết nối (`/api/connections`), thông báo in-app; xem hồ sơ thành viên (`GET /api/profiles/{userId}`) — thông tin liên hệ riêng tư chỉ hiện khi đã kết nối.
 - [x] **Migration V3** (`V3__tab_charges_vouchers_images_connections.sql`) + kiểm thử: unit test backend pass toàn bộ; kịch bản E2E (đặt chỗ → dịch vụ → QR → gia hạn → phí trễ → voucher → kết nối) chạy pass trên Postgres 16 thật.
+
+## 🎯 13. Rà soát Edge Case trước Demo
+- [x] **Migration V4** (`V4__floor_layout_columns.sql`): bổ sung `floors.layout_json` / `svg_content` mà V1 baseline thiếu — DB mới (máy demo, CI) trước đây lỗi mọi truy vấn tầng. Idempotent, không ảnh hưởng Supabase.
+- [x] **Xử lý lỗi API thống nhất**: gộp 2 `@RestControllerAdvice` chồng nhau còn 1 (`GlobalExceptionHandler`). Tham số sai kiểu / thiếu / ngày sai định dạng trả 400 thay vì 500; lỗi 500 không còn lộ tên exception & câu SQL; vi phạm CHECK / NOT NULL trả 400 có thông báo rõ.
+- [x] **Trang Khuyến mãi (Super Admin) lỗi 500**: query đếm lượt dùng theo lô thiếu tham số `:promotionId`.
+- [x] **Walk-in tại quầy**: đặt chỗ thất bại không còn để lại tài khoản khách rác (chung transaction); khách cũ cùng SĐT + tên dùng lại tài khoản (trừ SĐT mặc định 0900000000 của chế độ khách vãng lai — mỗi khách vẫn có tài khoản riêng, tránh dồn chi tiêu lên hạng thành viên và chạm giới hạn 3 đơn chờ thanh toán); giá hiển thị lấy từ bảng giá thật của chi nhánh (staff bị 403 ở API giá branch-admin → trước đây đoán giá cứng); QR / hóa đơn dùng tổng tiền server tính (có giảm giá hạng thành viên); báo lỗi khi không tạo được giao dịch VietQR.
+- [x] **Đặt chỗ**: server từ chối không gian ở trạng thái `maintenance` / `inactive` (trước chỉ FE chặn).
+- [x] **Check-in**: báo đúng "đã check-in" thay vì "chưa thanh toán"; chặn check-in gói nhiều ngày đã hết hạn.
+- [x] **Validate dữ liệu quản trị**: dịch vụ thêm không nhận giá âm; chính sách hủy kiểm tra loại quy tắc, khoảng min < max, % hoàn 0–100.
+- [x] **Checkout**: đếm ngược 15 phút chỉ chạy khi đã tạo đơn giữ chỗ (trước đó để trang mở quá 15 phút là nút "Thanh toán ngay" bị khóa vĩnh viễn).
+- [x] **VietQR offline**: nếu không tải được ảnh `img.vietqr.io`, tự sinh mã VietQR chuẩn EMVCo (có CRC) ngay trên trình duyệt.
+- [x] **Lịch sử đặt chỗ**: gói nhiều ngày hiện khoảng ngày; ẩn nút "Hủy" khi đơn đã bắt đầu (server không cho hủy online).
+- [x] **FE env**: `VITE_SUPABASE_URL` / `VITE_API_BASE_URL` để trống không còn làm trắng trang; `/api/tags` ở Hồ sơ gửi kèm token.
+- [x] **Kiểm thử**: 310/310 unit test BE pass; build FE pass; Playwright duyệt 34 trang × 4 vai trò không lỗi console/API; E2E đặt chỗ → VietQR → lịch sử, check-in → dịch vụ → thu tiền → check-out, hủy → hoàn voucher chạy pass trên Postgres 16.
+
+## 🧹 14. Dọn "AI slop" trên giao diện
+- [x] **Nội dung bịa / sai sự thật**: bỏ "10,000+ thành viên", "25+ chi nhánh", "24/7", avatar ảnh stock ở trang đăng nhập; bỏ nhãn "Phổ biến" không có số liệu; thay tiện ích tự nghĩ ra ở bảng giá (Smart TV 4K, khóa từ 24/7, địa chỉ ĐKKD…) bằng tính năng hệ thống thật sự có; sửa claim "hoàn tiền tự động, không chờ duyệt" và "sơ đồ realtime" cho đúng nghiệp vụ.
+- [x] **Chỉ báo giả**: bỏ badge "Live Database", "Online", "Trực tiếp", chấm "đang hoạt động" trên avatar, mũi tên tăng trưởng không có dữ liệu xu hướng; trạng thái máy chủ chỉ hiện khi mất kết nối.
+- [x] **Thẻ KPI**: component `StatCard` dùng chung cho các dashboard (admin, chi nhánh, trực ban, báo cáo) thay cho icon gradient cầu vồng + đốm glow; số doanh thu không còn bị cắt.
+- [x] **Trang trí thừa**: bỏ avatar gradient tím–chàm, đốm blur, watermark chữ viền, sọc chéo, nhãn xiên, hiệu ứng nhấc/phóng khi rê chuột, chấm nhấp nháy/nảy không mang thông tin.
+- [x] **Chữ & emoji**: tiêu đề tiếng Việt viết sentence case thay vì Title Case, bỏ chữ IN HOA tràn lan ở trang chủ; thay emoji trong nhãn trạng thái/menu bằng chữ hoặc icon `react-icons` (`ServiceIcon`).
+- [x] **Sửa kèm**: navbar trang chủ luôn nền đặc (logo/menu trước đây chìm trên hero tối); tab lọc "Khách đến hôm nay" không còn tràn; thanh tiến độ báo cáo theo loại không gian trước đây không hiện màu.
+
+## 🎨 15. Thiết kế lại trình chỉnh sửa sơ đồ tầng
+- [x] **Một thanh công cụ duy nhất** (thay hai header chồng nhau): tên tầng + trạng thái lưu bên trái; chọn/di chuyển, hoàn tác, thu phóng, lưới ở giữa; "Xem trước" và "Lưu sơ đồ" bên phải. Nút lưu bị khóa khi chưa có thay đổi.
+- [x] **Thư viện phần tử dạng danh sách** với icon nét mảnh tô theo màu phần tử, ô tìm kiếm, nhóm thu gọn được; bấm vào phần tử để thêm vào giữa khung nhìn (ngoài kéo-thả như trước).
+- [x] **Bảng thuộc tính chia mục**: "Chỗ đặt" lên đầu (cho biết đã gán, mồ côi, hay sẽ tự tạo khi lưu), rồi Thông tin, Vị trí & kích thước, Màu sắc. Khi chưa chọn gì thì hiện tóm tắt sơ đồ (số chỗ chưa gán) và danh sách phím tắt thu gọn.
+- [x] **Ẩn/hiện hai bảng bên** để khung vẽ chiếm toàn bộ chiều ngang; thanh trạng thái mỏng ở đáy (số phần tử, đã gán, kích thước khung, lưới).
+- [x] **Đóng có xác nhận** khi còn thay đổi chưa lưu; trình chỉnh sửa mở toàn màn hình qua portal (trước đây lệch 24px do kế thừa `space-y-6`).
+- [x] Nhãn mặc định trong danh mục chuyển sang tiếng Việt đầy đủ: "Văn phòng riêng", "Cabin cách âm", "Không gian khác".

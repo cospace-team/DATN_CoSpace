@@ -86,7 +86,7 @@ export const ProfileNetworkTab: React.FC<ProfileNetworkTabProps> = ({
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              ⭐ Phù hợp nhất
+              Phù hợp nhất
             </button>
             <button
               type="button"
@@ -100,7 +100,7 @@ export const ProfileNetworkTab: React.FC<ProfileNetworkTabProps> = ({
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              🌐 Tất cả ({partnersList.length})
+              Tất cả ({partnersList.length})
             </button>
           </div>
 

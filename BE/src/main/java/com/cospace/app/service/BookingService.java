@@ -109,6 +109,7 @@ public class BookingService {
         // Rule #42: Compute branchId server-side from Workspace -> Floor
         WorkspaceEntity ws = workspaceEntityRepository.findById(req.getWorkspaceId())
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy không gian làm việc."));
+        requireBookable(ws);
         com.cospace.app.entity.Floor floor = floorRepository.findById(ws.getFloorId())
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thông tin tầng của không gian làm việc."));
         UUID computedBranchId = floor.getBranchId();
@@ -226,6 +227,20 @@ public class BookingService {
         Booking savedBooking = bookingRepository.save(booking);
         bookingAddonService.attachToNewBooking(savedBooking, userId, addonLines);
         return toDto(savedBooking);
+    }
+
+    /**
+     * A workspace switched to maintenance or inactive by the branch takes no bookings at all, even
+     * without a maintenance window on the calendar. The booking screens grey these out; this is the
+     * server-side guarantee for requests that do not come through them.
+     */
+    private static void requireBookable(WorkspaceEntity ws) {
+        if (ws.getStatus() == WorkspaceEntity.Status.maintenance) {
+            throw new IllegalArgumentException("Không gian \"" + ws.getName() + "\" đang bảo trì, tạm thời không nhận đặt chỗ.");
+        }
+        if (ws.getStatus() == WorkspaceEntity.Status.inactive) {
+            throw new IllegalArgumentException("Không gian \"" + ws.getName() + "\" đã ngừng hoạt động, vui lòng chọn vị trí khác.");
+        }
     }
 
     /** Discounts applied to a booking: membership tier first, then the promotion on what remains. */
@@ -359,6 +374,7 @@ public class BookingService {
         }
         WorkspaceEntity ws = workspaceEntityRepository.findById(req.getWorkspaceId())
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy không gian làm việc."));
+        requireBookable(ws);
         com.cospace.app.entity.Floor floor = floorRepository.findById(ws.getFloorId())
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thông tin tầng của không gian làm việc."));
         String workspaceTypeId = ws.getWorkspaceTypeId() != null ? ws.getWorkspaceTypeId().toString() : null;

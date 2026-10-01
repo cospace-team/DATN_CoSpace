@@ -283,8 +283,6 @@
   transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
 }
 .card-interactive:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
   border-color: hsl(var(--primary));
 }
 
@@ -567,11 +565,11 @@
 }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-primary { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); cursor: pointer; }
-.btn-primary:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-1px); box-shadow: var(--shadow-lg); }
+.btn-primary:hover:not(:disabled) { filter: brightness(1.1); }
 .btn-secondary { background: hsl(var(--card)); color: hsl(var(--foreground)); border: 1px solid hsl(var(--border)); }
 .btn-secondary:hover:not(:disabled) { background: hsl(var(--muted)); border-color: hsl(var(--primary)); }
 .btn-danger { background: hsl(var(--destructive)); color: hsl(var(--destructive-foreground)); }
-.btn-danger:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+.btn-danger:hover:not(:disabled) { opacity: 0.9; }
 .btn-ghost { background: transparent; color: hsl(var(--muted-foreground)); }
 .btn-ghost:hover:not(:disabled) { background: hsl(var(--muted)); color: hsl(var(--foreground)); }
 .btn-sm { padding: 6px 12px; font-size: 13px; min-height: 36px; border-radius: 9999px; }

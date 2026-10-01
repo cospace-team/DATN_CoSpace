@@ -73,7 +73,7 @@ export const AvatarModal: React.FC<AvatarModalProps> = ({
                   className="h-full w-full object-cover"
                 />
               ) : (
-                <div className="h-full w-full bg-gradient-to-tr from-primary to-secondary flex items-center justify-center text-white text-2xl font-bold">
+                <div className="h-full w-full bg-primary/10 flex items-center justify-center text-primary text-2xl font-bold">
                   {userFullName ? userFullName.charAt(0).toUpperCase() : 'U'}
                 </div>
               )}
@@ -141,7 +141,7 @@ export const AvatarModal: React.FC<AvatarModalProps> = ({
                   className={`h-16 rounded-2xl overflow-hidden border-2 transition-all cursor-pointer relative group ${
                     customAvatarUrl === url
                       ? 'border-primary scale-105 shadow-md ring-2 ring-primary/20'
-                      : 'border-transparent opacity-80 hover:opacity-100 hover:scale-102'
+                      : 'border-transparent opacity-80 hover:opacity-100 '
                   }`}
                 >
                   <img src={url} alt={`Avatar Preset ${idx + 1}`} className="h-full w-full object-cover" />

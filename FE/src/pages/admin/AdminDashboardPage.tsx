@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   FiTrendingUp, FiMapPin, FiDollarSign, FiCalendar,
-  FiActivity, FiArrowUpRight, FiPieChart,
+  FiActivity, FiPieChart,
   FiAlertCircle, FiDownload, FiLayers
 } from 'react-icons/fi';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
   PieChart as RePieChart, Pie, Cell
 } from 'recharts';
+import { StatCard, StatCardSkeleton } from '../../components/ui/StatCard';
 import { formatVND } from '../../utils/formatters';
 import { staffApi, type ReportOverviewDto } from '../../api/staffApi';
 import { API_BASE_URL } from '../../config/api';
@@ -170,32 +171,24 @@ const AdminDashboardPage: React.FC = () => {
         label: 'Tổng doanh thu',
         value: formatVND(report.totalRevenue),
         sub: 'Toàn hệ thống ' + timeLabel.toLowerCase(),
-        gradient: 'from-emerald-500 to-teal-600',
-        glow: 'bg-emerald-500/15',
       },
       {
         icon: FiCalendar,
         label: 'Tổng đơn đặt chỗ',
         value: String(report.totalBookings),
         sub: `${report.completedBookings} hoàn thành · ${report.canceledBookings} hủy`,
-        gradient: 'from-blue-500 to-indigo-600',
-        glow: 'bg-blue-500/15',
       },
       {
         icon: FiActivity,
         label: 'Tỷ lệ hoàn thành',
         value: `${report.totalBookings > 0 ? Math.round((report.completedBookings / report.totalBookings) * 100) : 0}%`,
         sub: `${report.completedBookings} / ${report.totalBookings} đơn thành công`,
-        gradient: 'from-violet-500 to-purple-600',
-        glow: 'bg-violet-500/15',
       },
       {
         icon: FiMapPin,
         label: 'Chi nhánh hoạt động',
         value: `${branches.filter(b => b.status === 'active').length} / ${branches.length}`,
-        sub: 'Trung tâm đang phục vụ khách',
-        gradient: 'from-amber-500 to-orange-600',
-        glow: 'bg-amber-500/15',
+        sub: 'Đang nhận đặt chỗ',
       },
     ];
   }, [report, branches, timeLabel]);
@@ -222,20 +215,16 @@ const AdminDashboardPage: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in pb-12">
       {/* Header Bar */}
-      <div className="bg-card rounded-3xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow">
+      <div className="bg-card rounded-xl border border-border p-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                Tổng Quan Toàn Hệ Thống
+                Tổng quan hệ thống
               </h1>
-              <span className="text-xs bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-3 py-1 rounded-full font-semibold flex items-center gap-1.5 shadow-sm">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                Live Database
-              </span>
             </div>
             <p className="text-xs text-muted-foreground">
-              Báo cáo hiệu suất kinh doanh, doanh thu hợp nhất và lưu lượng booking trên toàn bộ chi nhánh CoSpace.
+              Doanh thu và lượt đặt chỗ của tất cả chi nhánh.
             </p>
           </div>
 
@@ -301,43 +290,13 @@ const AdminDashboardPage: React.FC = () => {
 
       {/* KPI Cards */}
       {isLoading ? (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {[1, 2, 3, 4].map(i => (
-            <div key={i} className="bg-card rounded-3xl border border-border p-5 animate-pulse space-y-3">
-              <div className="h-10 w-10 rounded-xl bg-muted" />
-              <div className="h-7 w-28 bg-muted rounded" />
-              <div className="h-4 w-36 bg-muted rounded" />
-            </div>
-          ))}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => <StatCardSkeleton key={i} />)}
         </div>
       ) : (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {kpis.map((s) => (
-            <div
-              key={s.label}
-              className="group relative overflow-hidden bg-card rounded-3xl border border-border p-5 shadow-sm hover:shadow-md transition-all duration-300 hover:border-primary/40 hover:-translate-y-0.5"
-            >
-              <div className={`absolute -top-10 -right-10 h-28 w-28 rounded-full ${s.glow} blur-2xl opacity-60 transition-opacity group-hover:opacity-100`} />
-              <div className="relative z-10">
-                <div className={`inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br ${s.gradient} text-white shadow-md`}>
-                  <s.icon className="h-5 w-5" />
-                </div>
-                <p className="mt-4 text-2xl font-bold tracking-tight text-foreground truncate">
-                  {s.value}
-                </p>
-                <div className="mt-1 flex items-center justify-between gap-2">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    {s.label}
-                  </p>
-                  <span className="inline-flex items-center gap-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400 shrink-0">
-                    <FiArrowUpRight className="h-3.5 w-3.5" />
-                  </span>
-                </div>
-                <p className="text-[11px] text-muted-foreground mt-1.5 truncate">
-                  {s.sub}
-                </p>
-              </div>
-            </div>
+            <StatCard key={s.label} icon={s.icon} label={s.label} value={s.value} sub={s.sub} />
           ))}
         </div>
       )}
@@ -345,15 +304,15 @@ const AdminDashboardPage: React.FC = () => {
       {/* Visual Analytics Row */}
       <div className="grid gap-6 lg:grid-cols-12">
         {/* Recharts Revenue Bar Chart */}
-        <div className="lg:col-span-7 bg-card rounded-3xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow flex flex-col">
+        <div className="lg:col-span-7 bg-card rounded-xl border border-border p-6 flex flex-col">
           <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
             <div>
               <h2 className="font-bold text-base flex items-center gap-2 text-foreground">
                 <FiTrendingUp className="h-4 w-4 text-primary" />
-                {chartMetric === 'revenue' ? 'Doanh Thu Hợp Nhất Hệ Thống' : 'Lưu Lượng Khách Hàng Hệ Thống'}
+                {chartMetric === 'revenue' ? 'Doanh thu' : 'Lượt khách'}
               </h2>
               <p className="text-[11px] text-muted-foreground">
-                {chartMetric === 'revenue' ? 'Biến động dòng tiền theo thời gian trên toàn bộ chi nhánh' : 'Tổng số lượt khách và đơn đặt chỗ trên toàn bộ chi nhánh'}
+                {chartMetric === 'revenue' ? 'Tổng doanh thu của các chi nhánh theo thời gian' : 'Số lượt khách và đơn đặt chỗ của các chi nhánh'}
               </p>
             </div>
 
@@ -553,10 +512,10 @@ const AdminDashboardPage: React.FC = () => {
         </div>
 
         {/* Workspace Type Breakdown */}
-        <div className="lg:col-span-5 bg-card rounded-3xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow flex flex-col">
+        <div className="lg:col-span-5 bg-card rounded-xl border border-border p-6 flex flex-col">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-bold text-base flex items-center gap-2 text-foreground">
-              <FiPieChart className="h-4 w-4 text-primary" /> Cơ Cấu Theo Loại Không Gian
+              <FiPieChart className="h-4 w-4 text-primary" /> Theo loại không gian
             </h2>
             <span className="text-xs font-semibold text-muted-foreground bg-muted px-2.5 py-1 rounded-full">
               {typeData.reduce((s, x) => s + x.count, 0)} đơn
@@ -641,10 +600,10 @@ const AdminDashboardPage: React.FC = () => {
       </div>
 
       {/* Branch Comparison Cards */}
-      <div className="bg-card rounded-3xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow">
+      <div className="bg-card rounded-xl border border-border p-6">
         <div className="flex items-center justify-between mb-5">
           <h2 className="font-bold text-base flex items-center gap-2 text-foreground">
-            <FiMapPin className="h-4 w-4 text-primary" /> So Sánh Hiệu Suất Theo Chi Nhánh ({timeLabel})
+            <FiMapPin className="h-4 w-4 text-primary" /> Theo chi nhánh ({timeLabel.toLowerCase()})
           </h2>
           <span className="text-xs font-semibold text-muted-foreground bg-muted px-2.5 py-1 rounded-full">
             {branches.length} chi nhánh
@@ -654,7 +613,7 @@ const AdminDashboardPage: React.FC = () => {
         {isLoading ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {[1, 2, 3].map(i => (
-              <div key={i} className="h-28 bg-muted rounded-2xl animate-pulse" />
+              <div key={i} className="h-28 bg-muted rounded-lg animate-pulse" />
             ))}
           </div>
         ) : branches.length === 0 ? (
@@ -664,11 +623,11 @@ const AdminDashboardPage: React.FC = () => {
             {branches.map(b => (
               <div
                 key={b.id}
-                className="group rounded-2xl bg-muted/40 border border-border/70 p-4.5 transition-all duration-300 hover:border-primary/40 hover:bg-card hover:shadow-md"
+                className="rounded-lg bg-muted/40 border border-border/70 p-4"
               >
                 <div className="flex items-start justify-between mb-3.5">
                   <div>
-                    <p className="font-bold text-sm text-foreground group-hover:text-primary transition-colors">
+                    <p className="font-semibold text-sm text-foreground">
                       {b.name}
                     </p>
                     <p className="text-[11px] text-muted-foreground font-mono mt-0.5">{b.code}</p>
@@ -678,7 +637,6 @@ const AdminDashboardPage: React.FC = () => {
                       ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-400'
                       : 'border-border bg-muted text-muted-foreground'
                   }`}>
-                    {b.status === 'active' && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />}
                     {b.status === 'active' ? 'Hoạt động' : 'Tạm dừng'}
                   </span>
                 </div>

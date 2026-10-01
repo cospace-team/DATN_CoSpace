@@ -103,12 +103,12 @@ export const WorkspaceTable: React.FC<WorkspaceTableProps> = ({
                           onClick={() => onToggleAssigning(ws.id, ws.code)}
                           className={`px-2 py-1 rounded-lg text-xs font-semibold transition-all ${
                             assigningWsId === ws.id
-                              ? 'bg-warning text-warning-foreground animate-pulse'
+                              ? 'bg-warning text-warning-foreground'
                               : 'bg-muted hover:bg-muted-foreground/20 text-muted-foreground'
                           }`}
                           title="Click để chọn vị trí trên sơ đồ"
                         >
-                          {assigningWsId === ws.id ? 'Đang gán...' : '➕ Gán sơ đồ'}
+                          {assigningWsId === ws.id ? 'Đang gán...' : 'Gán sơ đồ'}
                         </button>
                       )}
                     </td>

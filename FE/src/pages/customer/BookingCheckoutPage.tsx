@@ -13,17 +13,8 @@ import { customerSpaceApi, type ExtraServiceResponse } from '../../lib/spaceApi'
 import { describePromotion, promotionApi, type BookingQuoteDto, type PromotionDto } from '../../api/loyaltyApi';
 import { resolveBranchId } from '../../data/branchAliases';
 import { QuantityStepper } from '../../components/ui/QuantityStepper';
+import { ServiceIcon } from '../../components/ui/ServiceIcon';
 
-const getServiceIcon = (type?: string, name?: string) => {
-  const n = (name || '').toLowerCase();
-  const t = (type || '').toLowerCase();
-  if (t === 'drink' || n.includes('cà phê') || n.includes('trà') || n.includes('nước')) return '☕';
-  if (t === 'printing' || n.includes('in') || n.includes('scan')) return '🖨️';
-  if (t === 'meal' || n.includes('bánh') || n.includes('cơm') || n.includes('ăn')) return '🥪';
-  if (n.includes('màn hình') || n.includes('máy chiếu')) return '🖥️';
-  if (n.includes('bút') || n.includes('bảng')) return '📝';
-  return '✨';
-};
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -89,10 +80,10 @@ const BookingCheckoutPage: React.FC = () => {
   const [paymentMethod, setPaymentMethod] = useState<'payos' | 'momo'>('payos');
   const [holdExpired, setHoldExpired] = useState(false);
 
-  // Before a booking is created there's no real hold yet, so this is only an advisory display —
-  // the moment activeBooking.paymentDeadlineAt comes back from the server, the countdown re-syncs
-  // to that authoritative deadline so it can never drift from what the backend will actually expire.
-  const [softDeadline] = useState(() => Date.now() + 15 * 60 * 1000);
+  // Before a booking is created there's no hold yet: the badge shows the full 15 minutes the hold
+  // will last and nothing counts down (a client-only countdown used to reach 00:00 while the guest
+  // was still reading the page and then disabled "Thanh toán ngay" for good). Once the booking
+  // exists the countdown follows activeBooking.paymentDeadlineAt, the deadline the backend enforces.
   const [timeLeft, setTimeLeft] = useState(15 * 60);
 
   // Server-side price quote: applies the membership-tier discount and the promotion code, so the
@@ -200,9 +191,11 @@ const BookingCheckoutPage: React.FC = () => {
   const grandTotal = quote ? quote.totalAmount : total;
 
   useEffect(() => {
-    const deadlineMs = activeBooking?.paymentDeadlineAt
-      ? new Date(activeBooking.paymentDeadlineAt).getTime()
-      : softDeadline;
+    if (!activeBooking?.paymentDeadlineAt) {
+      setTimeLeft(15 * 60);
+      return;
+    }
+    const deadlineMs = new Date(activeBooking.paymentDeadlineAt).getTime();
 
     const tick = () => {
       const remaining = Math.max(0, Math.round((deadlineMs - Date.now()) / 1000));
@@ -215,7 +208,7 @@ const BookingCheckoutPage: React.FC = () => {
     tick();
     const timer = setInterval(tick, 1000);
     return () => clearInterval(timer);
-  }, [activeBooking, softDeadline]);
+  }, [activeBooking]);
 
   const formatCountdown = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -344,7 +337,7 @@ const BookingCheckoutPage: React.FC = () => {
       <div className="flex items-center justify-between mb-4">
         <button 
           onClick={() => navigate(-1)} 
-          className="flex items-center gap-2 px-4 py-2 font-semibold text-sm  tracking-tight rounded-3xl border border-border bg-card text-foreground shadow-sm hover:-translate-y-1 hover:shadow-sm transition-all"
+          className="flex items-center gap-2 px-4 py-2 font-semibold text-sm tracking-tight rounded-3xl border border-border bg-card text-foreground shadow-sm hover:shadow-sm transition-all"
         >
           <FiChevronLeft className="h-5 w-5" /> Quay lại chọn chỗ
         </button>
@@ -360,7 +353,6 @@ const BookingCheckoutPage: React.FC = () => {
 
       {/* Header Banner */}
       <div className="bg-slate-900 rounded-3xl p-8 border border-border shadow-sm relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-muted rounded-full mix-blend-multiply filter blur-3xl opacity-50 translate-x-1/3 -translate-y-1/3"></div>
         
         
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -400,7 +392,7 @@ const BookingCheckoutPage: React.FC = () => {
 
             <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-6 bg-card">
               <div className="space-y-2 p-4 bg-muted/50 rounded-3xl border border-border shadow-inner">
-                <p className="text-[10px] text-foreground  tracking-tight font-semibold">
+                <p className="text-[10px] text-foreground tracking-tight font-semibold">
                   {isMultiDay ? 'Từ ngày' : 'Ngày sử dụng'}
                 </p>
                 <p className="flex items-center gap-3 font-semibold text-lg text-foreground">
@@ -423,7 +415,7 @@ const BookingCheckoutPage: React.FC = () => {
                   </>
                 ) : (
                   <>
-                    <p className="text-[10px] text-foreground  tracking-tight font-semibold">Khung giờ</p>
+                    <p className="text-[10px] text-foreground tracking-tight font-semibold">Khung giờ</p>
                     <div className="flex items-center gap-3 font-semibold text-lg text-foreground">
                       <div className="p-2 bg-card border border-border rounded-lg shadow-sm"><FiClock className="text-foreground h-5 w-5" /></div>
                       <span>{String(startHour).padStart(2, '0')}:00 → {String(endHour).padStart(2, '0')}:00</span>
@@ -444,12 +436,11 @@ const BookingCheckoutPage: React.FC = () => {
               </h3>
               <div className="space-y-4">
                 {addons.map(addon => {
-                  const serviceIcon = getServiceIcon(addon.unit, addon.name);
                   return (
                     <div key={addon.serviceId} className="flex items-center justify-between p-4 rounded-3xl border border-border bg-muted/50 hover:bg-muted/50 transition-colors">
                       <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-3xl bg-card border border-border text-foreground flex items-center justify-center text-xl shadow-sm">
-                          {serviceIcon}
+                        <div className="h-12 w-12 rounded-xl bg-card border border-border text-muted-foreground flex items-center justify-center">
+                          <ServiceIcon name={addon.name} className="h-5 w-5" />
                         </div>
                         <div>
                           <p className="font-semibold text-lg text-foreground">{addon.name}</p>
@@ -564,7 +555,7 @@ const BookingCheckoutPage: React.FC = () => {
             <div className="space-y-4">
               {/* PayOS VietQR Option */}
               <label className={`flex items-center justify-between p-4 rounded-3xl border-4 cursor-pointer transition-all ${
-                paymentMethod === 'payos' ? 'border-[#0052cc] bg-blue-50/20 dark:bg-blue-950/20 shadow-sm' : 'border-border hover:-translate-y-1 hover:shadow-sm'
+                paymentMethod === 'payos' ? 'border-[#0052cc] bg-blue-50/20 dark:bg-blue-950/20 shadow-sm' : 'border-border hover:shadow-sm'
               }`}>
                 <div className="flex items-center gap-4">
                   <input 
@@ -589,7 +580,7 @@ const BookingCheckoutPage: React.FC = () => {
               </label>
 
               <label className={`flex items-center justify-between p-4 rounded-3xl border-4 cursor-pointer transition-all ${
-                paymentMethod === 'momo' ? 'border-[#A50064] bg-muted/5 shadow-sm' : 'border-border hover:-translate-y-1 hover:shadow-sm'
+                paymentMethod === 'momo' ? 'border-[#A50064] bg-muted/5 shadow-sm' : 'border-border hover:shadow-sm'
               }`}>
                 <div className="flex items-center gap-4">
                   <input 
@@ -671,7 +662,7 @@ const BookingCheckoutPage: React.FC = () => {
                 <div className="flex justify-between items-end">
                   <div>
                     <span className="font-semibold text-lg block text-foreground ">Tổng cộng</span>
-                    <span className="text-[10px] font-medium text-foreground/50  tracking-tight">Đã bao gồm VAT</span>
+                    <span className="text-[10px] font-medium text-foreground/50 tracking-tight">Đã bao gồm VAT</span>
                   </div>
                   <span className="font-semibold text-3xl text-foreground font-mono">{formatVND(grandTotal)}</span>
                 </div>
@@ -685,7 +676,7 @@ const BookingCheckoutPage: React.FC = () => {
               <button 
                 onClick={handleCreateBooking} 
                 disabled={isProcessing || timeLeft <= 0 || (!activeBooking && !quote)}
-                className={`w-full py-5 text-lg font-semibold tracking-tight border border-border rounded-3xl shadow-sm hover:-translate-y-1 hover:shadow-sm transition-all flex justify-center items-center gap-3 ${
+                className={`w-full py-5 text-lg font-semibold tracking-tight border border-border rounded-3xl shadow-sm hover:shadow-sm transition-all flex justify-center items-center gap-3 ${
                   isProcessing || timeLeft <= 0 || (!activeBooking && !quote) ? 'bg-gray-600 text-white opacity-50 cursor-not-allowed' : 'bg-[#A50064] text-white hover:bg-[#8A0053]'
                 }`}
               >

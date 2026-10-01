@@ -58,17 +58,20 @@ public class CheckinService {
 
         boolean isMultiDayPass = BookingExtensionService.isMultiDayPass(booking);
 
-        // 2. Validate booking status
-        if (!isMultiDayPass && booking.getStatus() != BookingStatus.CONFIRMED) {
-            throw new IllegalArgumentException("Vé chưa được thanh toán/xác nhận hoặc đã hoàn tất (Trạng thái: " + booking.getStatus() + ").");
-        }
-        if (isMultiDayPass && booking.getStatus() != BookingStatus.CONFIRMED && booking.getStatus() != BookingStatus.CHECKED_IN) {
-            throw new IllegalArgumentException("Gói đặt chỗ dài hạn chưa hợp lệ để Check-in (Trạng thái: " + booking.getStatus() + ").");
-        }
-
-        // 3. Check if already checked in
+        // 2. Already checked in (checked first: a CHECKED_IN booking would otherwise be reported
+        // by the status check below as "not paid or already finished", which misleads the counter)
         if (checkinLogRepository.existsByBookingIdAndCheckoutAtIsNull(bookingId)) {
             throw new IllegalArgumentException("Khách hàng này đã được Check-in và đang sử dụng không gian.");
+        }
+
+        // 3. Validate booking status
+        if (!isMultiDayPass && booking.getStatus() != BookingStatus.CONFIRMED) {
+            throw new IllegalArgumentException("Vé chưa được thanh toán/xác nhận hoặc đã hoàn tất (Trạng thái: "
+                    + BookingStateMachine.label(booking.getStatus()) + ").");
+        }
+        if (isMultiDayPass && booking.getStatus() != BookingStatus.CONFIRMED && booking.getStatus() != BookingStatus.CHECKED_IN) {
+            throw new IllegalArgumentException("Gói đặt chỗ dài hạn chưa hợp lệ để Check-in (Trạng thái: "
+                    + BookingStateMachine.label(booking.getStatus()) + ").");
         }
 
         // 4. Validate time window (Rule #9 & UC-CHK-01)
@@ -76,7 +79,9 @@ public class CheckinService {
         if (now.isBefore(booking.getStartAt().minusMinutes(30))) {
             throw new IllegalArgumentException("Chưa đến giờ Check-in. Hệ thống chỉ cho phép Check-in trước giờ bắt đầu tối đa 30 phút.");
         }
-        if (!isMultiDayPass && now.isAfter(booking.getEndAt())) {
+        // A multi-day pass is closed by the lifecycle job only every few minutes; until then it is
+        // still CONFIRMED, so its end has to be enforced here as well.
+        if (now.isAfter(booking.getEndAt())) {
             throw new IllegalArgumentException("Vé đặt chỗ đã quá hạn giờ kết thúc. Không thể Check-in.");
         }
 

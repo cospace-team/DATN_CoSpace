@@ -28,7 +28,7 @@ const LoginPage: React.FC = () => {
   const [view, setView] = useState<"login" | "register">("login");
 
   useSEO({
-    title: view === "login" ? "Đăng Nhập" : "Đăng Ký Tài Khoản",
+    title: view === "login" ? "Đăng Nhập" : "Đăng ký tài khoản",
     description: "Đăng nhập tài khoản CoSpace để trải nghiệm hệ sinh thái không gian làm việc chuyên nghiệp, đặt chỗ tiện lợi.",
   });
   const [isSubmittingGoogle, setIsSubmittingGoogle] = useState(false);
@@ -128,12 +128,12 @@ const LoginPage: React.FC = () => {
     bgImage: isRegisterView 
       ? "url('https://images.unsplash.com/photo-1515187029135-18ee286d815b?auto=format&fit=crop&q=80&w=1200')"
       : "url('https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&q=80&w=1200')",
-    title: isRegisterView 
-      ? "Cộng đồng khởi nghiệp"
-      : "Không gian làm việc",
+    title: isRegisterView
+      ? "Tạo tài khoản CoSpace"
+      : "Đặt chỗ làm việc",
     description: isRegisterView
-      ? "Hệ sinh thái tối ưu cho startups, freelancer và doanh nghiệp. Trải nghiệm tối giản và hiệu quả."
-      : "Giải pháp văn phòng linh hoạt, tối ưu chi phí và tăng trưởng doanh thu vượt bậc."
+      ? "Đặt bàn, phòng họp hoặc văn phòng riêng, theo dõi đơn và kết nối với các thành viên khác."
+      : "Chọn chỗ trên sơ đồ, thanh toán online và check-in bằng mã QR tại quầy."
   };
 
   return (
@@ -144,7 +144,7 @@ const LoginPage: React.FC = () => {
         {/* Background Image with elegant overlay */}
         <div className="absolute inset-0 z-0 m-4 rounded-[2.5rem] overflow-hidden shadow-sm border border-border">
           <div 
-            className="absolute inset-0 bg-cover bg-center transition-all duration-1000 transform hover:scale-105" 
+            className="absolute inset-0 bg-cover bg-center transition-all duration-1000 transform " 
             style={{ backgroundImage: leftPanelContent.bgImage }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/40 to-transparent" />
@@ -154,7 +154,7 @@ const LoginPage: React.FC = () => {
         <div className="relative z-20 self-start mt-8 ml-8">
           <Link
             to="/"
-            className="bg-card/90 backdrop-blur-md text-foreground px-6 py-3 rounded-full shadow-sm border border-white/20 inline-flex items-center hover:opacity-90 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer group"
+            className="bg-card/90 backdrop-blur-md text-foreground px-6 py-3 rounded-full shadow-sm border border-white/20 inline-flex items-center hover:opacity-90 transition-opacity cursor-pointer group"
             title="Về trang chủ CoSpace"
           >
             <Logo iconClassName="h-6 w-6" textClassName="text-xl font-semibold tracking-tight" />
@@ -163,9 +163,6 @@ const LoginPage: React.FC = () => {
 
         {/* Dynamic Value Prop */}
         <div className="relative z-20 mt-auto ml-8 mb-8 max-w-lg space-y-6">
-          <div className="inline-block bg-card/20 backdrop-blur-md text-white px-4 py-1.5 rounded-full border border-white/20 text-xs font-medium tracking-wide">
-            CoSpace Minimalist
-          </div>
           <h1 className="text-5xl font-semibold leading-[1.1] text-white tracking-tight">
             {leftPanelContent.title}
           </h1>
@@ -173,32 +170,6 @@ const LoginPage: React.FC = () => {
             {leftPanelContent.description}
           </p>
           
-          {/* Dynamic Footer stats/avatars */}
-          {isRegisterView ? (
-            <div className="grid grid-cols-3 gap-4 pt-6">
-              <div className="bg-card/10 backdrop-blur-md p-4 rounded-2xl border border-white/10 text-white">
-                <div className="text-2xl font-semibold">25+</div>
-                <div className="text-xs font-medium text-slate-300 mt-1">Chi nhánh</div>
-              </div>
-              <div className="bg-card/10 backdrop-blur-md p-4 rounded-2xl border border-white/10 text-white">
-                <div className="text-2xl font-semibold">10k+</div>
-                <div className="text-xs font-medium text-slate-300 mt-1">Thành viên</div>
-              </div>
-              <div className="bg-card/10 backdrop-blur-md p-4 rounded-2xl border border-white/10 text-white">
-                <div className="text-2xl font-semibold">24/7</div>
-                <div className="text-xs font-medium text-slate-300 mt-1">Truy cập</div>
-              </div>
-            </div>
-          ) : (
-            <div className="mt-8 flex items-center gap-4 pt-4">
-              <div className="flex -space-x-3">
-                <img className="h-10 w-10 rounded-full border-2 border-slate-900 object-cover" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=100" alt="User" />
-                <img className="h-10 w-10 rounded-full border-2 border-slate-900 object-cover" src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=100" alt="User" />
-                <img className="h-10 w-10 rounded-full border-2 border-slate-900 object-cover" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=100" alt="User" />
-              </div>
-              <span className="text-sm font-medium text-slate-300">Hơn 10,000+ thành viên</span>
-            </div>
-          )}
         </div>
       </div>
 
@@ -210,7 +181,7 @@ const LoginPage: React.FC = () => {
           <div className="flex lg:hidden justify-center mb-8">
             <Link
               to="/"
-              className="bg-card text-foreground px-6 py-3 rounded-full shadow-sm border border-border inline-flex items-center hover:opacity-90 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer group"
+              className="bg-card text-foreground px-6 py-3 rounded-full shadow-sm border border-border inline-flex items-center hover:opacity-90 transition-opacity cursor-pointer group"
               title="Về trang chủ CoSpace"
             >
               <Logo textClassName="text-xl font-semibold tracking-tight" />

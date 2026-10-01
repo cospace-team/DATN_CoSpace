@@ -162,7 +162,6 @@ const CommunityPage: React.FC = () => {
     <div className="max-w-6xl mx-auto py-6 px-4 font-sans animate-fade-in pb-20">
       {/* Header */}
       <div className="bg-slate-900 rounded-3xl p-8 mb-8 border border-slate-800 shadow-sm relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500 rounded-full mix-blend-screen filter blur-3xl opacity-20 translate-x-1/3 -translate-y-1/3" />
         <div className="relative z-10">
           <h1 className="text-3xl md:text-4xl font-semibold text-white tracking-tight">
             Cộng đồng CoSpace
@@ -183,7 +182,7 @@ const CommunityPage: React.FC = () => {
                 onClick={() => setComposerOpen(true)}
                 className="w-full flex items-center gap-3 text-left cursor-pointer group"
               >
-                <div className="h-11 w-11 rounded-2xl bg-gradient-to-tr from-primary to-secondary text-white flex items-center justify-center font-bold shrink-0 overflow-hidden">
+                <div className="h-11 w-11 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-bold shrink-0 overflow-hidden">
                   {user?.avatarUrl ? (
                     <img src={user.avatarUrl} alt="" className="h-full w-full object-cover" />
                   ) : (
@@ -355,7 +354,7 @@ const CommunityPage: React.FC = () => {
                   >
                     <div className="flex items-start justify-between gap-3 mb-4">
                       <div className="flex items-center gap-3">
-                        <div className="h-11 w-11 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-600 text-white flex items-center justify-center font-bold shrink-0 overflow-hidden">
+                        <div className="h-11 w-11 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-bold shrink-0 overflow-hidden">
                           {post.authorAvatar ? (
                             <img src={post.authorAvatar} alt="" className="h-full w-full object-cover" />
                           ) : (
@@ -464,7 +463,7 @@ const CommunityPage: React.FC = () => {
                     className="p-3.5 rounded-2xl bg-muted/30 border border-border/60 hover:bg-muted/60 transition-colors"
                   >
                     <div className="flex items-start gap-3">
-                      <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 text-white flex items-center justify-center text-sm font-bold shrink-0 overflow-hidden">
+                      <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-sm font-bold shrink-0 overflow-hidden">
                         {p.avatar && p.avatar.startsWith("http") ? (
                           <img src={p.avatar} alt="" className="h-full w-full object-cover" />
                         ) : (
