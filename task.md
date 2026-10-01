@@ -159,3 +159,4 @@ Sử dụng ký hiệu: `[ ]` Chưa làm | `[/]` Đang làm | `[x]` Đã xong.
 - [x] **Ẩn/hiện hai bảng bên** để khung vẽ chiếm toàn bộ chiều ngang; thanh trạng thái mỏng ở đáy (số phần tử, đã gán, kích thước khung, lưới).
 - [x] **Đóng có xác nhận** khi còn thay đổi chưa lưu; trình chỉnh sửa mở toàn màn hình qua portal (trước đây lệch 24px do kế thừa `space-y-6`).
 - [x] Nhãn mặc định trong danh mục chuyển sang tiếng Việt đầy đủ: "Văn phòng riêng", "Cabin cách âm", "Không gian khác".
+- [x] **Sơ đồ demo Tầng 3 (CoSpace Nguyễn Huệ)**: mặt bằng kiểu bản vẽ kiến trúc — mặt kính, vách ngăn, cửa, hành lang, lõi thang (cầu thang bộ + 2 thang máy + WC), pantry, sảnh lễ tân; chỉ PO-301/302/303 là chỗ đặt nên lưu trong trình chỉnh sửa không tự tạo chỗ thừa. Chạy `database/seeds/layout_demo_q1_tang3.sql` (đã cập nhật luôn trong `database/seed_floor_layouts_json.sql`). Biểu tượng khóa của phần tử bị khóa giờ chỉ hiện trong trình chỉnh sửa, không còn rải trên sơ đồ khách xem.

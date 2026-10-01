@@ -492,8 +492,9 @@ const ElementRenderer: React.FC<Props> = ({
         </text>
       )}
 
-      {/* Lock indicator */}
-      {el.locked && (
+      {/* Lock indicator: only the editor (the one view that drags elements) needs it; on the
+          read-only plans it would put padlocks on every locked wall. */}
+      {el.locked && onMouseDown && (
         <text
           x={el.width - 8}
           y={12}
