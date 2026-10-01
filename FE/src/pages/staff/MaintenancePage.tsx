@@ -299,7 +299,7 @@ const MaintenancePage: React.FC = () => {
               >
                 {branches.map((b) => (
                   <option key={b.id} value={b.id}>
-                    📍 {b.name}
+                    {b.name}
                   </option>
                 ))}
               </select>
@@ -461,7 +461,7 @@ const MaintenancePage: React.FC = () => {
                 <span className="text-muted-foreground">Khả dụng (Nhấp để báo hỏng / Khóa)</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="w-3.5 h-3.5 rounded-full bg-amber-500 shadow-sm animate-pulse"></span>
+                <span className="w-3.5 h-3.5 rounded-full bg-amber-500 shadow-sm"></span>
                 <span className="text-muted-foreground font-semibold text-amber-700 dark:text-amber-400">
                   Đang bảo trì (Nhấp để mở khóa / sửa xong)
                 </span>
@@ -501,7 +501,7 @@ const MaintenancePage: React.FC = () => {
                   onChange={(e) => setListFloorFilter(e.target.value)}
                   className="input-field !pr-8 text-xs bg-muted/60"
                 >
-                  <option value="all">🏢 Tất cả các tầng</option>
+                  <option value="all">Tất cả các tầng</option>
                   {floors.map((fl) => (
                     <option key={fl.id} value={fl.id}>
                       Tầng {fl.floorNo}: {fl.name}
@@ -519,10 +519,10 @@ const MaintenancePage: React.FC = () => {
                   onChange={(e) => setStatusFilter(e.target.value as any)}
                   className="input-field !pr-8 text-xs bg-muted/60"
                 >
-                  <option value="all">⚡ Tất cả trạng thái</option>
-                  <option value="available">🟢 Đang hoạt động</option>
-                  <option value="maintenance">🟠 Đang bảo trì</option>
-                  <option value="inactive">⚪ Ngưng hoạt động</option>
+                  <option value="all">Tất cả trạng thái</option>
+                  <option value="available">Đang hoạt động</option>
+                  <option value="maintenance">Đang bảo trì</option>
+                  <option value="inactive">Ngưng hoạt động</option>
                 </select>
                 <FiChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
               </div>
@@ -574,7 +574,7 @@ const MaintenancePage: React.FC = () => {
                           </td>
                           <td className="py-3 px-4">
                             {isMaintenance ? (
-                              <span className="badge badge-warning animate-pulse inline-flex items-center gap-1">
+                              <span className="badge badge-warning inline-flex items-center gap-1">
                                 <FiTool className="h-3 w-3" /> Bảo trì (Đang khóa)
                               </span>
                             ) : ws.workspaceStatus === 'active' ? (

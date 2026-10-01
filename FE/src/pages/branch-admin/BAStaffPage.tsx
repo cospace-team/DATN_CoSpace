@@ -159,7 +159,7 @@ const BAStaffPage: React.FC = () => {
                   <tr key={s.id} className="hover:bg-muted/30 transition-colors">
                     <td className="max-w-[200px]">
                       <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-primary-foreground text-sm font-bold shrink-0 shadow-sm">
+                        <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary text-sm font-bold shrink-0">
                           {s.fullName.charAt(0)}
                         </div>
                         <span className="font-medium">{s.fullName}</span>

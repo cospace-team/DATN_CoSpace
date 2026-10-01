@@ -17,10 +17,6 @@ const formatVND = (amount: number) => {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
 };
 
-const POPULAR_BANKS = [
-  'Vietcombank', 'MB Bank', 'Techcombank', 'BIDV', 
-  'VietinBank', 'TPBank', 'VPBank', 'ACB', 'MoMo', 'ZaloPay'
-];
 
 const VietQrCheckoutPage: React.FC = () => {
   const navigate = useNavigate();
@@ -180,7 +176,7 @@ const VietQrCheckoutPage: React.FC = () => {
       {isPaidSuccess && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-card border border-border p-8 rounded-3xl max-w-md w-full shadow-2xl text-center space-y-5">
-            <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-950/60 rounded-full flex items-center justify-center mx-auto text-emerald-600 dark:text-emerald-400 animate-bounce">
+            <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-950/60 rounded-full flex items-center justify-center mx-auto text-emerald-600 dark:text-emerald-400 ">
               <FiCheckCircle className="w-12 h-12" />
             </div>
             <div className="space-y-2">
@@ -243,14 +239,10 @@ const VietQrCheckoutPage: React.FC = () => {
                 NAPAS 247
               </span>
             </div>
-            <span className="text-[11px] font-mono font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-              Trực tiếp
-            </span>
           </div>
 
           {/* QR Code Canvas Frame */}
-          <div className="p-3.5 bg-white rounded-2xl shadow-sm border border-slate-200 inline-block transition-transform hover:scale-[1.01]">
+          <div className="p-3.5 bg-white rounded-2xl shadow-sm border border-slate-200 inline-block transition-transform ">
             <VietQrImage
               remoteUrl={qrImageUrl}
               bankBin={bankBin}
@@ -262,7 +254,7 @@ const VietQrCheckoutPage: React.FC = () => {
             />
           </div>
 
-          {/* Live Scanning Telemetry */}
+          {/* Payment status */}
           <div className="space-y-2 w-full pt-1">
             <div className={`flex items-center justify-center gap-2 text-xs font-medium py-2.5 px-3 rounded-xl border transition-all ${
               paymentStep === 'DETECTING'
@@ -293,37 +285,18 @@ const VietQrCheckoutPage: React.FC = () => {
             </div>
             <p className="text-[11px] text-muted-foreground">
               {paymentStep === 'DETECTING'
-                ? 'Vui lòng giữ nguyên màn hình, đang liên kết trạng thái ngân hàng...'
-                : 'Mã QR đã nhúng chính xác số tài khoản, số tiền và mã đơn.'}
+                ? 'Đang kiểm tra trạng thái thanh toán...'
+                : 'Mã QR đã có sẵn số tài khoản, số tiền và nội dung chuyển khoản.'}
             </p>
           </div>
 
-          {/* Supported Banks Chips */}
-          <div className="w-full pt-3 border-t border-border/80">
-            <p className="text-[11px] text-muted-foreground mb-2 text-left">
-              Hỗ trợ quét qua ứng dụng của mọi ngân hàng:
-            </p>
-            <div className="flex flex-wrap gap-1.5 justify-start">
-              {POPULAR_BANKS.map((b) => (
-                <span 
-                  key={b} 
-                  className="text-[10px] font-medium bg-muted/60 text-muted-foreground px-2 py-0.5 rounded-md border border-border/50"
-                >
-                  {b}
-                </span>
-              ))}
-              <span className="text-[10px] text-muted-foreground font-medium px-1 py-0.5">
-                +40 ngân hàng khác
-              </span>
-            </div>
-          </div>
         </div>
 
         {/* Right Column: Transfer Info & Payment Instructions */}
         <div className="lg:col-span-7 space-y-6">
           
           {/* Amount Overview Card */}
-          <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 text-white shadow-sm relative overflow-hidden">
+          <div className="bg-slate-900 rounded-xl p-6 text-white relative overflow-hidden">
             <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <span className="text-xs text-blue-200/80 uppercase tracking-wider block font-medium">
@@ -430,7 +403,7 @@ const VietQrCheckoutPage: React.FC = () => {
                 <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300 font-bold flex items-center justify-center text-[11px]">
                   1
                 </span>
-                <span className="font-semibold text-foreground">Mở App Ngân Hàng</span>
+                <span className="font-semibold text-foreground">Mở app ngân hàng</span>
                 <span className="text-muted-foreground text-[11px] leading-relaxed">
                   Đăng nhập vào app ngân hàng hoặc ví điện tử bất kỳ trên điện thoại của bạn.
                 </span>

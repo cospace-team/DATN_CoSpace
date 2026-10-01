@@ -4,6 +4,7 @@ import { formatVND } from '../../../utils/formatters';
 import { Card, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Badge } from '../../../components/ui/badge';
 import { Skeleton } from '../../../components/ui/Skeleton';
+import { ServiceIcon, serviceTypeLabel } from '../../../components/ui/ServiceIcon';
 import type { ExtraServiceDto } from '../../../api/staffApi';
 
 interface ExtraServicesTabProps {
@@ -90,15 +91,8 @@ export const ExtraServicesTab: React.FC<ExtraServicesTabProps> = ({
                     </td>
                     <td className="px-6 py-4">
                       <Badge variant="neutral" className="gap-1 font-medium text-xs">
-                        <span>
-                          {svc.serviceType === 'drink' ? '☕'
-                            : svc.serviceType === 'meal' ? '🥐'
-                            : svc.serviceType === 'printing' ? '🖨️'
-                            : svc.serviceType === 'equipment' ? '📽️'
-                            : svc.serviceType === 'facility' ? '🚪'
-                            : '✨'}
-                        </span>
-                        <span className="capitalize">{svc.serviceType}</span>
+                        <ServiceIcon type={svc.serviceType} name={svc.name} className="h-3.5 w-3.5" />
+                        <span>{serviceTypeLabel(svc.serviceType)}</span>
                       </Badge>
                     </td>
                     <td className="px-6 py-4 text-muted-foreground font-medium">{svc.unit}</td>

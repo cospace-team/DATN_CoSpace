@@ -7,6 +7,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { formatTime, formatVND, bookingStatusLabel, bookingStatusColor } from '../../utils/formatters';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { StatCard } from '../../components/ui/StatCard';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
 import { staffApi, StaffDashboardStatsDto, BranchTodayBookingDto } from '../../api/staffApi';
 import { getBookingPackageDisplay } from '../../utils/bookingPackage';
@@ -124,15 +125,15 @@ const OperationsDashboardPage: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in pb-24 lg:pb-6">
       {/* Header */}
-      <div className="rounded-2xl border border-border bg-card p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-sm">
+      <div className="rounded-xl border border-border bg-card p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold font-heading text-foreground">Dashboard Trực Ban</h1>
+            <h1 className="text-2xl font-bold font-heading text-foreground">Trực ban</h1>
             <span className="text-xs bg-primary/10 text-primary border border-primary/20 px-3 py-1 rounded-full font-medium">
               {branchName}
             </span>
           </div>
-          <p className="text-xs text-muted-foreground">Theo dõi thời gian thực lưu lượng khách và điều phối không gian</p>
+          <p className="text-xs text-muted-foreground">Khách đến hôm nay, chỗ trống và doanh thu của chi nhánh</p>
         </div>
         
         <div className="flex items-center gap-2 bg-muted/60 p-1.5 rounded-xl border border-border/50">
@@ -162,66 +163,25 @@ const OperationsDashboardPage: React.FC = () => {
           </button>
         </div>
 
-        <div className="flex items-center gap-3 bg-primary/5 border border-primary/20 text-primary px-4 py-2.5 rounded-xl shadow-inner hidden lg:flex">
-          <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
-            <FiUsers className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Khách đang ngồi</p>
-            <p className="font-bold text-lg leading-tight text-foreground">{stats?.activeGuests || 0} khách hàng</p>
-          </div>
-        </div>
       </div>
 
-      {/* Thẻ Chỉ Số Kinh Doanh & Vận Hành */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm flex items-center gap-4 transition-all hover:shadow-md">
-          <div className="h-12 w-12 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-            <FiDollarSign className="h-6 w-6" />
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard icon={FiDollarSign} label={`Doanh thu ${timeLabel}`} value={formatVND(stats?.revenue || 0)} sub="Đã gồm dịch vụ thêm" />
+        <StatCard icon={FiTrendingUp} label="Tỷ lệ lấp đầy" value={`${stats?.occupancyRate || 0}%`}>
+          <div className="w-full bg-muted rounded-full h-1.5 mt-2 overflow-hidden">
+            <div className="bg-primary h-1.5 rounded-full transition-all duration-500" style={{ width: `${Math.min(stats?.occupancyRate || 0, 100)}%` }} />
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Doanh thu {timeLabel}</p>
-            <p className="text-xl font-bold text-foreground mt-0.5 truncate">{formatVND(stats?.revenue || 0)}</p>
-            <p className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-1 flex items-center gap-1 font-medium">
-              <FiTrendingUp /> Đã bao gồm dịch vụ
-            </p>
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm flex items-center gap-4 transition-all hover:shadow-md">
-          <div className="h-12 w-12 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-            <FiTrendingUp className="h-6 w-6" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Tỷ lệ lấp đầy</p>
-            <p className="text-xl font-bold text-foreground mt-0.5">{stats?.occupancyRate || 0}%</p>
-            <div className="w-full bg-muted rounded-full h-1.5 mt-2 overflow-hidden">
-              <div className="bg-blue-500 h-1.5 rounded-full transition-all duration-500" style={{ width: `${Math.min(stats?.occupancyRate || 0, 100)}%` }} />
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm flex items-center gap-4 transition-all hover:shadow-md">
-          <div className="h-12 w-12 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
-            <FiUsers className="h-6 w-6" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Khách đang ngồi</p>
-            <p className="text-xl font-bold text-foreground mt-0.5">{stats?.activeGuests || 0} <span className="text-xs font-normal text-muted-foreground">/ {stats?.totalCapacity || 0} chỗ</span></p>
-            <p className="text-[11px] text-muted-foreground mt-1 font-medium">Sức chứa tối đa hiện tại</p>
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm flex items-center gap-4 transition-all hover:shadow-md">
-          <div className="h-12 w-12 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-            <FiLayers className="h-6 w-6" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Bàn Trống / Tổng số</p>
-            <p className="text-xl font-bold text-foreground mt-0.5">{stats?.availableWs || 0} <span className="text-xs font-normal text-muted-foreground">/ {stats?.totalWs || 0} bàn</span></p>
-            <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1 font-medium">Sẵn sàng đón khách</p>
-          </div>
-        </div>
+        </StatCard>
+        <StatCard
+          icon={FiUsers}
+          label="Khách đang ngồi"
+          value={<>{stats?.activeGuests || 0} <span className="text-sm font-normal text-muted-foreground">/ {stats?.totalCapacity || 0} chỗ</span></>}
+        />
+        <StatCard
+          icon={FiLayers}
+          label="Bàn trống"
+          value={<>{stats?.availableWs || 0} <span className="text-sm font-normal text-muted-foreground">/ {stats?.totalWs || 0} bàn</span></>}
+        />
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
@@ -301,10 +261,10 @@ const OperationsDashboardPage: React.FC = () => {
           <div className="rounded-2xl border border-border bg-card p-5 shadow-sm h-full flex flex-col">
             {/* Header Lịch Trình & Filter Tabs */}
             <div className="flex flex-col gap-4 mb-5 pb-4 border-b border-border">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <div className="flex flex-col 2xl:flex-row justify-between items-start 2xl:items-center gap-3">
                 <div className="flex items-center gap-2">
-                  <h2 className="font-bold text-base flex items-center gap-2 text-foreground">
-                    <FiClock className="text-primary" /> Lịch Trình Khách Đến Hôm Nay
+                  <h2 className="font-bold text-base flex items-center gap-2 text-foreground whitespace-nowrap">
+                    <FiClock className="text-primary" /> Khách đến hôm nay
                     <span className="text-xs font-semibold bg-muted px-2 py-0.5 rounded-full text-muted-foreground">
                       {counts.all}
                     </span>
@@ -312,7 +272,7 @@ const OperationsDashboardPage: React.FC = () => {
                   <button 
                     onClick={() => navigate('/staff/checkin')}
                     className="hidden sm:inline-flex items-center gap-1 text-xs text-primary hover:underline font-medium ml-2"
-                    title="Mở Quầy Check-in"
+                    title="Mở quầy check-in"
                   >
                     <span>Quầy Check-in</span>
                     <FiArrowRight className="w-3 h-3" />
@@ -320,7 +280,7 @@ const OperationsDashboardPage: React.FC = () => {
                 </div>
 
                 {/* Tabs trạng thái có số lượng */}
-                <div className="flex gap-1 bg-muted/60 p-1 rounded-xl w-full sm:w-auto border border-border/50">
+                <div className="flex gap-1 bg-muted/60 p-1 rounded-xl w-full 2xl:w-auto border border-border/50 overflow-x-auto">
                   <button 
                     onClick={() => setActiveTab('all')} 
                     className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${

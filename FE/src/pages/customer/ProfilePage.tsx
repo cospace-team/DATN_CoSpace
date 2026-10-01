@@ -221,12 +221,12 @@ const ProfilePage: React.FC = () => {
   const [realStats, setRealStats] = useState({
     totalBookings: 0,
     totalHours: 0,
-    tier: 'Bronze Member',
+    tier: 'Hạng Bronze',
     memberSince: 'Năm 2026',
   });
   // Server-side membership tier; realStats.tier stays as the offline fallback.
   const [membership, setMembership] = useState<MyMembershipDto | null>(null);
-  const tierLabel = membership?.currentTier ? `${membership.currentTier.name} Member` : realStats.tier;
+  const tierLabel = membership?.currentTier ? `Hạng ${membership.currentTier.name}` : realStats.tier;
 
   // Sync user data when loaded
   useEffect(() => {
@@ -388,10 +388,10 @@ const ProfilePage: React.FC = () => {
             }
           });
 
-          let tier = 'Bronze Member';
-          if (totalBookings >= 20 || totalHours >= 80) tier = 'Platinum Member';
-          else if (totalBookings >= 10 || totalHours >= 40) tier = 'Gold Member';
-          else if (totalBookings >= 3 || totalHours >= 10) tier = 'Silver Member';
+          let tier = 'Hạng Bronze';
+          if (totalBookings >= 20 || totalHours >= 80) tier = 'Hạng Platinum';
+          else if (totalBookings >= 10 || totalHours >= 40) tier = 'Hạng Gold';
+          else if (totalBookings >= 3 || totalHours >= 10) tier = 'Hạng Silver';
 
           let memberSince = 'Năm 2026';
           if (user?.createdAt) {
@@ -960,7 +960,7 @@ const ProfilePage: React.FC = () => {
             onError={e => {
               const parent = e.currentTarget.parentElement;
               if (parent) {
-                parent.innerHTML = `<div class="h-full w-full bg-gradient-to-tr from-indigo-500 to-purple-600 text-white flex items-center justify-center font-bold ${textClass}">${
+                parent.innerHTML = `<div class="h-full w-full bg-primary/10 text-primary flex items-center justify-center font-bold ${textClass}">${
                   name ? name.charAt(0).toUpperCase() : 'U'
                 }</div>`;
               }
@@ -979,7 +979,7 @@ const ProfilePage: React.FC = () => {
 
     return (
       <div
-        className={`${sizeClass} rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-600 text-white flex items-center justify-center font-bold shadow-md shrink-0 ${textClass}`}
+        className={`${sizeClass} rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-bold shrink-0 ${textClass}`}
       >
         {letter}
       </div>
@@ -1000,8 +1000,6 @@ const ProfilePage: React.FC = () => {
         >
           {/* Glass / Mesh Overlay Glows */}
           <div className="absolute inset-0 bg-black/10 backdrop-blur-[2px]" />
-          <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl transform translate-x-1/3 -translate-y-1/3 pointer-events-none" />
-          <div className="absolute bottom-0 left-1/4 w-64 h-64 bg-white/10 rounded-full blur-2xl transform translate-y-1/2 pointer-events-none" />
 
           {/* Banner Preset Switcher */}
           <div className="absolute top-4 right-4 z-20 flex items-center gap-1.5 bg-black/30 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/20">
@@ -1013,7 +1011,7 @@ const ProfilePage: React.FC = () => {
                 key={theme.id}
                 onClick={() => setSelectedTheme(theme.id)}
                 title={theme.name}
-                className={`w-5 h-5 rounded-full ${theme.accent} border-2 transition-transform hover:scale-110 ${
+                className={`w-5 h-5 rounded-full ${theme.accent} border-2 transition-transform  ${
                   selectedTheme === theme.id
                     ? 'border-white scale-110 shadow-sm'
                     : 'border-transparent opacity-75'
@@ -1037,7 +1035,7 @@ const ProfilePage: React.FC = () => {
                       className="h-full w-full object-cover rounded-2xl"
                     />
                   ) : (
-                    <div className="h-full w-full bg-gradient-to-tr from-primary to-secondary rounded-2xl flex items-center justify-center text-white text-3xl sm:text-4xl font-bold">
+                    <div className="h-full w-full bg-primary/10 rounded-2xl flex items-center justify-center text-primary text-3xl sm:text-4xl font-bold">
                       {user?.fullName ? user.fullName.charAt(0).toUpperCase() : 'U'}
                     </div>
                   )}
@@ -1053,11 +1051,6 @@ const ProfilePage: React.FC = () => {
                   </button>
                 </div>
 
-                {/* Online / Active badge */}
-                <div
-                  className="absolute bottom-1 right-1 w-5 h-5 rounded-full bg-emerald-500 border-2 border-card shadow-sm"
-                  title="Đang hoạt động"
-                />
               </div>
 
               <div className="space-y-1.5">
@@ -1743,7 +1736,7 @@ const ProfilePage: React.FC = () => {
               </div>
 
               <div className="mt-3.5 pt-3 border-t border-border/60 flex items-center justify-between text-[11px] text-muted-foreground">
-                <span>💡 Nhập hoặc dán liên kết trực tiếp và bấm <strong>Lưu</strong>.</span>
+                <span>Nhập hoặc dán liên kết trực tiếp và bấm <strong>Lưu</strong>.</span>
               </div>
             </section>
           </div>

@@ -320,7 +320,7 @@ const AuditLogPage: React.FC = () => {
                       <td className="text-sm font-mono whitespace-nowrap">{formatDateTime(l.createdAt)}</td>
                       <td>
                         <div className="flex items-center gap-2">
-                          <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
+                          <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary text-xs font-bold shrink-0">
                             {initials}
                           </div>
                           <span className="font-medium text-sm">{l.actorName || (l as any).actor_name || 'Hệ thống'}</span>

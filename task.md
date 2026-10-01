@@ -143,3 +143,11 @@ Sử dụng ký hiệu: `[ ]` Chưa làm | `[/]` Đang làm | `[x]` Đã xong.
 - [x] **Lịch sử đặt chỗ**: gói nhiều ngày hiện khoảng ngày; ẩn nút "Hủy" khi đơn đã bắt đầu (server không cho hủy online).
 - [x] **FE env**: `VITE_SUPABASE_URL` / `VITE_API_BASE_URL` để trống không còn làm trắng trang; `/api/tags` ở Hồ sơ gửi kèm token.
 - [x] **Kiểm thử**: 310/310 unit test BE pass; build FE pass; Playwright duyệt 34 trang × 4 vai trò không lỗi console/API; E2E đặt chỗ → VietQR → lịch sử, check-in → dịch vụ → thu tiền → check-out, hủy → hoàn voucher chạy pass trên Postgres 16.
+
+## 🧹 14. Dọn "AI slop" trên giao diện
+- [x] **Nội dung bịa / sai sự thật**: bỏ "10,000+ thành viên", "25+ chi nhánh", "24/7", avatar ảnh stock ở trang đăng nhập; bỏ nhãn "Phổ biến" không có số liệu; thay tiện ích tự nghĩ ra ở bảng giá (Smart TV 4K, khóa từ 24/7, địa chỉ ĐKKD…) bằng tính năng hệ thống thật sự có; sửa claim "hoàn tiền tự động, không chờ duyệt" và "sơ đồ realtime" cho đúng nghiệp vụ.
+- [x] **Chỉ báo giả**: bỏ badge "Live Database", "Online", "Trực tiếp", chấm "đang hoạt động" trên avatar, mũi tên tăng trưởng không có dữ liệu xu hướng; trạng thái máy chủ chỉ hiện khi mất kết nối.
+- [x] **Thẻ KPI**: component `StatCard` dùng chung cho các dashboard (admin, chi nhánh, trực ban, báo cáo) thay cho icon gradient cầu vồng + đốm glow; số doanh thu không còn bị cắt.
+- [x] **Trang trí thừa**: bỏ avatar gradient tím–chàm, đốm blur, watermark chữ viền, sọc chéo, nhãn xiên, hiệu ứng nhấc/phóng khi rê chuột, chấm nhấp nháy/nảy không mang thông tin.
+- [x] **Chữ & emoji**: tiêu đề tiếng Việt viết sentence case thay vì Title Case, bỏ chữ IN HOA tràn lan ở trang chủ; thay emoji trong nhãn trạng thái/menu bằng chữ hoặc icon `react-icons` (`ServiceIcon`).
+- [x] **Sửa kèm**: navbar trang chủ luôn nền đặc (logo/menu trước đây chìm trên hero tối); tab lọc "Khách đến hôm nay" không còn tràn; thanh tiến độ báo cáo theo loại không gian trước đây không hiện màu.

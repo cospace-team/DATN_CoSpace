@@ -141,7 +141,7 @@ const ElementLibrary: React.FC<Props> = ({ onDragStart }) => {
 
       {/* Helper Footer */}
       <div className="p-3 border-t border-border bg-muted/20 text-[10px] text-muted-foreground flex items-center gap-2">
-        <span className="h-2 w-2 rounded-full bg-primary shrink-0 animate-ping" />
+        <span className="h-2 w-2 rounded-full bg-primary shrink-0" />
         <span>Kéo thả vật tư lên canvas để vẽ layout</span>
       </div>
     </div>

@@ -891,7 +891,7 @@ const ExplorePage: React.FC = () => {
                       className={`group relative overflow-hidden bg-card rounded-3xl border transition-all duration-300 p-5 cursor-pointer flex flex-col h-full ${
                         selectedWs === ws.id
                           ? "border-primary ring-2 ring-primary/25 shadow-lg -translate-y-1 bg-primary/[0.02]"
-                          : "border-border shadow-sm hover:-translate-y-1 hover:shadow-md hover:border-primary/40"
+                          : "border-border shadow-sm  hover:shadow-md hover:border-primary/40"
                       }`}
                     >
                       {ws.images && ws.images.length > 0 && (

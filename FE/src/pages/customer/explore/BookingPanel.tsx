@@ -5,6 +5,7 @@ import { formatVND, durationUnitLabel } from '../../../utils/formatters';
 import type { ExtraServiceDto } from '../../../api/addonApi';
 import { QuantityStepper } from '../../../components/ui/QuantityStepper';
 import WorkspaceGallery from '../../../components/workspace/WorkspaceGallery';
+import { ServiceIcon } from '../../../components/ui/ServiceIcon';
 import type { ExtraServiceResponse } from '../../../lib/spaceApi';
 
 export type DurationUnitMode = 'hour' | 'day' | 'week';
@@ -30,16 +31,6 @@ export interface UnitPrice {
   duration_unit: PriceUnit;
 }
 
-export const getServiceIcon = (type?: string, name?: string) => {
-  const n = (name || '').toLowerCase();
-  const t = (type || '').toLowerCase();
-  if (t === 'drink' || n.includes('cà phê') || n.includes('trà') || n.includes('nước')) return '☕';
-  if (t === 'printing' || n.includes('in') || n.includes('scan')) return '🖨️';
-  if (t === 'meal' || n.includes('bánh') || n.includes('cơm') || n.includes('ăn')) return '🥪';
-  if (n.includes('màn hình') || n.includes('máy chiếu')) return '🖥️';
-  if (n.includes('bút') || n.includes('bảng')) return '📝';
-  return '✨';
-};
 
 const UNIT_LABELS: Record<DurationUnitMode, string> = {
   hour: 'Giờ',
@@ -402,7 +393,7 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
                         className="rounded accent-[var(--brand-primary)]"
                       />
                       <span className="flex items-center gap-1.5 min-w-0">
-                        {getServiceIcon(s.unit || s.serviceType, s.name)}
+                        <ServiceIcon type={s.serviceType} name={s.name} className="h-4 w-4 shrink-0 text-muted-foreground" />
                         <span className="truncate">{s.name}</span>
                       </span>
                     </label>

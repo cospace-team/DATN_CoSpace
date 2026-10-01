@@ -703,19 +703,18 @@ const WalkinBookingPage: React.FC = () => {
 
     return (
       <div className="flex flex-col items-center justify-center min-h-[75vh] p-6 animate-fade-in">
-        <div className="w-full max-w-md bg-card border border-border rounded-3xl p-8 shadow-2xl text-center relative overflow-hidden">
-          <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-emerald-400 via-teal-500 to-primary"></div>
+        <div className="w-full max-w-md bg-card border border-border rounded-xl p-8 text-center">
           
           <div className="w-20 h-20 bg-emerald-500/10 text-emerald-500 rounded-3xl flex items-center justify-center mx-auto mb-5 border border-emerald-500/20 shadow-inner">
-            <FiCheckCircle className="h-10 w-10 animate-bounce" />
+            <FiCheckCircle className="h-10 w-10" />
           </div>
 
           <span className="px-3.5 py-1 rounded-full text-xs font-mono font-bold bg-primary/10 text-primary border border-primary/20 tracking-wider">
-            POS RECEIPT: {createdBookingCode}
+            Mã đơn: {createdBookingCode}
           </span>
 
           <h2 className="text-2xl font-bold font-heading text-foreground mt-3">
-            Đặt Chỗ Thành Công!
+            Đặt chỗ thành công!
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
             Đã thanh toán ({paymentLabel}) và hoàn tất thủ tục xếp chỗ.
@@ -765,7 +764,7 @@ const WalkinBookingPage: React.FC = () => {
               onClick={handleReset}
               className="btn btn-primary w-full py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-primary/20"
             >
-              <FiCheck className="h-4 w-4" /> Tạo Đơn Walk-in Mới
+              <FiCheck className="h-4 w-4" /> Tạo đơn walk-in Mới
             </button>
           </div>
         </div>
@@ -784,19 +783,13 @@ const WalkinBookingPage: React.FC = () => {
     <div className="space-y-6 max-w-7xl mx-auto pb-24 animate-fade-in relative">
       
       {/* ── 1. COMPACT POS HEADER ── */}
-      <div className="rounded-3xl border border-border/80 bg-gradient-to-r from-card via-card to-primary/5 p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="rounded-xl border border-border bg-card p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-              POS Terminal • Quầy Lễ Tân
-            </span>
-          </div>
-          <h1 className="text-xl md:text-2xl font-black font-heading text-foreground mt-0.5 tracking-tight flex items-center gap-2.5">
-            Đặt Chỗ Nhanh Tại Quầy
+          <h1 className="text-xl md:text-2xl font-bold font-heading text-foreground tracking-tight">
+            Đặt chỗ tại quầy
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Quy trình dọc 3 bước: 1. Khách & Thời gian ➔ 2. Chọn Chỗ (Sơ đồ / Danh sách) ➔ 3. Hóa đơn & Thu ngân POS.
+            Chọn khách và thời lượng, chọn chỗ trên sơ đồ, rồi thu tiền.
           </p>
         </div>
 
@@ -859,7 +852,7 @@ const WalkinBookingPage: React.FC = () => {
                 1
               </div>
               <h2 className="font-bold text-sm text-foreground font-heading flex items-center gap-1.5">
-                <FiUser className="text-primary h-3.5 w-3.5" /> Thông Tin Khách Hàng
+                <FiUser className="text-primary h-3.5 w-3.5" /> Thông tin khách hàng
               </h2>
             </div>
 
@@ -903,12 +896,12 @@ const WalkinBookingPage: React.FC = () => {
           {customerMode === 'quick' && (
             <div className="p-3 bg-primary/5 border border-primary/20 rounded-2xl flex items-center justify-between gap-3 animate-fade-in">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-primary/20 text-primary flex items-center justify-center font-bold text-sm">
-                  ⚡
+                <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                  <FiZap className="h-4 w-4" />
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-foreground">Khách vãng lai tại quầy (Mặc định)</p>
-                  <p className="text-[11px] text-muted-foreground">Không cần nhập hồ sơ, xuất hóa đơn nhanh chóng.</p>
+                  <p className="text-xs font-bold text-foreground">Khách vãng lai</p>
+                  <p className="text-[11px] text-muted-foreground">Không cần tạo hồ sơ; có thể ghi lại số điện thoại.</p>
                 </div>
               </div>
               <div className="flex items-center gap-1.5">
@@ -1031,7 +1024,7 @@ const WalkinBookingPage: React.FC = () => {
                 2
               </div>
               <h2 className="font-bold text-sm text-foreground font-heading flex items-center gap-1.5">
-                <FiClock className="text-primary h-3.5 w-3.5" /> Thời Lượng & Giờ Trả Bàn
+                <FiClock className="text-primary h-3.5 w-3.5" /> Thời lượng
               </h2>
             </div>
 
@@ -1044,7 +1037,7 @@ const WalkinBookingPage: React.FC = () => {
                   timeMode === 'preset' ? 'bg-card text-primary shadow-sm font-bold' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
-                Gói Giờ Chẵn
+                Theo giờ
               </button>
               <button
                 type="button"
@@ -1053,7 +1046,7 @@ const WalkinBookingPage: React.FC = () => {
                   timeMode === 'custom' ? 'bg-card text-primary shadow-sm font-bold' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
-                ⏱️ Tùy Chỉnh Giờ Trả
+                ⏱️ Chọn giờ trả
               </button>
             </div>
           </div>
@@ -1162,7 +1155,7 @@ const WalkinBookingPage: React.FC = () => {
             </div>
             <div>
               <h2 className="font-bold text-sm md:text-base text-foreground font-heading">
-                Sơ Đồ Mặt Bằng & Chọn Vị Trí Chỗ Ngồi
+                Chọn chỗ ngồi
               </h2>
               <p className="text-[11px] text-muted-foreground">
                 Click vào chỗ ngồi trống (màu xanh lá) để chọn và lập hóa đơn thu tiền bên dưới.
@@ -1261,7 +1254,6 @@ const WalkinBookingPage: React.FC = () => {
                   isAdmin={false}
                 />
                 <div className="absolute bottom-3 left-3 bg-background/85 backdrop-blur-md px-3 py-1.5 rounded-xl border border-border text-xs text-muted-foreground pointer-events-none shadow-sm flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping"></span>
                   <span>Chạm vào vị trí màu xanh lá để chọn chỗ cho khách</span>
                 </div>
               </>
@@ -1427,16 +1419,13 @@ const WalkinBookingPage: React.FC = () => {
             </div>
             <div>
               <h2 className="font-extrabold text-base md:text-lg text-foreground font-heading">
-                Hóa Đơn & Chốt Thanh Toán Quầy POS
+                Hóa đơn POS
               </h2>
               <p className="text-xs text-muted-foreground">
                 Kiểm tra thông tin chi tiết và thu tiền tại quầy (Tiền mặt, VietQR hoặc MoMo).
               </p>
             </div>
           </div>
-          <span className="text-[10px] font-mono font-bold px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-            REAL-TIME POS RECEIPT
-          </span>
         </div>
 
         {selectedWsInfo ? (
@@ -1486,7 +1475,7 @@ const WalkinBookingPage: React.FC = () => {
                 <div className="flex justify-between pt-2">
                   <span className="text-muted-foreground">Thời gian sử dụng:</span>
                   <span className="font-bold text-foreground">
-                    {timingInfo.displayDuration} (Từ {currentTimeStr} ➔ ~{timingInfo.displayEnd})
+                    {timingInfo.displayDuration} (từ {currentTimeStr} đến ~{timingInfo.displayEnd})
                   </span>
                 </div>
                 <div className="flex justify-between pt-2">
@@ -1602,17 +1591,17 @@ const WalkinBookingPage: React.FC = () => {
                     {paymentMethod === 'cash' ? (
                       <>
                         <FiCheck className="h-5 w-5" />
-                        <span>Xác Nhận & Thu Tiền Mặt (POS)</span>
+                        <span>Thu tiền mặt (POS)</span>
                       </>
                     ) : paymentMethod === 'vietqr' ? (
                       <>
                         <FiSmartphone className="h-5 w-5" />
-                        <span>Tạo Đơn & Mở Mã VietQR</span>
+                        <span>Tạo đơn & mở mã VietQR</span>
                       </>
                     ) : (
                       <>
                         <FiExternalLink className="h-5 w-5" />
-                        <span>Mở Cổng Thanh Toán MoMo</span>
+                        <span>Mở cổng thanh toán MoMo</span>
                       </>
                     )}
                   </>
@@ -1624,15 +1613,15 @@ const WalkinBookingPage: React.FC = () => {
         ) : (
           /* Empty / Unselected State */
           <div className="py-12 px-4 text-center rounded-2xl border border-dashed border-border bg-muted/20 space-y-3">
-            <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto text-xl font-bold">
-              💡
+            <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto">
+              <FiMapPin className="h-6 w-6" />
             </div>
             <div>
               <h3 className="font-bold text-sm md:text-base text-foreground">
-                Chưa Chọn Vị Trí Chỗ Ngồi
+                Chưa chọn chỗ ngồi
               </h3>
               <p className="text-xs text-muted-foreground max-w-md mx-auto mt-1">
-                Vui lòng chạm vào một chỗ ngồi màu xanh còn trống trên sơ đồ mặt bằng ở trên (hoặc chọn từ bảng danh sách) để hệ thống tự động lập hóa đơn quầy POS.
+                Chọn một chỗ còn trống (màu xanh) trên sơ đồ hoặc trong danh sách để lập hóa đơn.
               </p>
             </div>
           </div>
@@ -1653,7 +1642,7 @@ const WalkinBookingPage: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="font-bold text-base text-foreground font-heading">
-                    Thanh Toán VietQR Tại Quầy
+                    Thanh toán VietQR Tại Quầy
                   </h3>
                   <p className="text-xs text-muted-foreground">
                     Khách dùng ứng dụng ngân hàng quét mã để thanh toán.
@@ -1768,7 +1757,7 @@ const WalkinBookingPage: React.FC = () => {
                 title="Dùng cho Demo/Kiểm thử tức thì"
               >
                 <FiZap className="h-3.5 w-3.5 text-amber-500" />
-                <span>⚡ [Demo] Khách quét QR xong</span>
+                <span>Mô phỏng khách đã chuyển khoản</span>
               </button>
 
               {/* Manual Confirmation button */}
@@ -1779,7 +1768,7 @@ const WalkinBookingPage: React.FC = () => {
                 className="btn btn-primary btn-sm flex-1 text-xs py-2.5 rounded-xl font-bold flex items-center justify-center gap-1.5 shadow-md shadow-primary/20"
               >
                 {isConfirmingQr ? <Spinner size="sm" /> : <FiCheck className="h-4 w-4" />}
-                <span>✓ Tiền đã vào tài khoản</span>
+                <span>Đã nhận tiền chuyển khoản</span>
               </button>
             </div>
 

@@ -21,7 +21,6 @@ import {
   FiRefreshCw,
   FiCalendar,
   FiChevronDown,
-  FiWifi,
   FiMonitor,
   FiPhoneCall,
 } from "react-icons/fi";
@@ -59,22 +58,23 @@ const serviceImages: Record<string, string> = {
   private_office: "https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&q=80&w=800",
 };
 
+// What each type of space offers in the app itself — no amenity the system cannot back up.
 const serviceFeatures: Record<string, string[]> = {
   desk: [
-    "Không gian làm việc mở tràn ngập ánh sáng",
-    "Nguồn điện & Internet cáp quang tốc độ cao",
-    "Giao lưu kết nối cộng đồng năng động"
+    "Chọn đúng bàn trên sơ đồ tầng",
+    "Đặt theo giờ, ngày, tuần hoặc tháng",
+    "Gọi đồ uống, in ấn ngay trong ứng dụng",
   ],
   meeting_room: [
-    "Màn hình tương tác Smart TV 4K",
-    "Thiết bị Zoom/Teams Meeting hiện đại",
-    "Phục vụ trà & cà phê miễn phí"
+    "Đặt theo giờ, gia hạn khi họp kéo dài",
+    "Thuê thêm máy chiếu, bảng tương tác",
+    "Check-in bằng mã QR tại quầy",
   ],
   private_office: [
-    "Truy cập khóa từ an toàn 24/7",
-    "Miễn phí giờ phòng họp hàng tháng",
-    "Địa chỉ đăng ký kinh doanh chính thức"
-  ]
+    "Thuê theo tuần hoặc theo tháng",
+    "Một mã check-in cho cả thời gian thuê",
+    "Hóa đơn và lịch sử thanh toán trong tài khoản",
+  ],
 };
 
 const defaultBranchImages = [
@@ -104,21 +104,21 @@ const tourTimeSlots = ["09:00 - 10:00", "10:00 - 11:00", "14:00 - 15:00", "16:00
 
 const bookingSteps = [
   { icon: FiMapPin, title: "Chọn chi nhánh", text: "Lọc theo thành phố, giờ mở cửa và loại không gian phù hợp." },
-  { icon: FiLayout, title: "Chọn chỗ trên sơ đồ", text: "Xem trống/bận theo thời gian thực và chọn đúng vị trí bạn muốn." },
+  { icon: FiLayout, title: "Chọn chỗ trên sơ đồ", text: "Xem chỗ nào còn trống trong khung giờ bạn cần và chọn đúng vị trí." },
   { icon: FiCreditCard, title: "Thanh toán online", text: "Thanh toán qua MoMo hoặc VietQR. Chỗ được giữ 15 phút trong lúc bạn thanh toán." },
   { icon: FiSmartphone, title: "Check-in bằng mã QR", text: "Đưa mã đặt chỗ cho lễ tân quét và bắt đầu làm việc ngay." },
 ];
 
 const whyUsFeatures = [
-  { icon: FiLayout, title: "Sơ đồ realtime", text: "Trạng thái trống/bận từng chỗ ngồi cập nhật tức thì." },
-  { icon: FiCreditCard, title: "Thanh toán 1 chạm", text: "MoMo hoặc VietQR, hóa đơn lưu sẵn trong tài khoản." },
+  { icon: FiLayout, title: "Sơ đồ chỗ ngồi", text: "Thấy chỗ trống, đã đặt hay đang bảo trì theo từng khung giờ." },
+  { icon: FiCreditCard, title: "Thanh toán online", text: "VietQR hoặc MoMo; đơn được giữ chỗ 15 phút trong lúc thanh toán." },
   { icon: FiSmartphone, title: "Check-in QR", text: "Mỗi đơn một mã riêng, lễ tân quét là vào làm việc." },
-  { icon: FiRefreshCw, title: "Hoàn tiền tự động", text: "Hủy đơn là biết ngay số tiền hoàn, không chờ duyệt." },
+  { icon: FiRefreshCw, title: "Hủy đơn rõ ràng", text: "Biết trước tỷ lệ hoàn tiền theo chính sách hủy của chi nhánh." },
 ];
 
 const aboutFeatures = [
-  { icon: FiWifi, label: "Internet tốc độ cao" },
-  { icon: FiMonitor, label: "Phòng họp hiện đại" },
+  { icon: FiMonitor, label: "Bàn, phòng họp, văn phòng" },
+  { icon: FiCreditCard, label: "Đặt và thanh toán online" },
   { icon: FiUsers, label: "Kết nối đối tác" },
 ];
 
@@ -129,7 +129,7 @@ const faqs = [
   },
   {
     q: "Nếu cần hủy đặt chỗ thì sao?",
-    a: "Bạn tự gửi yêu cầu hủy trong ứng dụng. Hệ thống tự động áp dụng chính sách hủy của chi nhánh, tính số tiền hoàn và thông báo ngay cho bạn mà không cần chờ duyệt.",
+    a: "Bạn có thể hủy trong ứng dụng trước giờ bắt đầu. Số tiền hoàn được tính ngay theo chính sách hủy của chi nhánh, sau đó chi nhánh hoàn lại qua chuyển khoản, tiền mặt hoặc voucher. Khi đơn đã đến giờ sử dụng, vui lòng liên hệ quầy lễ tân.",
   },
   {
     q: "Đơn đặt chỗ chưa thanh toán được giữ bao lâu?",
@@ -137,7 +137,7 @@ const faqs = [
   },
   {
     q: "Tôi có thể gọi thêm dịch vụ khi đang làm việc không?",
-    a: "Có. Lễ tân có thể thêm đồ uống, in ấn hoặc các dịch vụ khác vào đơn của bạn trong suốt thời gian sử dụng.",
+    a: "Có. Bạn tự gọi đồ uống, in ấn hay thiết bị trong mục Lịch sử đặt chỗ, hoặc nhờ lễ tân thêm vào đơn. Phần gọi thêm được thanh toán bằng VietQR hoặc tiền mặt trước khi check-out.",
   },
 ];
 
@@ -187,11 +187,9 @@ const darkInputClass =
 
 const labelClass = "block text-sm font-medium text-foreground mb-1.5";
 
-// Slanted accent tag used as the eyebrow above every section title.
+// Short label above a section title.
 const Eyebrow: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <span className="inline-block -skew-x-12 bg-primary px-3.5 py-1 mb-4">
-    <span className="block skew-x-12 text-xs font-bold uppercase tracking-[0.18em] text-primary-foreground">{children}</span>
-  </span>
+  <p className="mb-3 text-sm font-semibold text-primary">{children}</p>
 );
 
 const SectionTitle: React.FC<{
@@ -279,8 +277,8 @@ const RetryBlock: React.FC<{ message: string; onRetry: () => void }> = ({ messag
 
 const LandingPage: React.FC = () => {
   useSEO({
-    title: "Không Gian Làm Việc Linh Hoạt & Đẳng Cấp",
-    description: "CoSpace - Nền tảng đặt chỗ co-working space thông minh, linh hoạt theo giờ, ngày, tháng. Đặt chỗ tức thì, bản đồ trực quan, thanh toán tiện lợi.",
+    title: "Không gian làm việc linh hoạt",
+    description: "CoSpace - đặt bàn làm việc, phòng họp và văn phòng riêng theo giờ, ngày, tuần hoặc tháng. Chọn chỗ trên sơ đồ, thanh toán online, check-in bằng mã QR.",
   });
 
   const { isAuthenticated, user } = useAuth();
@@ -369,7 +367,6 @@ const LandingPage: React.FC = () => {
   const displayServices: ServiceCard[] = useMemo(() => {
     return workspaceTypes.map((wt) => {
       const category = wt.code.includes("meeting") ? "meeting" : "office";
-      const isPopular = wt.code === "desk" || wt.code.includes("private");
 
       const image = serviceImages[wt.code] || "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=800";
       const features = serviceFeatures[wt.code] || [
@@ -382,7 +379,7 @@ const LandingPage: React.FC = () => {
         id: wt.workspaceTypeId,
         title: wt.name,
         category: category as "office" | "meeting",
-        tag: isPopular ? "Phổ biến" : undefined,
+        tag: undefined,
         price: formatVND(wt.price),
         description: `/${unitLabel[wt.unit] || wt.unit} · tối đa ${wt.capacityDefault} người`,
         image,
@@ -531,9 +528,6 @@ const LandingPage: React.FC = () => {
           />
           <div className="absolute inset-0 bg-slate-950/70 lg:bg-slate-950/25" />
         </div>
-        {/* Accent slashes */}
-        <div className="hidden lg:block absolute inset-y-0 left-[37%] w-[13%] bg-primary/40 [clip-path:polygon(76.9%_0,92.3%_0,15.4%_100%,0_100%)] -z-10" aria-hidden="true" />
-        <div className="hidden lg:block absolute inset-y-0 left-[40%] w-[15%] bg-primary [clip-path:polygon(66.7%_0,93.3%_0,26.7%_100%,0_100%)] -z-10" aria-hidden="true" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 grid grid-cols-1 lg:grid-cols-12">
           <m.div
@@ -545,7 +539,7 @@ const LandingPage: React.FC = () => {
             <Eyebrow>
               {isLoading || branches.length === 0 ? "Mạng lưới co-working" : `${branches.length} chi nhánh đang mở cửa`}
             </Eyebrow>
-            <h1 className="font-display font-bold uppercase tracking-tight leading-[1.05] text-4xl sm:text-6xl xl:text-7xl mb-6">
+            <h1 className="font-display font-bold tracking-tight leading-[1.05] text-4xl sm:text-6xl xl:text-7xl mb-6">
               Làm việc
               <br />
               <span className="text-primary">đúng chỗ,</span>
@@ -557,7 +551,7 @@ const LandingPage: React.FC = () => {
               thanh toán online và check-in bằng mã QR.
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
-              <Button onClick={() => handleBookingRedirect()} size="lg" className="rounded-sm px-8 uppercase tracking-wide group/btn">
+              <Button onClick={() => handleBookingRedirect()} size="lg" className="rounded-sm px-8 group/btn">
                 Đặt chỗ ngay
                 <FiArrowRight className="h-5 w-5 transition-transform group-hover/btn:translate-x-0.5" aria-hidden="true" />
               </Button>
@@ -565,7 +559,7 @@ const LandingPage: React.FC = () => {
                 onClick={() => openTourModal()}
                 variant="outline"
                 size="lg"
-                className="rounded-sm px-8 uppercase tracking-wide bg-transparent border-white/40 text-white hover:bg-white hover:text-slate-950 hover:border-white"
+                className="rounded-sm px-8 bg-transparent border-white/40 text-white hover:bg-white hover:text-slate-950 hover:border-white"
               >
                 <FiCalendar className="h-5 w-5" aria-hidden="true" />
                 Đặt lịch tham quan
@@ -587,7 +581,7 @@ const LandingPage: React.FC = () => {
               <div className="w-14 h-14 mx-auto mb-4 flex items-center justify-center text-primary border-2 border-primary/20 rounded-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-200">
                 <card.icon className="w-6 h-6" aria-hidden="true" />
               </div>
-              <h3 className="font-display font-bold uppercase tracking-wide text-foreground mb-2">{card.title}</h3>
+              <h3 className="font-display font-bold text-foreground mb-2">{card.title}</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">{card.text}</p>
             </m.div>
           ))}
@@ -597,11 +591,11 @@ const LandingPage: React.FC = () => {
               <div className="w-14 h-14 mx-auto mb-4 flex items-center justify-center bg-primary text-primary-foreground rounded-full">
                 <FiSmartphone className="w-6 h-6" aria-hidden="true" />
               </div>
-              <h3 className="font-display font-bold uppercase tracking-wide mb-2">Check-in QR</h3>
+              <h3 className="font-display font-bold mb-2">Check-in QR</h3>
               <p className="text-sm text-slate-300 leading-relaxed mb-4">Quét mã tại quầy lễ tân là bắt đầu làm việc.</p>
               <a
                 href="#how-it-works"
-                className="inline-flex items-center gap-2 min-h-[40px] px-4 bg-primary text-primary-foreground text-xs font-bold uppercase tracking-wider rounded-sm hover:brightness-110 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                className="inline-flex items-center gap-2 min-h-[40px] px-4 bg-primary text-primary-foreground text-xs font-bold rounded-sm hover:brightness-110 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
               >
                 Xem cách hoạt động <FiArrowRight aria-hidden="true" />
               </a>
@@ -616,43 +610,35 @@ const LandingPage: React.FC = () => {
           <SectionTitle
             align="left"
             eyebrow="Về CoSpace"
-            title="Nâng tầm mỗi ngày làm việc của bạn"
+            title="Một tài khoản cho mọi chi nhánh"
             description="CoSpace là mạng lưới không gian làm việc chung dành cho freelancer, startup và doanh nghiệp. Mọi thứ từ tìm chỗ, đặt chỗ đến thanh toán đều diễn ra trên một nền tảng."
           />
           <ul className="grid grid-cols-3 gap-4 my-10">
             {aboutFeatures.map((f) => (
               <li key={f.label} className="text-center sm:text-left">
                 <f.icon className="w-9 h-9 text-primary mb-3 mx-auto sm:mx-0" aria-hidden="true" />
-                <p className="font-display font-bold text-sm uppercase tracking-wide text-foreground leading-snug">{f.label}</p>
+                <p className="font-display font-bold text-sm text-foreground leading-snug">{f.label}</p>
               </li>
             ))}
           </ul>
-          <Button onClick={() => openTourModal()} size="lg" className="rounded-sm px-8 uppercase tracking-wide bg-slate-950 text-white hover:bg-primary hover:text-primary-foreground dark:bg-white dark:text-slate-950">
+          <Button onClick={() => openTourModal()} size="lg" className="rounded-sm px-8 bg-slate-950 text-white hover:bg-primary hover:text-primary-foreground dark:bg-white dark:text-slate-950">
             Đặt lịch tham quan <FiArrowRight aria-hidden="true" />
           </Button>
         </m.div>
 
         <m.div {...reveal(0.08)} className="relative flex justify-center">
-          {/* Outlined brand word behind the image */}
-          <span
-            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/3 -rotate-90 font-display font-bold uppercase text-7xl md:text-8xl text-transparent [-webkit-text-stroke:1.5px_hsl(var(--border))] select-none pointer-events-none hidden sm:block"
-            aria-hidden="true"
-          >
-            CoSpace
-          </span>
           <div className="relative w-72 h-72 sm:w-96 sm:h-96">
-            <div className="absolute inset-0 translate-x-6 translate-y-2 rounded-full bg-primary" aria-hidden="true" />
             <img
               src={withUnsplashSize(IMAGES.about, 768, 768)}
               alt="Thành viên đang làm việc với laptop tại CoSpace"
               width={768}
               height={768}
               loading="lazy"
-              className="relative w-full h-full object-cover rounded-full border-8 border-background"
+              className="relative w-full h-full object-cover rounded-2xl"
             />
             {!isLoading && lowestPrice && (
-              <div className="absolute -bottom-4 -left-4 sm:left-0 bg-slate-950 text-white px-5 py-4 shadow-xl">
-                <p className="text-xs uppercase tracking-wider text-slate-400">{lowestPrice.name} chỉ từ</p>
+              <div className="absolute -bottom-4 -left-4 sm:left-0 bg-slate-950 text-white px-5 py-4 rounded-lg">
+                <p className="text-xs text-slate-400">{lowestPrice.name} chỉ từ</p>
                 <p className="font-display font-bold text-2xl tabular-nums">
                   {formatVND(lowestPrice.price)}
                   <span className="text-sm text-slate-400">/{unitLabel[lowestPrice.unit] || lowestPrice.unit}</span>
@@ -709,7 +695,7 @@ const LandingPage: React.FC = () => {
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent" />
                         <div className="absolute inset-x-0 bottom-0 p-5">
-                          <p className="text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1 flex items-center gap-1.5">
+                          <p className="text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
                             <FiMapPin aria-hidden="true" /> {branch.tag}
                           </p>
                           <h3 className={`font-display font-bold text-white mb-2 ${isFeatured ? "text-2xl md:text-3xl" : "text-lg"}`}>
@@ -738,11 +724,11 @@ const LandingPage: React.FC = () => {
         <div className="absolute inset-y-0 right-10 w-24 bg-white/10 [clip-path:polygon(40%_0,100%_0,60%_100%,0_100%)]" aria-hidden="true" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-12 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <h2 className="font-display font-bold text-2xl md:text-3xl max-w-2xl text-balance">
-            Không gian chuyên nghiệp, giá linh hoạt cho mọi quy mô đội nhóm.
+            Thuê theo giờ khi cần, theo tháng khi cố định.
           </h2>
           <a
             href="#services"
-            className="inline-flex items-center gap-2 min-h-[48px] px-7 bg-white text-slate-950 font-bold uppercase tracking-wide text-sm rounded-sm hover:bg-slate-950 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-primary shrink-0"
+            className="inline-flex items-center gap-2 min-h-[48px] px-7 bg-white text-slate-950 font-bold text-sm rounded-sm hover:bg-slate-950 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-primary shrink-0"
           >
             Xem bảng giá <FiArrowRight aria-hidden="true" />
           </a>
@@ -751,24 +737,19 @@ const LandingPage: React.FC = () => {
 
       {/* ── Why choose us (dark) ── */}
       <section id="features" className="relative overflow-hidden bg-slate-950 text-white py-20 md:py-28 scroll-mt-20">
-        <div
-          className="absolute inset-0 opacity-[0.07] pointer-events-none [background-image:linear-gradient(135deg,white_1px,transparent_1px)] [background-size:28px_28px]"
-          aria-hidden="true"
-        />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 grid grid-cols-1 lg:grid-cols-2 gap-14 items-center">
           <m.div {...reveal()} className="relative max-w-lg mx-auto lg:mx-0 w-full">
-            <div className="absolute -top-4 -left-4 w-full h-full border-4 border-primary" aria-hidden="true" />
             <img
               src={withUnsplashSize(IMAGES.whyUs, 800, 900)}
               alt="Nhóm làm việc tại không gian CoSpace"
               width={800}
               height={900}
               loading="lazy"
-              className="relative w-full aspect-[8/9] object-cover"
+              className="relative w-full aspect-[8/9] object-cover rounded-2xl"
             />
-            <div className="absolute -bottom-6 right-4 sm:-right-6 bg-primary text-primary-foreground px-6 py-5 shadow-xl">
+            <div className="absolute -bottom-6 right-4 sm:-right-6 bg-primary text-primary-foreground px-6 py-5 rounded-lg">
               <p className="font-display font-bold text-4xl tabular-nums leading-none">{isLoading ? "…" : branches.length || "—"}</p>
-              <p className="text-xs font-semibold uppercase tracking-wider mt-1">Chi nhánh</p>
+              <p className="text-xs font-semibold mt-1">Chi nhánh</p>
             </div>
           </m.div>
 
@@ -777,7 +758,7 @@ const LandingPage: React.FC = () => {
               dark
               align="left"
               eyebrow="Vì sao chọn CoSpace"
-              title="Mọi thứ bạn cần để làm việc hiệu quả"
+              title="Từ đặt chỗ đến check-in trong một ứng dụng"
               description="Một nền tảng cho việc đặt chỗ, thanh toán, check-in và kết nối cộng đồng."
             />
             <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-7 my-10">
@@ -787,13 +768,13 @@ const LandingPage: React.FC = () => {
                     <f.icon className="w-6 h-6" aria-hidden="true" />
                   </div>
                   <div>
-                    <h3 className="font-display font-bold uppercase tracking-wide text-sm mb-1">{f.title}</h3>
+                    <h3 className="font-display font-bold text-sm mb-1">{f.title}</h3>
                     <p className="text-sm text-slate-400 leading-relaxed">{f.text}</p>
                   </div>
                 </li>
               ))}
             </ul>
-            <Button onClick={() => handleBookingRedirect()} size="lg" className="rounded-sm px-8 uppercase tracking-wide">
+            <Button onClick={() => handleBookingRedirect()} size="lg" className="rounded-sm px-8">
               Khám phá không gian <FiArrowRight aria-hidden="true" />
             </Button>
           </m.div>
@@ -824,7 +805,7 @@ const LandingPage: React.FC = () => {
                     <span className="font-display font-bold text-4xl leading-none opacity-40 tabular-nums" aria-hidden="true">0{idx + 1}</span>
                     <step.icon className="w-6 h-6" aria-hidden="true" />
                   </div>
-                  <h3 className="font-display font-bold uppercase tracking-wide mb-1.5">
+                  <h3 className="font-display font-bold mb-1.5">
                     <span className="sr-only">Bước {idx + 1}: </span>{step.title}
                   </h3>
                   <p className="text-sm leading-relaxed opacity-90">{step.text}</p>
@@ -853,7 +834,7 @@ const LandingPage: React.FC = () => {
                 type="button"
                 aria-pressed={activeCategory === cat.key}
                 onClick={() => setActiveCategory(cat.key)}
-                className={`min-h-[44px] px-5 text-sm font-bold uppercase tracking-wide rounded-sm cursor-pointer transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                className={`min-h-[44px] px-5 text-sm font-bold rounded-sm cursor-pointer transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                   activeCategory === cat.key
                     ? "bg-primary text-primary-foreground"
                     : "bg-card text-muted-foreground border border-border hover:text-foreground hover:border-primary"
@@ -883,9 +864,7 @@ const LandingPage: React.FC = () => {
                     <m.article
                       key={service.id}
                       {...appear((idx % 3) * 0.06)}
-                      className={`bg-card shadow-sm hover:shadow-xl transition-shadow duration-200 flex flex-col text-center ${
-                        service.tag ? "border-2 border-primary" : "border border-border"
-                      }`}
+                      className="bg-card border border-border flex flex-col text-center"
                     >
                       <div className="relative h-40 overflow-hidden bg-slate-900">
                         <img
@@ -898,7 +877,7 @@ const LandingPage: React.FC = () => {
                         />
                         <div className="absolute inset-0 flex flex-col items-center justify-center px-4">
                           {service.tag && <Eyebrow>{service.tag}</Eyebrow>}
-                          <h3 className="font-display font-bold uppercase tracking-wide text-xl text-white">{service.title}</h3>
+                          <h3 className="font-display font-bold text-xl text-white">{service.title}</h3>
                         </div>
                       </div>
                       <div className="p-8 flex-1 flex flex-col">
@@ -914,8 +893,7 @@ const LandingPage: React.FC = () => {
                         </ul>
                         <Button
                           onClick={() => handleBookingRedirect()}
-                          variant={service.tag ? "default" : "outline"}
-                          className="w-full rounded-sm uppercase tracking-wide"
+                          className="w-full rounded-sm"
                         >
                           Đặt ngay <FiArrowRight aria-hidden="true" />
                         </Button>
@@ -988,12 +966,12 @@ const LandingPage: React.FC = () => {
                 </div>
                 <div className="sm:col-span-2 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-t border-white/10 pt-6 mt-2">
                   <div aria-live="polite">
-                    <p className="text-xs uppercase tracking-wider text-slate-400">Chi phí tạm tính</p>
+                    <p className="text-xs text-slate-400">Chi phí tạm tính</p>
                     <p className="font-display font-bold text-3xl md:text-4xl text-primary tabular-nums">
                       {calcTotal !== null ? formatVND(calcTotal) : "—"}
                     </p>
                   </div>
-                  <Button type="submit" size="lg" className="rounded-sm px-8 uppercase tracking-wide">
+                  <Button type="submit" size="lg" className="rounded-sm px-8">
                     Đặt chỗ ngay <FiArrowRight aria-hidden="true" />
                   </Button>
                 </div>
@@ -1074,14 +1052,14 @@ const LandingPage: React.FC = () => {
             Gọi ngay: <a href="tel:19003384" className="underline-offset-4 hover:underline">1900 3384</a>
           </p>
           <div className="flex flex-col sm:flex-row gap-3">
-            <Button onClick={() => openTourModal()} size="lg" className="rounded-sm px-8 uppercase tracking-wide">
+            <Button onClick={() => openTourModal()} size="lg" className="rounded-sm px-8">
               <FiCalendar aria-hidden="true" /> Đặt lịch tham quan
             </Button>
             <Button
               onClick={() => handleBookingRedirect()}
               size="lg"
               variant="outline"
-              className="rounded-sm px-8 uppercase tracking-wide bg-transparent border-white/40 text-white hover:bg-white hover:text-slate-950 hover:border-white"
+              className="rounded-sm px-8 bg-transparent border-white/40 text-white hover:bg-white hover:text-slate-950 hover:border-white"
             >
               Đặt chỗ ngay
             </Button>
@@ -1117,7 +1095,7 @@ const LandingPage: React.FC = () => {
             </ul>
           </div>
           <div className="col-span-2 sm:col-span-1 md:col-span-3">
-            <h2 className="font-display font-bold text-foreground mb-4 text-sm uppercase tracking-wider">Không gian</h2>
+            <h2 className="font-display font-bold text-foreground mb-4 text-sm">Không gian</h2>
             <ul className="space-y-3 text-muted-foreground">
               {workspaceTypes.map(wt => (
                 <li key={wt.workspaceTypeId}>
@@ -1127,7 +1105,7 @@ const LandingPage: React.FC = () => {
             </ul>
           </div>
           <div className="col-span-2 sm:col-span-1 md:col-span-5">
-            <h2 className="font-display font-bold text-foreground mb-4 text-sm uppercase tracking-wider">Giờ mở cửa</h2>
+            <h2 className="font-display font-bold text-foreground mb-4 text-sm">Giờ mở cửa</h2>
             <ul className="space-y-3">
               {displayBranches.slice(0, 4).map(b => (
                 <li key={b.id} className="flex items-center justify-between gap-4 border-b border-border pb-3 last:border-0">
@@ -1240,7 +1218,7 @@ const LandingPage: React.FC = () => {
                   </div>
                 </div>
               </div>
-              <Button type="submit" size="lg" className="w-full rounded-sm mt-2 uppercase tracking-wide">
+              <Button type="submit" size="lg" className="w-full rounded-sm mt-2">
                 Xác nhận lịch hẹn
               </Button>
             </form>
@@ -1288,7 +1266,7 @@ const LandingPage: React.FC = () => {
               <Button
                 onClick={() => { handleBookingRedirect(selectedBranchForDetail.exploreBranchId); setSelectedBranchForDetail(null); }}
                 size="lg"
-                className="flex-1 rounded-sm uppercase tracking-wide"
+                className="flex-1 rounded-sm"
               >
                 Xem sơ đồ & đặt chỗ
               </Button>
@@ -1296,7 +1274,7 @@ const LandingPage: React.FC = () => {
                 variant="outline"
                 size="lg"
                 onClick={() => { const id = selectedBranchForDetail.id; setSelectedBranchForDetail(null); openTourModal(id); }}
-                className="flex-1 rounded-sm uppercase tracking-wide"
+                className="flex-1 rounded-sm"
               >
                 Đặt lịch tham quan
               </Button>

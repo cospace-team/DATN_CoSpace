@@ -701,7 +701,7 @@ const BAWorkspacePage: React.FC<BAWorkspacePageProps> = ({ isSuperAdminView = fa
               disabled={(isSuperAdminView && !selectedBranchId) || isBranchInactive}
               title={isBranchInactive ? 'Chi nhánh đang tạm ngưng hoạt động' : undefined}
             >
-              <FiPlus className="h-4 w-4" /> Thêm Tầng Mới
+              <FiPlus className="h-4 w-4" /> Thêm tầng mới
             </button>
           </div>
         </div>
@@ -730,7 +730,7 @@ const BAWorkspacePage: React.FC<BAWorkspacePageProps> = ({ isSuperAdminView = fa
         {floors.length === 0 ? (
           <div className="flex flex-col items-center py-10 gap-2 text-muted-foreground">
             <FiAlertCircle className="h-8 w-8 opacity-40" />
-            <p className="text-sm">Chưa có tầng nào. Nhấn "Thêm Tầng Mới" để bắt đầu.</p>
+            <p className="text-sm">Chưa có tầng nào. Nhấn "Thêm tầng mới" để bắt đầu.</p>
           </div>
         ) : (
           <div className="flex gap-2 flex-wrap">
@@ -775,7 +775,7 @@ const BAWorkspacePage: React.FC<BAWorkspacePageProps> = ({ isSuperAdminView = fa
       {currentFloor && !loading && !loadingWorkspaces && orphanWorkspaceElements.length > 0 && (
         <div className="p-4 bg-warning/15 border border-warning/30 rounded-xl text-warning flex items-center justify-between flex-wrap gap-4 shadow-sm mb-6 animate-fade-in">
           <div className="flex items-center gap-3">
-            <FiAlertCircle className="h-5 w-5 shrink-0 animate-bounce" />
+            <FiAlertCircle className="h-5 w-5 shrink-0" />
             <div>
               <p className="font-semibold text-sm">Sơ đồ có các phần tử chưa đồng bộ với Database</p>
               <p className="text-xs opacity-95">
@@ -795,7 +795,7 @@ const BAWorkspacePage: React.FC<BAWorkspacePageProps> = ({ isSuperAdminView = fa
                 Đang đồng bộ...
               </>
             ) : (
-              '⚡ Đồng bộ & Tạo ngay'
+              'Đồng bộ & tạo ngay'
             )}
           </button>
         </div>
@@ -811,8 +811,8 @@ const BAWorkspacePage: React.FC<BAWorkspacePageProps> = ({ isSuperAdminView = fa
                 <h2 className="font-semibold text-sm">Sơ đồ mặt bằng — {currentFloor.name}</h2>
                 <div className="text-xs text-muted-foreground">
                   {assigningWsId ? (
-                    <span className="text-warning font-medium animate-pulse flex items-center gap-1.5">
-                      👉 Đang gán không gian {assigningWsCode}. Click bàn/phòng trên sơ đồ để gán.
+                    <span className="text-warning font-medium flex items-center gap-1.5">
+                      Đang gán không gian {assigningWsCode}. Click bàn/phòng trên sơ đồ để gán.
                       <button
                         onClick={(e) => {
                           e.stopPropagation();

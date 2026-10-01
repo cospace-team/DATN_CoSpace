@@ -65,7 +65,7 @@ const EditorToolbar: React.FC<Props> = ({
             onClick={() => editor.setTool('select')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${
               editor.tool === 'select'
-                ? 'bg-gradient-to-r from-primary to-secondary text-primary-foreground shadow-md shadow-primary/20'
+                ? 'bg-primary text-primary-foreground'
                 : 'text-muted-foreground hover:text-foreground hover:bg-muted'
             }`}
             title="Công cụ Chọn (V)"
@@ -77,7 +77,7 @@ const EditorToolbar: React.FC<Props> = ({
             onClick={() => editor.setTool('pan')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${
               editor.tool === 'pan'
-                ? 'bg-gradient-to-r from-primary to-secondary text-primary-foreground shadow-md shadow-primary/20'
+                ? 'bg-primary text-primary-foreground'
                 : 'text-muted-foreground hover:text-foreground hover:bg-muted'
             }`}
             title="Công cụ Pan (H / Space)"

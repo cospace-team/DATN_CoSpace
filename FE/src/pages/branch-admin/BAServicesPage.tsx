@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FiCoffee, FiPrinter, FiPlus, FiX, FiCheck, FiEdit2, FiTrash2, FiAlertCircle } from 'react-icons/fi';
+import { FiCoffee, FiPrinter, FiPlus, FiX, FiCheck, FiEdit2, FiTrash2, FiAlertCircle, FiShoppingBag, FiPackage } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import { staffApi, type ExtraServiceDto } from '../../api/staffApi';
 import { formatVND } from '../../utils/formatters';
@@ -21,9 +21,9 @@ const Modal: React.FC<{ title: string; onClose: () => void; children: React.Reac
 
 const TYPE_ICON: Record<string, React.ReactNode> = {
   drink: <FiCoffee className="h-4 w-4" />,
-  meal: <span className="text-sm">🍽️</span>,
+  meal: <FiShoppingBag className="h-4 w-4" />,
   printing: <FiPrinter className="h-4 w-4" />,
-  other: <span className="text-sm">📦</span>,
+  other: <FiPackage className="h-4 w-4" />,
 };
 const TYPE_LABEL: Record<string, string> = {
   drink: 'Đồ uống', meal: 'Ăn uống', printing: 'In ấn', other: 'Khác',

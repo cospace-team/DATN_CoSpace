@@ -89,9 +89,6 @@ const FloorPlanEditor: React.FC<Props> = ({
 
   return (
     <div className="flex flex-col h-full overflow-hidden bg-background font-sans relative z-0">
-      {/* Ambient Light Blobs (theme-aware, subtle) */}
-      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-primary/10 rounded-full blur-[140px] pointer-events-none -z-10 animate-pulse" style={{ animationDuration: '8s' }} />
-      <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-secondary/10 rounded-full blur-[140px] pointer-events-none -z-10 animate-pulse" style={{ animationDuration: '12s', animationDelay: '2s' }} />
 
       {/* Toolbar */}
       <EditorToolbar

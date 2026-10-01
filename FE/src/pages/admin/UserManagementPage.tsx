@@ -167,7 +167,7 @@ const EditRoleModal: React.FC<RoleModalProps> = ({ user, branches, onClose, onSa
   );
 };
 
-/* ── Trang Quản Lý Người Dùng ── */
+/* ── Trang quản lý người dùng ── */
 const UserManagementPage: React.FC = () => {
   const { user: authUser } = useAuth();
   const { showToast } = useToast();
@@ -459,7 +459,7 @@ const UserManagementPage: React.FC = () => {
                             className="h-9 w-9 rounded-xl object-cover border border-border shrink-0"
                           />
                         ) : (
-                          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-sm font-bold shrink-0 shadow-sm">
+                          <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary text-sm font-bold shrink-0">
                             {u.fullName ? u.fullName.charAt(0).toUpperCase() : '?'}
                           </div>
                         )}

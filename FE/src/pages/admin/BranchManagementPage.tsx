@@ -498,7 +498,7 @@ const BranchManagementPage: React.FC = () => {
             </div>
 
             <div className="p-3.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-700 dark:text-amber-300 mb-5">
-              ⚠️ <strong>Lưu ý quan trọng:</strong> Nếu không cấu hình mức giá, khách hàng sẽ không thể tra cứu giá hoặc hệ thống có nguy cơ cho đặt chỗ với giá 0đ. Hãy thiết lập ngay 4 mốc giá cơ bản.
+              <strong>Lưu ý:</strong> Nếu không cấu hình mức giá, khách hàng sẽ không thể tra cứu giá hoặc hệ thống có nguy cơ cho đặt chỗ với giá 0đ. Hãy thiết lập ngay 4 mốc giá cơ bản.
             </div>
 
             <div className="flex items-center justify-end gap-3">

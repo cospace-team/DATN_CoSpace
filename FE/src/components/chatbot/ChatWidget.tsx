@@ -124,7 +124,7 @@ export const ChatWidget = React.memo(function ChatWidget() {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-20 right-5 lg:bottom-6 z-50 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-xl shadow-primary/30 flex items-center justify-center hover:scale-105 transition-transform"
+        className="fixed bottom-20 right-5 lg:bottom-6 z-50 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-xl shadow-primary/30 flex items-center justify-center  transition-transform"
         aria-label="Mở trợ lý AI CoSpace"
       >
         <FiMessageCircle className="h-6 w-6" />

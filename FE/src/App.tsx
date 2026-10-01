@@ -362,15 +362,6 @@ const AppShell: React.FC = () => {
     return <Navigate to={defaultRoute} replace />;
   }
 
-  const backendPillClass =
-    backendStatus === "ok"
-      ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-400"
-      : backendStatus === "error"
-        ? "bg-red-500/10 text-red-600 border-red-500/20 dark:text-red-400"
-        : "bg-muted text-muted-foreground border-border";
-  const backendLabel =
-    backendStatus === "ok" ? "Online" : backendStatus === "error" ? "Offline" : "Checking";
-
   return (
     <div className="flex h-screen overflow-hidden">
       {/* Skip-to-content link (a11y) */}
@@ -419,17 +410,8 @@ const AppShell: React.FC = () => {
           </Link>
         </div>
 
-        {/* Section label */}
-        {!collapsed && (
-          <div className="px-5 pt-5 pb-1">
-            <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-sidebar-foreground/40">
-              Điều hướng
-            </p>
-          </div>
-        )}
-
         {/* Nav links */}
-        <nav className="flex-1 overflow-y-auto py-2 px-3 space-y-0.5" aria-label="Menu chính">
+        <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-0.5" aria-label="Menu chính">
           {navItems.map((item) => (
             <NavLink
               key={item.to}
@@ -440,7 +422,7 @@ const AppShell: React.FC = () => {
               title={item.label}
               aria-current={location.pathname === item.to ? "page" : undefined}
             >
-              <span className="transition-transform duration-200 group-hover:scale-110 shrink-0">
+              <span className="shrink-0">
                 {item.icon}
               </span>
               {!collapsed && <span className="truncate">{item.label}</span>}
@@ -465,7 +447,7 @@ const AppShell: React.FC = () => {
         <div className={`shrink-0 border-t border-sidebar-border ${collapsed ? "px-2 py-3" : "p-3"}`}>
           {!collapsed ? (
             <div className="flex items-center gap-3 p-2.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.10] transition-colors cursor-default">
-              <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-sm font-bold shrink-0 shadow-lg shadow-blue-500/30">
+              <div className="h-9 w-9 rounded-lg bg-white/10 flex items-center justify-center text-white text-sm font-semibold shrink-0">
                 {user.fullName.charAt(0)}
               </div>
               <div className="min-w-0 flex-1">
@@ -483,7 +465,7 @@ const AppShell: React.FC = () => {
             </div>
           ) : (
             <div className="flex justify-center">
-              <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-sm font-bold shadow-lg shadow-blue-500/30" title={user.fullName}>
+              <div className="h-9 w-9 rounded-lg bg-white/10 flex items-center justify-center text-white text-sm font-semibold" title={user.fullName}>
                 {user.fullName.charAt(0)}
               </div>
             </div>
@@ -494,7 +476,7 @@ const AppShell: React.FC = () => {
       {/* ─── Main Content Area ─── */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top header bar */}
-        <header className="relative z-40 h-[60px] flex items-center justify-between px-6 border-b border-border bg-card/90 backdrop-blur-xl shrink-0">
+        <header className="relative z-40 h-[60px] flex items-center justify-between px-6 border-b border-border bg-card shrink-0">
           {/* Left: mobile menu + page context */}
           <div className="flex items-center gap-4">
             <button
@@ -518,18 +500,13 @@ const AppShell: React.FC = () => {
             </div>
           </div>
 
-          {/* Right: status + actions */}
+          {/* Right: actions. The server status only shows up when there is something to report. */}
           <div className="flex items-center gap-2">
-            <span
-              className={`hidden sm:inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-semibold ${backendPillClass}`}
-            >
-              <span className={`mr-1.5 h-1.5 w-1.5 rounded-full ${
-                backendStatus === "ok" ? "bg-emerald-500 animate-glow" : backendStatus === "error" ? "bg-red-500" : "bg-gray-400"
-              }`} />
-              {backendLabel}
-            </span>
-
-            <div className="w-px h-5 bg-border hidden sm:block" />
+            {backendStatus === "error" && (
+              <span className="hidden sm:inline-flex items-center rounded-full border border-red-500/20 bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-600 dark:text-red-400">
+                Mất kết nối máy chủ
+              </span>
+            )}
 
             <NotificationBell />
 

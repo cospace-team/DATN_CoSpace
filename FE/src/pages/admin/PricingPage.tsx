@@ -1093,12 +1093,12 @@ const PricingPage: React.FC = () => {
                       setServiceForm(p => ({ ...p, serviceType: e.target.value }));
                     }}
                   >
-                    <option value="drink">☕ Đồ uống (Drink)</option>
-                    <option value="meal">🥐 Đồ ăn (Meal)</option>
-                    <option value="printing">🖨️ In ấn (Printing)</option>
-                    <option value="equipment">📽️ Thiết bị (Equipment)</option>
-                    <option value="facility">🚪 Tiện ích phòng (Facility)</option>
-                    <option value="other">✨ Tùy chỉnh / Phân loại khác...</option>
+                    <option value="drink">Đồ uống</option>
+                    <option value="meal">Đồ ăn</option>
+                    <option value="printing">In ấn</option>
+                    <option value="equipment">Thiết bị</option>
+                    <option value="facility">Tiện ích phòng</option>
+                    <option value="other">Loại khác…</option>
                   </select>
                   {!['drink', 'meal', 'printing', 'equipment', 'facility'].includes(serviceForm.serviceType) && (
                     <Input

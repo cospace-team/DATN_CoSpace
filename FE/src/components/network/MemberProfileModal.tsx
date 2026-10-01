@@ -31,7 +31,7 @@ const Avatar: React.FC<{ src?: string | null; name: string }> = ({ src, name }) 
   isImage(src) ? (
     <img src={src as string} alt={name} className="h-20 w-20 rounded-2xl object-cover ring-4 ring-card bg-muted" />
   ) : (
-    <div className="h-20 w-20 rounded-2xl ring-4 ring-card bg-gradient-to-tr from-indigo-500 to-purple-600 text-white flex items-center justify-center text-3xl font-bold">
+    <div className="h-20 w-20 rounded-2xl ring-4 ring-card bg-primary/10 text-primary flex items-center justify-center text-3xl font-bold">
       {(name || 'U').charAt(0).toUpperCase()}
     </div>
   );

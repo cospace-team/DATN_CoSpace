@@ -79,7 +79,7 @@ const PropertiesPanel: React.FC<Props> = ({
           <div className="flex flex-col items-center justify-center text-center py-8 gap-3 text-muted-foreground">
             <div className="w-14 h-14 rounded-3xl bg-muted flex items-center justify-center border border-border shadow-inner mb-1 relative">
               <FiInfo className="h-6 w-6 text-primary" />
-              <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-primary animate-ping" />
+              <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-primary" />
             </div>
             <div>
               <p className="text-sm font-bold text-foreground font-heading">Chưa chọn phần tử</p>
@@ -369,7 +369,7 @@ const PropertiesPanel: React.FC<Props> = ({
                         className={`h-8 rounded-xl border flex items-center justify-center transition-all ${
                           isCurrent
                             ? 'border-primary ring-2 ring-primary/30 scale-105 shadow-md'
-                            : 'border-border hover:border-muted-foreground/50 hover:scale-105'
+                            : 'border-border hover:border-muted-foreground/50 '
                         }`}
                         title={preset.name}
                         style={{
@@ -496,7 +496,7 @@ const PropertiesPanel: React.FC<Props> = ({
                   const isOrphan = !availableWs.some((ws) => ws.id === element.workspaceId);
                   return isOrphan ? (
                     <div className="flex items-center gap-2 p-2.5 bg-warning/10 border border-warning/30 text-warning rounded-xl text-xs font-semibold">
-                      <span className="h-2 w-2 rounded-full bg-warning shrink-0 animate-ping" />
+                      <span className="h-2 w-2 rounded-full bg-warning shrink-0" />
                       Workspace đã xóa — cần liên kết lại.
                     </div>
                   ) : (

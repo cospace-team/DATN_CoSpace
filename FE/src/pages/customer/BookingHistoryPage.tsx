@@ -307,19 +307,9 @@ const BookingHistoryPage: React.FC = () => {
   return (
     <div className="max-w-5xl mx-auto py-8 px-4 font-sans animate-fade-in">
       {/* Header Banner */}
-      <div className="bg-slate-900 rounded-3xl p-8 mb-10 border border-slate-800 shadow-sm relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-slate-700 rounded-full mix-blend-screen filter blur-3xl opacity-30 translate-x-1/3 -translate-y-1/3"></div>
-
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-semibold text-white tracking-tight">
-              Quản lý Đặt chỗ
-            </h1>
-            <p className="text-sm font-medium bg-card/10 text-slate-200 px-3 py-1.5 rounded-lg border border-white/10 inline-block mt-3">
-              Theo dõi mã QR, lịch sử và trạng thái booking của bạn.
-            </p>
-          </div>
-        </div>
+      <div className="mb-8">
+        <h1 className="text-2xl md:text-3xl font-semibold text-foreground tracking-tight">Đặt chỗ của tôi</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Mã QR check-in, trạng thái thanh toán và lịch sử đặt chỗ.</p>
       </div>
 
       {successMessage && (
@@ -363,7 +353,7 @@ const BookingHistoryPage: React.FC = () => {
               className={`flex items-center gap-2 px-6 py-3 font-semibold text-sm tracking-tight rounded-full border border-border transition-all ${
                 isActive
                   ? "bg-slate-900 text-white shadow-sm -translate-y-1"
-                  : "bg-card text-foreground shadow-sm hover:-translate-y-1 hover:shadow-sm"
+                  : "bg-card text-foreground shadow-sm  hover:shadow-sm"
               }`}
             >
               <Icon
@@ -405,7 +395,7 @@ const BookingHistoryPage: React.FC = () => {
           getFilteredBookings().map((booking) => (
             <div
               key={booking.id}
-              className="bg-card border border-border rounded-2xl p-6 flex flex-col md:flex-row gap-6 transition-all shadow-sm hover:-translate-y-1 hover:shadow-sm"
+              className="bg-card border border-border rounded-2xl p-6 flex flex-col md:flex-row gap-6 transition-all shadow-sm  hover:shadow-sm"
             >
               {/* Left Details */}
               <div className="flex-1 space-y-4">
@@ -423,18 +413,18 @@ const BookingHistoryPage: React.FC = () => {
                     }`}
                   >
                     {booking.status === "confirmed"
-                      ? "● Đã xác nhận"
+                      ? "Đã xác nhận"
                       : booking.status === "pending_payment"
-                        ? "⏳ Chờ thanh toán"
+                        ? "Chờ thanh toán"
                         : booking.status === "checked_in"
-                          ? "🔑 Đã check-in"
+                          ? "Đang sử dụng"
                           : booking.status === "completed" || booking.status === "checked_out"
-                            ? "✓ Hoàn thành"
+                            ? "Hoàn thành"
                             : booking.status === "no_show"
-                              ? "× Không đến"
+                              ? "Không đến"
                               : booking.status === "expired"
-                                ? "⌛ Hết hạn thanh toán"
-                                : "× Đã hủy"}
+                                ? "Hết hạn thanh toán"
+                                : "Đã hủy"}
                   </span>
                   {booking.status === "pending_payment" && booking.paymentDeadlineAt && (
                     <span
@@ -517,11 +507,11 @@ const BookingHistoryPage: React.FC = () => {
                       >
                         {(booking.refundAmount ?? 0) > 0
                           ? booking.refundStatus === "processed" || booking.refundStatus === "confirmed"
-                            ? "✓ Đã hoàn tiền"
+                            ? "Đã hoàn tiền"
                             : booking.refundStatus === "rejected"
-                              ? "× Yêu cầu hoàn tiền bị từ chối"
-                              : "⏳ Đang xử lý hoàn tiền"
-                          : "× Không áp dụng hoàn tiền"}
+                              ? "Yêu cầu hoàn tiền bị từ chối"
+                              : "Đang xử lý hoàn tiền"
+                          : "Không áp dụng hoàn tiền"}
                       </span>
                     </div>
 
@@ -562,7 +552,7 @@ const BookingHistoryPage: React.FC = () => {
                 {(booking.status === "confirmed" || booking.status === "checked_in") && (
                   <button
                     onClick={() => setServicesBooking(booking)}
-                    className="w-full py-3 bg-card text-foreground font-semibold tracking-tight border border-border rounded-full shadow-sm hover:-translate-y-1 hover:shadow-sm transition-all flex justify-center items-center gap-2 text-xs"
+                    className="w-full py-3 bg-card text-foreground font-semibold tracking-tight border border-border rounded-full shadow-sm  hover:shadow-sm transition-all flex justify-center items-center gap-2 text-xs"
                   >
                     <FiCoffee className="h-4 w-4" /> Dịch vụ & gia hạn
                   </button>
@@ -571,7 +561,7 @@ const BookingHistoryPage: React.FC = () => {
                   <>
                     <button
                       onClick={() => setShowQrModal(booking)}
-                      className="w-full py-3 bg-slate-900 text-white font-semibold tracking-tight border border-border rounded-full shadow-sm hover:-translate-y-1 hover:shadow-sm transition-all flex justify-center items-center gap-2 text-xs"
+                      className="w-full py-3 bg-slate-900 text-white font-semibold tracking-tight border border-border rounded-full shadow-sm  hover:shadow-sm transition-all flex justify-center items-center gap-2 text-xs"
                     >
                       <FiMaximize className="h-4 w-4" /> Mã QR Pass
                     </button>
@@ -579,7 +569,7 @@ const BookingHistoryPage: React.FC = () => {
                         (the counter handles it), so the button would only lead to an error. */}
                     {booking.date instanceof Date && booking.date.getTime() > Date.now() && (
                       <button
-                        className="w-full py-3 bg-card text-foreground font-semibold tracking-tight border border-border rounded-full shadow-sm hover:bg-red-50 dark:bg-red-950/30 dark:bg-red-950/30 hover:text-red-700 hover:border-red-200 dark:border-red-900/50 dark:border-red-900/50 transition-colors flex justify-center items-center gap-2 text-xs"
+                        className="w-full py-3 bg-card text-foreground font-semibold tracking-tight border border-border rounded-full shadow-sm hover:bg-red-50 dark:bg-red-950/30 hover:text-red-700 hover:border-red-200 dark:border-red-900/50 transition-colors flex justify-center items-center gap-2 text-xs"
                         onClick={() => setShowCancelModal(booking.id)}
                       >
                         <FiX className="h-4 w-4" /> Hủy đặt chỗ
@@ -592,7 +582,7 @@ const BookingHistoryPage: React.FC = () => {
                     <button
                       onClick={() => void handlePayNow(booking.id, booking.totalAmount)}
                       disabled={!apiLoaded || payingId === booking.id}
-                      className="w-full py-3 bg-slate-900 text-white font-semibold tracking-tight border border-border rounded-full shadow-sm hover:-translate-y-1 hover:shadow-sm transition-all flex justify-center items-center gap-2 text-xs disabled:opacity-60 disabled:hover:translate-y-0"
+                      className="w-full py-3 bg-slate-900 text-white font-semibold tracking-tight border border-border rounded-full shadow-sm  hover:shadow-sm transition-all flex justify-center items-center gap-2 text-xs disabled:opacity-60 disabled:hover:translate-y-0"
                     >
                       <FiCreditCard className="h-4 w-4" />
                       {payingId === booking.id ? "Đang chuyển..." : "Thanh toán ngay"}
@@ -643,7 +633,7 @@ const BookingHistoryPage: React.FC = () => {
           <div className="w-full max-w-sm rounded-3xl bg-card border border-border shadow-sm p-8 text-center relative">
             <button
               onClick={() => setShowQrModal(null)}
-              className="absolute -top-4 -right-4 h-12 w-12 rounded-full border border-border bg-slate-900 text-white flex items-center justify-center shadow-sm hover:scale-110 transition-transform z-10"
+              className="absolute -top-4 -right-4 h-12 w-12 rounded-full border border-border bg-slate-900 text-white flex items-center justify-center shadow-sm  transition-transform z-10"
             >
               <FiX className="h-6 w-6 font-semibold" />
             </button>
@@ -702,15 +692,8 @@ const BookingHistoryPage: React.FC = () => {
 
             <div className="bg-muted/50 p-3.5 rounded-2xl border border-border border-dashed mb-4 text-left">
               <p className="text-[11px] font-medium text-muted-foreground leading-relaxed">
-                💡 <strong className="text-foreground">Mẹo Demo:</strong> Nhấn{" "}
-                <kbd className="px-1.5 py-0.5 font-mono text-[10px] font-bold bg-card border border-border rounded shadow-xs">
-                  Win + Shift + S
-                </kbd>{" "}
-                để chụp mã QR này, sau đó qua tab Lễ tân nhấn{" "}
-                <kbd className="px-1.5 py-0.5 font-mono text-[10px] font-bold bg-card border border-border rounded shadow-xs">
-                  Ctrl + V
-                </kbd>{" "}
-                để quét tức thì!
+                Đưa mã này cho lễ tân quét khi đến. Lễ tân cũng có thể dán ảnh chụp mã QR
+                (<kbd className="px-1 font-mono text-[10px] bg-card border border-border rounded">Ctrl + V</kbd>) vào ô quét ở quầy.
               </p>
             </div>
 
@@ -782,7 +765,7 @@ const BookingHistoryPage: React.FC = () => {
                 className={`flex-1 py-4 text-white font-semibold tracking-tight border rounded-full shadow-sm transition-all ${
                   isCanceling 
                     ? "bg-red-400 border-red-400 cursor-not-allowed opacity-70" 
-                    : "bg-red-600 border-red-700 hover:-translate-y-1 hover:shadow-md"
+                    : "bg-red-600 border-red-700  hover:shadow-md"
                 }`}
                 onClick={handleCancel}
                 disabled={isCanceling}
