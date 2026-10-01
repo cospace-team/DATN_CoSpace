@@ -235,7 +235,7 @@ const PropertiesPanel: React.FC<Props> = ({
               />
             </Field>
           )}
-          {(element.type === 'meeting_room' || element.type === 'private_office') && (
+          {(element.type === 'meeting_room' || element.type === 'private_office' || element.type === 'desk') && (
             <Field label="Số ghế">
               <div className="flex items-center gap-1.5">
                 <StepBtn
@@ -246,7 +246,7 @@ const PropertiesPanel: React.FC<Props> = ({
                 <input
                   type="number"
                   className="input-field-custom text-center tabular-nums"
-                  value={element.seatCount ?? (element.type === 'meeting_room' ? 6 : 2)}
+                  value={element.seatCount ?? (element.type === 'meeting_room' ? 6 : element.type === 'private_office' ? 2 : 1)}
                   min={1}
                   max={32}
                   onChange={(e) => onUpdate(element.id, { seatCount: Math.min(32, Math.max(1, Number(e.target.value) || 1)) })}
