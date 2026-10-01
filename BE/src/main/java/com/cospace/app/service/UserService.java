@@ -141,10 +141,25 @@ public class UserService {
     @Transactional
     @CacheEvict(value = CacheConfig.ADMIN_USERS, allEntries = true)
     public UserProfileDto createWalkinUser(com.cospace.app.dto.api.WalkinUserCreateRequest req) {
+        String phone = req.getPhone() != null ? req.getPhone().trim() : null;
+        String fullName = req.getFullName() != null ? req.getFullName().trim() : null;
+        // A returning walk-in guest (same phone and name) keeps one account and one booking history
+        // instead of a new placeholder account on every visit. The name is part of the match because
+        // the counter's quick mode fills in a shared placeholder phone for guests who give none.
+        if (phone != null && !phone.isEmpty() && fullName != null && !fullName.isEmpty()) {
+            java.util.Optional<User> existing = userRepository
+                    .findFirstByPhoneAndFullNameIgnoreCaseAndEmailEndingWithOrderByCreatedAtAsc(phone, fullName, WALKIN_EMAIL_DOMAIN);
+            if (existing.isPresent()) {
+                User user = existing.get();
+                Profile profile = profileRepository.findById(user.getId())
+                        .orElseGet(() -> profileRepository.save(Profile.builder().userId(user.getId()).contactPublic(false).build()));
+                return convertToDto(user, profile);
+            }
+        }
         User user = User.builder()
                 .email("walkin_" + UUID.randomUUID().toString().substring(0, 8) + WALKIN_EMAIL_DOMAIN)
-                .fullName(req.getFullName())
-                .phone(req.getPhone())
+                .fullName(fullName)
+                .phone(phone)
                 .role(User.Role.customer)
                 .status(User.Status.active)
                 .build();

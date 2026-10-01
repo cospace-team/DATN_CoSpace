@@ -19,6 +19,7 @@ import type { FloorLayout, LayoutElement } from '../../types/floorPlan';
 import { useStableCallback } from '../../hooks/useStableCallback';
 import { Spinner } from '../../components/ui/Spinner';
 import { Skeleton } from '../../components/ui/Skeleton';
+import VietQrImage from '../../components/VietQrImage';
 
 const QUICK_DURATIONS = [
   { hours: 1, label: '1 Giờ' },
@@ -91,6 +92,8 @@ const WalkinBookingPage: React.FC = () => {
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'vietqr' | 'momo'>('cash');
   const [isSuccess, setIsSuccess] = useState(false);
   const [createdBookingCode, setCreatedBookingCode] = useState('');
+  // What the server actually charged (membership discount included), for the receipt.
+  const [collectedAmount, setCollectedAmount] = useState<number | null>(null);
 
   // QR Modal State
   const [qrModal, setQrModal] = useState<QrModalState | null>(null);
@@ -174,7 +177,18 @@ const WalkinBookingPage: React.FC = () => {
       const [floorsRes, statusRes, policiesRes] = await Promise.all([
         staffApi.getFloors(activeBranchId),
         staffApi.getWorkspaceBookingStatus(activeBranchId),
-        staffApi.getPricePolicies().catch(() => [])
+        // The branch's effective prices (branch overrides on top of the global table). Not the
+        // branch-admin price-policy API: staff are not allowed to read it, and the page then fell
+        // back to guessed prices that did not match what the server charges.
+        customerSpaceApi.listPrices(activeBranchId)
+          .then((prices) => prices.map((p) => ({
+            branchId: activeBranchId,
+            workspaceTypeId: p.workspaceTypeId,
+            durationUnit: p.unit,
+            price: p.price,
+            isActive: true,
+          })))
+          .catch(() => [])
       ]);
       setFloors(floorsRes);
       if (floorsRes.length > 0) {
@@ -470,6 +484,7 @@ const WalkinBookingPage: React.FC = () => {
 
       playSuccessChime();
       setCreatedBookingCode(qrModal.bookingCode);
+      setCollectedAmount(qrModal.amount);
       setIsSuccess(true);
       showToast(`Đã nhận thanh toán thành công đơn hàng: ${qrModal.bookingCode}`, 'success');
       setQrModal(null);
@@ -607,6 +622,7 @@ const WalkinBookingPage: React.FC = () => {
         }
 
         setCreatedBookingCode(booking.bookingCode);
+        setCollectedAmount(booking.totalAmount ?? total);
         setIsSuccess(true);
         showToast(`Đã tạo đơn và thu tiền mặt thành công: ${booking.bookingCode}`, 'success');
         await fetchData();
@@ -615,16 +631,19 @@ const WalkinBookingPage: React.FC = () => {
         showToast('Đang tạo liên kết thanh toán VietQR (PayOS)...', 'info');
         let payosRes = null;
         try {
-          payosRes = await bookingApi.createPayosPayment(booking.id, total);
+          payosRes = await bookingApi.createPayosPayment(booking.id, booking.totalAmount ?? total);
         } catch (e: any) {
-          console.warn('PayOS API call:', e.message);
+          // The booking exists but no payment was opened: the QR can still be shown for a manual
+          // transfer, but nothing will confirm it automatically, so say so instead of failing silently.
+          showToast(`Chưa tạo được giao dịch VietQR (${e.message || 'lỗi cổng thanh toán'}). Có thể thu tiền mặt cho đơn ${booking.bookingCode}.`, 'error');
         }
 
         setQrModal({
           isOpen: true,
           bookingId: booking.id,
           bookingCode: booking.bookingCode,
-          amount: total,
+          // The server's total (membership discount included), not the estimate shown while picking.
+          amount: payosRes?.amount ?? booking.totalAmount ?? total,
           orderCode: payosRes?.orderCode,
           checkoutUrl: payosRes?.checkoutUrl,
           qrCode: payosRes?.qrCode
@@ -632,7 +651,7 @@ const WalkinBookingPage: React.FC = () => {
       } else if (paymentMethod === 'momo') {
         // 3. MOMO E-WALLET
         showToast('Đang kết nối cổng MoMo...', 'info');
-        const momoRes = await bookingApi.createMomoPayment(booking.id, total);
+        const momoRes = await bookingApi.createMomoPayment(booking.id, booking.totalAmount ?? total);
         if (momoRes.payUrl && momoRes.payUrl.startsWith('http')) {
           window.open(momoRes.payUrl, '_blank');
           showToast('Đã mở cổng thanh toán MoMo trong tab mới.', 'info');
@@ -640,7 +659,7 @@ const WalkinBookingPage: React.FC = () => {
             isOpen: true,
             bookingId: booking.id,
             bookingCode: booking.bookingCode,
-            amount: total,
+            amount: booking.totalAmount ?? total,
             checkoutUrl: momoRes.payUrl
           });
         } else {
@@ -667,6 +686,7 @@ const WalkinBookingPage: React.FC = () => {
     setSelectedWorkspaceId(null);
     setPaymentMethod('cash');
     setIsSuccess(false);
+    setCollectedAmount(null);
     setQrModal(null);
   };
 
@@ -729,7 +749,7 @@ const WalkinBookingPage: React.FC = () => {
             </div>
             <div className="flex justify-between pt-1 text-sm">
               <span className="font-bold text-muted-foreground">Tổng đã thu:</span>
-              <span className="font-extrabold text-emerald-500 font-mono text-base">{formatVND(total)}</span>
+              <span className="font-extrabold text-emerald-500 font-mono text-base">{formatVND(collectedAmount ?? total)}</span>
             </div>
           </div>
 
@@ -1653,8 +1673,12 @@ const WalkinBookingPage: React.FC = () => {
             <div className="grid sm:grid-cols-[210px_1fr] gap-4 items-center bg-muted/30 p-4 rounded-2xl border border-border">
               {/* Left: Dynamic Official VietQR */}
               <div className="flex flex-col items-center justify-center bg-white p-2.5 rounded-2xl border border-border shadow-sm">
-                <img
-                  src={dynamicQrImageUrl}
+                <VietQrImage
+                  remoteUrl={dynamicQrImageUrl}
+                  bankBin={BANK_INFO.bankBin}
+                  accountNumber={BANK_INFO.accountNumber}
+                  amount={qrModal.amount}
+                  addInfo={`BK ${qrModal.bookingCode}`.replace(/[^A-Za-z0-9 ]/g, ' ')}
                   alt={`VietQR ${qrModal.bookingCode}`}
                   className="w-44 h-44 object-contain rounded-lg"
                 />

@@ -50,20 +50,19 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
      * booking that WAS paid keeps it, otherwise a single-use code could be reused for ever by
      * booking and cancelling.
      */
-    String PROMOTION_STILL_REDEEMED = "b.promotionId = :promotionId "
-            + "AND b.status <> com.cospace.app.entity.BookingStatus.EXPIRED "
+    String PROMOTION_STILL_REDEEMED = "b.status <> com.cospace.app.entity.BookingStatus.EXPIRED "
             + "AND (b.status <> com.cospace.app.entity.BookingStatus.CANCELLED OR EXISTS ("
             + "  SELECT 1 FROM Payment p WHERE p.bookingId = b.id "
             + "  AND p.status = com.cospace.app.entity.PaymentStatus.PAID))";
 
-    @org.springframework.data.jpa.repository.Query("SELECT COUNT(b) FROM Booking b WHERE " + PROMOTION_STILL_REDEEMED)
+    @org.springframework.data.jpa.repository.Query("SELECT COUNT(b) FROM Booking b WHERE b.promotionId = :promotionId AND " + PROMOTION_STILL_REDEEMED)
     long countPromotionUsage(@org.springframework.data.repository.query.Param("promotionId") UUID promotionId);
 
     @org.springframework.data.jpa.repository.Query("SELECT b.promotionId, COUNT(b) FROM Booking b WHERE b.promotionId IN :promotionIds AND " + PROMOTION_STILL_REDEEMED + " GROUP BY b.promotionId")
     List<Object[]> countPromotionUsageBatch(@org.springframework.data.repository.query.Param("promotionIds") Collection<UUID> promotionIds);
 
-    @org.springframework.data.jpa.repository.Query("SELECT COUNT(b) FROM Booking b WHERE " + PROMOTION_STILL_REDEEMED
-            + " AND b.userId = :userId")
+    @org.springframework.data.jpa.repository.Query("SELECT COUNT(b) FROM Booking b WHERE b.promotionId = :promotionId AND "
+            + PROMOTION_STILL_REDEEMED + " AND b.userId = :userId")
     long countPromotionUsageByUser(@org.springframework.data.repository.query.Param("promotionId") UUID promotionId,
                                    @org.springframework.data.repository.query.Param("userId") UUID userId);
 

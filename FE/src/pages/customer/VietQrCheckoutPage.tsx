@@ -10,6 +10,7 @@ import {
   FiInfo,
 } from 'react-icons/fi';
 import { useToast } from '../../components/Toast';
+import VietQrImage from '../../components/VietQrImage';
 import { API_BASE_URL } from '../../config/api';
 
 const formatVND = (amount: number) => {
@@ -250,9 +251,13 @@ const VietQrCheckoutPage: React.FC = () => {
 
           {/* QR Code Canvas Frame */}
           <div className="p-3.5 bg-white rounded-2xl shadow-sm border border-slate-200 inline-block transition-transform hover:scale-[1.01]">
-            <img 
-              src={qrImageUrl} 
-              alt="Mã QR Chuyển khoản VietQR" 
+            <VietQrImage
+              remoteUrl={qrImageUrl}
+              bankBin={bankBin}
+              accountNumber={accountNumber}
+              amount={amount}
+              addInfo={description}
+              alt="Mã QR Chuyển khoản VietQR"
               className="w-64 h-64 md:w-72 md:h-72 object-contain rounded-lg"
             />
           </div>

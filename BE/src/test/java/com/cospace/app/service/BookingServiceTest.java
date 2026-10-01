@@ -206,6 +206,20 @@ class BookingServiceTest {
         }
 
         @Test
+        void rejectsWorkspaceSwitchedToMaintenanceOrInactive() {
+            for (WorkspaceEntity.Status status : List.of(WorkspaceEntity.Status.maintenance, WorkspaceEntity.Status.inactive)) {
+                when(workspaceEntityRepository.findById(workspaceId)).thenReturn(Optional.of(WorkspaceEntity.builder()
+                        .id(workspaceId).floorId(floorId).workspaceTypeId(workspaceTypeId)
+                        .name("Desk A1").status(status).build()));
+
+                assertThatThrownBy(() -> bookingService.createBooking(userId, request(DurationUnit.hour, 2)))
+                        .isInstanceOf(IllegalArgumentException.class)
+                        .hasMessageContaining("Desk A1");
+            }
+            verify(bookingRepository, never()).save(any());
+        }
+
+        @Test
         void rejectsOverlappingBooking() {
             givenWorkspaceExists();
             when(bookingRepository.findOverlappingBookings(eq(workspaceId), any(), any(), anyList()))

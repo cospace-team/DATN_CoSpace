@@ -31,6 +31,8 @@ export interface CustomerBookingItem {
   workspaceName: string;
   branchName: string;
   date: Date;
+  /** Last day of the booking; differs from `date` for day / week / month passes. */
+  endDate: Date;
   startTime: string;
   endTime: string;
   status: string;
@@ -199,6 +201,7 @@ const BookingHistoryPage: React.FC = () => {
             workspaceName: b.workspaceName || `Chỗ ngồi ${b.workspaceId?.slice(0, 6) ?? ''}`,
             branchName: b.branchName || "CoSpace",
           date: new Date(b.startAt),
+          endDate: new Date(b.endAt),
           startTime: new Date(b.startAt).toLocaleTimeString("vi-VN", {
             hour: "2-digit",
             minute: "2-digit",
@@ -462,6 +465,10 @@ const BookingHistoryPage: React.FC = () => {
                       {booking.date instanceof Date
                         ? booking.date.toLocaleDateString("vi-VN")
                         : String(booking.date)}
+                      {booking.endDate instanceof Date &&
+                        booking.date instanceof Date &&
+                        booking.endDate.toDateString() !== booking.date.toDateString() &&
+                        ` → ${booking.endDate.toLocaleDateString("vi-VN")}`}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -568,12 +575,16 @@ const BookingHistoryPage: React.FC = () => {
                     >
                       <FiMaximize className="h-4 w-4" /> Mã QR Pass
                     </button>
-                    <button
-                      className="w-full py-3 bg-card text-foreground font-semibold tracking-tight border border-border rounded-full shadow-sm hover:bg-red-50 dark:bg-red-950/30 dark:bg-red-950/30 hover:text-red-700 hover:border-red-200 dark:border-red-900/50 dark:border-red-900/50 transition-colors flex justify-center items-center gap-2 text-xs"
-                      onClick={() => setShowCancelModal(booking.id)}
-                    >
-                      <FiX className="h-4 w-4" /> Hủy đặt chỗ
-                    </button>
+                    {/* Once the booked time has started the server refuses online cancellation
+                        (the counter handles it), so the button would only lead to an error. */}
+                    {booking.date instanceof Date && booking.date.getTime() > Date.now() && (
+                      <button
+                        className="w-full py-3 bg-card text-foreground font-semibold tracking-tight border border-border rounded-full shadow-sm hover:bg-red-50 dark:bg-red-950/30 dark:bg-red-950/30 hover:text-red-700 hover:border-red-200 dark:border-red-900/50 dark:border-red-900/50 transition-colors flex justify-center items-center gap-2 text-xs"
+                        onClick={() => setShowCancelModal(booking.id)}
+                      >
+                        <FiX className="h-4 w-4" /> Hủy đặt chỗ
+                      </button>
+                    )}
                   </>
                 )}
                 {booking.status === "pending_payment" && (

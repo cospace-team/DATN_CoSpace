@@ -252,7 +252,11 @@ const ProfilePage: React.FC = () => {
     // 1. Fetch Master Tags from Database
     const fetchMasterTags = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/api/tags`);
+        // /api/tags requires a signed-in user; without the header it answered 401 and the skill
+        // picker silently fell back to no master tags.
+        const res = await fetch(`${API_BASE_URL}/api/tags`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data)) {

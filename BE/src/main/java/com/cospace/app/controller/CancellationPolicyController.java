@@ -56,6 +56,7 @@ public class CancellationPolicyController {
         if (!branchAccessGuard.isSuperAdmin(jwt)) {
             policy.setBranchId(branchAccessGuard.requireOwnBranch(jwt));
         }
+        validatePolicy(policy);
         CancellationPolicy savedPolicy = policyRepository.save(policy);
         auditLogService.log(httpServletRequest, UUID.fromString(jwt.getSubject()), "CREATE", "cancellation_policies", savedPolicy.getId(),
                 null, Map.of("name", savedPolicy.getName(), "ruleType", savedPolicy.getRuleType(), "refundPercent", savedPolicy.getRefundPercent()));
@@ -83,6 +84,7 @@ public class CancellationPolicyController {
         existing.setRefundPercent(updated.getRefundPercent());
         existing.setPriority(updated.getPriority());
         existing.setActive(updated.isActive());
+        validatePolicy(existing);
         CancellationPolicy saved = policyRepository.save(existing);
         auditLogService.log(httpServletRequest, UUID.fromString(jwt.getSubject()), "UPDATE", "cancellation_policies", saved.getId(),
                 oldValues, Map.of("name", saved.getName(), "refundPercent", saved.getRefundPercent(), "isActive", saved.isActive()));
@@ -101,6 +103,32 @@ public class CancellationPolicyController {
         auditLogService.log(httpServletRequest, UUID.fromString(jwt.getSubject()), "DELETE", "cancellation_policies", existing.getId(),
                 Map.of("isActive", true), Map.of("isActive", false));
         return ResponseEntity.ok(Map.of("success", true, "message", "Chính sách đã được vô hiệu hóa."));
+    }
+
+    private static final java.util.Set<String> RULE_TYPES =
+            // HOURS_BEFORE_CHECKIN exists in seeded data; accepted so those rows stay editable.
+            java.util.Set.of("GRACE_HOURS", "BEFORE_START_DAYS", "BEFORE_START_HOURS", "HOURS_BEFORE", "HOURS_BEFORE_CHECKIN");
+
+    /**
+     * Checked here so a bad form gets a message saying what is wrong, instead of the database's
+     * check constraint surfacing as a generic "dữ liệu xung đột".
+     */
+    private static void validatePolicy(CancellationPolicy policy) {
+        if (policy.getName() == null || policy.getName().isBlank()) {
+            throw new IllegalArgumentException("Tên chính sách không được để trống.");
+        }
+        String ruleType = policy.getRuleType() != null ? policy.getRuleType().trim().toUpperCase(java.util.Locale.ROOT) : "";
+        if (!RULE_TYPES.contains(ruleType)) {
+            throw new IllegalArgumentException("Loại quy tắc không hợp lệ: " + policy.getRuleType());
+        }
+        policy.setRuleType(ruleType);
+        if (policy.getMinValue() < 0 || policy.getMaxValue() <= policy.getMinValue()) {
+            throw new IllegalArgumentException("Khoảng thời gian không hợp lệ: giá trị tối đa phải lớn hơn giá trị tối thiểu (và không âm).");
+        }
+        java.math.BigDecimal percent = policy.getRefundPercent();
+        if (percent == null || percent.signum() < 0 || percent.compareTo(java.math.BigDecimal.valueOf(100)) > 0) {
+            throw new IllegalArgumentException("Tỷ lệ hoàn tiền phải từ 0 đến 100%.");
+        }
     }
 
     @PostMapping("/bookings/{bookingId}/cancel-v2")

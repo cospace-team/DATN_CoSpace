@@ -89,10 +89,10 @@ const BookingCheckoutPage: React.FC = () => {
   const [paymentMethod, setPaymentMethod] = useState<'payos' | 'momo'>('payos');
   const [holdExpired, setHoldExpired] = useState(false);
 
-  // Before a booking is created there's no real hold yet, so this is only an advisory display —
-  // the moment activeBooking.paymentDeadlineAt comes back from the server, the countdown re-syncs
-  // to that authoritative deadline so it can never drift from what the backend will actually expire.
-  const [softDeadline] = useState(() => Date.now() + 15 * 60 * 1000);
+  // Before a booking is created there's no hold yet: the badge shows the full 15 minutes the hold
+  // will last and nothing counts down (a client-only countdown used to reach 00:00 while the guest
+  // was still reading the page and then disabled "Thanh toán ngay" for good). Once the booking
+  // exists the countdown follows activeBooking.paymentDeadlineAt, the deadline the backend enforces.
   const [timeLeft, setTimeLeft] = useState(15 * 60);
 
   // Server-side price quote: applies the membership-tier discount and the promotion code, so the
@@ -200,9 +200,11 @@ const BookingCheckoutPage: React.FC = () => {
   const grandTotal = quote ? quote.totalAmount : total;
 
   useEffect(() => {
-    const deadlineMs = activeBooking?.paymentDeadlineAt
-      ? new Date(activeBooking.paymentDeadlineAt).getTime()
-      : softDeadline;
+    if (!activeBooking?.paymentDeadlineAt) {
+      setTimeLeft(15 * 60);
+      return;
+    }
+    const deadlineMs = new Date(activeBooking.paymentDeadlineAt).getTime();
 
     const tick = () => {
       const remaining = Math.max(0, Math.round((deadlineMs - Date.now()) / 1000));
@@ -215,7 +217,7 @@ const BookingCheckoutPage: React.FC = () => {
     tick();
     const timer = setInterval(tick, 1000);
     return () => clearInterval(timer);
-  }, [activeBooking, softDeadline]);
+  }, [activeBooking]);
 
   const formatCountdown = (seconds: number) => {
     const m = Math.floor(seconds / 60);

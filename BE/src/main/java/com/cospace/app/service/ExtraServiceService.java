@@ -55,7 +55,18 @@ public class ExtraServiceService {
     @Transactional
     @CacheEvict(value = CacheConfig.EXTRA_SERVICES, allEntries = true)
     public ExtraServiceEntity createService(ExtraServiceEntity service) {
+        if (service.getName() == null || service.getName().isBlank()) {
+            throw new IllegalArgumentException("Tên dịch vụ không được để trống.");
+        }
+        requireValidPrice(service.getPrice());
         return extraServiceRepository.save(service);
+    }
+
+    /** A service is never priced below zero: a negative line would quietly discount the booking it is added to. */
+    private static void requireValidPrice(long price) {
+        if (price < 0) {
+            throw new IllegalArgumentException("Giá dịch vụ không được âm.");
+        }
     }
 
     /**
@@ -73,6 +84,9 @@ public class ExtraServiceService {
             existing.setCode(updates.get("code").toString());
         }
         if (updates.containsKey("name") && updates.get("name") != null) {
+            if (updates.get("name").toString().isBlank()) {
+                throw new IllegalArgumentException("Tên dịch vụ không được để trống.");
+            }
             existing.setName(updates.get("name").toString());
         }
         if (updates.containsKey("serviceType") && updates.get("serviceType") != null) {
@@ -83,7 +97,15 @@ public class ExtraServiceService {
             existing.setDescription(description != null ? description.toString() : null);
         }
         if (updates.containsKey("price") && updates.get("price") != null) {
-            existing.setPrice(Long.parseLong(updates.get("price").toString()));
+            long price;
+            try {
+                // Through BigDecimal so "35000" and a JSON number serialised as "35000.0" both parse.
+                price = new java.math.BigDecimal(updates.get("price").toString().trim()).setScale(0, java.math.RoundingMode.HALF_UP).longValueExact();
+            } catch (NumberFormatException | ArithmeticException e) {
+                throw new IllegalArgumentException("Giá dịch vụ không hợp lệ.");
+            }
+            requireValidPrice(price);
+            existing.setPrice(price);
         }
         if (updates.containsKey("unit") && updates.get("unit") != null) {
             existing.setUnit(updates.get("unit").toString());
