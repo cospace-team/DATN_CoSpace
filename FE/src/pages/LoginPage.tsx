@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { Button } from "../components/ui/button";
 import { Logo } from "../components/ui/Logo";
@@ -151,9 +152,13 @@ const LoginPage: React.FC = () => {
         
         {/* Brand Logo/Header */}
         <div className="relative z-20 self-start mt-8 ml-8">
-          <div className="bg-card/90 backdrop-blur-md text-foreground px-6 py-3 rounded-full shadow-sm border border-white/20 inline-block">
+          <Link
+            to="/"
+            className="bg-card/90 backdrop-blur-md text-foreground px-6 py-3 rounded-full shadow-sm border border-white/20 inline-flex items-center hover:opacity-90 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer group"
+            title="Về trang chủ CoSpace"
+          >
             <Logo iconClassName="h-6 w-6" textClassName="text-xl font-semibold tracking-tight" />
-          </div>
+          </Link>
         </div>
 
         {/* Dynamic Value Prop */}
@@ -203,9 +208,13 @@ const LoginPage: React.FC = () => {
           
           {/* Mobile Logo */}
           <div className="flex lg:hidden justify-center mb-8">
-            <div className="bg-card text-foreground px-6 py-3 rounded-full shadow-sm border border-border inline-block">
+            <Link
+              to="/"
+              className="bg-card text-foreground px-6 py-3 rounded-full shadow-sm border border-border inline-flex items-center hover:opacity-90 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer group"
+              title="Về trang chủ CoSpace"
+            >
               <Logo textClassName="text-xl font-semibold tracking-tight" />
-            </div>
+            </Link>
           </div>
 
           {/* View Headers */}

@@ -5,6 +5,7 @@ import {
   Route,
   Navigate,
   NavLink,
+  Link,
   useLocation,
   useNavigate,
 } from "react-router-dom";
@@ -397,12 +398,18 @@ const AppShell: React.FC = () => {
       >
         {/* Logo area */}
         <div className={`flex items-center gap-3 h-[68px] border-b border-sidebar-border shrink-0 ${collapsed ? "justify-center px-3" : "px-5"}`}>
-          <Logo
-            showText={!collapsed}
-            isDarkBackground
-            iconClassName="h-9 w-9"
-            textClassName="text-lg font-bold tracking-tight"
-          />
+          <Link
+            to={defaultRoute}
+            className="flex items-center gap-3 group hover:opacity-90 transition-opacity focus:outline-none"
+            title="Trang chính"
+          >
+            <Logo
+              showText={!collapsed}
+              isDarkBackground
+              iconClassName="h-9 w-9"
+              textClassName="text-lg font-bold tracking-tight"
+            />
+          </Link>
         </div>
 
         {/* Section label */}
