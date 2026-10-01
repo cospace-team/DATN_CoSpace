@@ -28,7 +28,14 @@ const InnerDecoration: React.FC<{
 
   switch (el.type) {
     case 'desk':
-    case 'standing_desk':
+    case 'standing_desk': {
+      // A shared desk (bench, cluster) seats people on both long sides: half the chairs above the
+      // table, the rest below. A single desk keeps its one chair above the table.
+      const seats = el.type === 'desk' ? Math.max(1, el.seatCount ?? 1) : 1;
+      const above = Math.ceil(seats / 2);
+      const below = seats - above;
+      const chairR = Math.min(Math.min(el.width, el.height) * 0.08, 7);
+      const chairX = (i: number, n: number) => el.width * (0.15 + (0.7 * (i + 0.5)) / n);
       return (
         <g>
           {/* Table surface */}
@@ -42,13 +49,13 @@ const InnerDecoration: React.FC<{
             stroke="var(--border-strong, #CBD5E1)"
             strokeWidth={0.8}
           />
-          {/* Chair dot */}
-          <circle
-            cx={cx}
-            cy={el.height * 0.15}
-            r={Math.min(el.width, el.height) * 0.08}
-            fill={el.strokeColor || '#22C55E'}
-          />
+          {/* Chairs */}
+          {Array.from({ length: above }, (_, i) => (
+            <circle key={`a${i}`} cx={chairX(i, above)} cy={el.height * 0.15} r={chairR} fill={el.strokeColor || '#22C55E'} />
+          ))}
+          {Array.from({ length: below }, (_, i) => (
+            <circle key={`b${i}`} cx={chairX(i, below)} cy={el.height * 0.75} r={chairR} fill={el.strokeColor || '#22C55E'} />
+          ))}
           {el.type === 'standing_desk' && (
             <line
               x1={el.width * 0.25}
@@ -62,6 +69,7 @@ const InnerDecoration: React.FC<{
           )}
         </g>
       );
+    }
 
     case 'chair':
       return (
@@ -492,8 +500,9 @@ const ElementRenderer: React.FC<Props> = ({
         </text>
       )}
 
-      {/* Lock indicator */}
-      {el.locked && (
+      {/* Lock indicator: only the editor (the one view that drags elements) needs it; on the
+          read-only plans it would put padlocks on every locked wall. */}
+      {el.locked && onMouseDown && (
         <text
           x={el.width - 8}
           y={12}
