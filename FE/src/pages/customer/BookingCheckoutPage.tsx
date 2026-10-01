@@ -337,7 +337,7 @@ const BookingCheckoutPage: React.FC = () => {
       <div className="flex items-center justify-between mb-4">
         <button 
           onClick={() => navigate(-1)} 
-          className="flex items-center gap-2 px-4 py-2 font-semibold text-sm  tracking-tight rounded-3xl border border-border bg-card text-foreground shadow-sm  hover:shadow-sm transition-all"
+          className="flex items-center gap-2 px-4 py-2 font-semibold text-sm tracking-tight rounded-3xl border border-border bg-card text-foreground shadow-sm hover:shadow-sm transition-all"
         >
           <FiChevronLeft className="h-5 w-5" /> Quay lại chọn chỗ
         </button>
@@ -392,7 +392,7 @@ const BookingCheckoutPage: React.FC = () => {
 
             <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-6 bg-card">
               <div className="space-y-2 p-4 bg-muted/50 rounded-3xl border border-border shadow-inner">
-                <p className="text-[10px] text-foreground  tracking-tight font-semibold">
+                <p className="text-[10px] text-foreground tracking-tight font-semibold">
                   {isMultiDay ? 'Từ ngày' : 'Ngày sử dụng'}
                 </p>
                 <p className="flex items-center gap-3 font-semibold text-lg text-foreground">
@@ -415,7 +415,7 @@ const BookingCheckoutPage: React.FC = () => {
                   </>
                 ) : (
                   <>
-                    <p className="text-[10px] text-foreground  tracking-tight font-semibold">Khung giờ</p>
+                    <p className="text-[10px] text-foreground tracking-tight font-semibold">Khung giờ</p>
                     <div className="flex items-center gap-3 font-semibold text-lg text-foreground">
                       <div className="p-2 bg-card border border-border rounded-lg shadow-sm"><FiClock className="text-foreground h-5 w-5" /></div>
                       <span>{String(startHour).padStart(2, '0')}:00 → {String(endHour).padStart(2, '0')}:00</span>
@@ -555,7 +555,7 @@ const BookingCheckoutPage: React.FC = () => {
             <div className="space-y-4">
               {/* PayOS VietQR Option */}
               <label className={`flex items-center justify-between p-4 rounded-3xl border-4 cursor-pointer transition-all ${
-                paymentMethod === 'payos' ? 'border-[#0052cc] bg-blue-50/20 dark:bg-blue-950/20 shadow-sm' : 'border-border  hover:shadow-sm'
+                paymentMethod === 'payos' ? 'border-[#0052cc] bg-blue-50/20 dark:bg-blue-950/20 shadow-sm' : 'border-border hover:shadow-sm'
               }`}>
                 <div className="flex items-center gap-4">
                   <input 
@@ -580,7 +580,7 @@ const BookingCheckoutPage: React.FC = () => {
               </label>
 
               <label className={`flex items-center justify-between p-4 rounded-3xl border-4 cursor-pointer transition-all ${
-                paymentMethod === 'momo' ? 'border-[#A50064] bg-muted/5 shadow-sm' : 'border-border  hover:shadow-sm'
+                paymentMethod === 'momo' ? 'border-[#A50064] bg-muted/5 shadow-sm' : 'border-border hover:shadow-sm'
               }`}>
                 <div className="flex items-center gap-4">
                   <input 
@@ -662,7 +662,7 @@ const BookingCheckoutPage: React.FC = () => {
                 <div className="flex justify-between items-end">
                   <div>
                     <span className="font-semibold text-lg block text-foreground ">Tổng cộng</span>
-                    <span className="text-[10px] font-medium text-foreground/50  tracking-tight">Đã bao gồm VAT</span>
+                    <span className="text-[10px] font-medium text-foreground/50 tracking-tight">Đã bao gồm VAT</span>
                   </div>
                   <span className="font-semibold text-3xl text-foreground font-mono">{formatVND(grandTotal)}</span>
                 </div>
@@ -676,7 +676,7 @@ const BookingCheckoutPage: React.FC = () => {
               <button 
                 onClick={handleCreateBooking} 
                 disabled={isProcessing || timeLeft <= 0 || (!activeBooking && !quote)}
-                className={`w-full py-5 text-lg font-semibold tracking-tight border border-border rounded-3xl shadow-sm  hover:shadow-sm transition-all flex justify-center items-center gap-3 ${
+                className={`w-full py-5 text-lg font-semibold tracking-tight border border-border rounded-3xl shadow-sm hover:shadow-sm transition-all flex justify-center items-center gap-3 ${
                   isProcessing || timeLeft <= 0 || (!activeBooking && !quote) ? 'bg-gray-600 text-white opacity-50 cursor-not-allowed' : 'bg-[#A50064] text-white hover:bg-[#8A0053]'
                 }`}
               >

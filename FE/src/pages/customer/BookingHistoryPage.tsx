@@ -353,7 +353,7 @@ const BookingHistoryPage: React.FC = () => {
               className={`flex items-center gap-2 px-6 py-3 font-semibold text-sm tracking-tight rounded-full border border-border transition-all ${
                 isActive
                   ? "bg-slate-900 text-white shadow-sm -translate-y-1"
-                  : "bg-card text-foreground shadow-sm  hover:shadow-sm"
+                  : "bg-card text-foreground shadow-sm hover:shadow-sm"
               }`}
             >
               <Icon
@@ -395,7 +395,7 @@ const BookingHistoryPage: React.FC = () => {
           getFilteredBookings().map((booking) => (
             <div
               key={booking.id}
-              className="bg-card border border-border rounded-2xl p-6 flex flex-col md:flex-row gap-6 transition-all shadow-sm  hover:shadow-sm"
+              className="bg-card border border-border rounded-2xl p-6 flex flex-col md:flex-row gap-6 transition-all shadow-sm hover:shadow-sm"
             >
               {/* Left Details */}
               <div className="flex-1 space-y-4">
@@ -552,7 +552,7 @@ const BookingHistoryPage: React.FC = () => {
                 {(booking.status === "confirmed" || booking.status === "checked_in") && (
                   <button
                     onClick={() => setServicesBooking(booking)}
-                    className="w-full py-3 bg-card text-foreground font-semibold tracking-tight border border-border rounded-full shadow-sm  hover:shadow-sm transition-all flex justify-center items-center gap-2 text-xs"
+                    className="w-full py-3 bg-card text-foreground font-semibold tracking-tight border border-border rounded-full shadow-sm hover:shadow-sm transition-all flex justify-center items-center gap-2 text-xs"
                   >
                     <FiCoffee className="h-4 w-4" /> Dịch vụ & gia hạn
                   </button>
@@ -561,7 +561,7 @@ const BookingHistoryPage: React.FC = () => {
                   <>
                     <button
                       onClick={() => setShowQrModal(booking)}
-                      className="w-full py-3 bg-slate-900 text-white font-semibold tracking-tight border border-border rounded-full shadow-sm  hover:shadow-sm transition-all flex justify-center items-center gap-2 text-xs"
+                      className="w-full py-3 bg-slate-900 text-white font-semibold tracking-tight border border-border rounded-full shadow-sm hover:shadow-sm transition-all flex justify-center items-center gap-2 text-xs"
                     >
                       <FiMaximize className="h-4 w-4" /> Mã QR Pass
                     </button>
@@ -582,7 +582,7 @@ const BookingHistoryPage: React.FC = () => {
                     <button
                       onClick={() => void handlePayNow(booking.id, booking.totalAmount)}
                       disabled={!apiLoaded || payingId === booking.id}
-                      className="w-full py-3 bg-slate-900 text-white font-semibold tracking-tight border border-border rounded-full shadow-sm  hover:shadow-sm transition-all flex justify-center items-center gap-2 text-xs disabled:opacity-60 disabled:hover:translate-y-0"
+                      className="w-full py-3 bg-slate-900 text-white font-semibold tracking-tight border border-border rounded-full shadow-sm hover:shadow-sm transition-all flex justify-center items-center gap-2 text-xs disabled:opacity-60"
                     >
                       <FiCreditCard className="h-4 w-4" />
                       {payingId === booking.id ? "Đang chuyển..." : "Thanh toán ngay"}
@@ -765,7 +765,7 @@ const BookingHistoryPage: React.FC = () => {
                 className={`flex-1 py-4 text-white font-semibold tracking-tight border rounded-full shadow-sm transition-all ${
                   isCanceling 
                     ? "bg-red-400 border-red-400 cursor-not-allowed opacity-70" 
-                    : "bg-red-600 border-red-700  hover:shadow-md"
+                    : "bg-red-600 border-red-700 hover:shadow-md"
                 }`}
                 onClick={handleCancel}
                 disabled={isCanceling}

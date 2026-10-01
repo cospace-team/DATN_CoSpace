@@ -764,7 +764,7 @@ const WalkinBookingPage: React.FC = () => {
               onClick={handleReset}
               className="btn btn-primary w-full py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-primary/20"
             >
-              <FiCheck className="h-4 w-4" /> Tạo đơn walk-in Mới
+              <FiCheck className="h-4 w-4" /> Tạo đơn walk-in mới
             </button>
           </div>
         </div>
