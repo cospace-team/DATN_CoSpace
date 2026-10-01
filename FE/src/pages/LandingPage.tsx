@@ -1095,7 +1095,19 @@ const LandingPage: React.FC = () => {
       <footer className="bg-card border-t-4 border-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-16 grid grid-cols-2 md:grid-cols-12 gap-10">
           <div className="col-span-2 md:col-span-4">
-            <Logo iconClassName="h-8 w-8" textClassName="text-2xl font-display font-bold tracking-tight text-foreground" />
+            <button
+              type="button"
+              onClick={() => {
+                window.scrollTo({ top: 0, behavior: "smooth" });
+                if (window.location.hash) {
+                  window.history.pushState(null, "", window.location.pathname);
+                }
+              }}
+              className="inline-flex items-center group cursor-pointer text-left focus:outline-none hover:opacity-90 transition-opacity"
+              title="Cuộn về đầu trang CoSpace"
+            >
+              <Logo iconClassName="h-8 w-8" textClassName="text-2xl font-display font-bold tracking-tight text-foreground" />
+            </button>
             <p className="text-muted-foreground mt-4 leading-relaxed max-w-sm">
               Nền tảng đặt chỗ và quản lý không gian làm việc chung. Đơn giản hóa vận hành, tối ưu trải nghiệm.
             </p>

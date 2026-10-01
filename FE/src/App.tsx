@@ -400,7 +400,14 @@ const AppShell: React.FC = () => {
         <div className={`flex items-center gap-3 h-[68px] border-b border-sidebar-border shrink-0 ${collapsed ? "justify-center px-3" : "px-5"}`}>
           <Link
             to={defaultRoute}
-            className="flex items-center gap-3 group hover:opacity-90 transition-opacity focus:outline-none"
+            onClick={() => {
+              window.scrollTo({ top: 0, behavior: "smooth" });
+              const main = document.getElementById("main-content");
+              if (main) {
+                main.scrollTo({ top: 0, behavior: "smooth" });
+              }
+            }}
+            className="flex items-center gap-3 group hover:opacity-90 transition-opacity focus:outline-none cursor-pointer"
             title="Trang chính"
           >
             <Logo

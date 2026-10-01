@@ -59,6 +59,18 @@ const PublicNavbar: React.FC = () => {
     }
   };
 
+  const handleLogoClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (location.pathname === "/") {
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      if (window.location.hash) {
+        window.history.pushState(null, "", window.location.pathname);
+      }
+    } else {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
   const isActive = (to: string) =>
     to.startsWith("/#") ? false : location.pathname === to;
 
@@ -70,7 +82,7 @@ const PublicNavbar: React.FC = () => {
     >
       <nav className="flex justify-between items-center px-6 md:px-8 max-w-7xl mx-auto">
         {/* ── Logo ── */}
-        <Link to="/" className="group flex items-center gap-2">
+        <Link to="/" onClick={handleLogoClick} className="group flex items-center gap-2 cursor-pointer" title="Về đầu trang CoSpace">
           <Logo iconClassName="text-foreground w-6 h-6" textClassName="text-lg font-semibold tracking-tight text-foreground" />
         </Link>
 
