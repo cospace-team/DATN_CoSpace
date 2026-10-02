@@ -73,6 +73,26 @@ export interface MyMembershipDto {
   progressPercent: number;
 }
 
+/* ─── Reputation (điểm uy tín) ─── */
+
+export interface ReputationEventDto {
+  id: string;
+  bookingId: string | null;
+  reason: string;
+  delta: number;
+  scoreAfter: number;
+  note: string | null;
+  createdAt: string;
+}
+
+export interface MyReputationDto {
+  score: number;
+  maxScore: number;
+  checkinDeadlineMinutes: number;
+  missedCheckinPenalty: number;
+  recentEvents: ReputationEventDto[];
+}
+
 /* ─── Promotions ─── */
 
 export type PromotionState = 'scheduled' | 'running' | 'ended' | 'inactive' | 'exhausted';
@@ -199,6 +219,10 @@ export const membershipApi = {
       json('POST'), 'Không thể tính lại hạng thành viên'),
   me: () => request<MyMembershipDto>('/api/membership/me', {}, 'Không thể tải hạng thành viên'),
   publicTiers: () => request<MembershipTierDto[]>('/api/membership/tiers', {}, 'Không thể tải hạng thành viên'),
+};
+
+export const reputationApi = {
+  me: () => request<MyReputationDto>('/api/reputation/me', {}, 'Không thể tải điểm uy tín'),
 };
 
 export const promotionApi = {

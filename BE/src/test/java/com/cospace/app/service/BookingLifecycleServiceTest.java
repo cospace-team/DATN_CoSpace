@@ -3,6 +3,7 @@ package com.cospace.app.service;
 import com.cospace.app.entity.Booking;
 import com.cospace.app.entity.BookingStatus;
 import com.cospace.app.entity.CheckinLog;
+import com.cospace.app.entity.DurationUnit;
 import com.cospace.app.repository.BookingRepository;
 import com.cospace.app.repository.CheckinLogRepository;
 import org.junit.jupiter.api.Test;
@@ -33,6 +34,8 @@ class BookingLifecycleServiceTest {
     private NotificationService notificationService;
     @Mock
     private BookingAddonService bookingAddonService;
+    @Mock
+    private ReputationService reputationService;
 
     @InjectMocks
     private BookingLifecycleService lifecycleService;
@@ -86,6 +89,7 @@ class BookingLifecycleServiceTest {
         assertThat(lifecycleService.closeEndedBooking(b.getId(), now)).isEqualTo(BookingStatus.NO_SHOW);
         assertThat(b.getStatus()).isEqualTo(BookingStatus.NO_SHOW);
         verify(bookingAddonService).voidUnpaid(b, null);
+        verify(reputationService).penalizeMissedCheckin(b);
     }
 
     @Test
@@ -95,5 +99,52 @@ class BookingLifecycleServiceTest {
 
         assertThat(lifecycleService.closeEndedBooking(b.getId(), now)).isEqualTo(BookingStatus.COMPLETED);
         verify(notificationService, never()).createNotification(any(), any(), any(), any(), any(), any());
+        verify(reputationService, never()).penalizeMissedCheckin(any());
+    }
+
+    private Booking startedBooking(BookingStatus status, OffsetDateTime startAt, DurationUnit unit) {
+        Booking b = Booking.builder().id(UUID.randomUUID()).bookingCode("WH-LATE01").userId(UUID.randomUUID())
+                .status(status).unit(unit).startAt(startAt).endAt(startAt.plusHours(3)).build();
+        when(bookingRepository.findByIdWithLock(b.getId())).thenReturn(Optional.of(b));
+        return b;
+    }
+
+    @Test
+    void bookingNotCheckedInPastDeadlineIsPenalized() {
+        when(reputationService.checkinDeadlineMinutes()).thenReturn(30L);
+        Booking b = startedBooking(BookingStatus.CONFIRMED, now.minusMinutes(31), DurationUnit.hour);
+        when(checkinLogRepository.existsByBookingId(b.getId())).thenReturn(false);
+        when(reputationService.penalizeMissedCheckin(b)).thenReturn(true);
+
+        assertThat(lifecycleService.penalizeMissedCheckin(b.getId(), now)).isTrue();
+        // The booking stays usable: the guest may still turn up late.
+        assertThat(b.getStatus()).isEqualTo(BookingStatus.CONFIRMED);
+    }
+
+    @Test
+    void bookingStillWithinDeadlineIsNotPenalized() {
+        when(reputationService.checkinDeadlineMinutes()).thenReturn(30L);
+        Booking b = startedBooking(BookingStatus.CONFIRMED, now.minusMinutes(10), DurationUnit.hour);
+
+        assertThat(lifecycleService.penalizeMissedCheckin(b.getId(), now)).isFalse();
+        verify(reputationService, never()).penalizeMissedCheckin(any());
+    }
+
+    @Test
+    void checkedInOrCancelledBookingIsNotPenalized() {
+        Booking checkedIn = startedBooking(BookingStatus.CHECKED_IN, now.minusHours(1), DurationUnit.hour);
+        Booking cancelled = startedBooking(BookingStatus.CANCELLED, now.minusHours(1), DurationUnit.hour);
+
+        assertThat(lifecycleService.penalizeMissedCheckin(checkedIn.getId(), now)).isFalse();
+        assertThat(lifecycleService.penalizeMissedCheckin(cancelled.getId(), now)).isFalse();
+        verify(reputationService, never()).penalizeMissedCheckin(any());
+    }
+
+    @Test
+    void multiDayPassIsExemptFromCheckinDeadline() {
+        Booking b = startedBooking(BookingStatus.CONFIRMED, now.minusHours(5), DurationUnit.week);
+
+        assertThat(lifecycleService.penalizeMissedCheckin(b.getId(), now)).isFalse();
+        verify(reputationService, never()).penalizeMissedCheckin(any());
     }
 }

@@ -81,6 +81,17 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
     List<UUID> findIdsByStatusAndEndAtBefore(@org.springframework.data.repository.query.Param("status") BookingStatus status,
                                              @org.springframework.data.repository.query.Param("before") OffsetDateTime before);
 
+    /**
+     * Ids of bookings in a status that started inside [startedAfter, startedBefore) and have never
+     * been checked in — candidates for the missed check-in penalty.
+     */
+    @org.springframework.data.jpa.repository.Query("SELECT b.id FROM Booking b WHERE b.status = :status "
+            + "AND b.startAt < :startedBefore AND b.startAt >= :startedAfter "
+            + "AND NOT EXISTS (SELECT 1 FROM CheckinLog c WHERE c.bookingId = b.id)")
+    List<UUID> findIdsNotCheckedInStartedBetween(@org.springframework.data.repository.query.Param("status") BookingStatus status,
+                                                 @org.springframework.data.repository.query.Param("startedAfter") OffsetDateTime startedAfter,
+                                                 @org.springframework.data.repository.query.Param("startedBefore") OffsetDateTime startedBefore);
+
     int countByBranchIdAndStatus(UUID branchId, BookingStatus status);
 
     int countByUserIdAndStatus(UUID userId, BookingStatus status);

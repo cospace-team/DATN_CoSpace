@@ -4,9 +4,11 @@ import com.cospace.app.dto.api.AmenityDto.WorkspaceTypeAmenities;
 import com.cospace.app.dto.api.MembershipDto.MyMembershipResponse;
 import com.cospace.app.dto.api.MembershipDto.TierResponse;
 import com.cospace.app.dto.api.PromotionDto.PromotionResponse;
+import com.cospace.app.dto.api.ReputationDto.MyReputationResponse;
 import com.cospace.app.service.AmenityService;
 import com.cospace.app.service.MembershipService;
 import com.cospace.app.service.PromotionService;
+import com.cospace.app.service.ReputationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -17,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.UUID;
 
-/** Customer-facing read endpoints for amenities, membership tiers and promotions. */
+/** Customer-facing read endpoints for amenities, membership tiers, reputation and promotions. */
 @RestController
 @RequiredArgsConstructor
 public class LoyaltyController {
@@ -25,6 +27,7 @@ public class LoyaltyController {
     private final AmenityService amenityService;
     private final MembershipService membershipService;
     private final PromotionService promotionService;
+    private final ReputationService reputationService;
 
     /** Workspace types with their active amenities, for the explore / booking screens. */
     @GetMapping("/api/customer/spaces/workspace-types")
@@ -40,6 +43,12 @@ public class LoyaltyController {
     @GetMapping("/api/membership/me")
     public MyMembershipResponse myMembership(@AuthenticationPrincipal Jwt jwt) {
         return membershipService.getMyMembership(requireSubject(jwt));
+    }
+
+    /** The caller's reputation score (điểm uy tín) and its latest changes. */
+    @GetMapping("/api/reputation/me")
+    public MyReputationResponse myReputation(@AuthenticationPrincipal Jwt jwt) {
+        return reputationService.getMyReputation(requireSubject(jwt));
     }
 
     /** Public promotions the caller can use right now at this branch (and workspace type, if given). */

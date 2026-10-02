@@ -42,7 +42,7 @@ import { useToast } from '../../components/Toast';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { Spinner } from '../../components/ui/Spinner';
 import { bookingApi } from '../../lib/bookingApi';
-import { membershipApi, type MyMembershipDto } from '../../api/loyaltyApi';
+import { membershipApi, reputationApi, type MyMembershipDto, type MyReputationDto } from '../../api/loyaltyApi';
 import { formatVND } from '../../utils/formatters';
 import { API_BASE_URL } from '../../config/api';
 import type { PartnerSuggestion } from './profile/partnerTypes';
@@ -226,6 +226,7 @@ const ProfilePage: React.FC = () => {
   });
   // Server-side membership tier; realStats.tier stays as the offline fallback.
   const [membership, setMembership] = useState<MyMembershipDto | null>(null);
+  const [reputation, setReputation] = useState<MyReputationDto | null>(null);
   const tierLabel = membership?.currentTier ? `Hạng ${membership.currentTier.name}` : realStats.tier;
 
   // Sync user data when loaded
@@ -410,6 +411,7 @@ const ProfilePage: React.FC = () => {
     };
     loadRealStats();
     membershipApi.me().then(setMembership).catch(() => setMembership(null));
+    reputationApi.me().then(setReputation).catch(() => setReputation(null));
 
     // 5. Fetch partner matching suggestions (uses cached suggestions when available for 0ms transition)
     const fetchPartners = async () => {
@@ -1108,7 +1110,7 @@ const ProfilePage: React.FC = () => {
           {/* ══════════════════════════════════════════════════════════════
               2. MINI STATS DASHBOARD (REAL METRICS)
               ══════════════════════════════════════════════════════════════ */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 pt-4 border-t border-border/80">
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3.5 pt-4 border-t border-border/80">
             {/* Metric 1: Bookings */}
             <div className="bg-muted/40 hover:bg-muted/70 p-3.5 rounded-2xl border border-border/60 transition-all flex items-center gap-3.5 group">
               <div className="h-11 w-11 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xl shrink-0 group-hover:scale-105 transition-transform">
@@ -1171,6 +1173,35 @@ const ProfilePage: React.FC = () => {
                 )}
               </div>
             </div>
+
+            {/* Metric 5: Reputation */}
+            {reputation && (
+              <div className="bg-muted/40 hover:bg-muted/70 p-3.5 rounded-2xl border border-border/60 transition-all flex items-center gap-3.5 group">
+                <div className={`h-11 w-11 rounded-xl flex items-center justify-center text-xl shrink-0 group-hover:scale-105 transition-transform ${
+                  reputation.score >= 80
+                    ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400'
+                    : reputation.score >= 50
+                      ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                      : 'bg-red-500/10 text-red-600 dark:text-red-400'
+                }`}>
+                  <FiShield />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] font-medium text-muted-foreground">Điểm uy tín</p>
+                  <p className="text-lg font-bold text-foreground">
+                    {reputation.score}<span className="text-xs font-semibold text-muted-foreground">/{reputation.maxScore}</span>
+                  </p>
+                  <p
+                    className="text-[11px] text-muted-foreground truncate"
+                    title={reputation.recentEvents[0]?.note ?? undefined}
+                  >
+                    {reputation.recentEvents[0]
+                      ? `Gần nhất: ${reputation.recentEvents[0].delta} điểm (${new Date(reputation.recentEvents[0].createdAt).toLocaleDateString('vi-VN')})`
+                      : `Check-in trễ quá ${reputation.checkinDeadlineMinutes} phút: -${reputation.missedCheckinPenalty} điểm`}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

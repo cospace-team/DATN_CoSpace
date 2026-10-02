@@ -133,6 +133,11 @@ app:
     late-fee-grace-minutes: ${APP_BOOKING_LATE_FEE_GRACE_MINUTES:15}
     # Guests nobody checked out are closed automatically this long after the booked end.
     auto-checkout-after-minutes: ${APP_BOOKING_AUTO_CHECKOUT_AFTER_MINUTES:120}
+  reputation:
+    # A customer who has not checked in this long after the booked start loses reputation points
+    # (once per booking). Multi-day passes are only penalised if they end without any check-in.
+    checkin-deadline-minutes: ${APP_REPUTATION_CHECKIN_DEADLINE_MINUTES:30}
+    missed-checkin-penalty: ${APP_REPUTATION_MISSED_CHECKIN_PENALTY:10}
 
 logging:
   level:
