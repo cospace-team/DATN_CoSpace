@@ -292,6 +292,7 @@ public class UserService {
                 .contactPublic(profile.isContactPublic())
                 .contactLink(profile.getContactLink())
                 .membershipTier(user.getMembershipTier())
+                .reputationScore(user.getReputationScore())
                 .createdAt(user.getCreatedAt())
                 .build();
     }

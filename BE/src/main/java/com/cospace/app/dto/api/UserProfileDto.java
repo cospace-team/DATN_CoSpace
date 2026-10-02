@@ -27,5 +27,6 @@ public class UserProfileDto {
     private boolean contactPublic;
     private String contactLink;
     private String membershipTier;
+    private Integer reputationScore;
     private java.time.OffsetDateTime createdAt;
 }

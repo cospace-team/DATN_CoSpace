@@ -10,6 +10,8 @@ import { adminApi, type AdminUserDto } from '../../api/adminApi';
 import { customerSpaceApi, type BranchResponse } from '../../lib/spaceApi';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../components/Toast';
+import { ReputationBadge } from '../../components/reputation/ReputationBadge';
+import { CustomerReputationModal } from '../../components/reputation/CustomerReputationModal';
 
 /* ── Dropdown Menu ── */
 const ActionDropdown: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -190,6 +192,8 @@ const UserManagementPage: React.FC = () => {
 
   // Editing User
   const [editingUser, setEditingUser] = useState<AdminUserDto | null>(null);
+  /** Customer whose reputation history is open, if any. */
+  const [reputationUserId, setReputationUserId] = useState<string | null>(null);
 
   // Load branches
   useEffect(() => {
@@ -480,6 +484,11 @@ const UserManagementPage: React.FC = () => {
                       {u.role === 'customer' && u.membershipTier && u.membershipTier !== 'standard' && (
                         <span className="block text-xs text-muted-foreground mt-1 capitalize">Hạng {u.membershipTier}</span>
                       )}
+                      {u.role === 'customer' && u.reputationScore != null && (
+                        <div className="mt-1">
+                          <ReputationBadge score={u.reputationScore} onClick={() => setReputationUserId(u.id)} />
+                        </div>
+                      )}
                     </td>
                     <td className="max-w-[180px]">
                       {branchDisplay ? (
@@ -561,6 +570,14 @@ const UserManagementPage: React.FC = () => {
             </button>
           </div>
         </div>
+      )}
+
+      {reputationUserId && (
+        <CustomerReputationModal
+          userId={reputationUserId}
+          onClose={() => setReputationUserId(null)}
+          onChanged={() => fetchUsers()}
+        />
       )}
 
       {/* Modal Edit Role & Branch */}

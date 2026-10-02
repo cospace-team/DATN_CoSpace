@@ -26,6 +26,8 @@ export interface BookingResponse {
   id: string;
   bookingCode: string;
   userId: string;
+  customerName?: string | null;
+  customerPhone?: string | null;
   workspaceId: string;
   workspaceName?: string;
   workspaceTypeId: string;
@@ -35,7 +37,7 @@ export interface BookingResponse {
   endAt: string;
   unit: string;
   unitCount: number;
-  status: 'pending_payment' | 'confirmed' | 'checked_in' | 'completed' | 'canceled' | 'expired';
+  status: 'pending_payment' | 'confirmed' | 'checked_in' | 'completed' | 'canceled' | 'expired' | 'no_show';
   subtotalAmount: number;
   discountAmount: number;
   membershipTierCode?: string | null;
@@ -54,6 +56,31 @@ export interface BookingResponse {
   refundStatus?: string;
   policyName?: string;
   cancelledAt?: string;
+  isContract?: boolean;
+  pricePerUnit?: number;
+  taxAmount?: number;
+  serviceFeeAmount?: number;
+  paymentStatus?: string | null;
+  /* Details for the customer's booking list. */
+  workspaceCode?: string | null;
+  workspaceTypeName?: string | null;
+  workspaceCapacity?: number | null;
+  floorName?: string | null;
+  floorNo?: number | null;
+  branchAddress?: string | null;
+  branchCity?: string | null;
+  /** payos | momo | cash | bank_transfer */
+  paidVia?: string | null;
+  paidAt?: string | null;
+  firstCheckinAt?: string | null;
+  lastCheckoutAt?: string | null;
+  checkinCount?: number | null;
+  /** Net reputation points this booking earned (+) or cost (-). */
+  reputationDelta?: number | null;
+  /** Booking group (several seats booked together) this seat belongs to. */
+  groupId?: string | null;
+  groupCode?: string | null;
+  groupSize?: number | null;
 }
 
 export interface MomoCreatePaymentResponse {
@@ -284,4 +311,81 @@ export const bookingApi = {
       return { success: false, message: 'Không kết nối được máy chủ. Thanh toán chưa được ghi nhận.' };
     }
   },
+};
+
+/* ─────────────── Booking groups: several seats at once ─────────────── */
+
+export interface BookingGroupCreatePayload {
+  workspaceIds: string[];
+  startAt: string;
+  endAt: string;
+  unit: 'hour' | 'day' | 'week' | 'month';
+  /** Add-ons ordered with the group; served once, attached to the first seat. */
+  addons?: { serviceId: string; quantity: number }[];
+}
+
+export interface BookingGroupQuote {
+  seats: {
+    workspaceId: string;
+    workspaceName: string | null;
+    pricePerUnit: number;
+    unitCount: number;
+    subtotalAmount: number;
+    discountAmount: number;
+    totalAmount: number;
+  }[];
+  membershipTierName: string | null;
+  membershipDiscountPercent: number;
+  subtotalAmount: number;
+  discountAmount: number;
+  addonAmount: number;
+  totalAmount: number;
+}
+
+export interface BookingGroupResponse {
+  id: string;
+  groupCode: string;
+  branchId: string;
+  startAt: string;
+  endAt: string;
+  seatCount: number;
+  totalAmount: number;
+  /** What is still to be paid: the seats awaiting payment. */
+  amountDue: number;
+  paymentDeadlineAt: string | null;
+  bookings: BookingResponse[];
+}
+
+async function groupRequest<T>(path: string, body: unknown | undefined, fallback: string): Promise<T> {
+  const headers = await getAuthHeader();
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE_URL}${path}`, {
+      method: body === undefined ? 'GET' : 'POST',
+      headers,
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    });
+  } catch {
+    throw new Error('Không kết nối được máy chủ. Vui lòng thử lại.');
+  }
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || `${fallback} (${res.status})`);
+  }
+  if (body !== undefined) invalidateBookingCache();
+  return res.json();
+}
+
+export const bookingGroupApi = {
+  quote: (payload: Omit<BookingGroupCreatePayload, 'unit'> & { unit: string }) =>
+    groupRequest<BookingGroupQuote>('/api/bookings/groups/quote', payload, 'Không thể tính giá các chỗ đã chọn'),
+  create: (payload: BookingGroupCreatePayload) =>
+    groupRequest<BookingGroupResponse>('/api/bookings/groups', payload, 'Không thể đặt các chỗ đã chọn'),
+  get: (groupId: string) =>
+    groupRequest<BookingGroupResponse>(`/api/bookings/groups/${groupId}`, undefined, 'Không thể tải đơn nhóm'),
+  /** One VietQR payment for every seat still awaiting payment. */
+  payPayos: (groupId: string) =>
+    groupRequest<PayosCreatePaymentResponse>(`/api/bookings/groups/${groupId}/pay/payos`, {}, 'Không thể tạo thanh toán cho đơn nhóm'),
+  cancel: (groupId: string, reason?: string) =>
+    groupRequest<BookingGroupResponse>(`/api/bookings/groups/${groupId}/cancel`, reason ? { reason } : {}, 'Không thể hủy đơn nhóm'),
 };

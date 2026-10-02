@@ -32,6 +32,10 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     java.util.List<User> findByRole(User.Role role);
 
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("SELECT u FROM User u WHERE u.id = :id")
+    Optional<User> findByIdWithLock(@org.springframework.data.repository.query.Param("id") UUID id);
+
     /** [membership_tier code, user count] pairs for users with the given role. */
     @org.springframework.data.jpa.repository.Query("SELECT u.membershipTier, COUNT(u) FROM User u WHERE u.role = :role GROUP BY u.membershipTier")
     java.util.List<Object[]> countByMembershipTierForRole(@org.springframework.data.repository.query.Param("role") User.Role role);

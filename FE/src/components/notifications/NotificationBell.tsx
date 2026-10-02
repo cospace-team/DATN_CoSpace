@@ -10,6 +10,7 @@ import {
   FiUsers,
   FiMessageSquare,
   FiCreditCard,
+  FiShield,
 } from 'react-icons/fi';
 import { API_BASE_URL } from '../../config/api';
 
@@ -114,6 +115,18 @@ export const NotificationBell = React.memo(function NotificationBell() {
           icon: <FiClock className="h-4 w-4" />,
           colorClass: 'text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20',
           badge: 'Nhắc nhở',
+        };
+      case 'CHECKIN_REMINDER':
+        return {
+          icon: <FiClock className="h-4 w-4" />,
+          colorClass: 'text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20',
+          badge: 'Check-in',
+        };
+      case 'REPUTATION':
+        return {
+          icon: <FiShield className="h-4 w-4" />,
+          colorClass: 'text-sky-600 dark:text-sky-400 bg-sky-500/10 border-sky-500/20',
+          badge: 'Uy tín',
         };
       case 'REFUND':
       case 'REFUND_PROCESSED':

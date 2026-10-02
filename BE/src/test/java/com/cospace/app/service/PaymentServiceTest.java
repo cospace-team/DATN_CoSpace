@@ -580,4 +580,90 @@ class PaymentServiceTest {
             assertThat(captor.getValue().getStatus()).isEqualTo(PaymentStatus.FAILED);
         }
     }
+
+    @Nested
+    class GroupPayment {
+
+        private final UUID groupId = UUID.randomUUID();
+
+        private Payment groupRow(Booking booking, String orderId, String groupOrderId) {
+            Payment p = payment(booking, orderId, PaymentStatus.PENDING);
+            p.setGroupOrderId(groupOrderId);
+            p.setBookingGroupId(groupId);
+            return p;
+        }
+
+        @Test
+        void createsOneGatewayOrderWithOneRowPerSeat() {
+            BookingDto a = payableDto(UUID.randomUUID(), 100_000L);
+            BookingDto b = payableDto(UUID.randomUUID(), 150_000L);
+            when(bookingService.getMyGroup(userId, groupId)).thenReturn(
+                    com.cospace.app.dto.api.BookingGroupDto.GroupResponse.builder()
+                            .id(groupId).groupCode("GR-ABC234").bookings(java.util.List.of(a, b)).build());
+            when(payosService.createPaymentLink(anyLong(), eq(250_000L), eq("GR-ABC234"), any()))
+                    .thenReturn(Map.of("checkoutUrl", "https://pay.example/1", "qrCode", "qr"));
+
+            PayosCreatePaymentResponse res = paymentService.createPayosGroupPayment(userId, groupId);
+
+            assertThat(res.getAmount()).isEqualTo(250_000L);
+            assertThat(res.getCheckoutUrl()).isEqualTo("https://pay.example/1");
+            @SuppressWarnings("unchecked")
+            org.mockito.ArgumentCaptor<java.util.List<Payment>> rows = org.mockito.ArgumentCaptor.forClass(java.util.List.class);
+            verify(paymentRepository, org.mockito.Mockito.atLeastOnce()).saveAll(rows.capture());
+            java.util.List<Payment> saved = rows.getValue();
+            assertThat(saved).hasSize(2);
+            assertThat(saved).extracting(Payment::getAmount).containsExactly(100_000L, 150_000L);
+            assertThat(saved).extracting(Payment::getGroupOrderId).containsOnly(saved.get(0).getOrderId());
+            assertThat(saved).extracting(Payment::getStatus).containsOnly(PaymentStatus.PENDING);
+        }
+
+        @Test
+        void refusesGroupWithNothingLeftToPay() {
+            BookingDto paid = payableDto(UUID.randomUUID(), 100_000L);
+            paid.setStatus(BookingStatus.CONFIRMED);
+            when(bookingService.getMyGroup(userId, groupId)).thenReturn(
+                    com.cospace.app.dto.api.BookingGroupDto.GroupResponse.builder()
+                            .id(groupId).groupCode("GR-ABC234").bookings(java.util.List.of(paid)).build());
+
+            assertThatThrownBy(() -> paymentService.createPayosGroupPayment(userId, groupId))
+                    .isInstanceOf(IllegalStateException.class);
+            verify(payosService, never()).createPaymentLink(anyLong(), anyLong(), anyString(), any());
+        }
+
+        @Test
+        void webhookConfirmsEverySeatAndRefundsOneThatExpired() {
+            Booking seatA = booking(BookingStatus.PENDING_PAYMENT);
+            Booking seatB = booking(BookingStatus.EXPIRED);
+            Payment rowA = groupRow(seatA, "PAYOS-222", "PAYOS-222");
+            Payment rowB = groupRow(seatB, "PAYOS-222-2", "PAYOS-222");
+            rowB.setStatus(PaymentStatus.CANCELLED); // retired when the seat expired
+            when(payosService.verifyWebhookSignature(anyMap(), anyString())).thenReturn(true);
+            when(paymentRepository.findByOrderId("PAYOS-222")).thenReturn(Optional.of(rowA));
+            when(paymentRepository.findByGroupOrderId("PAYOS-222")).thenReturn(java.util.List.of(rowA, rowB));
+            when(bookingRepository.findByIdWithLock(seatA.getId())).thenReturn(Optional.of(seatA));
+            when(bookingRepository.findByIdWithLock(seatB.getId())).thenReturn(Optional.of(seatB));
+
+            paymentService.handlePayosWebhook(payosWebhook(222L, "00"));
+
+            assertThat(rowA.getStatus()).isEqualTo(PaymentStatus.PAID);
+            assertThat(rowB.getStatus()).isEqualTo(PaymentStatus.PAID);
+            assertThat(seatA.getStatus()).isEqualTo(BookingStatus.CONFIRMED);
+            verify(refundService).requestRefund(eq(seatB), eq(rowB.getId()), eq(150_000L), any(), any());
+        }
+
+        @Test
+        void repeatedWebhookChangesNothing() {
+            Booking seat = booking(BookingStatus.CONFIRMED);
+            Payment row = groupRow(seat, "PAYOS-333", "PAYOS-333");
+            row.setStatus(PaymentStatus.PAID);
+            when(payosService.verifyWebhookSignature(anyMap(), anyString())).thenReturn(true);
+            when(paymentRepository.findByOrderId("PAYOS-333")).thenReturn(Optional.of(row));
+            when(paymentRepository.findByGroupOrderId("PAYOS-333")).thenReturn(java.util.List.of(row));
+
+            paymentService.handlePayosWebhook(payosWebhook(333L, "00"));
+
+            verify(paymentRepository, never()).save(any());
+            verify(bookingRepository, never()).findByIdWithLock(any());
+        }
+    }
 }

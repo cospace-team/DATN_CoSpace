@@ -160,3 +160,34 @@ Sử dụng ký hiệu: `[ ]` Chưa làm | `[/]` Đang làm | `[x]` Đã xong.
 - [x] **Đóng có xác nhận** khi còn thay đổi chưa lưu; trình chỉnh sửa mở toàn màn hình qua portal (trước đây lệch 24px do kế thừa `space-y-6`).
 - [x] Nhãn mặc định trong danh mục chuyển sang tiếng Việt đầy đủ: "Văn phòng riêng", "Cabin cách âm", "Không gian khác".
 - [x] **Sơ đồ demo cho cả 9 tầng / 3 chi nhánh**: mặt bằng kiểu bản vẽ kiến trúc — mặt kính, vách ngăn, cửa, hành lang, lõi thang (cầu thang bộ + 2 thang máy + WC) cùng vị trí ở mọi tầng của một tòa (Nguyễn Huệ phía Đông, Nam Kỳ Khởi Nghĩa phía Tây, Cầu Giấy giữa phía Bắc), sảnh lễ tân, pantry, lounge, sân thượng penthouse. 29/29 chỗ đặt đều nằm trên sơ đồ; các phần tử khác là kết cấu/tiện ích nên lưu trong trình chỉnh sửa không tự tạo chỗ thừa. Sinh bằng `database/tools/floor_layouts.py` → `database/seed_floor_layouts_json.sql` (có sẵn câu kiểm tra ở cuối). Bàn nhiều chỗ (cụm bàn, dãy bàn) giờ vẽ đủ số ghế và chỉnh được "Số ghế" trong trình chỉnh sửa; biểu tượng khóa chỉ hiện trong trình chỉnh sửa.
+
+## 🛡️ 16. Điểm uy tín & nhắc lịch check-in
+- [x] **Trừ điểm khi không check-in**: mỗi khách bắt đầu 100 điểm; đơn đã xác nhận quá 30 phút sau giờ bắt đầu chưa check-in bị trừ 10 điểm (mỗi đơn một lần), gói nhiều ngày chỉ bị trừ khi hết hạn mà chưa dùng lần nào (Migration V5: `users.reputation_score`, `reputation_events`).
+- [x] **Hồi điểm**: check-in đúng hạn được cộng 2 điểm (tối đa 100).
+- [x] **Hệ quả**: dưới 50 điểm chỉ được giữ 1 đơn chưa sử dụng khi đặt online; dưới 30 điểm không đặt online được (quầy vẫn đặt hộ).
+- [x] **Gỡ phạt sai**: nhân viên/admin hoàn điểm phạt kèm lý do (`POST /api/staff/reputation/bookings/{id}/revert`), mỗi đơn một lần, ghi audit log và báo khách.
+- [x] **Nhắc lịch**: thông báo trước giờ bắt đầu 60 phút và lúc bắt đầu (còn bao nhiêu phút để check-in), mỗi đơn mỗi loại một lần.
+- [x] **Giao diện**: quy tắc check-in và cảnh báo hạn chế ở bước thanh toán; đếm ngược check-in trong Lịch sử đặt chỗ; huy hiệu điểm uy tín + lịch sử + nút hoàn điểm ở màn Check-in và Quản lý người dùng; ô điểm uy tín ở Hồ sơ.
+- [x] **Kiểm thử**: 334/334 unit test BE pass; chạy thật trên Postgres 16 (migration V5, job nhắc lịch, job trừ điểm, cộng điểm, hoàn điểm, chặn đặt online, phân quyền 403); build FE pass, chụp màn hình 4 vai trò.
+
+## 🪑 17. Đặt nhiều chỗ cùng lúc (đơn nhóm)
+- [x] **Migration V6**: bảng `booking_groups`, `bookings.group_id`, `payments.booking_group_id` / `group_order_id`.
+- [x] **Tạo đơn nhóm** (`POST /api/bookings/groups`): 1–10 chỗ cùng chi nhánh, cùng khung giờ; mỗi chỗ là một đơn riêng; tất cả hoặc không (báo đúng chỗ lỗi); khóa theo thứ tự cố định chống deadlock; nhóm tính là 1 đơn trong giới hạn 3 đơn chờ thanh toán; uy tín dưới 50 chỉ đặt 1 chỗ; mã khuyến mãi chỉ cho đơn 1 chỗ.
+- [x] **Thanh toán gộp**: một mã VietQR cho cả nhóm, mỗi chỗ một dòng `payments`; webhook / trang trả về / mô phỏng xác nhận mọi dòng, chỗ đã hết hạn thì tự hoàn tiền phần của chỗ đó.
+- [x] **Hủy cả nhóm** (`POST /api/bookings/groups/{id}/cancel`), mỗi chỗ hoàn tiền theo chính sách như đơn lẻ.
+- [x] **Giao diện**: chọn thêm chỗ trong panel đặt chỗ hoặc bấm trực tiếp trên sơ đồ (tô sáng các chỗ đã chọn); trang thanh toán liệt kê từng chỗ và giá; Lịch sử hiện nhãn nhóm, nút "Thanh toán cả nhóm", tìm theo mã nhóm.
+- [x] **Kiểm thử**: 344/344 unit test BE pass (thêm 10 test đơn nhóm); chạy thật trên Postgres 16 (tạo nhóm 3 chỗ, đặt trùng bị chặn và không để lại nhóm rác, thanh toán gộp, xác nhận đủ 3 chỗ, hủy nhóm hoàn tiền từng chỗ); luồng trình duyệt chọn 3 chỗ → thanh toán → VietQR → lịch sử. Tài liệu: `docs/api-contracts/booking-groups.md`.
+
+## 📦 18. Giới hạn dịch vụ theo cơ sở & thiết kế lại Khám phá không gian
+- [x] **Migration V7** `branch_service_limits` (chi nhánh, mã dịch vụ, số lượng tối đa dùng cùng lúc); áp được cho cả dịch vụ chung lẫn dịch vụ riêng của chi nhánh; không có dòng = không giới hạn.
+- [x] **Kiểm tra số lượng** khi đặt chỗ (có khóa chống tranh chấp), khi báo giá, khi gọi thêm trong lúc dùng chỗ và khi tăng số lượng: tính tổng thiết bị trên các đơn còn hiệu lực có thời gian chồng lấn. API: `GET/PUT /api/extra-services/limits`, `GET /api/extra-services/availability`.
+- [x] **Quản trị**: bảng "Số lượng tại cơ sở" cho Branch Admin (trang Dịch vụ) và Super Admin (chọn chi nhánh), thiết bị lên đầu.
+- [x] **Khách hàng**: panel đặt chỗ hiện "Còn x/y" / "Hết", giới hạn số lượng chọn được.
+- [x] **Khám phá không gian 2 bước**: (1) bộ lọc chi nhánh, ngày, khung giờ, số người, loại không gian, thiết bị cần dùng; (2) kết quả chỉ gồm chỗ phù hợp, gom theo tầng, chỗ trống trước, báo thiết bị đã hết trong khung giờ; vẫn xem được Sơ đồ tầng và Lịch theo giờ. Nạp chỗ của mọi tầng nên đặt nhiều chỗ được khác tầng. Thiết bị đã lọc được chọn sẵn khi mở chỗ.
+- [x] **Kiểm thử**: 351/351 unit test BE pass (thêm 7 test giới hạn); chạy thật trên Postgres 16 (đặt giới hạn 1 máy chiếu, đơn thứ hai trùng giờ bị chặn, báo giá vượt bị chặn, khách không sửa được giới hạn); chụp màn hình bộ lọc, kết quả, panel, trang quản trị, bản điện thoại.
+
+## 🛑 19. Nhân viên/Admin hủy hoặc kết thúc sớm đơn và hoàn tiền
+- [x] **Kết thúc sớm đơn đang sử dụng** (`POST /api/staff/bookings/{id}/end-early`): check-out khách ngay, hoàn phần thời gian chưa dùng (làm tròn 1.000đ), hoàn toàn bộ, hoặc số tiền tự nhập (0 → tối đa số đã trả); bắt buộc lý do, ghi nhật ký, báo khách. Migration V8 thêm loại hoàn tiền `STAFF_ENDED`.
+- [x] **Hủy đơn chưa sử dụng thay khách** (API có sẵn) nay có giao diện: "Lỗi do cơ sở – hoàn 100%" hoặc "Theo chính sách hủy". Xem trước số tiền hoàn qua `GET /api/staff/bookings/{id}/refund-preview`.
+- [x] **Trang "Đơn đặt chỗ"** cho Super Admin (chọn chi nhánh) và Branch Admin: xem đơn theo ngày, lọc trạng thái, tìm theo mã/khách/SĐT; nút hủy/kết thúc sớm ngay trên từng đơn (`GET /api/staff/bookings?branchId&from&to`). Màn Check-in của nhân viên cũng có nút này.
+- [x] **Kiểm thử**: 356/356 unit test BE pass (thêm 5 test kết thúc sớm); chạy thật trên Postgres 16: kết thúc sớm qua giao diện admin (đơn → Hoàn thành, khách được check-out, khoản hoàn vào hàng đợi, có nhật ký và thông báo), hủy hoàn 100%, hoàn số tiền tự nhập, chặn kết thúc sớm đơn đã hủy.

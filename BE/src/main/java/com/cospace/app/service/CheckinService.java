@@ -27,19 +27,22 @@ public class CheckinService {
     private final UserRepository userRepository;
     private final BookingAddonService bookingAddonService;
     private final BookingExtensionService bookingExtensionService;
+    private final ReputationService reputationService;
 
     public CheckinService(CheckinLogRepository checkinLogRepository,
                           BookingRepository bookingRepository,
                           BookingService bookingService,
                           UserRepository userRepository,
                           BookingAddonService bookingAddonService,
-                          BookingExtensionService bookingExtensionService) {
+                          BookingExtensionService bookingExtensionService,
+                          ReputationService reputationService) {
         this.checkinLogRepository = checkinLogRepository;
         this.bookingRepository = bookingRepository;
         this.bookingService = bookingService;
         this.userRepository = userRepository;
         this.bookingAddonService = bookingAddonService;
         this.bookingExtensionService = bookingExtensionService;
+        this.reputationService = reputationService;
     }
 
     @Transactional
@@ -100,6 +103,7 @@ public class CheckinService {
             BookingStateMachine.transition(booking, BookingStatus.CHECKED_IN);
         }
         bookingRepository.save(booking);
+        reputationService.rewardOnTimeCheckin(booking, now);
 
         return toDto(checkinLog);
     }

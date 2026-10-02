@@ -15,7 +15,8 @@ import java.util.UUID;
 
 /**
  * Closes bookings whose time is up but that nobody closed: guests who never checked out, and paid
- * bookings nobody showed up for. Each booking is handled in its own locked transaction so a
+ * bookings nobody showed up for — and docks the reputation of customers who do not check in on time.
+ * Each booking is handled in its own locked transaction so a
  * concurrent staff check-out or check-in always wins cleanly.
  */
 @Service
@@ -27,6 +28,7 @@ public class BookingLifecycleService {
     private final CheckinLogRepository checkinLogRepository;
     private final NotificationService notificationService;
     private final BookingAddonService bookingAddonService;
+    private final ReputationService reputationService;
 
     /**
      * How long after the booked end time a guest still checked in is checked out automatically.
@@ -97,6 +99,8 @@ public class BookingLifecycleService {
         bookingRepository.save(booking);
 
         if (!wasUsed) {
+            // Covers bookings that ended before the check-in deadline job reached them.
+            reputationService.penalizeMissedCheckin(booking);
             notificationService.createNotification(booking.getUserId(),
                     "Bạn đã bỏ lỡ lượt đặt chỗ",
                     "Đơn " + booking.getBookingCode() + " đã kết thúc mà không có lượt check-in nào. "
@@ -105,5 +109,24 @@ public class BookingLifecycleService {
         }
         log.info("Closed ended booking {} as {}", booking.getBookingCode(), target);
         return target;
+    }
+
+    /**
+     * Docks the customer's reputation when a CONFIRMED booking has not been checked in within the
+     * deadline after its start. Multi-day passes are exempt: their guests may come any day, so they
+     * are only penalised if the pass ends without ever being used (see closeEndedBooking).
+     *
+     * @return true if points were deducted
+     */
+    @Transactional
+    public boolean penalizeMissedCheckin(UUID bookingId, OffsetDateTime now) {
+        Booking booking = bookingRepository.findByIdWithLock(bookingId).orElse(null);
+        if (booking == null || booking.getStatus() != BookingStatus.CONFIRMED
+                || BookingExtensionService.isMultiDayPass(booking)
+                || !booking.getStartAt().plusMinutes(reputationService.checkinDeadlineMinutes()).isBefore(now)
+                || checkinLogRepository.existsByBookingId(bookingId)) {
+            return false; // checked in meanwhile, cancelled, or not late yet
+        }
+        return reputationService.penalizeMissedCheckin(booking);
     }
 }

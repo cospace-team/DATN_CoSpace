@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { FiX, FiCheck } from 'react-icons/fi';
+import { FiX, FiCheck, FiPlus, FiUsers } from 'react-icons/fi';
 import { WorkspaceAmenities } from '../../../components/WorkspaceAmenities';
 import { formatVND, durationUnitLabel } from '../../../utils/formatters';
-import type { ExtraServiceDto } from '../../../api/addonApi';
+import { serviceLimitApi, type ExtraServiceDto, type ServiceAvailabilityDto } from '../../../api/addonApi';
 import { QuantityStepper } from '../../../components/ui/QuantityStepper';
 import WorkspaceGallery from '../../../components/workspace/WorkspaceGallery';
 import { ServiceIcon } from '../../../components/ui/ServiceIcon';
@@ -65,13 +65,30 @@ interface BookingPanelProps {
   onChangeStartHour: (hour: number) => void;
   checkAvailability?: (startHour: number, endHour: number, endDate: Date, unit: string) => string;
   availableServices?: ExtraServiceResponse[];
+  /** Other seats of the floor that can be booked together with this one (same time). */
+  candidateSeats?: ExploreWorkspace[];
+  /** Extra seats chosen to book together with this one. */
+  extraSeatIds?: string[];
+  onToggleExtraSeat?: (wsId: string) => void;
+  /** Availability of another seat for the time being chosen here. */
+  checkSeatAvailability?: (wsId: string, startHour: number, endHour: number, endDate: Date, unit: string) => string;
+  getSeatPrice?: (wsTypeId: string, unit: DurationUnitMode) => UnitPrice | undefined;
+  maxSeats?: number;
+  /** Whether clicks on the floor plan add seats instead of switching to them. */
+  multiSelect?: boolean;
+  /** Services ticked when the panel opens (equipment asked for in the search filters). */
+  initialServices?: Record<string, number>;
+  /** Short floor label for a seat, shown when adding seats from other floors. */
+  floorNameOf?: (floorId: string) => string;
+  onToggleMultiSelect?: (on: boolean) => void;
   onBookNow: (
     endHour: number,
     services: Record<string, number>,
     subtotal: number,
     addonTotal: number,
     endDate: Date,
-    durationUnit: DurationUnitMode
+    durationUnit: DurationUnitMode,
+    extraSeatIds: string[]
   ) => void;
 }
 
@@ -91,6 +108,16 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
   onChangeStartHour,
   checkAvailability,
   availableServices = [],
+  candidateSeats = [],
+  extraSeatIds = [],
+  onToggleExtraSeat,
+  checkSeatAvailability,
+  getSeatPrice,
+  maxSeats = 10,
+  multiSelect = false,
+  onToggleMultiSelect,
+  initialServices,
+  floorNameOf,
   onBookNow,
 }) => {
   const [endHour, setEndHour] = useState(initialEndHour);
@@ -106,10 +133,46 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
     }
     validEndHour = Math.min(validEndHour, closeHour);
     setEndHour(validEndHour);
-    setServices({});
+    setServices(initialServices ?? {});
     setDurationUnit('hour');
     setEndDate(toMidnight(selectedDate));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- initialServices only seeds a newly opened panel
   }, [selectedHour, initialEndHour, selectedWs, selectedDate, closeHour]);
+
+  // Items the branch has only a few of (projectors…): what is still free for the chosen time.
+  const [serviceStock, setServiceStock] = useState<Record<string, ServiceAvailabilityDto>>({});
+  useEffect(() => {
+    const start = new Date(selectedDate);
+    start.setHours(selectedHour, 0, 0, 0);
+    const end = new Date(durationUnit === 'hour' ? selectedDate : endDate);
+    end.setHours(durationUnit === 'hour' ? endHour : selectedHour, 0, 0, 0);
+    if (!ws.branch_id || end <= start) return;
+    let active = true;
+    const timer = window.setTimeout(() => {
+      serviceLimitApi.availability(ws.branch_id, start, end)
+        .then((list) => {
+          if (active) setServiceStock(Object.fromEntries(list.map((a) => [a.serviceId, a])));
+        })
+        .catch(() => { if (active) setServiceStock({}); });
+    }, 250);
+    return () => { active = false; window.clearTimeout(timer); };
+  }, [ws.branch_id, selectedDate, selectedHour, endHour, endDate, durationUnit]);
+
+  // A chosen quantity never exceeds what is left; a service that ran out is dropped.
+  useEffect(() => {
+    setServices((prev) => {
+      let changed = false;
+      const next: Record<string, number> = {};
+      for (const [id, qty] of Object.entries(prev)) {
+        const stock = serviceStock[id];
+        if (stock && stock.remaining <= 0) { changed = true; continue; }
+        const capped = stock ? Math.min(qty, stock.remaining) : qty;
+        if (capped !== qty) changed = true;
+        next[id] = capped;
+      }
+      return changed ? next : prev;
+    });
+  }, [serviceStock]);
 
   const handleServiceChange = (id: string, isChecked: boolean) => {
     setServices(prev => {
@@ -132,7 +195,25 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
     return Math.max(1, Math.ceil(daysDiff(toMidnight(selectedDate), endDate) / 7));
   }, [durationUnit, endHour, selectedHour, selectedDate, endDate]);
 
-  const subtotal = (price?.price || 0) * unitCount;
+  // Extra seats booked for the same time: each priced by its own type for the chosen unit.
+  const extraSeats = useMemo(
+    () =>
+      extraSeatIds
+        .map((id) => candidateSeats.find((c) => c.id === id))
+        .filter((c): c is ExploreWorkspace => !!c)
+        .map((seat) => {
+          const avail = checkSeatAvailability
+            ? checkSeatAvailability(seat.id, selectedHour, endHour, endDate, durationUnit)
+            : 'available';
+          const seatPrice = getSeatPrice?.(seat.workspace_type_id, durationUnit);
+          return { seat, avail, price: seatPrice, subtotal: (seatPrice?.price || 0) * unitCount };
+        }),
+    [extraSeatIds, candidateSeats, checkSeatAvailability, getSeatPrice, selectedHour, endHour, endDate, durationUnit, unitCount],
+  );
+  const blockedExtras = extraSeats.filter((e) => e.avail !== 'available' || !e.price);
+  const seatCount = 1 + extraSeats.length;
+
+  const subtotal = (price?.price || 0) * unitCount + extraSeats.reduce((sum, e) => sum + e.subtotal, 0);
   const allAddons = addonServices && addonServices.length > 0 ? addonServices : availableServices;
   const addonTotal = Object.keys(services).reduce((sum, id) => {
     const s = allAddons.find((x: any) => x.id === id);
@@ -368,6 +449,96 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
           </p>
         </div>
 
+        {/* Book more seats at the same time */}
+        {onToggleExtraSeat && (
+          <div className="rounded-2xl bg-[var(--bg-surface-hover)] p-3 border border-border">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <p className="text-xs text-[var(--text-tertiary)] flex items-center gap-1.5">
+                <FiUsers className="h-3.5 w-3.5" /> Đặt thêm chỗ cùng khung giờ
+              </p>
+              {onToggleMultiSelect && (
+                <label className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)] cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={multiSelect}
+                    onChange={(e) => onToggleMultiSelect(e.target.checked)}
+                    className="rounded accent-[var(--brand-primary)]"
+                  />
+                  Chọn trên sơ đồ
+                </label>
+              )}
+            </div>
+            {multiSelect && (
+              <p className="mb-2 text-[11px] text-[var(--text-secondary)]">
+                Bấm vào các chỗ còn trống trên sơ đồ để thêm hoặc bỏ khỏi đơn.
+              </p>
+            )}
+            {extraSeats.length > 0 && (
+              <ul className="space-y-1.5 mb-2">
+                {extraSeats.map(({ seat, avail, price: seatPrice, subtotal: seatSubtotal }) => {
+                  const ok = avail === 'available' && !!seatPrice;
+                  return (
+                    <li key={seat.id} className={`flex items-center gap-2 text-sm rounded-lg px-2 py-1.5 ${ok ? 'bg-card' : 'bg-[var(--state-danger-bg)]'}`}>
+                      <span className="min-w-0 flex-1">
+                        <span className="font-medium truncate block">{seat.name}</span>
+                        <span className={`text-[11px] ${ok ? 'text-[var(--text-tertiary)]' : 'text-[var(--state-danger)]'}`}>
+                          {!seatPrice
+                            ? 'Chưa có giá cho loại thời gian này'
+                            : avail !== 'available'
+                              ? 'Đã có người đặt khung giờ này'
+                              : `${seat.workspaceTypeName} · ${seat.capacity} chỗ`}
+                        </span>
+                      </span>
+                      <span className="text-xs shrink-0">{seatPrice ? formatVND(seatSubtotal) : '—'}</span>
+                      <button
+                        type="button"
+                        onClick={() => onToggleExtraSeat(seat.id)}
+                        className="p-1 rounded hover:bg-[var(--border-subtle)] cursor-pointer"
+                        aria-label={`Bỏ ${seat.name}`}
+                      >
+                        <FiX className="h-3.5 w-3.5" />
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            {(() => {
+              const addable = candidateSeats.filter(
+                (c) =>
+                  c.id !== ws.id &&
+                  !extraSeatIds.includes(c.id) &&
+                  (checkSeatAvailability ? checkSeatAvailability(c.id, selectedHour, endHour, endDate, durationUnit) : 'available') === 'available' &&
+                  !!getSeatPrice?.(c.workspace_type_id, durationUnit),
+              );
+              if (seatCount >= maxSeats) {
+                return <p className="text-[11px] text-[var(--text-tertiary)]">Đã đạt tối đa {maxSeats} chỗ cho một lần đặt.</p>;
+              }
+              if (addable.length === 0) {
+                return <p className="text-[11px] text-[var(--text-tertiary)] italic">Không còn chỗ trống nào khác cho khung giờ đã chọn.</p>;
+              }
+              return (
+                <select
+                  value=""
+                  onChange={(e) => e.target.value && onToggleExtraSeat(e.target.value)}
+                  className="input-field text-sm w-full"
+                  aria-label="Thêm chỗ"
+                >
+                  <option value="">+ Thêm chỗ trống ({addable.length})</option>
+                  {addable.map((c) => {
+                    const p = getSeatPrice?.(c.workspace_type_id, durationUnit);
+                    return (
+                      <option key={c.id} value={c.id}>
+                        {c.name}{floorNameOf && c.floor_id !== ws.floor_id ? ` (${floorNameOf(c.floor_id)})` : ''} · {c.capacity} chỗ{p ? ` · ${formatVND(p.price)}/${durationUnitLabel[p.duration_unit]?.toLowerCase()}` : ''}
+                      </option>
+                    );
+                  })}
+                </select>
+              );
+            })()}
+          </div>
+        )}
+
         {/* Add-on services */}
         <div className="rounded-2xl bg-[var(--bg-surface-hover)] p-3 border border-border">
           <p className="text-xs text-[var(--text-tertiary)] mb-2">Dịch vụ thêm</p>
@@ -379,8 +550,11 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
             ) : (
               allAddons
                 .filter((s: any) => s.isActive !== false)
-                .map((s: any) => (
-                  <div key={s.id} className="flex items-center gap-3 text-sm">
+                .map((s: any) => {
+                  const stock = serviceStock[s.id];
+                  const soldOut = !!stock && stock.remaining <= 0;
+                  return (
+                  <div key={s.id} className={`flex items-center gap-3 text-sm ${soldOut ? 'opacity-60' : ''}`}>
                     <label
                       htmlFor={`addon-${s.id}-${selectedWs}`}
                       className="flex items-center gap-3 cursor-pointer min-w-0 flex-1"
@@ -389,18 +563,30 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
                         id={`addon-${s.id}-${selectedWs}`}
                         type="checkbox"
                         checked={!!services[s.id]}
+                        disabled={soldOut}
                         onChange={e => handleServiceChange(s.id, e.target.checked)}
                         className="rounded accent-[var(--brand-primary)]"
                       />
                       <span className="flex items-center gap-1.5 min-w-0">
                         <ServiceIcon type={s.serviceType} name={s.name} className="h-4 w-4 shrink-0 text-muted-foreground" />
                         <span className="truncate">{s.name}</span>
+                        {stock && (
+                          <span
+                            className={`shrink-0 rounded-full px-1.5 text-[10px] font-semibold ${
+                              soldOut ? 'bg-[var(--state-danger-bg)] text-[var(--state-danger)]' : 'bg-[var(--border-subtle)] text-[var(--text-secondary)]'
+                            }`}
+                            title={`Cơ sở có ${stock.maxConcurrent}, đang được đặt ${stock.inUse} trong khung giờ này`}
+                          >
+                            {soldOut ? 'Hết' : `Còn ${stock.remaining}/${stock.maxConcurrent}`}
+                          </span>
+                        )}
                       </span>
                     </label>
                     {services[s.id] ? (
                       <QuantityStepper
                         value={services[s.id]}
                         onChange={q => handleQuantityChange(s.id, q)}
+                        max={stock ? Math.max(1, stock.remaining) : undefined}
                         label={`Số lượng ${s.name}`}
                       />
                     ) : null}
@@ -410,14 +596,17 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
                         : `+${formatVND(s.price)}${s.unit ? `/${s.unit}` : ''}`}
                     </span>
                   </div>
-                ))
+                  );
+                })
             )}
           </div>
         </div>
 
         {/* Total Price summary */}
         <div className="flex justify-between items-center pt-2 border-t border-[var(--border-subtle)]">
-          <span className="text-sm font-semibold">Tổng cộng</span>
+          <span className="text-sm font-semibold">
+            Tổng cộng{seatCount > 1 && <span className="font-normal text-[var(--text-tertiary)]"> · {seatCount} chỗ</span>}
+          </span>
           <span className="text-lg font-medium text-[var(--brand-primary)]">
             {formatVND(total)}
           </span>
@@ -426,12 +615,21 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
 
       {/* Book button */}
       {currentAvail === 'available' && price && (
-        <button
-          className="btn btn-primary w-full mt-5 cursor-pointer"
-          onClick={() => onBookNow(endHour, services, subtotal, addonTotal, endDate, durationUnit)}
-        >
-          <FiCheck className="h-4 w-4" /> Đặt chỗ ngay
-        </button>
+        <>
+          {blockedExtras.length > 0 && (
+            <p className="mt-4 text-xs text-[var(--state-danger)]">
+              Bỏ {blockedExtras.length === 1 ? 'chỗ' : `${blockedExtras.length} chỗ`} không đặt được ở trên để tiếp tục.
+            </p>
+          )}
+          <button
+            className="btn btn-primary w-full mt-5 cursor-pointer disabled:opacity-50"
+            disabled={blockedExtras.length > 0}
+            onClick={() => onBookNow(endHour, services, subtotal, addonTotal, endDate, durationUnit, extraSeats.map((e) => e.seat.id))}
+          >
+            {seatCount > 1 ? <FiPlus className="h-4 w-4" /> : <FiCheck className="h-4 w-4" />}
+            {seatCount > 1 ? `Đặt ${seatCount} chỗ cùng lúc` : 'Đặt chỗ ngay'}
+          </button>
+        </>
       )}
       {currentAvail?.startsWith('booked') && (
         <div className="mt-5 rounded-2xl bg-[var(--state-danger-bg)] border border-[var(--state-danger-border)] p-3 text-center">

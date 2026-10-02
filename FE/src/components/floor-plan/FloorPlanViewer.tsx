@@ -19,6 +19,8 @@ interface Props {
   onElementClick?: (el: LayoutElement) => void;
   /** Optional: seat count, code and type of a linked workspace, shown on the map. */
   getWorkspaceInfo?: (wsId: string) => WorkspaceMapInfo | null;
+  /** Optional: further workspaces shown as selected (seats booked together with the main one). */
+  extraSelectedIds?: string[];
 }
 
 export interface WorkspaceMapInfo {
@@ -83,6 +85,7 @@ const FloorPlanViewer: React.FC<Props> = ({
   isAdmin = false,
   onElementClick,
   getWorkspaceInfo,
+  extraSelectedIds,
 }) => {
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -198,7 +201,7 @@ const FloorPlanViewer: React.FC<Props> = ({
       };
     }
 
-    const isSelected = Boolean(selectedWsId) && Boolean(el.workspaceId) && selectedWsId === el.workspaceId;
+    const isSelected = Boolean(el.workspaceId) && (selectedWsId === el.workspaceId || !!extraSelectedIds?.includes(el.workspaceId!));
     const avail = getAvailability(el.workspaceId);
 
     let fillColor = el.fillColor;
@@ -222,7 +225,7 @@ const FloorPlanViewer: React.FC<Props> = ({
     }
 
     return { ...el, fillColor, strokeColor };
-  }, [isAdmin, selectedWsId, getAvailability]);
+  }, [isAdmin, selectedWsId, getAvailability, extraSelectedIds]);
 
   // Styled copies depend only on the layout and selection/availability — not on pan, zoom or
   // hover — so memoizing them keeps each element's identity stable and lets the memoized
@@ -236,13 +239,13 @@ const FloorPlanViewer: React.FC<Props> = ({
           const canLink = catalogItem?.canLinkWorkspace ?? false;
           return {
             styledEl: getElementWithStatus(el),
-            isSelected: Boolean(selectedWsId) && Boolean(el.workspaceId) && selectedWsId === el.workspaceId,
+            isSelected: Boolean(el.workspaceId) && (selectedWsId === el.workspaceId || (!isAdmin && !!extraSelectedIds?.includes(el.workspaceId!))),
             cursor: isAdmin
               ? (canLink ? 'pointer' : 'default')
               : (el.workspaceId ? 'pointer' : 'default'),
           };
         }),
-    [layout.elements, getElementWithStatus, selectedWsId, isAdmin]
+    [layout.elements, getElementWithStatus, selectedWsId, isAdmin, extraSelectedIds]
   );
 
   // Seat-count / type / status badges for every element linked to a workspace.

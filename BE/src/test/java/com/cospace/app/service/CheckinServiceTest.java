@@ -45,6 +45,9 @@ class CheckinServiceTest {
     @Mock
     private BookingExtensionService bookingExtensionService;
 
+    @Mock
+    private ReputationService reputationService;
+
     @InjectMocks
     private CheckinService checkinService;
 

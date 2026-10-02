@@ -51,6 +51,7 @@ public class BookingAddonService {
     private final ExtraServiceRepository extraServiceRepository;
     private final BookingServiceItemRepository bookingServiceItemRepository;
     private final PaymentRepository paymentRepository;
+    private final ServiceLimitService serviceLimitService;
 
     /**
      * Prices add-ons ordered together with a new booking, from the server-side catalogue. The lines
@@ -79,6 +80,28 @@ public class BookingAddonService {
         return lines;
     }
 
+    /**
+     * Refuses add-ons a branch cannot lend for the whole booked window (see {@link ServiceLimitService}).
+     * With {@code lock} it holds the check until the transaction commits; a price quote checks without.
+     */
+    @Transactional
+    public void requireCapacity(UUID branchId, OffsetDateTime start, OffsetDateTime end,
+                                List<BookingServiceItem> lines, boolean lock) {
+        serviceLimitService.requireCapacity(branchId, start, end, lines, null, lock);
+    }
+
+    /** Whether the booking still has time left in which a lent item would be in use. */
+    private static boolean hasRemainingTime(Booking booking) {
+        return booking.getStartAt() != null && booking.getEndAt() != null
+                && booking.getEndAt().isAfter(remainingStart(booking));
+    }
+
+    /** What is left of the booking's time: from now if it already started, to its end. */
+    private static OffsetDateTime remainingStart(Booking booking) {
+        OffsetDateTime now = OffsetDateTime.now(java.time.ZoneOffset.UTC);
+        return booking.getStartAt() != null && booking.getStartAt().isAfter(now) ? booking.getStartAt() : now;
+    }
+
     public static long total(List<BookingServiceItem> lines) {
         return lines.stream().mapToLong(BookingServiceItem::getSubtotal).sum();
     }
@@ -104,6 +127,10 @@ public class BookingAddonService {
         ExtraServiceEntity service = requireOrderableService(serviceId, booking.getBranchId());
         int qty = requireQuantity(quantity);
         long lineTotal = service.getPrice() * qty;
+        if (hasRemainingTime(booking)) {
+            serviceLimitService.requireCapacity(booking.getBranchId(), remainingStart(booking), booking.getEndAt(),
+                    List.of(BookingServiceItem.builder().serviceId(serviceId).quantity(qty).build()), null, true);
+        }
 
         BookingServiceItem item = bookingServiceItemRepository.save(BookingServiceItem.builder()
                 .bookingId(bookingId)
@@ -153,6 +180,11 @@ public class BookingAddonService {
         int qty = requireQuantity(quantity);
         if (qty == item.getQuantity()) {
             return item;
+        }
+        if (qty > item.getQuantity() && item.getServiceId() != null && hasRemainingTime(booking)) {
+            serviceLimitService.requireCapacity(booking.getBranchId(), remainingStart(booking), booking.getEndAt(),
+                    List.of(BookingServiceItem.builder().serviceId(item.getServiceId()).quantity(qty - item.getQuantity()).build()),
+                    null, true);
         }
         releaseOpenPayment(item);
         long newSubtotal = item.getUnitPrice() * qty;

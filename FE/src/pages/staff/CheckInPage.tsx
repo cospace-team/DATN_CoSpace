@@ -16,6 +16,9 @@ import ExtendBookingPanel from '../../components/ExtendBookingPanel';
 import type { BookingTabDto } from '../../api/addonApi';
 import { CheckoutModal } from './checkin/CheckoutModal';
 import { TodayScheduleTab } from './checkin/TodayScheduleTab';
+import { ReputationBadge } from '../../components/reputation/ReputationBadge';
+import { CustomerReputationModal } from '../../components/reputation/CustomerReputationModal';
+import { StaffBookingActionModal } from '../../components/staff/StaffBookingActionModal';
 
 import { BookingPackageDisplay, getBookingPackageDisplay } from '../../utils/bookingPackage';
 
@@ -47,6 +50,10 @@ const CheckInPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [searchedBooking, setSearchedBooking] = useState<BookingWithDetailsDto | null>(null);
+  /** Customer whose reputation history is open, if any. */
+  const [reputationUserId, setReputationUserId] = useState<string | null>(null);
+  /** Booking being cancelled / ended early with a refund, if any. */
+  const [actionTarget, setActionTarget] = useState<{ id: string; customerName?: string; workspaceName?: string } | null>(null);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -518,6 +525,14 @@ const CheckInPage: React.FC = () => {
                   <div>
                     <p className="text-xs text-muted-foreground flex items-center gap-1.5 mb-1"><FiUser /> Khách hàng</p>
                     <p className="font-bold text-base">{searchedBooking.customer?.fullName || 'Khách vãng lai'}</p>
+                    {searchedBooking.customer?.reputationScore != null && (
+                      <div className="mt-1">
+                        <ReputationBadge
+                          score={searchedBooking.customer.reputationScore}
+                          onClick={() => setReputationUserId(searchedBooking.customer.id)}
+                        />
+                      </div>
+                    )}
                     <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
                       <FiPhone className="h-3 w-3" /> {searchedBooking.customer?.phone || 'Chưa cập nhật SĐT'}
                     </p>
@@ -566,6 +581,19 @@ const CheckInPage: React.FC = () => {
                         : 'Vé chưa được thanh toán hoặc không ở trạng thái hợp lệ để Check-in.'}
                     </p>
                   </div>
+                )}
+                {['CONFIRMED', 'PENDING_PAYMENT', 'CHECKED_IN'].includes(searchedBooking.booking?.status) && (
+                  <button
+                    type="button"
+                    onClick={() => setActionTarget({
+                      id: searchedBooking.booking.id,
+                      customerName: searchedBooking.customer?.fullName,
+                      workspaceName: searchedBooking.workspace?.name,
+                    })}
+                    className="mt-3 w-full text-sm font-medium text-red-600 hover:text-red-700 hover:underline cursor-pointer"
+                  >
+                    {searchedBooking.booking.status === 'CHECKED_IN' ? 'Kết thúc sớm & hoàn tiền' : 'Hủy đơn & hoàn tiền'}
+                  </button>
                 )}
               </div>
             );
@@ -713,8 +741,12 @@ const CheckInPage: React.FC = () => {
                           >
                             {/* Khách hàng */}
                             <td className="py-4 font-medium">
-                              <div className="font-bold text-foreground flex items-center gap-1.5">
+                              <div className="font-bold text-foreground flex items-center gap-1.5 flex-wrap">
                                 {ci.customer?.fullName || 'Khách vãng lai'}
+                                <ReputationBadge
+                                  score={ci.customer?.reputationScore}
+                                  onClick={ci.customer?.id ? () => setReputationUserId(ci.customer.id) : undefined}
+                                />
                               </div>
                               <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                                 <FiPhone className="h-3 w-3" /> {ci.customer?.phone || 'Chưa cập nhật SĐT'}
@@ -801,6 +833,17 @@ const CheckInPage: React.FC = () => {
                                 <FiLogOut className="h-3.5 w-3.5 mr-1" />
                                 {ci.meta.pkg?.isMultiDay ? 'Check-out hôm nay' : 'Ra về (Check-out)'}
                               </button>
+                              <button
+                                onClick={() => setActionTarget({
+                                  id: ci.booking.id,
+                                  customerName: ci.customer?.fullName,
+                                  workspaceName: ci.workspace?.name,
+                                })}
+                                className="btn btn-sm btn-ghost text-xs ml-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
+                                title="Kết thúc sớm vì sự cố / lý do khác và hoàn tiền"
+                              >
+                                Kết thúc sớm
+                              </button>
                             </td>
                           </tr>
                         ))}
@@ -870,6 +913,33 @@ const CheckInPage: React.FC = () => {
             )}
           </div>
         </div>
+      )}
+
+      {actionTarget && (
+        <StaffBookingActionModal
+          bookingId={actionTarget.id}
+          customerName={actionTarget.customerName}
+          workspaceName={actionTarget.workspaceName}
+          onClose={() => setActionTarget(null)}
+          onDone={() => {
+            setSearchedBooking(null);
+            fetchDashboardData();
+          }}
+        />
+      )}
+
+      {reputationUserId && (
+        <CustomerReputationModal
+          userId={reputationUserId}
+          onClose={() => setReputationUserId(null)}
+          onChanged={(score) => {
+            // Keep the open ticket's badge in step with the reverted score.
+            setSearchedBooking((prev) =>
+              prev && prev.customer?.id === reputationUserId
+                ? { ...prev, customer: { ...prev.customer, reputationScore: score } }
+                : prev);
+          }}
+        />
       )}
 
       {/* QR Scanner Modal */}

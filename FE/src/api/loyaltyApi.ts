@@ -73,6 +73,37 @@ export interface MyMembershipDto {
   progressPercent: number;
 }
 
+/* ─── Reputation (điểm uy tín) ─── */
+
+export interface ReputationEventDto {
+  id: string;
+  bookingId: string | null;
+  reason: string;
+  delta: number;
+  scoreAfter: number;
+  note: string | null;
+  createdAt: string;
+  /** For a missed check-in penalty: whether staff already gave the points back. */
+  reverted: boolean;
+}
+
+export type ReputationRestriction = 'none' | 'limited' | 'blocked';
+
+export interface MyReputationDto {
+  userId: string;
+  fullName: string;
+  score: number;
+  maxScore: number;
+  checkinDeadlineMinutes: number;
+  missedCheckinPenalty: number;
+  onTimeCheckinReward: number;
+  limitedBelow: number;
+  blockedBelow: number;
+  restriction: ReputationRestriction;
+  missedCheckinCount: number;
+  recentEvents: ReputationEventDto[];
+}
+
 /* ─── Promotions ─── */
 
 export type PromotionState = 'scheduled' | 'running' | 'ended' | 'inactive' | 'exhausted';
@@ -199,6 +230,17 @@ export const membershipApi = {
       json('POST'), 'Không thể tính lại hạng thành viên'),
   me: () => request<MyMembershipDto>('/api/membership/me', {}, 'Không thể tải hạng thành viên'),
   publicTiers: () => request<MembershipTierDto[]>('/api/membership/tiers', {}, 'Không thể tải hạng thành viên'),
+};
+
+export const reputationApi = {
+  me: () => request<MyReputationDto>('/api/reputation/me', {}, 'Không thể tải điểm uy tín'),
+  /** Staff / admin: a customer's score and history. */
+  ofCustomer: (userId: string) =>
+    request<MyReputationDto>(`/api/staff/reputation/customers/${userId}`, {}, 'Không thể tải điểm uy tín của khách'),
+  /** Staff / admin: give back a missed check-in penalty given by mistake. */
+  revertPenalty: (bookingId: string, reason: string) =>
+    request<MyReputationDto>(`/api/staff/reputation/bookings/${bookingId}/revert`,
+      json('POST', { reason }), 'Không thể hoàn điểm uy tín'),
 };
 
 export const promotionApi = {

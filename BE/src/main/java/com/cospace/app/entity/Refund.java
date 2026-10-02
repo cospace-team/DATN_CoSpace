@@ -35,6 +35,8 @@ public class Refund {
     public static final String REASON_LATE_PAYMENT = "LATE_PAYMENT";
     /** A second payment arrived for a booking that was already paid. */
     public static final String REASON_DUPLICATE_PAYMENT = "DUPLICATE_PAYMENT";
+    /** Staff ended a booking in use early (incident, outage, rules broken…) and refunded the customer. */
+    public static final String REASON_STAFF_ENDED = "STAFF_ENDED";
 
     public static final String METHOD_CASH = "cash";
     public static final String METHOD_BANK_TRANSFER = "bank_transfer";
