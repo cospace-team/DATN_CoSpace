@@ -45,6 +45,9 @@ import { resolveBranchId } from "../../data/branchAliases";
 import { addonApi, type ExtraServiceDto } from "../../api/addonApi";
 import { Skeleton } from "../../components/ui/Skeleton";
 
+import { ExploreFilters, type ExploreFilter } from "./explore/ExploreFilters";
+import { ExploreResults } from "./explore/ExploreResults";
+import { serviceLimitApi, type ServiceAvailabilityDto } from "../../api/addonApi";
 import {
   BookingPanel,
   type DurationUnitMode,
@@ -54,7 +57,8 @@ import {
 } from "./explore/BookingPanel";
 
 /* ── Types ── */
-type ViewMode = "map" | "day" | "grid" | "list";
+/** results: spaces matching the filters; map: floor plan; day: hourly timeline. */
+type ViewMode = "results" | "map" | "day";
 
 const DEFAULT_OPEN_HOUR = 6;
 const DEFAULT_CLOSE_HOUR = 23;
@@ -76,7 +80,7 @@ const branchHourRange = (branch?: Pick<BranchResponse, "openTime" | "closeTime">
 
 /* ── Main Explore Page ── */
 const ExplorePage: React.FC = () => {
-  const [viewMode, setViewMode] = useState<ViewMode>("map");
+  const [viewMode, setViewMode] = useState<ViewMode>("results");
   const navigate = useNavigate();
   const location = useLocation();
   const { showToast } = useToast();
@@ -156,6 +160,33 @@ const ExplorePage: React.FC = () => {
       sessionStorage.removeItem("selectedEndHour");
     }
   }, [selectedEndHour]);
+  /* ── Step 1 filters: who, when, what kind of space and which equipment ── */
+  const readJson = <T,>(key: string, fallback: T): T => {
+    try {
+      const raw = sessionStorage.getItem(key);
+      return raw ? (JSON.parse(raw) as T) : fallback;
+    } catch {
+      return fallback;
+    }
+  };
+  const [filterEndHour, setFilterEndHour] = useState<number>(() => readJson("exploreEndHour", selectedHour + 2));
+  const [people, setPeople] = useState<number>(() => readJson("explorePeople", 1));
+  const [typeIds, setTypeIds] = useState<string[]>(() => readJson("exploreTypes", []));
+  const [equipmentIds, setEquipmentIds] = useState<string[]>(() => readJson("exploreEquipment", []));
+  // The results show once the customer has searched (or arrives with a space already picked).
+  const [searched, setSearched] = useState<boolean>(
+    () => !!new URLSearchParams(location.search).get("wsId") || sessionStorage.getItem("exploreSearched") === "1",
+  );
+  const [editingFilters, setEditingFilters] = useState(false);
+  const [draft, setDraft] = useState<ExploreFilter | null>(null);
+  useEffect(() => {
+    sessionStorage.setItem("exploreEndHour", JSON.stringify(filterEndHour));
+    sessionStorage.setItem("explorePeople", JSON.stringify(people));
+    sessionStorage.setItem("exploreTypes", JSON.stringify(typeIds));
+    sessionStorage.setItem("exploreEquipment", JSON.stringify(equipmentIds));
+    sessionStorage.setItem("exploreSearched", searched ? "1" : "0");
+  }, [filterEndHour, people, typeIds, equipmentIds, searched]);
+
   const [isDraggingTime, setIsDraggingTime] = useState(false);
   const [dragStartHour, setDragStartHour] = useState<number | null>(null);
 
@@ -199,7 +230,8 @@ const ExplorePage: React.FC = () => {
 
   // Database-loaded floors, workspaces and user bookings
   const [dbFloors, setDbFloors] = useState<FloorResponse[]>([]);
-  const [dbWorkspaces, setDbWorkspaces] = useState<WorkspaceResponse[]>([]);
+  // Workspaces of every floor of the branch, so results can span floors.
+  const [allWorkspaces, setAllWorkspaces] = useState<Record<string, WorkspaceResponse[]>>({});
   const [branchAvailability, setBranchAvailability] = useState<PublicWorkspaceAvailability[]>([]);
   const [loading, setLoading] = useState(true);
   const [workspacesLoading, setWorkspacesLoading] = useState(true);
@@ -322,42 +354,43 @@ const ExplorePage: React.FC = () => {
     };
   }, [selectedBranch]);
 
-  // Load workspaces when selected floor changes
+  // Load the workspaces of every floor once the branch's floors are known.
   useEffect(() => {
     const resolvedBranchId = resolveBranchId(selectedBranch);
-    if (!selectedFloor || !resolvedBranchId) {
-      setDbWorkspaces([]);
+    if (!resolvedBranchId || dbFloors.length === 0) {
+      setAllWorkspaces({});
       setWorkspacesLoading(false);
       return;
     }
     let active = true;
-    const loadWorkspaces = async () => {
+    (async () => {
       setWorkspacesLoading(true);
       try {
-        const data = await customerSpaceApi.listWorkspaces(resolvedBranchId, selectedFloor);
-        if (active) setDbWorkspaces(data);
+        const lists = await Promise.all(
+          dbFloors.map((f) => customerSpaceApi.listWorkspaces(resolvedBranchId, f.id).then((ws) => [f.id, ws] as const)),
+        );
+        if (active) setAllWorkspaces(Object.fromEntries(lists));
       } catch (err) {
         console.error("Failed to load workspaces from DB", err);
         if (active) {
-          setDbWorkspaces([]);
+          setAllWorkspaces({});
           setErrorMsg("Không thể tải danh sách chỗ ngồi. Vui lòng thử lại sau.");
         }
       } finally {
         if (active) setWorkspacesLoading(false);
       }
-    };
-    loadWorkspaces();
+    })();
     return () => {
       active = false;
     };
-  }, [selectedFloor, selectedBranch]);
+  }, [dbFloors, selectedBranch]);
 
   const branchFloors = dbFloors;
   const currentFloor = selectedFloor || branchFloors[0]?.id || "";
   const currentFloorData = branchFloors.find((f) => f.id === currentFloor);
 
   const mappedWorkspaces = useMemo<ExploreWorkspace[]>(() => {
-    return dbWorkspaces.map((ws) => ({
+    return Object.entries(allWorkspaces).flatMap(([floorId, list]) => list.map((ws) => ({
       id: ws.id,
       workspace_type_id: ws.workspaceTypeId,
       workspaceTypeName: ws.workspaceTypeName,
@@ -366,19 +399,22 @@ const ExplorePage: React.FC = () => {
       capacity: ws.capacity,
       svg_element_id: ws.svgElementId,
       status: ws.status,
-      floor_id: currentFloor,
+      floor_id: floorId,
       branch_id: resolveBranchId(selectedBranch),
       images: ws.images || [],
-    }));
-  }, [dbWorkspaces, currentFloor, selectedBranch]);
+    })));
+  }, [allWorkspaces, selectedBranch]);
 
-  const floorWorkspaces = mappedWorkspaces;
+  const floorWorkspaces = useMemo(
+    () => mappedWorkspaces.filter((w) => w.floor_id === currentFloor),
+    [mappedWorkspaces, currentFloor],
+  );
 
-  // Extra seats belong to the floor on screen and never include the main seat.
+  // Extra seats belong to the branch on screen and never include the main seat.
   useEffect(() => {
     setExtraSeatIds([]);
     setMultiSelect(false);
-  }, [currentFloor]);
+  }, [selectedBranch]);
   useEffect(() => {
     if (!selectedWs) {
       setExtraSeatIds([]);
@@ -417,7 +453,9 @@ const ExplorePage: React.FC = () => {
       checkTimeStart.setHours(targetHour, 0, 0, 0);
 
       let checkTimeEnd = new Date(checkTimeStart);
-      checkTimeEnd.setHours(targetHour + 1, 0, 0, 0);
+      // With no explicit time the searched slot is meant (floor plan, panel status), else one hour.
+      const searchedSlot = checkHour === undefined && checkEndDate === undefined && checkEndHour === undefined;
+      checkTimeEnd.setHours(searchedSlot ? Math.max(filterEndHour, targetHour + 1) : targetHour + 1, 0, 0, 0);
       
       if (checkEndDate || checkEndHour !== undefined) {
          if (checkEndDate) {
@@ -450,7 +488,7 @@ const ExplorePage: React.FC = () => {
       }
       return "available";
     },
-    [mappedWorkspaces, selectedDate, selectedHour, branchAvailability, workspacesLoading],
+    [mappedWorkspaces, selectedDate, selectedHour, branchAvailability, workspacesLoading, filterEndHour],
   );
 
   // Stable adapter for the memoized FloorPlanViewer — an inline arrow would re-render the whole
@@ -638,6 +676,95 @@ const ExplorePage: React.FC = () => {
     }
   }, [currentFloorData]);
 
+  /* ── Filters → results ── */
+  const currentFilter: ExploreFilter = {
+    branchId: resolveBranchId(selectedBranch),
+    date: selectedDate,
+    startHour: selectedHour,
+    endHour: Math.min(Math.max(filterEndHour, selectedHour + 1), closeHour),
+    people,
+    typeIds,
+    equipmentIds,
+  };
+  const workspaceTypes = useMemo(() => {
+    const seen = new Map<string, string>();
+    mappedWorkspaces.forEach((w) => { if (!seen.has(w.workspace_type_id)) seen.set(w.workspace_type_id, w.workspaceTypeName); });
+    return Array.from(seen, ([id, name]) => ({ id, name }));
+  }, [mappedWorkspaces]);
+  const equipmentServices = useMemo(
+    () => extraServices.filter((s) => (s.serviceType || "").toLowerCase() === "equipment").map((s) => ({ id: s.id, name: s.name })),
+    [extraServices],
+  );
+
+  // What is left of each piece of equipment the customer asked for, for the searched slot.
+  const [equipmentStock, setEquipmentStock] = useState<Record<string, ServiceAvailabilityDto>>({});
+  useEffect(() => {
+    const branchId = resolveBranchId(selectedBranch);
+    if (!searched || !branchId || equipmentIds.length === 0) {
+      setEquipmentStock({});
+      return;
+    }
+    const start = new Date(selectedDate);
+    start.setHours(selectedHour, 0, 0, 0);
+    const end = new Date(selectedDate);
+    end.setHours(currentFilter.endHour, 0, 0, 0);
+    if (end <= start) return;
+    let active = true;
+    serviceLimitApi.availability(branchId, start, end)
+      .then((list) => { if (active) setEquipmentStock(Object.fromEntries(list.map((a) => [a.serviceId, a]))); })
+      .catch(() => { if (active) setEquipmentStock({}); });
+    return () => { active = false; };
+  }, [searched, selectedBranch, selectedDate, selectedHour, currentFilter.endHour, equipmentIds.join(",")]);
+
+  // Equipment asked for in the filters is pre-ticked when a space is opened (if any is left).
+  const initialServices = useMemo(() => {
+    const picked: Record<string, number> = {};
+    equipmentIds.forEach((id) => {
+      const stock = equipmentStock[id];
+      if (!stock || stock.remaining > 0) picked[id] = 1;
+    });
+    return picked;
+  }, [equipmentIds, equipmentStock]);
+
+  const applyFilter = (f: ExploreFilter) => {
+    if (f.branchId !== resolveBranchId(selectedBranch)) {
+      setSelectedBranch(f.branchId);
+      setSelectedFloor("");
+    }
+    setSelectedDate(f.date);
+    setSelectedHour(f.startHour);
+    setFilterEndHour(f.endHour);
+    setPeople(f.people);
+    setTypeIds(f.typeIds);
+    setEquipmentIds(f.equipmentIds);
+    setSelectedWs(null);
+    setSearched(true);
+    setEditingFilters(false);
+    setDraft(null);
+    setViewMode("results");
+  };
+  // Changing branch in the form loads that branch's types and equipment right away.
+  const onDraftChange = (next: ExploreFilter) => {
+    if (next.branchId !== resolveBranchId(selectedBranch)) {
+      setSelectedBranch(next.branchId);
+      setSelectedFloor("");
+    }
+    setDraft(next);
+  };
+  const activeDraft = draft ?? currentFilter;
+
+  const slotLabel = `${selectedDate.toLocaleDateString("vi-VN", { weekday: "short", day: "2-digit", month: "2-digit" })}, ${String(selectedHour).padStart(2, "0")}:00–${String(currentFilter.endHour).padStart(2, "0")}:00`;
+  const resultStatus = useCallback(
+    (wsId: string) => getWsAvailability(wsId, selectedDate, selectedHour, undefined, currentFilter.endHour),
+    [getWsAvailability, selectedDate, selectedHour, currentFilter.endHour],
+  );
+  const openSpace = (ws: ExploreWorkspace) => {
+    if (ws.floor_id !== currentFloor) setSelectedFloor(ws.floor_id);
+    setSelectedWs(ws.id);
+    setSelectedEndHour(currentFilter.endHour);
+  };
+  const branchName = apiBranches.find((b) => b.id === resolveBranchId(selectedBranch))?.name ?? "";
+
   return (
     <div
       className="flex flex-col h-full bg-muted/50 font-sans"
@@ -650,132 +777,106 @@ const ExplorePage: React.FC = () => {
     >
 
 
-      {/* ── Top Toolbar (Block-based) ── */}
-      <div className="flex items-center gap-3 px-6 py-3 bg-card border-b border-border shrink-0 overflow-x-auto shadow-sm">
-        {/* View mode switcher */}
-        <div className="flex items-center bg-muted/60 p-1 rounded-2xl border border-border shrink-0 shadow-sm">
-          {[
-            {
-              mode: "day" as ViewMode,
-              label: "LỊCH NGÀY",
-              icon: <FiCalendar className="h-3.5 w-3.5" />,
-            },
-            {
-              mode: "grid" as ViewMode,
-              label: "LƯỚI",
-              icon: <FiGrid className="h-3.5 w-3.5" />,
-            },
-            {
-              mode: "list" as ViewMode,
-              label: "DANH SÁCH",
-              icon: <FiList className="h-3.5 w-3.5" />,
-            },
-            {
-              mode: "map" as ViewMode,
-              label: "SƠ ĐỒ 2D",
-              icon: <FiMap className="h-3.5 w-3.5" />,
-            },
-          ].map((v) => (
-            <button
-              key={v.mode}
-              onClick={() => setViewMode(v.mode)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-all rounded-xl ${
-                viewMode === v.mode
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {v.icon} {v.label}
-            </button>
-          ))}
+      {!searched ? (
+        /* ── Step 1: what do you need? ── */
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-3xl mx-auto px-4 py-8 sm:py-12">
+            <h1 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight">Tìm chỗ làm việc phù hợp</h1>
+            <p className="text-sm text-muted-foreground mt-2">
+              Cho chúng tôi biết bạn cần gì, chúng tôi chỉ hiện những chỗ còn trống và vừa với nhóm của bạn.
+            </p>
+            <div className="mt-6 rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-sm">
+              {errorMsg && !activeBranches.length ? (
+                <p className="text-sm text-destructive">{errorMsg}</p>
+              ) : (
+                <ExploreFilters
+                  variant="hero"
+                  value={activeDraft}
+                  onChange={onDraftChange}
+                  onSubmit={() => applyFilter(activeDraft)}
+                  branches={activeBranches.map((b) => ({ id: b.id, name: b.name, address: b.address }))}
+                  types={workspaceTypes}
+                  equipment={equipmentServices}
+                  openHour={openHour}
+                  closeHour={closeHour}
+                />
+              )}
+            </div>
+          </div>
         </div>
-
-        {/* Date navigation */}
-        <div className="flex items-center gap-1 shrink-0 bg-muted rounded-2xl border border-border p-1 shadow-sm">
+      ) : (
+      <>
+      {/* ── Filter summary + view switcher ── */}
+      <div className="px-4 sm:px-6 py-3 bg-card border-b border-border shrink-0 space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
           <button
-            onClick={() => shiftDate(-1)}
-            className="p-1.5 rounded-full hover:bg-card text-foreground transition"
-            aria-label="Ngày trước"
+            type="button"
+            onClick={() => { setEditingFilters((v) => !v); setDraft(null); }}
+            className="flex flex-wrap items-center gap-1.5 text-left rounded-xl border border-border bg-muted/40 hover:bg-muted px-3 py-2 text-sm cursor-pointer min-w-0"
+            aria-expanded={editingFilters}
           >
-            <FiChevronLeft className="h-4 w-4" />
+            <span className="font-semibold text-foreground truncate max-w-[16rem]">{branchName}</span>
+            <span className="text-muted-foreground">· {slotLabel}</span>
+            <span className="text-muted-foreground">· {people} người</span>
+            {typeIds.length > 0 && <span className="text-muted-foreground">· {typeIds.length} loại</span>}
+            {equipmentIds.length > 0 && <span className="text-muted-foreground">· {equipmentIds.length} thiết bị</span>}
+            <span className="text-primary font-medium ml-1">{editingFilters ? "Đóng" : "Sửa bộ lọc"}</span>
           </button>
-          <span className="text-xs font-medium text-foreground px-2 whitespace-nowrap tracking-tight">
-            {formatDateShort(selectedDate)}
-          </span>
-          <button
-            onClick={() => shiftDate(1)}
-            className="p-1.5 rounded-full hover:bg-card text-foreground transition"
-            aria-label="Ngày sau"
-          >
-            <FiChevronRight className="h-4 w-4" />
-          </button>
-        </div>
 
-        {/* Floor/Level selector */}
-        <div className="relative shrink-0">
-          {branchFloors.length > 0 ? (
-            <>
+          <div className="flex-1" />
+
+          <div className="flex items-center bg-muted/60 p-1 rounded-xl border border-border" role="tablist">
+            {([
+              { mode: "results", label: "Kết quả", icon: <FiList className="h-3.5 w-3.5" /> },
+              { mode: "map", label: "Sơ đồ tầng", icon: <FiMap className="h-3.5 w-3.5" /> },
+              { mode: "day", label: "Lịch theo giờ", icon: <FiCalendar className="h-3.5 w-3.5" /> },
+            ] as const).map((v) => (
+              <button
+                key={v.mode}
+                role="tab"
+                aria-selected={viewMode === v.mode}
+                onClick={() => setViewMode(v.mode)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+                  viewMode === v.mode ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {v.icon} {v.label}
+              </button>
+            ))}
+          </div>
+
+          {viewMode !== "results" && branchFloors.length > 0 && (
+            <div className="relative">
               <select
                 value={currentFloor}
                 onChange={(e) => setSelectedFloor(e.target.value)}
-                className="appearance-none bg-card border border-border rounded-2xl px-4 py-2 pr-10 text-xs font-medium text-foreground cursor-pointer shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+                aria-label="Chọn tầng"
+                className="appearance-none bg-card border border-border rounded-xl px-3 py-2 pr-9 text-xs font-medium text-foreground cursor-pointer"
               >
                 {branchFloors.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    TẦNG {f.floorNo} - {f.name}
-                  </option>
+                  <option key={f.id} value={f.id}>Tầng {f.floorNo} · {f.name}</option>
                 ))}
               </select>
               <FiChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground pointer-events-none" />
-            </>
-          ) : (
-            <span className="text-xs text-foreground px-4 py-2 border border-border bg-muted rounded-2xl shadow-sm font-medium">
-              Không có không gian
-            </span>
+            </div>
           )}
         </div>
 
-        {/* Time slider */}
-        <div className="flex items-center gap-3 shrink-0 bg-card border border-border rounded-2xl px-4 py-2 shadow-sm">
-          <FiClock className="h-4 w-4 text-foreground" />
-          <input
-            type="range"
-            min={openHour}
-            max={Math.max(openHour, closeHour - 1)}
-            value={selectedHour}
-            onChange={(e) => {
-              setSelectedHour(Number(e.target.value));
-              setSelectedEndHour(null);
-            }}
-            className="w-24 h-2 accent-[#2563EB] cursor-pointer"
-            aria-label="Chọn giờ"
-          />
-          <span className="text-xs font-medium text-foreground w-12 tabular-nums">
-            {String(selectedHour).padStart(2, "0")}:00
-          </span>
-        </div>
-
-        {/* Branch selector */}
-        <div className="relative shrink-0">
-          <select
-            value={selectedBranch}
-            onChange={(e) => {
-              setSelectedBranch(e.target.value);
-              setSelectedFloor("");
-            }}
-            className="appearance-none bg-card border border-border rounded-2xl px-4 py-2 pr-10 text-xs font-medium text-foreground cursor-pointer shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
-          >
-            {activeBranches.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-          </select>
-          <FiChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground pointer-events-none" />
-        </div>
-
-        <div className="flex-1" />
-
+        {editingFilters && (
+          <div className="rounded-2xl border border-border bg-background p-4">
+            <ExploreFilters
+              variant="bar"
+              value={activeDraft}
+              onChange={onDraftChange}
+              onSubmit={() => applyFilter(activeDraft)}
+              branches={activeBranches.map((b) => ({ id: b.id, name: b.name, address: b.address }))}
+              types={workspaceTypes}
+              equipment={equipmentServices}
+              openHour={openHour}
+              closeHour={closeHour}
+            />
+          </div>
+        )}
       </div>
 
       {/* ── Main Content ── */}
@@ -818,7 +919,7 @@ const ExplorePage: React.FC = () => {
                         Sơ đồ mặt bằng chi tiết của tầng đang được hoàn thiện. Quý khách vui lòng chọn tầng khác hoặc chuyển sang chế độ danh sách để xem chỗ ngồi khả dụng.
                       </p>
                       <button
-                        onClick={() => setViewMode("list")}
+                        onClick={() => setViewMode("results")}
                         className="btn btn-outline btn-sm mt-4 text-xs font-medium"
                       >
                         Chuyển sang xem dạng danh sách
@@ -829,184 +930,27 @@ const ExplorePage: React.FC = () => {
               </div>
 
             </>
-          ) : viewMode === "list" ? (
-            /* ── LIST VIEW ── */
-            <div className="p-6 overflow-y-auto h-full bg-muted/50">
-              <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-muted border-b border-border">
-                      <th className="px-4 py-3 font-medium text-foreground tracking-tight text-xs">Workspace</th>
-                      <th className="px-4 py-3 font-medium text-foreground tracking-tight text-xs">Loại</th>
-                      <th className="px-4 py-3 font-medium text-foreground tracking-tight text-xs">Sức chứa</th>
-                      <th className="px-4 py-3 font-medium text-foreground tracking-tight text-xs">Trạng thái</th>
-                      <th className="px-4 py-3 font-medium text-foreground tracking-tight text-xs">Giá</th>
-                      <th className="px-4 py-3"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(loading || workspacesLoading) &&
-                      [...Array(6)].map((_, i) => (
-                        <tr key={`ws-skeleton-${i}`} className="border-b border-border last:border-b-0">
-                          <td className="px-4 py-4"><Skeleton className="h-4 w-40" /></td>
-                          <td className="px-4 py-4"><Skeleton className="h-4 w-24" /></td>
-                          <td className="px-4 py-4"><Skeleton className="h-4 w-8" /></td>
-                          <td className="px-4 py-4"><Skeleton className="h-6 w-16 rounded-full" /></td>
-                          <td className="px-4 py-4"><Skeleton className="h-4 w-20" /></td>
-                          <td className="px-4 py-4"><Skeleton className="h-8 w-20" /></td>
-                        </tr>
-                      ))}
-                    {!loading && !workspacesLoading && floorWorkspaces.map((ws) => {
-                      const avail = getWsAvailability(
-                        ws.id,
-                        selectedDate,
-                        selectedHour,
-                      );
-                      const price = getDisplayPrice(ws.workspace_type_id);
-                      return (
-                        <tr
-                          key={ws.id}
-                          className="cursor-pointer border-b border-border last:border-b-0 hover:bg-card/10 transition-colors"
-                          style={
-                            selectedWs === ws.id
-                              ? { background: "rgba(245, 158, 11, 0.2)" }
-                              : undefined
-                          }
-                          onClick={() =>
-                            setSelectedWs(selectedWs === ws.id ? null : ws.id)
-                          }
-                        >
-                          <td className="px-4 py-4 font-medium text-foreground">
-                            {ws.name} <span className="text-xs opacity-70">({ws.code})</span>
-                          </td>
-                          <td className="px-4 py-4 text-foreground text-sm">
-                            {ws.workspaceTypeName || "—"}
-                          </td>
-                          <td className="px-4 py-4 text-foreground font-medium">{ws.capacity || "—"}</td>
-                          <td className="px-4 py-4">
-                            <span
-                              className={`px-3 py-1 rounded-full text-xs font-medium border border-border ${
-                                avail === "available"
-                                  ? "bg-emerald-100 text-emerald-800 dark:text-emerald-400 dark:text-emerald-400"
-                                  : avail === "booked"
-                                    ? "bg-rose-100 text-rose-800"
-                                    : "bg-slate-200 text-foreground"
-                              }`}
-                            >
-                              {avail === "available"
-                                ? "Trống"
-                                : avail === "booked"
-                                  ? "Đã đặt"
-                                  : "Bảo trì"}
-                            </span>
-                          </td>
-                          <td className="px-4 py-4 font-medium text-foreground">
-                            {price
-                              ? formatVND(price.price) +
-                                "/" +
-                                durationUnitLabel[
-                                  price.duration_unit
-                                ]?.toLowerCase()
-                              : "—"}
-                          </td>
-                          <td className="px-4 py-4 text-right">
-                            {avail === "available" && (
-                              <button
-                                className="bg-card text-foreground border border-border px-4 py-1.5 rounded-2xl font-medium shadow-sm hover:translate-y-px hover:shadow-none transition-all text-sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedWs(ws.id);
-                                }}
-                              >
-                                Đặt
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ) : viewMode === "grid" ? (
-            /* ── GRID VIEW ── */
-            <div className="p-6 overflow-y-auto h-full bg-muted/50">
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {floorWorkspaces.map((ws) => {
-                  const avail = getWsAvailability(
-                    ws.id,
-                    selectedDate,
-                    selectedHour,
-                  );
-                  const price = getDisplayPrice(ws.workspace_type_id);
-                  return (
-                    <div
-                      key={ws.id}
-                      onClick={() =>
-                        setSelectedWs(selectedWs === ws.id ? null : ws.id)
-                      }
-                      className={`group relative overflow-hidden bg-card rounded-3xl border transition-all duration-300 p-5 cursor-pointer flex flex-col h-full ${
-                        selectedWs === ws.id
-                          ? "border-primary ring-2 ring-primary/25 shadow-lg -translate-y-1 bg-primary/[0.02]"
-                          : "border-border shadow-sm hover:shadow-md hover:border-primary/40"
-                      }`}
-                    >
-                      {ws.images && ws.images.length > 0 && (
-                        <div className="-mx-1 -mt-1 mb-3.5 aspect-[16/9] overflow-hidden rounded-2xl bg-muted">
-                          <img src={ws.images[0].url} alt={ws.name} className="h-full w-full object-cover" loading="lazy" />
-                        </div>
-                      )}
-                      <div className="flex items-center justify-between mb-3.5">
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-semibold border ${
-                            avail === "available"
-                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
-                              : avail === "booked"
-                                ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20"
-                                : "bg-muted text-muted-foreground border-border"
-                          }`}
-                        >
-                          {avail === "available"
-                            ? "Còn trống"
-                            : avail === "booked"
-                              ? "Đang có khách"
-                              : "Đang bảo trì"}
-                        </span>
-                      </div>
-                      <h3 className="text-lg font-bold text-foreground group-hover:text-primary transition-colors flex items-center justify-between">
-                        <span>{ws.name}</span>
-                        <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-muted text-muted-foreground border border-border">
-                          {ws.code}
-                        </span>
-                      </h3>
-                      <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1.5">
-                        <FiUsers className="h-3.5 w-3.5 text-primary" />
-                        <span>{ws.workspaceTypeName || 'Không gian làm việc'}</span>
-                        <span>·</span>
-                        <span className="font-semibold text-foreground">{ws.capacity} chỗ ngồi</span>
-                      </p>
-                      
-                      <div className="mt-auto pt-4 border-t border-border/60">
-                        {price && (
-                          <div className="flex items-baseline justify-between">
-                            <span className="text-xs text-muted-foreground">Giá tiêu chuẩn:</span>
-                            <p className="font-bold text-lg text-primary">
-                              {formatVND(price.price)}
-                              <span className="text-xs font-normal text-muted-foreground">/{durationUnitLabel[price.duration_unit]?.toLowerCase()}</span>
-                            </p>
-                          </div>
-                        )}
-                        {avail === "available" && (
-                          <button className="w-full mt-3 btn btn-primary py-2.5 rounded-2xl font-semibold text-xs shadow-sm hover:shadow-md transition-all">
-                            Chọn đặt bàn này
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+          ) : viewMode === "results" ? (
+            <div className="h-full overflow-y-auto">
+              <ExploreResults
+                workspaces={mappedWorkspaces}
+                floors={branchFloors.map((f) => ({ id: f.id, floorNo: f.floorNo, name: f.name }))}
+                people={people}
+                typeIds={typeIds}
+                statusOf={resultStatus}
+                priceOf={(typeId) => getPrice(typeId, "hour") ?? getDisplayPrice(typeId)}
+                equipment={equipmentIds.map((id) => ({
+                  id,
+                  name: extraServices.find((x) => x.id === id)?.name ?? "Thiết bị",
+                  stock: equipmentStock[id],
+                }))}
+                slotLabel={slotLabel}
+                loading={loading || workspacesLoading}
+                selectedWs={selectedWs}
+                onSelect={openSpace}
+                onShowOnMap={(ws) => { openSpace(ws); setViewMode("map"); }}
+                onEditFilters={() => setEditingFilters(true)}
+              />
             </div>
           ) : (
             /* ── DAY VIEW (Timeline) ── */
@@ -1120,7 +1064,9 @@ const ExplorePage: React.FC = () => {
                 wsAvail={selectedWsAvail}
                 selectedWs={selectedWs}
                 selectedHour={selectedHour}
-                initialEndHour={selectedEndHour || Math.min(selectedHour + 1, closeHour)}
+                initialEndHour={selectedEndHour || currentFilter.endHour}
+                initialServices={initialServices}
+                floorNameOf={(floorId) => { const f = branchFloors.find((x) => x.id === floorId); return f ? `Tầng ${f.floorNo}` : ""; }}
                 selectedDate={selectedDate}
                 getPrice={(unit) => getPrice(selectedWsData.workspace_type_id, unit)}
                 addonServices={extraServices as any}
@@ -1156,7 +1102,9 @@ const ExplorePage: React.FC = () => {
                   wsAvail={selectedWsAvail}
                   selectedWs={selectedWs}
                   selectedHour={selectedHour}
-                  initialEndHour={selectedEndHour || Math.min(selectedHour + 1, closeHour)}
+                  initialEndHour={selectedEndHour || currentFilter.endHour}
+                initialServices={initialServices}
+                floorNameOf={(floorId) => { const f = branchFloors.find((x) => x.id === floorId); return f ? `Tầng ${f.floorNo}` : ""; }}
                   selectedDate={selectedDate}
                   getPrice={(unit) => getPrice(selectedWsData.workspace_type_id, unit)}
                   addonServices={extraServices as any}
@@ -1181,6 +1129,8 @@ const ExplorePage: React.FC = () => {
           </>
         )}
       </div>
+      </>
+      )}
     </div>
   );
 };

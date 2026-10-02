@@ -3,6 +3,7 @@ import { FiCoffee, FiPrinter, FiPlus, FiX, FiCheck, FiEdit2, FiTrash2, FiAlertCi
 import { useAuth } from '../../context/AuthContext';
 import { staffApi, type ExtraServiceDto } from '../../api/staffApi';
 import { formatVND } from '../../utils/formatters';
+import { ServiceLimitsPanel } from '../../components/branch-admin/ServiceLimitsPanel';
 
 
 const Modal: React.FC<{ title: string; onClose: () => void; children: React.ReactNode }> = ({
@@ -254,6 +255,8 @@ const BAServicesPage: React.FC = () => {
           ))}
         </div>
       )}
+
+      <ServiceLimitsPanel branchId={branchId} />
 
       {/* Add/Edit modal */}
       {modal && (

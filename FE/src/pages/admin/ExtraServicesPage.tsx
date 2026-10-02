@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { FiCoffee, FiEdit2, FiPlus, FiPrinter, FiTrash2, FiX, FiCheck, FiAlertTriangle, FiPackage, FiInfo, FiAlertCircle, FiShoppingBag } from 'react-icons/fi';
 import { staffApi, type ExtraServiceDto } from '../../api/staffApi';
 import { formatVND } from '../../utils/formatters';
+import { ServiceLimitsPanel } from '../../components/branch-admin/ServiceLimitsPanel';
+import { customerSpaceApi, type BranchResponse } from '../../lib/spaceApi';
 
 const Modal: React.FC<{ open: boolean; onClose: () => void; title: string; children: React.ReactNode }> = ({ open, onClose, title, children }) => {
   if (!open) return null;
@@ -34,6 +36,17 @@ const emptyForm = { code: '', name: '', service_type: 'other' as string, descrip
 
 const ExtraServicesPage: React.FC = () => {
   const [services, setServices] = useState<ExtraServiceDto[]>([]);
+  // Quantities are per branch (each site owns its own projectors): pick which one to set.
+  const [branches, setBranches] = useState<BranchResponse[]>([]);
+  const [limitBranchId, setLimitBranchId] = useState('');
+  useEffect(() => {
+    customerSpaceApi.listBranches()
+      .then((list) => {
+        setBranches(list);
+        setLimitBranchId((prev) => prev || list[0]?.id || '');
+      })
+      .catch(() => setBranches([]));
+  }, []);
   const [isLoading, setIsLoading] = useState(true);
   const [apiError, setApiError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -227,6 +240,23 @@ const ExtraServicesPage: React.FC = () => {
       </div>
 
       {/* Add/Edit Modal */}
+      {branches.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <label htmlFor="limit-branch" className="text-sm font-medium text-foreground">Số lượng thiết bị tại chi nhánh</label>
+            <select
+              id="limit-branch"
+              value={limitBranchId}
+              onChange={(e) => setLimitBranchId(e.target.value)}
+              className="input-field text-sm w-auto"
+            >
+              {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </select>
+          </div>
+          {limitBranchId && <ServiceLimitsPanel branchId={limitBranchId} />}
+        </div>
+      )}
+
       <Modal open={!!modal} onClose={() => setModal(null)} title={modal?.type === 'edit' ? 'Chỉnh sửa dịch vụ' : 'Thêm dịch vụ mới'}>
         <div className="space-y-5">
           {errors.general && (

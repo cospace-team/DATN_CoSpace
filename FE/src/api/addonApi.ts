@@ -154,3 +154,43 @@ export const addonApi = {
     request<BookingTabDto>(`/api/bookings/${bookingId}/addons/settle`, { method: 'POST', body: JSON.stringify({ method }) },
       'Không thể thu tiền dịch vụ'),
 };
+
+/* ─── Per-branch limits: how many of an item a branch can lend at once ─── */
+
+/** A service offered at a branch with its limit there (null = unlimited). */
+export interface ServiceLimitDto {
+  serviceId: string;
+  serviceKey: string;
+  name: string;
+  serviceType: string;
+  unit: string;
+  price: number;
+  /** false: inherited from the system-wide catalogue. */
+  branchOwned: boolean;
+  maxConcurrent: number | null;
+}
+
+/** What is still free of a limited service for a time window. */
+export interface ServiceAvailabilityDto {
+  serviceId: string;
+  serviceKey: string;
+  name: string;
+  maxConcurrent: number;
+  inUse: number;
+  remaining: number;
+}
+
+export const serviceLimitApi = {
+  list: (branchId: string) =>
+    request<ServiceLimitDto[]>(`/api/extra-services/limits?branchId=${branchId}`, {}, 'Không thể tải giới hạn dịch vụ'),
+  set: (branchId: string, serviceKey: string, maxConcurrent: number | null) =>
+    request<ServiceLimitDto[]>('/api/extra-services/limits', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ branchId, serviceKey, maxConcurrent }),
+    }, 'Không thể lưu giới hạn dịch vụ'),
+  availability: (branchId: string, startAt: Date, endAt: Date) =>
+    request<ServiceAvailabilityDto[]>(
+      `/api/extra-services/availability?branchId=${branchId}&startAt=${encodeURIComponent(startAt.toISOString())}&endAt=${encodeURIComponent(endAt.toISOString())}`,
+      {}, 'Không thể kiểm tra số lượng dịch vụ'),
+};

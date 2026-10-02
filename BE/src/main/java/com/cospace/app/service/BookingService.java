@@ -200,6 +200,8 @@ public class BookingService {
                 subtotal, req.getPromotionCode(), true);
         // Add-ons ordered at checkout are priced from the catalogue and paid together with the booking.
         List<com.cospace.app.entity.BookingServiceItem> addonLines = bookingAddonService.priceLines(computedBranchId, req.getAddons());
+        // Items the branch has only a few of (projectors…) must still be free for the whole slot.
+        bookingAddonService.requireCapacity(computedBranchId, req.getStartAt(), req.getEndAt(), addonLines, true);
         long addonAmount = BookingAddonService.total(addonLines);
         long taxAmount = 0;
         long serviceFeeAmount = 0;
@@ -590,7 +592,9 @@ public class BookingService {
         long subtotal = unitPrice * (long) unitCount;
         DiscountBreakdown d = computeDiscounts(userId, floor.getBranchId(), workspaceTypeId, subtotal,
                 req.getPromotionCode(), false);
-        long addonAmount = BookingAddonService.total(bookingAddonService.priceLines(floor.getBranchId(), req.getAddons()));
+        List<com.cospace.app.entity.BookingServiceItem> quotedLines = bookingAddonService.priceLines(floor.getBranchId(), req.getAddons());
+        bookingAddonService.requireCapacity(floor.getBranchId(), req.getStartAt(), req.getEndAt(), quotedLines, false);
+        long addonAmount = BookingAddonService.total(quotedLines);
 
         return com.cospace.app.dto.api.PromotionDto.QuoteResponse.builder()
                 .pricePerUnit(unitPrice)

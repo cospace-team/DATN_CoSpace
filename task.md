@@ -177,3 +177,11 @@ Sử dụng ký hiệu: `[ ]` Chưa làm | `[/]` Đang làm | `[x]` Đã xong.
 - [x] **Hủy cả nhóm** (`POST /api/bookings/groups/{id}/cancel`), mỗi chỗ hoàn tiền theo chính sách như đơn lẻ.
 - [x] **Giao diện**: chọn thêm chỗ trong panel đặt chỗ hoặc bấm trực tiếp trên sơ đồ (tô sáng các chỗ đã chọn); trang thanh toán liệt kê từng chỗ và giá; Lịch sử hiện nhãn nhóm, nút "Thanh toán cả nhóm", tìm theo mã nhóm.
 - [x] **Kiểm thử**: 344/344 unit test BE pass (thêm 10 test đơn nhóm); chạy thật trên Postgres 16 (tạo nhóm 3 chỗ, đặt trùng bị chặn và không để lại nhóm rác, thanh toán gộp, xác nhận đủ 3 chỗ, hủy nhóm hoàn tiền từng chỗ); luồng trình duyệt chọn 3 chỗ → thanh toán → VietQR → lịch sử. Tài liệu: `docs/api-contracts/booking-groups.md`.
+
+## 📦 18. Giới hạn dịch vụ theo cơ sở & thiết kế lại Khám phá không gian
+- [x] **Migration V7** `branch_service_limits` (chi nhánh, mã dịch vụ, số lượng tối đa dùng cùng lúc); áp được cho cả dịch vụ chung lẫn dịch vụ riêng của chi nhánh; không có dòng = không giới hạn.
+- [x] **Kiểm tra số lượng** khi đặt chỗ (có khóa chống tranh chấp), khi báo giá, khi gọi thêm trong lúc dùng chỗ và khi tăng số lượng: tính tổng thiết bị trên các đơn còn hiệu lực có thời gian chồng lấn. API: `GET/PUT /api/extra-services/limits`, `GET /api/extra-services/availability`.
+- [x] **Quản trị**: bảng "Số lượng tại cơ sở" cho Branch Admin (trang Dịch vụ) và Super Admin (chọn chi nhánh), thiết bị lên đầu.
+- [x] **Khách hàng**: panel đặt chỗ hiện "Còn x/y" / "Hết", giới hạn số lượng chọn được.
+- [x] **Khám phá không gian 2 bước**: (1) bộ lọc chi nhánh, ngày, khung giờ, số người, loại không gian, thiết bị cần dùng; (2) kết quả chỉ gồm chỗ phù hợp, gom theo tầng, chỗ trống trước, báo thiết bị đã hết trong khung giờ; vẫn xem được Sơ đồ tầng và Lịch theo giờ. Nạp chỗ của mọi tầng nên đặt nhiều chỗ được khác tầng. Thiết bị đã lọc được chọn sẵn khi mở chỗ.
+- [x] **Kiểm thử**: 351/351 unit test BE pass (thêm 7 test giới hạn); chạy thật trên Postgres 16 (đặt giới hạn 1 máy chiếu, đơn thứ hai trùng giờ bị chặn, báo giá vượt bị chặn, khách không sửa được giới hạn); chụp màn hình bộ lọc, kết quả, panel, trang quản trị, bản điện thoại.

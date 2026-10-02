@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { FiX, FiCheck, FiPlus, FiUsers } from 'react-icons/fi';
 import { WorkspaceAmenities } from '../../../components/WorkspaceAmenities';
 import { formatVND, durationUnitLabel } from '../../../utils/formatters';
-import type { ExtraServiceDto } from '../../../api/addonApi';
+import { serviceLimitApi, type ExtraServiceDto, type ServiceAvailabilityDto } from '../../../api/addonApi';
 import { QuantityStepper } from '../../../components/ui/QuantityStepper';
 import WorkspaceGallery from '../../../components/workspace/WorkspaceGallery';
 import { ServiceIcon } from '../../../components/ui/ServiceIcon';
@@ -76,6 +76,10 @@ interface BookingPanelProps {
   maxSeats?: number;
   /** Whether clicks on the floor plan add seats instead of switching to them. */
   multiSelect?: boolean;
+  /** Services ticked when the panel opens (equipment asked for in the search filters). */
+  initialServices?: Record<string, number>;
+  /** Short floor label for a seat, shown when adding seats from other floors. */
+  floorNameOf?: (floorId: string) => string;
   onToggleMultiSelect?: (on: boolean) => void;
   onBookNow: (
     endHour: number,
@@ -112,6 +116,8 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
   maxSeats = 10,
   multiSelect = false,
   onToggleMultiSelect,
+  initialServices,
+  floorNameOf,
   onBookNow,
 }) => {
   const [endHour, setEndHour] = useState(initialEndHour);
@@ -127,10 +133,46 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
     }
     validEndHour = Math.min(validEndHour, closeHour);
     setEndHour(validEndHour);
-    setServices({});
+    setServices(initialServices ?? {});
     setDurationUnit('hour');
     setEndDate(toMidnight(selectedDate));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- initialServices only seeds a newly opened panel
   }, [selectedHour, initialEndHour, selectedWs, selectedDate, closeHour]);
+
+  // Items the branch has only a few of (projectors…): what is still free for the chosen time.
+  const [serviceStock, setServiceStock] = useState<Record<string, ServiceAvailabilityDto>>({});
+  useEffect(() => {
+    const start = new Date(selectedDate);
+    start.setHours(selectedHour, 0, 0, 0);
+    const end = new Date(durationUnit === 'hour' ? selectedDate : endDate);
+    end.setHours(durationUnit === 'hour' ? endHour : selectedHour, 0, 0, 0);
+    if (!ws.branch_id || end <= start) return;
+    let active = true;
+    const timer = window.setTimeout(() => {
+      serviceLimitApi.availability(ws.branch_id, start, end)
+        .then((list) => {
+          if (active) setServiceStock(Object.fromEntries(list.map((a) => [a.serviceId, a])));
+        })
+        .catch(() => { if (active) setServiceStock({}); });
+    }, 250);
+    return () => { active = false; window.clearTimeout(timer); };
+  }, [ws.branch_id, selectedDate, selectedHour, endHour, endDate, durationUnit]);
+
+  // A chosen quantity never exceeds what is left; a service that ran out is dropped.
+  useEffect(() => {
+    setServices((prev) => {
+      let changed = false;
+      const next: Record<string, number> = {};
+      for (const [id, qty] of Object.entries(prev)) {
+        const stock = serviceStock[id];
+        if (stock && stock.remaining <= 0) { changed = true; continue; }
+        const capped = stock ? Math.min(qty, stock.remaining) : qty;
+        if (capped !== qty) changed = true;
+        next[id] = capped;
+      }
+      return changed ? next : prev;
+    });
+  }, [serviceStock]);
 
   const handleServiceChange = (id: string, isChecked: boolean) => {
     setServices(prev => {
@@ -473,7 +515,7 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
                 return <p className="text-[11px] text-[var(--text-tertiary)]">Đã đạt tối đa {maxSeats} chỗ cho một lần đặt.</p>;
               }
               if (addable.length === 0) {
-                return <p className="text-[11px] text-[var(--text-tertiary)] italic">Không còn chỗ trống nào khác trên tầng này cho khung giờ đã chọn.</p>;
+                return <p className="text-[11px] text-[var(--text-tertiary)] italic">Không còn chỗ trống nào khác cho khung giờ đã chọn.</p>;
               }
               return (
                 <select
@@ -487,7 +529,7 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
                     const p = getSeatPrice?.(c.workspace_type_id, durationUnit);
                     return (
                       <option key={c.id} value={c.id}>
-                        {c.name} · {c.capacity} chỗ{p ? ` · ${formatVND(p.price)}/${durationUnitLabel[p.duration_unit]?.toLowerCase()}` : ''}
+                        {c.name}{floorNameOf && c.floor_id !== ws.floor_id ? ` (${floorNameOf(c.floor_id)})` : ''} · {c.capacity} chỗ{p ? ` · ${formatVND(p.price)}/${durationUnitLabel[p.duration_unit]?.toLowerCase()}` : ''}
                       </option>
                     );
                   })}
@@ -508,8 +550,11 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
             ) : (
               allAddons
                 .filter((s: any) => s.isActive !== false)
-                .map((s: any) => (
-                  <div key={s.id} className="flex items-center gap-3 text-sm">
+                .map((s: any) => {
+                  const stock = serviceStock[s.id];
+                  const soldOut = !!stock && stock.remaining <= 0;
+                  return (
+                  <div key={s.id} className={`flex items-center gap-3 text-sm ${soldOut ? 'opacity-60' : ''}`}>
                     <label
                       htmlFor={`addon-${s.id}-${selectedWs}`}
                       className="flex items-center gap-3 cursor-pointer min-w-0 flex-1"
@@ -518,18 +563,30 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
                         id={`addon-${s.id}-${selectedWs}`}
                         type="checkbox"
                         checked={!!services[s.id]}
+                        disabled={soldOut}
                         onChange={e => handleServiceChange(s.id, e.target.checked)}
                         className="rounded accent-[var(--brand-primary)]"
                       />
                       <span className="flex items-center gap-1.5 min-w-0">
                         <ServiceIcon type={s.serviceType} name={s.name} className="h-4 w-4 shrink-0 text-muted-foreground" />
                         <span className="truncate">{s.name}</span>
+                        {stock && (
+                          <span
+                            className={`shrink-0 rounded-full px-1.5 text-[10px] font-semibold ${
+                              soldOut ? 'bg-[var(--state-danger-bg)] text-[var(--state-danger)]' : 'bg-[var(--border-subtle)] text-[var(--text-secondary)]'
+                            }`}
+                            title={`Cơ sở có ${stock.maxConcurrent}, đang được đặt ${stock.inUse} trong khung giờ này`}
+                          >
+                            {soldOut ? 'Hết' : `Còn ${stock.remaining}/${stock.maxConcurrent}`}
+                          </span>
+                        )}
                       </span>
                     </label>
                     {services[s.id] ? (
                       <QuantityStepper
                         value={services[s.id]}
                         onChange={q => handleQuantityChange(s.id, q)}
+                        max={stock ? Math.max(1, stock.remaining) : undefined}
                         label={`Số lượng ${s.name}`}
                       />
                     ) : null}
@@ -539,7 +596,8 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
                         : `+${formatVND(s.price)}${s.unit ? `/${s.unit}` : ''}`}
                     </span>
                   </div>
-                ))
+                  );
+                })
             )}
           </div>
         </div>

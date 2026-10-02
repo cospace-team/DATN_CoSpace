@@ -28,4 +28,19 @@ public interface BookingServiceItemRepository extends JpaRepository<BookingServi
     void deleteByBookingId(UUID bookingId);
 
     boolean existsByServiceId(UUID serviceId);
+
+    /**
+     * Units of the given services held by a branch's live bookings whose time overlaps [start, end),
+     * leaving out one booking (pass a random id to leave out none).
+     */
+    @org.springframework.data.jpa.repository.Query("SELECT COALESCE(SUM(i.quantity), 0) FROM BookingServiceItem i, Booking b "
+            + "WHERE b.id = i.bookingId AND i.serviceId IN :serviceIds AND i.status <> :voidStatus "
+            + "AND b.branchId = :branchId AND b.status IN :statuses AND b.startAt < :end AND b.endAt > :start AND b.id <> :excludeBookingId")
+    long sumQuantityInUse(@org.springframework.data.repository.query.Param("serviceIds") java.util.Collection<UUID> serviceIds,
+                          @org.springframework.data.repository.query.Param("voidStatus") String voidStatus,
+                          @org.springframework.data.repository.query.Param("branchId") UUID branchId,
+                          @org.springframework.data.repository.query.Param("statuses") java.util.Collection<com.cospace.app.entity.BookingStatus> statuses,
+                          @org.springframework.data.repository.query.Param("start") java.time.OffsetDateTime start,
+                          @org.springframework.data.repository.query.Param("end") java.time.OffsetDateTime end,
+                          @org.springframework.data.repository.query.Param("excludeBookingId") UUID excludeBookingId);
 }
