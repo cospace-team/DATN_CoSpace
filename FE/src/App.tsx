@@ -7,7 +7,6 @@ import {
   NavLink,
   Link,
   useLocation,
-  useNavigate,
 } from "react-router-dom";
 import { AuthProvider, useAuth, UserRole } from "./context/AuthContext";
 import { ThemeProvider, useTheme } from "./context/ThemeProvider";
@@ -220,24 +219,22 @@ const AppRoutes = React.memo<{ role: UserRole }>(({ role }) => (
 AppRoutes.displayName = "AppRoutes";
 
 // ── Mobile Bottom Nav ──
+// Links, not buttons: navigation should open in a new tab on long-press / middle-click like any link.
 const MobileBottomNav: React.FC<{ items: NavItem[] }> = ({ items }) => {
-  const location = useLocation();
-  const navigate = useNavigate();
   const visibleItems = items.slice(0, 5);
 
   return (
     <nav className="mobile-bottom-nav" aria-label="Điều hướng di động">
       {visibleItems.map((item) => (
-        <button
+        <NavLink
           key={item.to}
-          onClick={() => navigate(item.to)}
-          className={`nav-item ${location.pathname === item.to ? "active" : ""}`}
-          aria-label={item.label}
-          aria-current={location.pathname === item.to ? "page" : undefined}
+          to={item.to}
+          end
+          className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
         >
-          {item.icon}
+          <span aria-hidden="true">{item.icon}</span>
           <span>{item.label}</span>
-        </button>
+        </NavLink>
       ))}
     </nav>
   );
@@ -292,7 +289,7 @@ const AppShell: React.FC = () => {
           <div className="rounded-2xl border border-border bg-card/80 backdrop-blur-sm px-8 py-5 text-sm text-muted-foreground shadow-lg">
             <div className="flex items-center gap-3">
               <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-              Đang kiểm tra phiên đăng nhập...
+              Đang kiểm tra phiên đăng nhập…
             </div>
           </div>
         </div>
@@ -303,7 +300,7 @@ const AppShell: React.FC = () => {
   // ── Public Routes ──
   if (location.pathname === "/" || location.pathname === "/locations") {
     return (
-      <Suspense fallback={<SuspenseLoader fullScreen label="Đang tải trang..." />}>
+      <Suspense fallback={<SuspenseLoader fullScreen label="Đang tải trang…" />}>
         <LandingPage />
       </Suspense>
     );
@@ -313,7 +310,7 @@ const AppShell: React.FC = () => {
   if (!isAuthenticated || !user) {
     if (location.pathname === "/login") {
       return (
-        <Suspense fallback={<SuspenseLoader fullScreen label="Đang tải trang đăng nhập..." />}>
+        <Suspense fallback={<SuspenseLoader fullScreen label="Đang tải trang đăng nhập…" />}>
           <LoginPage />
         </Suspense>
       );
@@ -331,7 +328,7 @@ const AppShell: React.FC = () => {
 
     // Unknown public URLs show 404
     return (
-      <Suspense fallback={<SuspenseLoader fullScreen label="Đang tải trang..." />}>
+      <Suspense fallback={<SuspenseLoader fullScreen label="Đang tải trang…" />}>
         <NotFoundPage />
       </Suspense>
     );
@@ -387,7 +384,7 @@ const AppShell: React.FC = () => {
 
       {/* ─── Sidebar ─── */}
       <aside
-        className={`fixed lg:static z-50 h-full flex flex-col bg-sidebar transition-all duration-300 ${
+        className={`fixed lg:static z-50 h-full flex flex-col bg-sidebar transition-[transform,width] duration-300 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         } ${collapsed ? "w-[68px]" : "w-[260px]"}`}
         aria-label="Điều hướng chính"
@@ -403,7 +400,7 @@ const AppShell: React.FC = () => {
                 main.scrollTo({ top: 0, behavior: "smooth" });
               }
             }}
-            className="flex items-center gap-3 group hover:opacity-90 transition-opacity focus:outline-none cursor-pointer"
+            className="flex items-center gap-3 group hover:opacity-90 transition-opacity cursor-pointer"
             title="Trang chính"
           >
             <Logo
@@ -427,7 +424,7 @@ const AppShell: React.FC = () => {
               title={item.label}
               aria-current={location.pathname === item.to ? "page" : undefined}
             >
-              <span className="shrink-0">
+              <span className="shrink-0" aria-hidden="true">
                 {item.icon}
               </span>
               {!collapsed && <span className="truncate">{item.label}</span>}
@@ -461,7 +458,7 @@ const AppShell: React.FC = () => {
               </div>
               <button
                 onClick={() => void handleLogout()}
-                className="p-1.5 rounded-lg text-sidebar-foreground/40 hover:text-red-400 hover:bg-red-500/10 transition-all shrink-0"
+                className="p-1.5 rounded-lg text-sidebar-foreground/40 hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0"
                 aria-label="Đăng xuất"
                 title="Đăng xuất"
               >
@@ -549,7 +546,7 @@ const AppShell: React.FC = () => {
           className="flex-1 overflow-y-auto px-6 py-6 bg-background mobile-main-content"
         >
           <ErrorBoundary>
-            <Suspense fallback={<SuspenseLoader label="Đang tải trang..." />}>
+            <Suspense fallback={<SuspenseLoader label="Đang tải trang…" />}>
               <AppRoutes role={user.role} />
             </Suspense>
           </ErrorBoundary>

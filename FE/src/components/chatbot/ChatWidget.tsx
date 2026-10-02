@@ -224,7 +224,7 @@ export const ChatWidget = React.memo(function ChatWidget() {
 
         {busy && (
           <div className="rounded-xl border border-border bg-muted/40 p-2.5 space-y-1.5">
-            {(steps.length ? steps : ["Trợ lý đang xử lý..."]).map((label, i, all) => {
+            {(steps.length ? steps : ["Trợ lý đang xử lý…"]).map((label, i, all) => {
               const isCurrent = i === all.length - 1;
               return (
                 <div key={`${i}-${label}`} className="flex items-center gap-2 text-xs">
@@ -267,7 +267,7 @@ export const ChatWidget = React.memo(function ChatWidget() {
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Nhập câu hỏi của bạn..."
+          placeholder="Nhập câu hỏi của bạn…"
           className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-primary/30"
           aria-label="Tin nhắn gửi tới trợ lý AI"
         />

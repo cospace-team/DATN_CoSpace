@@ -322,7 +322,7 @@ const MaintenancePage: React.FC = () => {
           <div className="flex bg-muted p-1 rounded-xl border border-border">
             <button
               onClick={() => setViewMode('map')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ${
                 viewMode === 'map'
                   ? 'bg-background shadow text-primary font-bold'
                   : 'text-muted-foreground hover:text-foreground'
@@ -332,7 +332,7 @@ const MaintenancePage: React.FC = () => {
             </button>
             <button
               onClick={() => setViewMode('list')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ${
                 viewMode === 'list'
                   ? 'bg-background shadow text-primary font-bold'
                   : 'text-muted-foreground hover:text-foreground'
@@ -417,7 +417,7 @@ const MaintenancePage: React.FC = () => {
               <button
                 key={floor.id}
                 onClick={() => setSelectedFloorId(floor.id)}
-                className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all border ${
+                className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition border ${
                   (currentFloor?.id === floor.id)
                     ? 'bg-primary text-primary-foreground border-primary shadow-sm'
                     : 'bg-card border-border text-muted-foreground hover:bg-muted/80'
@@ -433,7 +433,7 @@ const MaintenancePage: React.FC = () => {
             {isLoading ? (
               <div className="h-full flex flex-col items-center justify-center gap-3">
                 <Spinner size="lg" />
-                <p className="text-xs text-muted-foreground">Đang tải sơ đồ và trạng thái chỗ ngồi...</p>
+                <p className="text-xs text-muted-foreground">Đang tải sơ đồ và trạng thái chỗ ngồi…</p>
               </div>
             ) : currentLayout ? (
               <FloorPlanViewer
@@ -485,7 +485,7 @@ const MaintenancePage: React.FC = () => {
               <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
               <input
                 type="text"
-                placeholder="Tìm theo tên hoặc mã chỗ..."
+                placeholder="Tìm theo tên hoặc mã chỗ…"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="input-field !pl-10 w-full text-xs"
@@ -534,7 +534,7 @@ const MaintenancePage: React.FC = () => {
             {isLoading ? (
               <div className="text-center py-16 text-muted-foreground flex flex-col items-center gap-2">
                 <Spinner size="default" />
-                <span className="text-xs">Đang tải danh sách không gian...</span>
+                <span className="text-xs">Đang tải danh sách không gian…</span>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -623,8 +623,9 @@ const MaintenancePage: React.FC = () => {
                                     onClick={() => handleDelete(ws.activeMaintenance!.id)}
                                     className="btn btn-ghost btn-sm text-destructive hover:bg-destructive/10 p-1.5"
                                     title="Hủy lịch bảo trì"
+                                    aria-label="Hủy lịch bảo trì"
                                   >
-                                    <FiTrash2 className="h-4 w-4" />
+                                    <FiTrash2 className="h-4 w-4" aria-hidden="true" />
                                   </button>
                                 </>
                               ) : null}
@@ -692,7 +693,7 @@ const MaintenancePage: React.FC = () => {
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   required
-                  placeholder="Ví dụ: Ổ cắm âm bàn mất điện, Đèn chiếu bị chớp, Chân ghế gãy..."
+                  placeholder="Ví dụ: Ổ cắm âm bàn mất điện, Đèn chiếu bị chớp, Chân ghế gãy…"
                   rows={3}
                   className="input-field w-full text-xs"
                 />
@@ -712,7 +713,7 @@ const MaintenancePage: React.FC = () => {
                   disabled={isSubmitting || !reason.trim()}
                 >
                   <FiAlertTriangle className="h-4 w-4" />
-                  {isSubmitting ? 'Đang khóa...' : 'Xác nhận Khóa'}
+                  {isSubmitting ? 'Đang khóa…' : 'Xác nhận Khóa'}
                 </button>
               </div>
             </form>

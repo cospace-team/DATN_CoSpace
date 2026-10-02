@@ -410,7 +410,7 @@ const BookingCard: React.FC<BookingCardProps> = ({
           {booking.status === "pending_payment" && (
             <button type="button" onClick={onPay} disabled={!apiLoaded || paying} className="btn btn-primary btn-sm disabled:opacity-60">
               <FiCreditCard className="h-4 w-4" />{" "}
-              {paying ? "Đang chuyển..." : raw.groupId && (raw.groupSize ?? 1) > 1 ? `Thanh toán cả nhóm (${raw.groupSize} chỗ)` : "Thanh toán ngay"}
+              {paying ? "Đang chuyển…" : raw.groupId && (raw.groupSize ?? 1) > 1 ? `Thanh toán cả nhóm (${raw.groupSize} chỗ)` : "Thanh toán ngay"}
             </button>
           )}
         </div>

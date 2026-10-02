@@ -2,18 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FiPlus, FiEdit2, FiTrash2, FiShield, FiCheck, FiX, FiAlertTriangle, FiAlertCircle } from 'react-icons/fi';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { staffApi, type CancellationPolicyDto } from '../../api/staffApi';
-
-const Modal: React.FC<{ title: string; onClose: () => void; children: React.ReactNode }> = ({ title, onClose, children }) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in" onClick={onClose}>
-    <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md animate-scale-in" onClick={(e) => e.stopPropagation()}>
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-        <h2 className="text-base font-bold font-heading">{title}</h2>
-        <button onClick={onClose} className="btn btn-ghost btn-sm p-1"><FiX className="h-4 w-4" /></button>
-      </div>
-      <div className="px-6 py-5">{children}</div>
-    </div>
-  </div>
-);
+import { Modal } from '../../components/ui/Modal';
 
 const ruleTypeLabel: Record<string, string> = {
   GRACE_HOURS: 'Giờ ân hạn',
@@ -187,8 +176,8 @@ const CancellationPoliciesPage: React.FC = () => {
                   <td><span className={`badge ${cp.isActive ? 'badge-success' : 'badge-neutral'}`}>{cp.isActive ? 'Hoạt động' : 'Tắt'}</span></td>
                   <td>
                     <div className="flex gap-1">
-                      <button onClick={() => openEdit(cp)} className="btn btn-ghost btn-sm !min-h-[28px] !p-1.5"><FiEdit2 className="h-3.5 w-3.5" /></button>
-                      <button onClick={() => setDeleteConfirm(cp)} className="btn btn-ghost btn-sm !min-h-[28px] !p-1.5 text-destructive hover:!text-destructive"><FiTrash2 className="h-3.5 w-3.5" /></button>
+                      <button onClick={() => openEdit(cp)} className="btn btn-ghost btn-sm !min-h-[28px] !p-1.5" title="Chỉnh sửa" aria-label={`Chỉnh sửa ${cp.name}`}><FiEdit2 className="h-3.5 w-3.5" aria-hidden="true" /></button>
+                      <button onClick={() => setDeleteConfirm(cp)} className="btn btn-ghost btn-sm !min-h-[28px] !p-1.5 text-destructive hover:!text-destructive" title="Xóa" aria-label={`Xóa ${cp.name}`}><FiTrash2 className="h-3.5 w-3.5" aria-hidden="true" /></button>
                     </div>
                   </td>
                 </tr>

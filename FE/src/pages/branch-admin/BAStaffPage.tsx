@@ -175,24 +175,26 @@ const BAStaffPage: React.FC = () => {
                     </td>
                     <td className="text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <button onClick={() => handleOpenModal(s)} className="btn btn-ghost btn-sm text-muted-foreground hover:text-primary">
-                          <FiEdit2 className="h-4 w-4" />
+                        <button onClick={() => handleOpenModal(s)} className="btn btn-ghost btn-sm text-muted-foreground hover:text-primary" title="Chỉnh sửa" aria-label={`Chỉnh sửa ${s.fullName}`}>
+                          <FiEdit2 className="h-4 w-4" aria-hidden="true" />
                         </button>
                         {s.status === 'active' ? (
                           <button 
                             onClick={() => { setStaffToToggle(s); setIsConfirmToggleOpen(true); }} 
                             className="btn btn-ghost btn-sm text-muted-foreground hover:text-destructive"
                             title="Khóa tài khoản"
+                            aria-label="Khóa tài khoản"
                           >
-                            <FiLock className="h-4 w-4" />
+                            <FiLock className="h-4 w-4" aria-hidden="true" />
                           </button>
                         ) : (
                           <button 
                             onClick={() => { setStaffToToggle(s); setIsConfirmToggleOpen(true); }} 
                             className="btn btn-ghost btn-sm text-muted-foreground hover:text-success"
                             title="Mở khóa tài khoản"
+                            aria-label="Mở khóa tài khoản"
                           >
-                            <FiUnlock className="h-4 w-4" />
+                            <FiUnlock className="h-4 w-4" aria-hidden="true" />
                           </button>
                         )}
                       </div>
@@ -219,8 +221,8 @@ const BAStaffPage: React.FC = () => {
           <div className="bg-card w-full max-w-md rounded-2xl shadow-xl border border-border overflow-hidden flex flex-col max-h-[90vh]">
             <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-muted/30">
               <h2 className="text-lg font-bold">{editingStaff ? 'Cập nhật nhân viên' : 'Thêm nhân viên mới'}</h2>
-              <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-muted rounded-full transition-colors text-muted-foreground">
-                <FiX className="h-5 w-5" />
+              <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-muted rounded-full transition-colors text-muted-foreground" aria-label="Đóng">
+                <FiX className="h-5 w-5" aria-hidden="true" />
               </button>
             </div>
             

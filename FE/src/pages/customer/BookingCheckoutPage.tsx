@@ -312,7 +312,7 @@ const BookingCheckoutPage: React.FC = () => {
           navigate('/customer/history', doneState);
           return;
         }
-        showToast('Đang kết nối cổng thanh toán VietQR (PayOS)...', 'info');
+        showToast('Đang kết nối cổng thanh toán VietQR (PayOS)…', 'info');
         const payRes = await bookingGroupApi.payPayos(group.id);
         if (payRes.checkoutUrl && payRes.checkoutUrl.startsWith('http')) {
           window.location.href = payRes.checkoutUrl;
@@ -355,7 +355,7 @@ const BookingCheckoutPage: React.FC = () => {
 
       // 2. Handle Payment Flow
       if (paymentMethod === 'payos') {
-        showToast('Đang kết nối cổng thanh toán VietQR (PayOS)...', 'info');
+        showToast('Đang kết nối cổng thanh toán VietQR (PayOS)…', 'info');
         const payosRes = await bookingApi.createPayosPayment(bookingRes.id, bookingRes.totalAmount);
 
         if (payosRes.checkoutUrl && payosRes.checkoutUrl.startsWith('http')) {
@@ -375,7 +375,7 @@ const BookingCheckoutPage: React.FC = () => {
       }
 
       // 3. Request MoMo Sandbox Payment API & redirect to MoMo Gateway
-      showToast('Đang chuyển hướng sang cổng thanh toán MoMo Sandbox...', 'info');
+      showToast('Đang chuyển hướng sang cổng thanh toán MoMo Sandbox…', 'info');
       const momoRes = await bookingApi.createMomoPayment(bookingRes.id, bookingRes.totalAmount);
 
       if (momoRes.payUrl && momoRes.payUrl.startsWith('http')) {
@@ -403,7 +403,7 @@ const BookingCheckoutPage: React.FC = () => {
       <div className="flex items-center justify-between mb-4">
         <button 
           onClick={() => navigate(-1)} 
-          className="flex items-center gap-2 px-4 py-2 font-semibold text-sm tracking-tight rounded-3xl border border-border bg-card text-foreground shadow-sm hover:shadow-sm transition-all"
+          className="flex items-center gap-2 px-4 py-2 font-semibold text-sm tracking-tight rounded-3xl border border-border bg-card text-foreground shadow-sm hover:shadow-sm transition"
         >
           <FiChevronLeft className="h-5 w-5" /> Quay lại chọn chỗ
         </button>
@@ -608,7 +608,7 @@ const BookingCheckoutPage: React.FC = () => {
                 </div>
                 {!activeBooking && (
                   <button onClick={removePromo} className="p-2 rounded-full hover:bg-emerald-100 dark:hover:bg-emerald-900/40" aria-label="Bỏ mã khuyến mãi">
-                    <FiX className="h-4 w-4" />
+                    <FiX className="h-4 w-4" aria-hidden="true" />
                   </button>
                 )}
               </div>
@@ -617,17 +617,21 @@ const BookingCheckoutPage: React.FC = () => {
                 <div className="flex gap-2">
                   <input
                     className="input-field flex-1 font-mono uppercase"
-                    placeholder="Nhập mã khuyến mãi"
+                    aria-label="Mã khuyến mãi"
+                    name="promo-code"
+                    autoComplete="off"
+                    spellCheck={false}
+                    placeholder="Nhập mã khuyến mãi…"
                     value={promoInput}
                     disabled={!!activeBooking || !quote}
                     onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
                     onKeyDown={(e) => { if (e.key === 'Enter') applyPromo(promoInput); }}
                   />
                   <Button onClick={() => applyPromo(promoInput)} disabled={!promoInput.trim() || isApplyingPromo || !!activeBooking || !quote}>
-                    {isApplyingPromo ? 'Đang kiểm tra...' : 'Áp dụng'}
+                    {isApplyingPromo ? 'Đang kiểm tra…' : 'Áp dụng'}
                   </Button>
                 </div>
-                {promoError && <p className="text-sm text-destructive">{promoError}</p>}
+                {promoError && <p role="alert" className="text-sm text-destructive">{promoError}</p>}
                 {!quote && <p className="text-xs text-muted-foreground">Mã khuyến mãi chỉ áp dụng khi kết nối được máy chủ.</p>}
               </div>
             )}
@@ -671,7 +675,7 @@ const BookingCheckoutPage: React.FC = () => {
             
             <div className="space-y-4">
               {/* PayOS VietQR Option */}
-              <label className={`flex items-center justify-between p-4 rounded-3xl border-4 cursor-pointer transition-all ${
+              <label className={`flex items-center justify-between p-4 rounded-3xl border-4 cursor-pointer transition ${
                 paymentMethod === 'payos' ? 'border-[#0052cc] bg-blue-50/20 dark:bg-blue-950/20 shadow-sm' : 'border-border hover:shadow-sm'
               }`}>
                 <div className="flex items-center gap-4">
@@ -698,7 +702,7 @@ const BookingCheckoutPage: React.FC = () => {
 
               {/* MoMo pays one booking per order; a group is paid with one VietQR instead. */}
               {!isGroup && (
-              <label className={`flex items-center justify-between p-4 rounded-3xl border-4 cursor-pointer transition-all ${
+              <label className={`flex items-center justify-between p-4 rounded-3xl border-4 cursor-pointer transition ${
                 paymentMethod === 'momo' ? 'border-[#A50064] bg-muted/5 shadow-sm' : 'border-border hover:shadow-sm'
               }`}>
                 <div className="flex items-center gap-4">
@@ -821,14 +825,14 @@ const BookingCheckoutPage: React.FC = () => {
               <button 
                 onClick={handleCreateBooking} 
                 disabled={isProcessing || holdExpired || (!activeBooking && !quote)}
-                className={`w-full py-5 text-lg font-semibold tracking-tight border border-border rounded-3xl shadow-sm hover:shadow-sm transition-all flex justify-center items-center gap-3 ${
+                className={`w-full py-5 text-lg font-semibold tracking-tight border border-border rounded-3xl shadow-sm hover:shadow-sm transition flex justify-center items-center gap-3 ${
                   isProcessing || holdExpired || (!activeBooking && !quote) ? 'bg-gray-600 text-white opacity-50 cursor-not-allowed' : 'bg-[#A50064] text-white hover:bg-[#8A0053]'
                 }`}
               >
                 {isProcessing ? (
                   <div className="flex items-center gap-2">
                     <span className="h-5 w-5 rounded-full border-4 border-white border-t-transparent animate-spin" />
-                    <span>Đang xử lý...</span>
+                    <span>Đang xử lý…</span>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">

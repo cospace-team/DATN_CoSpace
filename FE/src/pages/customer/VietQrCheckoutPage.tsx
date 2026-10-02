@@ -170,7 +170,7 @@ const VietQrCheckoutPage: React.FC = () => {
             </div>
             <div className="p-4 bg-muted/50 rounded-2xl border border-border text-xs text-muted-foreground flex items-center justify-center gap-2">
               <span className="w-3 h-3 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin"></span>
-              <span>Đang tự động chuyển đến trang Lịch sử đặt chỗ...</span>
+              <span>Đang tự động chuyển đến trang Lịch sử đặt chỗ…</span>
             </div>
           </div>
         </div>
@@ -180,7 +180,7 @@ const VietQrCheckoutPage: React.FC = () => {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 px-4 py-2 font-medium text-sm rounded-2xl border border-border bg-card text-foreground shadow-sm hover:bg-muted transition-all"
+          className="flex items-center gap-2 px-4 py-2 font-medium text-sm rounded-2xl border border-border bg-card text-foreground shadow-sm hover:bg-muted transition"
         >
           <FiArrowLeft className="h-4 w-4" /> Quay lại
         </button>
@@ -201,7 +201,7 @@ const VietQrCheckoutPage: React.FC = () => {
 
           <button
             onClick={handleCancel}
-            className="px-3.5 py-2 text-xs font-semibold text-muted-foreground hover:text-rose-500 border border-transparent hover:border-border rounded-2xl transition-all"
+            className="px-3.5 py-2 text-xs font-semibold text-muted-foreground hover:text-rose-500 border border-transparent hover:border-border rounded-2xl transition"
           >
             Hủy đơn
           </button>
@@ -217,7 +217,7 @@ const VietQrCheckoutPage: React.FC = () => {
           {/* Official VietQR Header Badge */}
           <div 
             onClick={handleTriggerPayment}
-            className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-border select-none cursor-pointer hover:border-blue-400/60 hover:bg-blue-50/20 dark:hover:bg-blue-950/20 transition-all active:scale-[0.99]"
+            className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-border select-none cursor-pointer hover:border-blue-400/60 hover:bg-blue-50/20 dark:hover:bg-blue-950/20 transition active:scale-[0.99]"
           >
             <div className="flex items-center gap-2">
               <span className="font-extrabold tracking-tight text-blue-600 dark:text-blue-400 text-sm">
@@ -245,7 +245,7 @@ const VietQrCheckoutPage: React.FC = () => {
 
           {/* Payment status */}
           <div className="space-y-2 w-full pt-1">
-            <div className={`flex items-center justify-center gap-2 text-xs font-medium py-2.5 px-3 rounded-xl border transition-all ${
+            <div className={`flex items-center justify-center gap-2 text-xs font-medium py-2.5 px-3 rounded-xl border transition ${
               paymentStep === 'DETECTING'
                 ? 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60 animate-pulse'
                 : paymentStep === 'CONFIRMED'
@@ -255,7 +255,7 @@ const VietQrCheckoutPage: React.FC = () => {
               {paymentStep === 'DETECTING' ? (
                 <>
                   <span className="w-3 h-3 rounded-full border-2 border-amber-500 border-t-transparent animate-spin"></span>
-                  <span className="font-semibold">Đã nhận diện giao dịch! Đang gạch nợ tự động...</span>
+                  <span className="font-semibold">Đã nhận diện giao dịch! Đang gạch nợ tự động…</span>
                 </>
               ) : paymentStep === 'CONFIRMED' ? (
                 <>
@@ -268,13 +268,13 @@ const VietQrCheckoutPage: React.FC = () => {
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-600"></span>
                   </span>
-                  <span>Đang chờ bạn quét mã & chuyển khoản...</span>
+                  <span>Đang chờ bạn quét mã & chuyển khoản…</span>
                 </>
               )}
             </div>
             <p className="text-[11px] text-muted-foreground">
               {paymentStep === 'DETECTING'
-                ? 'Đang kiểm tra trạng thái thanh toán...'
+                ? 'Đang kiểm tra trạng thái thanh toán…'
                 : 'Mã QR đã có sẵn số tài khoản, số tiền và nội dung chuyển khoản.'}
             </p>
           </div>
@@ -335,7 +335,7 @@ const VietQrCheckoutPage: React.FC = () => {
                 </div>
                 <button
                   onClick={() => handleCopy(accountNumber, 'Số tài khoản')}
-                  className="px-3 py-1.5 rounded-xl border border-border bg-card hover:bg-muted text-xs font-medium flex items-center gap-1.5 transition-all shadow-sm"
+                  className="px-3 py-1.5 rounded-xl border border-border bg-card hover:bg-muted text-xs font-medium flex items-center gap-1.5 transition shadow-sm"
                 >
                   {copiedField === 'Số tài khoản' ? <FiCheck className="text-emerald-500" /> : <FiCopy />}
                   <span>{copiedField === 'Số tài khoản' ? 'Đã sao chép' : 'Sao chép'}</span>
@@ -349,7 +349,7 @@ const VietQrCheckoutPage: React.FC = () => {
                 </div>
                 <button
                   onClick={() => handleCopy(String(amount), 'Số tiền')}
-                  className="px-3 py-1.5 rounded-xl border border-border bg-card hover:bg-muted text-xs font-medium flex items-center gap-1.5 transition-all shadow-sm"
+                  className="px-3 py-1.5 rounded-xl border border-border bg-card hover:bg-muted text-xs font-medium flex items-center gap-1.5 transition shadow-sm"
                 >
                   {copiedField === 'Số tiền' ? <FiCheck className="text-emerald-500" /> : <FiCopy />}
                   <span>{copiedField === 'Số tiền' ? 'Đã sao chép' : 'Sao chép'}</span>
@@ -368,7 +368,7 @@ const VietQrCheckoutPage: React.FC = () => {
                 </div>
                 <button
                   onClick={() => handleCopy(description, 'Nội dung chuyển khoản')}
-                  className="px-3 py-1.5 rounded-xl border border-blue-300 bg-white dark:bg-card hover:bg-blue-50 text-blue-700 dark:text-blue-300 text-xs font-medium flex items-center gap-1.5 transition-all shadow-sm"
+                  className="px-3 py-1.5 rounded-xl border border-blue-300 bg-white dark:bg-card hover:bg-blue-50 text-blue-700 dark:text-blue-300 text-xs font-medium flex items-center gap-1.5 transition shadow-sm"
                 >
                   {copiedField === 'Nội dung chuyển khoản' ? <FiCheck className="text-emerald-500" /> : <FiCopy />}
                   <span>{copiedField === 'Nội dung chuyển khoản' ? 'Đã sao chép' : 'Sao chép'}</span>

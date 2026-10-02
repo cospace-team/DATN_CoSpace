@@ -128,7 +128,7 @@ const ReportsPage: React.FC = () => {
             <h1 className="text-2xl font-semibold tracking-tight text-foreground mt-1">Phân tích & Thống kê</h1>
             {isLoading && (
               <p className="mt-2 flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                <Spinner size="sm" className="text-primary" /> Đang tải số liệu báo cáo...
+                <Spinner size="sm" className="text-primary" /> Đang tải số liệu báo cáo…
               </p>
             )}
           </div>
@@ -137,7 +137,7 @@ const ReportsPage: React.FC = () => {
             disabled={isExporting}
             className="btn btn-secondary btn-sm">
             <FiDownload className="h-4 w-4" /> 
-            {isExporting ? 'Đang xuất...' : 'Xuất CSV'}
+            {isExporting ? 'Đang xuất…' : 'Xuất CSV'}
           </button>
         </div>
 
@@ -220,7 +220,7 @@ const ReportsPage: React.FC = () => {
                   </div>
                 </div>
                 <div className="h-3 rounded-full bg-muted overflow-hidden">
-                  <div className="h-full rounded-full bg-primary transition-all duration-700"
+                  <div className="h-full rounded-full bg-primary transition-[width] duration-700"
                     style={{ width: `${(t.revenue / maxRevType) * 100}%` }} />
                 </div>
               </div>
@@ -267,7 +267,7 @@ const ReportsPage: React.FC = () => {
                   <td>
                     <div className="flex items-center gap-3">
                       <div className="flex-1 h-2.5 rounded-full bg-muted overflow-hidden max-w-[120px]">
-                        <div className="h-full rounded-full bg-emerald-500 transition-all duration-500" style={{ width: `${b.rate}%` }} />
+                        <div className="h-full rounded-full bg-emerald-500 transition-[width] duration-500" style={{ width: `${b.rate}%` }} />
                       </div>
                       <span className="text-sm font-semibold min-w-[40px]">{b.rate}%</span>
                     </div>

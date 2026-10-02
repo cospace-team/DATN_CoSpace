@@ -913,7 +913,7 @@ const ExplorePage: React.FC = () => {
                   {loading ? (
                     <div className="flex items-center gap-3 px-6 py-4 bg-card border border-border rounded-2xl shadow-sm">
                       <div className="h-5 w-5 animate-spin rounded-full border-2 border-border border-t-slate-900" />
-                      <span className="text-sm font-medium text-foreground">Đang tải sơ đồ...</span>
+                      <span className="text-sm font-medium text-foreground">Đang tải sơ đồ…</span>
                     </div>
                   ) : errorMsg ? (
                     <div className="text-sm text-foreground font-medium px-6 py-4 bg-card border border-border rounded-2xl shadow-sm">
@@ -1057,7 +1057,7 @@ const ExplorePage: React.FC = () => {
                                           : avail === "booked"
                                             ? "bg-rose-400"
                                             : "bg-slate-300"
-                                    } transition-all hover:opacity-80`}
+                                    } transition hover:opacity-80`}
                                   />
                                 </div>
                               );

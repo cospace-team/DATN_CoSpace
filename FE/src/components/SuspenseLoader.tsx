@@ -8,7 +8,7 @@ interface SuspenseLoaderProps {
 }
 
 export const SuspenseLoader: React.FC<SuspenseLoaderProps> = ({
-  label = 'Đang tải dữ liệu...',
+  label = 'Đang tải dữ liệu…',
   fullScreen = false,
 }) => {
   return (

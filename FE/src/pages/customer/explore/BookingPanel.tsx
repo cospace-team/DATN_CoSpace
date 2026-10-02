@@ -337,7 +337,7 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
               <button
                 key={u}
                 onClick={() => setDurationUnit(u)}
-                className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer ${
+                className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition cursor-pointer ${
                   durationUnit === u
                     ? 'bg-card text-foreground shadow-sm'
                     : 'text-[var(--text-tertiary)] hover:text-foreground'

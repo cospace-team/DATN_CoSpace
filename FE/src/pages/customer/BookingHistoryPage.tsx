@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import QRCode from "qrcode";
 import { Link, useLocation } from "react-router-dom";
 import {
@@ -136,6 +136,18 @@ const BookingHistoryPage: React.FC = () => {
     }
   };
 
+  // Escape closes the QR pass or the cancel dialog (not while a cancellation is being sent).
+  useEffect(() => {
+    if (!showQrModal && !showCancelModal) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setShowQrModal(null);
+      if (!isCancelingRef.current) setShowCancelModal(null);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [showQrModal, showCancelModal]);
+
   const qrCode: string | undefined = showQrModal?.code;
   useEffect(() => {
     setQrDataUrl(null);
@@ -266,6 +278,8 @@ const BookingHistoryPage: React.FC = () => {
       .sort((x, y) => x.date.getTime() - y.date.getTime())[0];
 
   const [isCanceling, setIsCanceling] = useState(false);
+  const isCancelingRef = useRef(false);
+  isCancelingRef.current = isCanceling;
   const selectedCancelBooking = bookings.find((b) => b.id === showCancelModal);
 
   const handleCancel = async () => {
@@ -332,8 +346,8 @@ const BookingHistoryPage: React.FC = () => {
       </div>
 
       {successMessage && (
-        <div className="mb-8 p-4 rounded-2xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-950/30 flex items-center gap-3 animate-fade-scale-in shadow-sm">
-          <FiCheckCircle className="h-6 w-6 shrink-0 text-emerald-600" />
+        <div role="status" className="mb-8 p-4 rounded-2xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-950/30 flex items-center gap-3 animate-fade-scale-in shadow-sm">
+          <FiCheckCircle className="h-6 w-6 shrink-0 text-emerald-600" aria-hidden="true" />
           <span className="font-semibold text-sm text-emerald-800 dark:text-emerald-400 tracking-tight">
             {successMessage}
           </span>
@@ -341,8 +355,8 @@ const BookingHistoryPage: React.FC = () => {
       )}
 
       {errorMessage && (
-        <div className="mb-8 p-4 rounded-2xl border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/30 flex items-center gap-3 animate-fade-scale-in shadow-sm">
-          <FiAlertCircle className="h-6 w-6 shrink-0 text-rose-600" />
+        <div role="alert" className="mb-8 p-4 rounded-2xl border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/30 flex items-center gap-3 animate-fade-scale-in shadow-sm">
+          <FiAlertCircle className="h-6 w-6 shrink-0 text-rose-600" aria-hidden="true" />
           <span className="font-semibold text-sm text-rose-800 dark:text-rose-400 tracking-tight">
             {errorMessage}
           </span>
@@ -477,7 +491,7 @@ const BookingHistoryPage: React.FC = () => {
       {/* QR Check-in Pass Modal */}
       {showQrModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-fade-scale-in">
-          <div className="w-full max-w-sm rounded-3xl bg-card border border-border shadow-sm p-8 text-center relative">
+          <div role="dialog" aria-modal="true" aria-labelledby="qr-pass-title" className="w-full max-w-sm rounded-3xl bg-card border border-border shadow-sm p-8 text-center relative">
             <button
               onClick={() => setShowQrModal(null)}
               aria-label="Đóng mã QR"
@@ -490,7 +504,7 @@ const BookingHistoryPage: React.FC = () => {
               <span className="px-4 py-2 rounded-full text-xs font-mono font-semibold bg-slate-900 text-white border border-border inline-block mb-4 shadow-sm -rotate-2">
                 MÃ CHECK-IN: {showQrModal.code}
               </span>
-              <h3 className="text-2xl font-semibold  text-foreground ">
+              <h3 id="qr-pass-title" className="text-2xl font-semibold  text-foreground ">
                 {showQrModal.workspaceName}
               </h3>
               <p className="text-sm font-medium text-foreground/70 mt-2 bg-muted/50 inline-flex px-3 py-1 rounded-lg border border-border">
@@ -553,7 +567,7 @@ const BookingHistoryPage: React.FC = () => {
 
             <button
               onClick={() => setShowQrModal(null)}
-              className="w-full py-3.5 rounded-full bg-slate-900 text-white font-semibold tracking-tight border border-border shadow-sm hover:translate-y-0.5 hover:shadow-none transition-all text-sm"
+              className="w-full py-3.5 rounded-full bg-slate-900 text-white font-semibold tracking-tight border border-border shadow-sm hover:translate-y-0.5 hover:shadow-none transition text-sm"
             >
               Đóng thẻ
             </button>
@@ -564,7 +578,7 @@ const BookingHistoryPage: React.FC = () => {
       {/* Cancel Confirmation Modal */}
       {showCancelModal && selectedCancelBooking && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-fade-scale-in">
-          <div className="bg-card rounded-3xl max-w-md w-full border border-border shadow-sm p-8 relative overflow-hidden">
+          <div role="alertdialog" aria-modal="true" aria-labelledby="cancel-booking-title" className="bg-card rounded-3xl max-w-md w-full border border-border shadow-sm p-8 relative overflow-hidden">
             {/* Warning Tape Decoration */}
             <div className="absolute top-0 left-0 w-full h-4 bg-[repeating-linear-gradient(45deg,#F59E0B,#F59E0B_10px,#0F172A_10px,#0F172A_20px)] border-b border-border"></div>
 
@@ -572,7 +586,7 @@ const BookingHistoryPage: React.FC = () => {
               <div className="w-14 h-14 rounded-2xl bg-muted border border-border shadow-sm flex items-center justify-center shrink-0 text-white ">
                 <FiAlertCircle className="h-8 w-8 font-semibold" />
               </div>
-              <h2 className="text-2xl font-semibold   text-foreground">
+              <h2 id="cancel-booking-title" className="text-2xl font-semibold   text-foreground">
                 Hủy đặt chỗ?
               </h2>
             </div>
@@ -616,7 +630,7 @@ const BookingHistoryPage: React.FC = () => {
                 Quay lại
               </button>
               <button
-                className={`flex-1 py-4 text-white font-semibold tracking-tight border rounded-full shadow-sm transition-all ${
+                className={`flex-1 py-4 text-white font-semibold tracking-tight border rounded-full shadow-sm transition ${
                   isCanceling 
                     ? "bg-red-400 border-red-400 cursor-not-allowed opacity-70" 
                     : "bg-red-600 border-red-700 hover:shadow-md"
@@ -624,7 +638,7 @@ const BookingHistoryPage: React.FC = () => {
                 onClick={handleCancel}
                 disabled={isCanceling}
               >
-                {isCanceling ? "Đang hủy..." : "Đồng ý Hủy"}
+                {isCanceling ? "Đang hủy…" : "Đồng ý Hủy"}
               </button>
             </div>
           </div>

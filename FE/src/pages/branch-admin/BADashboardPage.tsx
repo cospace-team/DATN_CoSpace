@@ -233,7 +233,7 @@ const BADashboardPage: React.FC = () => {
                   setGranularity('month');
                 }}
                 aria-label="Chọn năm báo cáo chi nhánh"
-                className="bg-transparent text-xs font-bold text-foreground focus:outline-none cursor-pointer pr-1"
+                className="bg-transparent text-xs font-bold text-foreground cursor-pointer pr-1"
               >
                 {availableYears.map(yr => (
                   <option key={yr} value={yr} className="bg-card text-foreground">
@@ -258,7 +258,7 @@ const BADashboardPage: React.FC = () => {
                     setTimeRange(t.id);
                     setGranularity('auto');
                   }}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
                     timeRange === t.id
                       ? 'bg-background text-foreground shadow-sm'
                       : 'text-muted-foreground hover:text-foreground'
@@ -276,7 +276,7 @@ const BADashboardPage: React.FC = () => {
               title="Xuất báo cáo định dạng CSV"
             >
               <FiDownload className="h-4 w-4" />
-              <span>{isExporting ? 'Đang xuất...' : 'Xuất CSV'}</span>
+              <span>{isExporting ? 'Đang xuất…' : 'Xuất CSV'}</span>
             </button>
           </div>
         </div>
@@ -323,7 +323,7 @@ const BADashboardPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setChartMetric('revenue')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
                     chartMetric === 'revenue'
                       ? 'bg-background text-foreground shadow-xs'
                       : 'text-muted-foreground hover:text-foreground'
@@ -334,7 +334,7 @@ const BADashboardPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setChartMetric('bookings')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
                     chartMetric === 'bookings'
                       ? 'bg-background text-foreground shadow-xs'
                       : 'text-muted-foreground hover:text-foreground'
@@ -350,7 +350,7 @@ const BADashboardPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setGranularity('week')}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
                       granularity === 'week' || granularity === 'auto'
                         ? 'bg-background text-foreground shadow-xs'
                         : 'text-muted-foreground hover:text-foreground'
@@ -361,7 +361,7 @@ const BADashboardPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setGranularity('day')}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
                       granularity === 'day'
                         ? 'bg-background text-foreground shadow-xs'
                         : 'text-muted-foreground hover:text-foreground'
@@ -377,7 +377,7 @@ const BADashboardPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setGranularity('month')}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
                       granularity === 'month' || granularity === 'auto'
                         ? 'bg-background text-foreground shadow-xs'
                         : 'text-muted-foreground hover:text-foreground'
@@ -388,7 +388,7 @@ const BADashboardPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setGranularity('week')}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
                       granularity === 'week'
                         ? 'bg-background text-foreground shadow-xs'
                         : 'text-muted-foreground hover:text-foreground'
@@ -404,7 +404,7 @@ const BADashboardPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setGranularity('month')}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
                       granularity === 'month' || granularity === 'auto'
                         ? 'bg-background text-foreground shadow-xs'
                         : 'text-muted-foreground hover:text-foreground'
@@ -415,7 +415,7 @@ const BADashboardPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setGranularity('quarter')}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
                       granularity === 'quarter'
                         ? 'bg-background text-foreground shadow-xs'
                         : 'text-muted-foreground hover:text-foreground'
@@ -442,7 +442,7 @@ const BADashboardPage: React.FC = () => {
 
           {isLoading ? (
             <div className="h-64 flex items-center justify-center text-muted-foreground text-xs animate-pulse">
-              Đang vẽ biểu đồ phân tích...
+              Đang vẽ biểu đồ phân tích…
             </div>
           ) : revenueChartData.length === 0 ? (
             <div className="h-64 flex items-center justify-center text-muted-foreground text-xs">
@@ -529,7 +529,7 @@ const BADashboardPage: React.FC = () => {
 
           {isLoading ? (
             <div className="h-64 flex items-center justify-center text-muted-foreground text-xs animate-pulse">
-              Đang tải cơ cấu...
+              Đang tải cơ cấu…
             </div>
           ) : typeData.length === 0 ? (
             <div className="h-64 flex items-center justify-center text-muted-foreground text-xs">
@@ -593,7 +593,7 @@ const BADashboardPage: React.FC = () => {
                       </div>
                       <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
                         <div
-                          className="h-1.5 rounded-full transition-all duration-500"
+                          className="h-1.5 rounded-full transition-[width] duration-500"
                           style={{ width: `${pct}%`, backgroundColor: t.color }}
                         />
                       </div>

@@ -4,21 +4,8 @@ import { useAuth } from '../../context/AuthContext';
 import { staffApi, type ExtraServiceDto } from '../../api/staffApi';
 import { formatVND } from '../../utils/formatters';
 import { ServiceLimitsPanel } from '../../components/branch-admin/ServiceLimitsPanel';
+import { Modal } from '../../components/ui/Modal';
 
-
-const Modal: React.FC<{ title: string; onClose: () => void; children: React.ReactNode }> = ({
-  title, onClose, children,
-}) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in" onClick={onClose}>
-    <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md animate-scale-in" onClick={(e) => e.stopPropagation()}>
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-        <h2 className="text-base font-bold font-heading">{title}</h2>
-        <button onClick={onClose} className="btn btn-ghost btn-sm p-1"><FiX className="h-4 w-4" /></button>
-      </div>
-      <div className="px-6 py-5">{children}</div>
-    </div>
-  </div>
-);
 
 const TYPE_ICON: Record<string, React.ReactNode> = {
   drink: <FiCoffee className="h-4 w-4" />,
@@ -199,7 +186,7 @@ const BAServicesPage: React.FC = () => {
           {services.map((s) => (
             <div
               key={s.id}
-              className={`bg-card rounded-2xl border p-5 flex flex-col transition-all hover:shadow-md ${
+              className={`bg-card rounded-2xl border p-5 flex flex-col transition hover:shadow-md ${
                 s.isActive ? 'border-border' : 'border-border opacity-60'
               }`}
             >
@@ -246,8 +233,9 @@ const BAServicesPage: React.FC = () => {
                   className="btn btn-ghost btn-sm text-destructive hover:bg-destructive/10 px-2"
                   onClick={() => deleteService(s.id)}
                   title="Xóa vĩnh viễn"
+                  aria-label="Xóa vĩnh viễn"
                 >
-                  <FiTrash2 className="h-3.5 w-3.5" />
+                  <FiTrash2 className="h-3.5 w-3.5" aria-hidden="true" />
                 </button>
               </div>
 
@@ -311,7 +299,7 @@ const BAServicesPage: React.FC = () => {
                 <label className="block text-sm font-medium mb-1.5">Đơn vị <span className="text-destructive">*</span></label>
                 <input
                   className={`input-field ${errors.unit ? 'border-destructive focus:ring-destructive' : ''}`}
-                  placeholder="ly, trang, phần..."
+                  placeholder="ly, trang, phần…"
                   value={form.unit}
                   onChange={(e) => {
                     setForm((p) => ({ ...p, unit: e.target.value }));

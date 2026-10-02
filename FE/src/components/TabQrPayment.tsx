@@ -58,7 +58,7 @@ const TabQrPayment: React.FC<Props> = ({ payment, onPaid, onClose }) => {
         </button>
       </div>
       {qrSrc ? (
-        <img src={qrSrc} alt={`Mã VietQR thanh toán ${formatVND(payment.amount)}`} className="mx-auto h-48 w-48 rounded-lg bg-white p-1" />
+        <img src={qrSrc} alt={`Mã VietQR thanh toán ${formatVND(payment.amount)}`} width={192} height={192} className="mx-auto h-48 w-48 rounded-lg bg-white p-1" />
       ) : (
         <div className="mx-auto h-48 w-48 rounded-lg bg-muted flex items-center justify-center text-xs text-muted-foreground">
           Không tạo được ảnh QR

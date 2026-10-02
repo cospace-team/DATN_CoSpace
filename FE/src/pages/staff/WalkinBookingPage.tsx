@@ -628,7 +628,7 @@ const WalkinBookingPage: React.FC = () => {
         await fetchData();
       } else if (paymentMethod === 'vietqr') {
         // 2. VIETQR / BANK TRANSFER (Inherited from Customer side!)
-        showToast('Đang tạo liên kết thanh toán VietQR (PayOS)...', 'info');
+        showToast('Đang tạo liên kết thanh toán VietQR (PayOS)…', 'info');
         let payosRes = null;
         try {
           payosRes = await bookingApi.createPayosPayment(booking.id, booking.totalAmount ?? total);
@@ -650,7 +650,7 @@ const WalkinBookingPage: React.FC = () => {
         });
       } else if (paymentMethod === 'momo') {
         // 3. MOMO E-WALLET
-        showToast('Đang kết nối cổng MoMo...', 'info');
+        showToast('Đang kết nối cổng MoMo…', 'info');
         const momoRes = await bookingApi.createMomoPayment(booking.id, booking.totalAmount ?? total);
         if (momoRes.payUrl && momoRes.payUrl.startsWith('http')) {
           window.open(momoRes.payUrl, '_blank');
@@ -813,7 +813,7 @@ const WalkinBookingPage: React.FC = () => {
                     setSelectedWorkspaceId(null);
                     setSelectedFloorId('');
                   }}
-                  className="bg-transparent text-xs font-bold text-foreground focus:outline-none cursor-pointer pr-3"
+                  className="bg-transparent text-xs font-bold text-foreground cursor-pointer pr-3"
                 >
                   {branches.map((b) => (
                     <option key={b.id} value={b.id}>
@@ -835,8 +835,9 @@ const WalkinBookingPage: React.FC = () => {
             disabled={isLoadingSpaces}
             className="btn btn-ghost btn-sm p-2 rounded-xl text-muted-foreground hover:text-foreground"
             title="Tải lại dữ liệu"
+            aria-label="Tải lại dữ liệu"
           >
-            <FiRefreshCw className={`h-4 w-4 ${isLoadingSpaces ? 'animate-spin' : ''}`} />
+            <FiRefreshCw className={`h-4 w-4 ${isLoadingSpaces ? 'animate-spin' : ''}`} aria-hidden="true" />
           </button>
         </div>
       </div>
@@ -865,7 +866,7 @@ const WalkinBookingPage: React.FC = () => {
                   setSelectedUser(null);
                   setNewUserName('Khách vãng lai');
                 }}
-                className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 text-[11px] ${
+                className={`px-2.5 py-1 rounded-lg transition flex items-center gap-1 text-[11px] ${
                   customerMode === 'quick' ? 'bg-card text-primary shadow-sm font-bold' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
@@ -874,7 +875,7 @@ const WalkinBookingPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => { setCustomerMode('search'); setSelectedUser(null); }}
-                className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 text-[11px] ${
+                className={`px-2.5 py-1 rounded-lg transition flex items-center gap-1 text-[11px] ${
                   customerMode === 'search' ? 'bg-card text-primary shadow-sm font-bold' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
@@ -883,7 +884,7 @@ const WalkinBookingPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => { setCustomerMode('create'); setSelectedUser(null); setNewUserName(''); setNewUserPhone(''); }}
-                className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 text-[11px] ${
+                className={`px-2.5 py-1 rounded-lg transition flex items-center gap-1 text-[11px] ${
                   customerMode === 'create' ? 'bg-card text-primary shadow-sm font-bold' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
@@ -907,7 +908,7 @@ const WalkinBookingPage: React.FC = () => {
               <div className="flex items-center gap-1.5">
                 <input
                   type="text"
-                  placeholder="Ghi chú SĐT (tùy chọn)..."
+                  placeholder="Ghi chú SĐT (tùy chọn)…"
                   value={newUserPhone}
                   onChange={(e) => setNewUserPhone(e.target.value)}
                   className="input-field text-xs h-8 w-36 rounded-lg font-mono bg-card"
@@ -929,7 +930,7 @@ const WalkinBookingPage: React.FC = () => {
                       setPhoneSearch(e.target.value);
                       if (e.target.value === '') setSearchResults([]);
                     }}
-                    placeholder="Nhập SĐT hoặc họ tên khách quen..."
+                    placeholder="Nhập SĐT hoặc họ tên khách quen…"
                     className="input-field !pl-9 text-xs h-9 rounded-xl"
                     onKeyDown={(e) => e.key === 'Enter' && handleSearchUser()}
                   />
@@ -1033,7 +1034,7 @@ const WalkinBookingPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setTimeMode('preset')}
-                className={`px-2.5 py-1 rounded-lg transition-all text-[11px] ${
+                className={`px-2.5 py-1 rounded-lg transition text-[11px] ${
                   timeMode === 'preset' ? 'bg-card text-primary shadow-sm font-bold' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
@@ -1042,7 +1043,7 @@ const WalkinBookingPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setTimeMode('custom')}
-                className={`px-2.5 py-1 rounded-lg transition-all text-[11px] ${
+                className={`px-2.5 py-1 rounded-lg transition text-[11px] ${
                   timeMode === 'custom' ? 'bg-card text-primary shadow-sm font-bold' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
@@ -1064,7 +1065,7 @@ const WalkinBookingPage: React.FC = () => {
                       setPresetHours(d.hours);
                       setSelectedWorkspaceId(null);
                     }}
-                    className={`py-2 px-1 rounded-xl border text-xs font-bold transition-all text-center flex flex-col items-center justify-center ${
+                    className={`py-2 px-1 rounded-xl border text-xs font-bold transition text-center flex flex-col items-center justify-center ${
                       isSelected
                         ? 'border-primary bg-primary text-white shadow-md shadow-primary/20'
                         : 'border-border bg-card text-foreground hover:bg-muted/50'
@@ -1185,7 +1186,7 @@ const WalkinBookingPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setViewMode('map')}
-                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg transition-all ${
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg transition ${
                   viewMode === 'map' ? 'bg-card text-primary shadow-sm font-bold' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
@@ -1194,7 +1195,7 @@ const WalkinBookingPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setViewMode('list')}
-                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg transition-all ${
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg transition ${
                   viewMode === 'list' ? 'bg-card text-primary shadow-sm font-bold' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
@@ -1220,7 +1221,7 @@ const WalkinBookingPage: React.FC = () => {
                     setSelectedFloorId(f.id);
                     setSelectedWorkspaceId(null);
                   }}
-                  className={`px-4 py-2 text-xs font-bold rounded-xl transition-all whitespace-nowrap flex items-center gap-2 ${
+                  className={`px-4 py-2 text-xs font-bold rounded-xl transition whitespace-nowrap flex items-center gap-2 ${
                     isSelected
                       ? 'bg-foreground text-background shadow-md'
                       : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground'
@@ -1240,7 +1241,7 @@ const WalkinBookingPage: React.FC = () => {
             {isLoadingSpaces ? (
               <div className="h-full flex flex-col items-center justify-center gap-3 text-muted-foreground">
                 <Spinner size="lg" className="text-primary" />
-                <span className="text-xs font-medium">Đang tải sơ đồ mặt bằng...</span>
+                <span className="text-xs font-medium">Đang tải sơ đồ mặt bằng…</span>
               </div>
             ) : currentLayout ? (
               <>
@@ -1284,7 +1285,7 @@ const WalkinBookingPage: React.FC = () => {
                   <select
                     value={listTableFloorFilter}
                     onChange={(e) => setListTableFloorFilter(e.target.value)}
-                    className="bg-transparent font-bold text-foreground focus:outline-none cursor-pointer"
+                    className="bg-transparent font-bold text-foreground cursor-pointer"
                   >
                     <option value="all">Tất cả các tầng</option>
                     {floors.map((f) => (
@@ -1317,7 +1318,7 @@ const WalkinBookingPage: React.FC = () => {
                   type="text"
                   value={listSearchQuery}
                   onChange={(e) => setListSearchQuery(e.target.value)}
-                  placeholder="Tìm mã hoặc tên bàn..."
+                  placeholder="Tìm mã hoặc tên bàn…"
                   className="input-field !pl-9 text-xs h-8 rounded-xl w-full"
                 />
               </div>
@@ -1519,7 +1520,7 @@ const WalkinBookingPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setPaymentMethod('cash')}
-                    className={`p-3 rounded-2xl border text-xs font-bold flex flex-col items-center justify-center gap-1.5 transition-all ${
+                    className={`p-3 rounded-2xl border text-xs font-bold flex flex-col items-center justify-center gap-1.5 transition ${
                       paymentMethod === 'cash'
                         ? 'border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shadow-sm'
                         : 'border-border text-muted-foreground hover:bg-muted/40'
@@ -1532,7 +1533,7 @@ const WalkinBookingPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setPaymentMethod('vietqr')}
-                    className={`p-3 rounded-2xl border text-xs font-bold flex flex-col items-center justify-center gap-1.5 transition-all ${
+                    className={`p-3 rounded-2xl border text-xs font-bold flex flex-col items-center justify-center gap-1.5 transition ${
                       paymentMethod === 'vietqr'
                         ? 'border-primary bg-primary/10 text-primary shadow-sm'
                         : 'border-border text-muted-foreground hover:bg-muted/40'
@@ -1545,7 +1546,7 @@ const WalkinBookingPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setPaymentMethod('momo')}
-                    className={`p-3 rounded-2xl border text-xs font-bold flex flex-col items-center justify-center gap-1.5 transition-all ${
+                    className={`p-3 rounded-2xl border text-xs font-bold flex flex-col items-center justify-center gap-1.5 transition ${
                       paymentMethod === 'momo'
                         ? 'border-pink-500 bg-pink-500/10 text-pink-600 dark:text-pink-400 shadow-sm'
                         : 'border-border text-muted-foreground hover:bg-muted/40'
@@ -1584,7 +1585,7 @@ const WalkinBookingPage: React.FC = () => {
                 {isSubmitting ? (
                   <>
                     <Spinner size="sm" />
-                    <span>Đang xử lý xuất đơn...</span>
+                    <span>Đang xử lý xuất đơn…</span>
                   </>
                 ) : (
                   <>
@@ -1653,8 +1654,9 @@ const WalkinBookingPage: React.FC = () => {
                 onClick={() => setQrModal(null)}
                 className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted"
                 title="Đóng modal"
+                aria-label="Đóng modal"
               >
-                <FiX className="h-5 w-5" />
+                <FiX className="h-5 w-5" aria-hidden="true" />
               </button>
             </div>
 
@@ -1740,7 +1742,7 @@ const WalkinBookingPage: React.FC = () => {
               <div className="flex items-center gap-2">
                 <Spinner size="sm" className="text-primary" />
                 <span className="text-foreground font-medium">
-                  Hệ thống đang tự động lắng nghe giao dịch chuyển khoản...
+                  Hệ thống đang tự động lắng nghe giao dịch chuyển khoản…
                 </span>
               </div>
               <span className="text-[10px] font-mono text-muted-foreground">3s/lần</span>
