@@ -195,13 +195,13 @@ const SVGFloorPlanEditor: React.FC<Props> = ({
     <div className="relative h-full flex flex-col bg-slate-950 select-none overflow-hidden rounded-2xl border border-slate-800">
       {/* Zoom controls overlay */}
       <div className="absolute top-4 left-4 z-20 flex flex-col gap-1.5 bg-slate-900/90 backdrop-blur-md p-1 rounded-xl border border-slate-800 shadow-xl">
-        <button onClick={handleZoomIn} className="p-2 rounded-lg hover:bg-secondary text-slate-300 hover:text-white transition-colors" title="Phóng to">
+        <button onClick={handleZoomIn} className="p-2 rounded-lg hover:bg-slate-700 text-slate-300 hover:text-white transition-colors" title="Phóng to">
           <FiPlus className="h-4 w-4" />
         </button>
-        <button onClick={handleZoomOut} className="p-2 rounded-lg hover:bg-secondary text-slate-300 hover:text-white transition-colors" title="Thu nhỏ">
+        <button onClick={handleZoomOut} className="p-2 rounded-lg hover:bg-slate-700 text-slate-300 hover:text-white transition-colors" title="Thu nhỏ">
           <FiMinus className="h-4 w-4" />
         </button>
-        <button onClick={handleReset} className="p-2 rounded-lg hover:bg-secondary text-slate-300 hover:text-white transition-colors" title="Reset Zoom">
+        <button onClick={handleReset} className="p-2 rounded-lg hover:bg-slate-700 text-slate-300 hover:text-white transition-colors" title="Reset Zoom">
           <FiMaximize2 className="h-4 w-4" />
         </button>
       </div>
@@ -256,9 +256,9 @@ const SVGFloorPlanEditor: React.FC<Props> = ({
           <FiLayers className="h-3.5 w-3.5 text-violet-400" />
           <strong className="text-slate-200">{parsedElements.length}</strong> gán được
         </span>
-        <div className="w-px h-3 bg-secondary" />
+        <div className="w-px h-3 bg-slate-700" />
         <span><strong className="text-emerald-400">{workspaces.length}</strong> đã gán</span>
-        <div className="w-px h-3 bg-secondary" />
+        <div className="w-px h-3 bg-slate-700" />
         <span><strong className="text-slate-400">{parsedElements.length - workspaces.length}</strong> chưa gán</span>
       </div>
     </div>

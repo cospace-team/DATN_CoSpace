@@ -87,7 +87,7 @@ export const ExploreResults: React.FC<ExploreResultsProps> = ({
                 : <FiCheckCircle className="h-3.5 w-3.5 text-emerald-600" />}
               {e.name}
               <span className="text-muted-foreground">
-                {e.stock ? (e.stock.remaining <= 0 ? '— đã hết trong khung giờ này' : `— còn ${e.stock.remaining}/${e.stock.maxConcurrent}`) : '— luôn sẵn'}
+                {e.stock ? (e.stock.remaining <= 0 ? '(đã hết trong khung giờ này)' : `(còn ${e.stock.remaining}/${e.stock.maxConcurrent})`) : '(luôn sẵn)'}
               </span>
             </span>
           ))}
@@ -155,7 +155,7 @@ export const ExploreResults: React.FC<ExploreResultsProps> = ({
                             ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
                             : 'border-border bg-muted text-muted-foreground'
                         }`}>
-                          {free ? 'Trống' : busy ? `Bận ${busy[1]}h–${busy[2]}h` : 'Bảo trì'}
+                          {free ? 'Trống' : busy ? `Bận ${busy[1]}h-${busy[2]}h` : 'Bảo trì'}
                         </span>
                       </div>
                       <p className="text-sm text-foreground flex items-center gap-1.5">

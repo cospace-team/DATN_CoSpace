@@ -753,7 +753,7 @@ const ExplorePage: React.FC = () => {
   };
   const activeDraft = draft ?? currentFilter;
 
-  const slotLabel = `${selectedDate.toLocaleDateString("vi-VN", { weekday: "short", day: "2-digit", month: "2-digit" })}, ${String(selectedHour).padStart(2, "0")}:00–${String(currentFilter.endHour).padStart(2, "0")}:00`;
+  const slotLabel = `${selectedDate.toLocaleDateString("vi-VN", { weekday: "short", day: "2-digit", month: "2-digit" })}, ${String(selectedHour).padStart(2, "0")}:00-${String(currentFilter.endHour).padStart(2, "0")}:00`;
   const resultStatus = useCallback(
     (wsId: string) => getWsAvailability(wsId, selectedDate, selectedHour, undefined, currentFilter.endHour),
     [getWsAvailability, selectedDate, selectedHour, currentFilter.endHour],
@@ -772,7 +772,6 @@ const ExplorePage: React.FC = () => {
         margin: "-24px",
         width: "calc(100% + 48px)",
         height: "calc(100% + 48px)",
-        fontFamily: "'Space Grotesk', 'DM Sans', sans-serif"
       }}
     >
 

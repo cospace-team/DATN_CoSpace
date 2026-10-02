@@ -381,7 +381,7 @@ const QrScannerModal: React.FC<QrScannerModalProps> = ({
 
           {/* Error Message display */}
           {error && (
-            <div className="p-3.5 rounded-2xl bg-destructive/10 border border-destructive/20 text-destructive text-xs flex items-start gap-2.5 animate-shake">
+            <div className="p-3.5 rounded-2xl bg-destructive/10 border border-destructive/20 text-destructive text-xs flex items-start gap-2.5 motion-safe:animate-shake">
               <FiAlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
               <div className="flex-1 leading-relaxed">
                 <p className="font-medium">{error}</p>

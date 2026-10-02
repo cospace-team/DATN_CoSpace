@@ -71,6 +71,9 @@ const PublicNavbar: React.FC = () => {
     }
   };
 
+  // Customers land on the booking page, everyone else on their management dashboard.
+  const dashboardLabel = user?.role === "customer" ? "Đặt chỗ ngay" : "Vào trang quản lý";
+
   const isActive = (to: string) =>
     to.startsWith("/#") ? false : location.pathname === to;
 
@@ -93,7 +96,7 @@ const PublicNavbar: React.FC = () => {
               to={link.to}
               onClick={(e) => handleNavClick(e, link.to)}
               className={`
-                px-4 py-2 text-sm font-medium rounded-full transition-all duration-200
+                px-4 py-2 text-sm font-medium rounded-sm transition-all duration-200
                 ${isActive(link.to)
                   ? "bg-muted text-foreground"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
@@ -114,15 +117,15 @@ const PublicNavbar: React.FC = () => {
               </span>
               <Button
                 onClick={handleDashboard}
-                className="rounded-full font-medium px-5 py-2"
+                className="rounded-sm font-medium px-5 py-2"
               >
-                Vào trang quản lý
+                {dashboardLabel}
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => void logout()}
-                className="rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 gap-1.5 px-3 py-2 text-sm"
+                className="rounded-sm text-muted-foreground hover:text-destructive hover:bg-destructive/10 gap-1.5 px-3 py-2 text-sm"
                 title="Đăng xuất"
               >
                 <FiLogOut className="h-4 w-4" />
@@ -139,9 +142,9 @@ const PublicNavbar: React.FC = () => {
               </Link>
               <Button
                 onClick={handleDashboard}
-                className="rounded-full font-medium px-5 py-2"
+                className="rounded-sm font-medium px-5 py-2"
               >
-                Đặt chỗ
+                Đặt chỗ ngay
               </Button>
             </>
           )}
@@ -151,21 +154,23 @@ const PublicNavbar: React.FC = () => {
         <button
           className="md:hidden p-2 rounded-full text-muted-foreground hover:bg-muted transition-colors bg-card/80 border border-border shadow-sm"
           onClick={() => setMobileOpen(!mobileOpen)}
-          aria-label="Mở menu"
+          aria-label={mobileOpen ? "Đóng menu" : "Mở menu"}
+          aria-expanded={mobileOpen}
+          aria-controls="public-mobile-menu"
         >
-          {mobileOpen ? <FiX className="w-5 h-5" /> : <FiMenu className="w-5 h-5" />}
+          {mobileOpen ? <FiX className="w-5 h-5" aria-hidden="true" /> : <FiMenu className="w-5 h-5" aria-hidden="true" />}
         </button>
       </nav>
 
       {/* ── Mobile dropdown menu ── */}
       {mobileOpen && (
-        <div className="md:hidden absolute top-full left-0 w-full bg-card border-b border-border px-6 py-4 space-y-2 shadow-lg animate-fade-in">
+        <div id="public-mobile-menu" className="md:hidden absolute top-full left-0 w-full bg-card border-b border-border px-6 py-4 space-y-2 shadow-lg animate-fade-in">
           {navLinks.map((link) => (
             <Link
               key={link.to}
               to={link.to}
               onClick={(e) => handleNavClick(e, link.to)}
-              className={`block py-3 px-4 rounded-xl text-sm font-medium transition-colors ${
+              className={`block py-3 px-4 rounded-sm text-sm font-medium transition-colors ${
                 isActive(link.to)
                   ? "bg-muted/50 text-foreground"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
@@ -175,20 +180,20 @@ const PublicNavbar: React.FC = () => {
             </Link>
           ))}
 
-          <div className="pt-4 mt-2 border-t border-slate-100 space-y-3">
+          <div className="pt-4 mt-2 border-t border-border space-y-3">
             {isAuthenticated && user ? (
               <>
                 <p className="text-sm text-muted-foreground px-4">
                   Xin chào, <span className="font-semibold text-foreground">{user.fullName}</span>
                 </p>
                 <div className="flex gap-2">
-                  <Button onClick={handleDashboard} className="flex-1 rounded-full py-5 font-medium">
-                    Vào trang quản lý
+                  <Button onClick={handleDashboard} className="flex-1 rounded-sm py-5 font-medium">
+                    {dashboardLabel}
                   </Button>
                   <Button
                     variant="outline"
                     onClick={() => void logout()}
-                    className="rounded-full py-5 px-4 text-destructive border-destructive/30 hover:bg-destructive/10"
+                    className="rounded-sm py-5 px-4 text-destructive border-destructive/30 hover:bg-destructive/10"
                     title="Đăng xuất"
                   >
                     <FiLogOut className="h-5 w-5" />
@@ -198,10 +203,10 @@ const PublicNavbar: React.FC = () => {
             ) : (
               <div className="flex gap-3">
                 <Link to="/login" className="flex-1">
-                  <Button variant="outline" className="w-full rounded-full py-5 border-border text-foreground font-medium">Đăng nhập</Button>
+                  <Button variant="outline" className="w-full rounded-sm py-5 border-border text-foreground font-medium">Đăng nhập</Button>
                 </Link>
-                <Button onClick={handleDashboard} className="flex-1 rounded-full py-5 font-medium">
-                  Đặt chỗ
+                <Button onClick={handleDashboard} className="flex-1 rounded-sm py-5 font-medium">
+                  Đặt chỗ ngay
                 </Button>
               </div>
             )}

@@ -513,7 +513,7 @@ const CheckInPage: React.FC = () => {
               (searchedBooking.booking.status === 'CONFIRMED' || (isMultiDay && searchedBooking.booking.status === 'CHECKED_IN'));
 
             return (
-              <div className="rounded-2xl border-2 border-primary bg-card p-6 shadow-xl animate-scale-up relative overflow-hidden">
+              <div className="rounded-2xl border-2 border-primary bg-card p-6 shadow-xl animate-scale-in relative overflow-hidden">
                 <div className={`absolute top-0 right-0 px-4 py-1.5 rounded-bl-xl text-xs font-bold uppercase tracking-wider shadow-sm flex items-center gap-1.5 ${pkg.badgeClass}`}>
                   <FiTag /> {pkg.packageType}
                 </div>
@@ -889,7 +889,7 @@ const CheckInPage: React.FC = () => {
           onClick={() => setTabItem(null)}
         >
           <div
-            className="bg-card border border-border rounded-2xl p-6 max-w-lg w-full shadow-2xl animate-scale-up space-y-4"
+            className="bg-card border border-border rounded-2xl p-6 max-w-lg w-full shadow-2xl animate-scale-in space-y-4"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between pb-3 border-b border-border">
