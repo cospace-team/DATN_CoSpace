@@ -48,7 +48,7 @@ public class LoyaltyController {
     /** The caller's reputation score (điểm uy tín) and its latest changes. */
     @GetMapping("/api/reputation/me")
     public MyReputationResponse myReputation(@AuthenticationPrincipal Jwt jwt) {
-        return reputationService.getMyReputation(requireSubject(jwt));
+        return reputationService.getReputation(requireSubject(jwt));
     }
 
     /** Public promotions the caller can use right now at this branch (and workspace type, if given). */

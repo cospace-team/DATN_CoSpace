@@ -160,3 +160,12 @@ Sử dụng ký hiệu: `[ ]` Chưa làm | `[/]` Đang làm | `[x]` Đã xong.
 - [x] **Đóng có xác nhận** khi còn thay đổi chưa lưu; trình chỉnh sửa mở toàn màn hình qua portal (trước đây lệch 24px do kế thừa `space-y-6`).
 - [x] Nhãn mặc định trong danh mục chuyển sang tiếng Việt đầy đủ: "Văn phòng riêng", "Cabin cách âm", "Không gian khác".
 - [x] **Sơ đồ demo cho cả 9 tầng / 3 chi nhánh**: mặt bằng kiểu bản vẽ kiến trúc — mặt kính, vách ngăn, cửa, hành lang, lõi thang (cầu thang bộ + 2 thang máy + WC) cùng vị trí ở mọi tầng của một tòa (Nguyễn Huệ phía Đông, Nam Kỳ Khởi Nghĩa phía Tây, Cầu Giấy giữa phía Bắc), sảnh lễ tân, pantry, lounge, sân thượng penthouse. 29/29 chỗ đặt đều nằm trên sơ đồ; các phần tử khác là kết cấu/tiện ích nên lưu trong trình chỉnh sửa không tự tạo chỗ thừa. Sinh bằng `database/tools/floor_layouts.py` → `database/seed_floor_layouts_json.sql` (có sẵn câu kiểm tra ở cuối). Bàn nhiều chỗ (cụm bàn, dãy bàn) giờ vẽ đủ số ghế và chỉnh được "Số ghế" trong trình chỉnh sửa; biểu tượng khóa chỉ hiện trong trình chỉnh sửa.
+
+## 🛡️ 16. Điểm uy tín & nhắc lịch check-in
+- [x] **Trừ điểm khi không check-in**: mỗi khách bắt đầu 100 điểm; đơn đã xác nhận quá 30 phút sau giờ bắt đầu chưa check-in bị trừ 10 điểm (mỗi đơn một lần), gói nhiều ngày chỉ bị trừ khi hết hạn mà chưa dùng lần nào (Migration V5: `users.reputation_score`, `reputation_events`).
+- [x] **Hồi điểm**: check-in đúng hạn được cộng 2 điểm (tối đa 100).
+- [x] **Hệ quả**: dưới 50 điểm chỉ được giữ 1 đơn chưa sử dụng khi đặt online; dưới 30 điểm không đặt online được (quầy vẫn đặt hộ).
+- [x] **Gỡ phạt sai**: nhân viên/admin hoàn điểm phạt kèm lý do (`POST /api/staff/reputation/bookings/{id}/revert`), mỗi đơn một lần, ghi audit log và báo khách.
+- [x] **Nhắc lịch**: thông báo trước giờ bắt đầu 60 phút và lúc bắt đầu (còn bao nhiêu phút để check-in), mỗi đơn mỗi loại một lần.
+- [x] **Giao diện**: quy tắc check-in và cảnh báo hạn chế ở bước thanh toán; đếm ngược check-in trong Lịch sử đặt chỗ; huy hiệu điểm uy tín + lịch sử + nút hoàn điểm ở màn Check-in và Quản lý người dùng; ô điểm uy tín ở Hồ sơ.
+- [x] **Kiểm thử**: 334/334 unit test BE pass; chạy thật trên Postgres 16 (migration V5, job nhắc lịch, job trừ điểm, cộng điểm, hoàn điểm, chặn đặt online, phân quyền 403); build FE pass, chụp màn hình 4 vai trò.

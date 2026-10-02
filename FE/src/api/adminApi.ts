@@ -17,6 +17,7 @@ export interface AdminUserDto {
   contactLink?: string;
   /** membership_tiers code, e.g. "gold"; "standard" until the tier is first computed */
   membershipTier?: string;
+  reputationScore?: number | null;
   createdAt?: string;
 }
 

@@ -86,6 +86,9 @@ class BookingServiceTest {
     @Mock
     private BookingAddonService bookingAddonService;
 
+    @Mock
+    private ReputationService reputationService;
+
     @InjectMocks
     private BookingService bookingService;
 

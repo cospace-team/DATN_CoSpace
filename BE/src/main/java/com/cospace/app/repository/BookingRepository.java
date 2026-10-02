@@ -96,6 +96,14 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
 
     int countByUserIdAndStatus(UUID userId, BookingStatus status);
 
+    long countByUserIdAndStatusIn(UUID userId, Collection<BookingStatus> statuses);
+
+    /** Ids of bookings in a status whose start lies in [from, to) — candidates for reminders. */
+    @org.springframework.data.jpa.repository.Query("SELECT b.id FROM Booking b WHERE b.status = :status AND b.startAt >= :from AND b.startAt < :to")
+    List<UUID> findIdsByStatusAndStartAtBetween(@org.springframework.data.repository.query.Param("status") BookingStatus status,
+                                                @org.springframework.data.repository.query.Param("from") OffsetDateTime from,
+                                                @org.springframework.data.repository.query.Param("to") OffsetDateTime to);
+
     List<Booking> findByBranchIdAndStatus(UUID branchId, BookingStatus status);
 
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)

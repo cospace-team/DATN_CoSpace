@@ -25,6 +25,10 @@ public class ReputationEvent {
 
     /** Not checked in within the deadline after the booking started (or never checked in at all). */
     public static final String REASON_MISSED_CHECKIN = "missed_checkin";
+    /** Checked in on time; gives back a few points. */
+    public static final String REASON_ON_TIME_CHECKIN = "on_time_checkin";
+    /** Staff reverted a missed check-in penalty given by mistake. */
+    public static final String REASON_PENALTY_REVERTED = "penalty_reverted";
 
     @Id
     @Column(nullable = false, updatable = false)

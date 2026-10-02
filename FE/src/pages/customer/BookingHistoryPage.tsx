@@ -22,6 +22,7 @@ import { bookingApi, type BookingResponse } from "../../lib/bookingApi";
 import { startPayment } from "../../lib/startPayment";
 import { useAuth } from "../../context/AuthContext";
 import BookingServicesModal from "./history/BookingServicesModal";
+import { reputationApi } from "../../api/loyaltyApi";
 import MyVouchersStrip from "./history/MyVouchersStrip";
 
 export interface CustomerBookingItem {
@@ -46,6 +47,8 @@ export interface CustomerBookingItem {
   policyName?: string;
   cancelledAt?: string;
   paymentDeadlineAt?: string;
+  unit?: string;
+  unitCount?: number;
 }
 
 /** Remaining hold time as mm:ss. */
@@ -55,6 +58,10 @@ const formatCountdown = (ms: number) => {
   const seconds = totalSeconds % 60;
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 };
+
+/** Multi-day passes (several days, a week or longer) have no check-in deadline, matching the backend. */
+const hasCheckinDeadline = (unit?: string, unitCount?: number) =>
+  unit === "hour" || (unit === "day" && (unitCount ?? 1) <= 1);
 
 const BookingHistoryPage: React.FC = () => {
   const location = useLocation();
@@ -82,12 +89,27 @@ const BookingHistoryPage: React.FC = () => {
 
   const hasPendingHold = bookings.some((b) => b.status === "pending_payment" && b.paymentDeadlineAt);
 
-  // Tick once a second while an unpaid booking is being held.
+  // Minutes after the start within which a booking must be checked in (server setting).
+  const [checkinDeadlineMinutes, setCheckinDeadlineMinutes] = useState(30);
   useEffect(() => {
-    if (!hasPendingHold) return;
+    reputationApi.me().then((r) => setCheckinDeadlineMinutes(r.checkinDeadlineMinutes)).catch(() => {});
+  }, []);
+  const checkinDeadlineOf = (b: { date: Date }) => b.date.getTime() + checkinDeadlineMinutes * 60_000;
+  // A confirmed booking whose check-in window is open (or opens within the hour) needs a live countdown.
+  const hasOpenCheckinWindow = bookings.some(
+    (b) =>
+      b.status === "confirmed" &&
+      hasCheckinDeadline(b.unit, b.unitCount) &&
+      b.date.getTime() - 3_600_000 <= now &&
+      checkinDeadlineOf(b) > now,
+  );
+
+  // Tick once a second while an unpaid booking is being held or a check-in window is running.
+  useEffect(() => {
+    if (!hasPendingHold && !hasOpenCheckinWindow) return;
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(timer);
-  }, [hasPendingHold]);
+  }, [hasPendingHold, hasOpenCheckinWindow]);
 
   // When a hold runs out the server releases the slot; mirror that locally right away.
   useEffect(() => {
@@ -222,6 +244,8 @@ const BookingHistoryPage: React.FC = () => {
             policyName: b.policyName,
             cancelledAt: b.cancelledAt,
             paymentDeadlineAt: b.paymentDeadlineAt,
+            unit: b.unit,
+            unitCount: b.unitCount,
           };
         });
         setBookings(mapped);
@@ -434,6 +458,38 @@ const BookingHistoryPage: React.FC = () => {
                       Giữ chỗ còn {formatCountdown(new Date(booking.paymentDeadlineAt).getTime() - now)}
                     </span>
                   )}
+                  {booking.status === "confirmed" && hasCheckinDeadline(booking.unit, booking.unitCount) && (() => {
+                    const deadline = checkinDeadlineOf(booking);
+                    const deadlineText = new Date(deadline).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+                    if (now >= deadline) {
+                      return (
+                        <span
+                          className="px-3 py-1 text-xs font-semibold rounded-lg border border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400 shadow-sm"
+                          title="Nếu bạn đã đến nhưng chưa được check-in, hãy liên hệ quầy để được hoàn điểm"
+                        >
+                          Quá hạn check-in · bị trừ điểm uy tín
+                        </span>
+                      );
+                    }
+                    if (now >= booking.date.getTime()) {
+                      return (
+                        <span
+                          className="px-3 py-1 text-xs font-semibold font-mono rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 shadow-sm"
+                          title="Quá hạn này mà chưa check-in sẽ bị trừ điểm uy tín"
+                        >
+                          Còn {formatCountdown(deadline - now)} để check-in
+                        </span>
+                      );
+                    }
+                    return (
+                      <span
+                        className="px-3 py-1 text-xs font-semibold rounded-lg border border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300 shadow-sm"
+                        title="Check-in tại quầy từ 30 phút trước giờ bắt đầu"
+                      >
+                        Check-in trước {deadlineText}
+                      </span>
+                    );
+                  })()}
                 </div>
 
                 <div>

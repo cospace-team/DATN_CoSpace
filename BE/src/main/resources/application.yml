@@ -138,6 +138,14 @@ app:
     # (once per booking). Multi-day passes are only penalised if they end without any check-in.
     checkin-deadline-minutes: ${APP_REPUTATION_CHECKIN_DEADLINE_MINUTES:30}
     missed-checkin-penalty: ${APP_REPUTATION_MISSED_CHECKIN_PENALTY:10}
+    # Points given back for each booking checked in on time (score is capped at 100).
+    on-time-checkin-reward: ${APP_REPUTATION_ON_TIME_CHECKIN_REWARD:2}
+    # Below limited-below a customer may hold only one unused booking online; below blocked-below
+    # online booking is refused (staff can still book at the counter).
+    limited-below: ${APP_REPUTATION_LIMITED_BELOW:50}
+    blocked-below: ${APP_REPUTATION_BLOCKED_BELOW:30}
+    # Reminder this long before the start; a second one at the start while check-in is still open.
+    reminder-before-minutes: ${APP_REPUTATION_REMINDER_BEFORE_MINUTES:60}
 
 logging:
   level:

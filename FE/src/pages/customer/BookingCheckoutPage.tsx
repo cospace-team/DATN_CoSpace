@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FiChevronLeft, FiMapPin, FiCalendar, FiClock,
-  FiCheckCircle, FiAlertTriangle, FiMaximize, FiLock, FiExternalLink, FiX, FiCreditCard, FiGift, FiAward
+  FiCheckCircle, FiAlertTriangle, FiMaximize, FiLock, FiExternalLink, FiX, FiCreditCard, FiGift, FiAward, FiShield
 } from 'react-icons/fi';
 import { formatVND, durationUnitLabel } from '../../utils/formatters';
 import { Button } from '../../components/ui/button';
@@ -10,7 +10,7 @@ import { useAuth } from '../../context/AuthContext';
 import { bookingApi } from '../../lib/bookingApi';
 import { useToast } from '../../components/Toast';
 import { customerSpaceApi, type ExtraServiceResponse } from '../../lib/spaceApi';
-import { describePromotion, promotionApi, type BookingQuoteDto, type PromotionDto } from '../../api/loyaltyApi';
+import { describePromotion, promotionApi, reputationApi, type BookingQuoteDto, type MyReputationDto, type PromotionDto } from '../../api/loyaltyApi';
 import { resolveBranchId } from '../../data/branchAliases';
 import { QuantityStepper } from '../../components/ui/QuantityStepper';
 import { ServiceIcon } from '../../components/ui/ServiceIcon';
@@ -62,6 +62,18 @@ const BookingCheckoutPage: React.FC = () => {
   const estimatedUnitCount = Math.max(1, Math.ceil((endAtDate.getTime() - startAtDate.getTime()) / unitMs));
 
   const [serviceDetails, setServiceDetails] = useState<ExtraServiceResponse[]>(state?.serviceDetails || []);
+
+  // Check-in rule and any booking restriction from the customer's reputation score. Multi-day
+  // passes (several days, a week or longer) are exempt from the check-in deadline.
+  const [reputation, setReputation] = useState<MyReputationDto | null>(null);
+  useEffect(() => {
+    reputationApi.me().then(setReputation).catch(() => setReputation(null));
+  }, []);
+  const checkinDeadlineApplies = bookingDurationUnit === 'hour' || (bookingDurationUnit === 'day' && estimatedUnitCount <= 1);
+  const checkinDeadlineText = reputation
+    ? new Date(startAtDate.getTime() + reputation.checkinDeadlineMinutes * 60_000)
+        .toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+    : null;
 
   useEffect(() => {
     if (serviceDetails.length === 0 && Object.keys(services).length > 0 && workspace) {
@@ -670,6 +682,27 @@ const BookingCheckoutPage: React.FC = () => {
             </div>
 
             <div className="p-6 bg-slate-900 space-y-4">
+              {reputation && reputation.restriction !== 'none' && !activeBooking && (
+                <p className="text-sm text-amber-200 bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3 flex gap-2">
+                  <FiAlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                  <span>
+                    Điểm uy tín của bạn là {reputation.score}/{reputation.maxScore}.{' '}
+                    {reputation.restriction === 'blocked'
+                      ? 'Bạn tạm thời không thể đặt chỗ online, vui lòng đặt trực tiếp tại quầy.'
+                      : 'Bạn chỉ được giữ 1 đơn chưa sử dụng tại một thời điểm.'}
+                  </span>
+                </p>
+              )}
+              {reputation && checkinDeadlineApplies && (
+                <p className="text-xs text-white/80 bg-white/5 border border-white/10 rounded-2xl p-3 flex gap-2 leading-relaxed">
+                  <FiShield className="h-4 w-4 shrink-0 mt-0.5 text-sky-300" />
+                  <span>
+                    Vui lòng check-in tại quầy trước <strong className="text-white">{checkinDeadlineText}</strong>{' '}
+                    ({reputation.checkinDeadlineMinutes} phút sau giờ bắt đầu). Quá hạn sẽ bị trừ {reputation.missedCheckinPenalty} điểm uy tín;
+                    check-in đúng giờ được cộng {reputation.onTimeCheckinReward} điểm. Chúng tôi sẽ nhắc bạn trước giờ bắt đầu.
+                  </span>
+                </p>
+              )}
               {!activeBooking && quoteError && (
                 <p className="text-sm text-rose-300 bg-rose-500/10 border border-rose-500/30 rounded-2xl p-3">{quoteError}</p>
               )}

@@ -48,11 +48,12 @@ public class BookingService {
     private final PromotionService promotionService;
     private final BookingAddonService bookingAddonService;
     private final BookingExpiryService bookingExpiryService;
+    private final ReputationService reputationService;
 
     /** Business time zone: opening hours and "today" are always Vietnam local time, whatever the server runs in. */
     public static final java.time.ZoneId BUSINESS_ZONE = java.time.ZoneId.of("Asia/Ho_Chi_Minh");
 
-    public BookingService(BookingRepository bookingRepository, PaymentRepository paymentRepository, PricingService pricingService, WorkspaceEntityRepository workspaceEntityRepository, com.cospace.app.repository.FloorRepository floorRepository, BranchEntityRepository branchEntityRepository, UserRepository userRepository, CheckinLogRepository checkinLogRepository, jakarta.persistence.EntityManager entityManager, com.cospace.app.repository.WorkspaceMaintenanceRepository workspaceMaintenanceRepository, com.cospace.app.repository.BookingCancellationRepository bookingCancellationRepository, MembershipService membershipService, PromotionService promotionService, BookingAddonService bookingAddonService, BookingExpiryService bookingExpiryService) {
+    public BookingService(BookingRepository bookingRepository, PaymentRepository paymentRepository, PricingService pricingService, WorkspaceEntityRepository workspaceEntityRepository, com.cospace.app.repository.FloorRepository floorRepository, BranchEntityRepository branchEntityRepository, UserRepository userRepository, CheckinLogRepository checkinLogRepository, jakarta.persistence.EntityManager entityManager, com.cospace.app.repository.WorkspaceMaintenanceRepository workspaceMaintenanceRepository, com.cospace.app.repository.BookingCancellationRepository bookingCancellationRepository, MembershipService membershipService, PromotionService promotionService, BookingAddonService bookingAddonService, BookingExpiryService bookingExpiryService, ReputationService reputationService) {
         this.bookingRepository = bookingRepository;
         this.paymentRepository = paymentRepository;
         this.pricingService = pricingService;
@@ -68,6 +69,7 @@ public class BookingService {
         this.promotionService = promotionService;
         this.bookingAddonService = bookingAddonService;
         this.bookingExpiryService = bookingExpiryService;
+        this.reputationService = reputationService;
     }
 
     @Transactional
@@ -104,6 +106,10 @@ public class BookingService {
         int pendingCount = bookingRepository.countByUserIdAndStatus(userId, BookingStatus.PENDING_PAYMENT);
         if (pendingCount >= 3) {
             throw new IllegalStateException("Bạn đang có 3 đơn đặt chỗ chờ thanh toán. Vui lòng hoàn tất thanh toán hoặc hủy đơn cũ trước khi đặt tiếp.");
+        }
+        // A low reputation score limits online booking; the counter can still book for the customer.
+        if (source == BookingSource.web) {
+            reputationService.requireCanBookOnline(userId);
         }
 
         // Rule #42: Compute branchId server-side from Workspace -> Floor
@@ -600,6 +606,7 @@ public class BookingService {
                         .email(u.getEmail())
                         .fullName(u.getFullName())
                         .phone(u.getPhone())
+                        .reputationScore(u.getRole() == com.cospace.app.entity.User.Role.customer ? u.getReputationScore() : null)
                         .build())
                 .orElse(null);
 
@@ -652,6 +659,7 @@ public class BookingService {
                         .email(u.getEmail())
                         .fullName(u.getFullName())
                         .phone(u.getPhone())
+                        .reputationScore(u.getRole() == com.cospace.app.entity.User.Role.customer ? u.getReputationScore() : null)
                         .build()));
 
         java.util.Set<UUID> wsIds = bookings.stream().map(Booking::getWorkspaceId).collect(java.util.stream.Collectors.toSet());
