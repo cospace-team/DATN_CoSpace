@@ -58,4 +58,22 @@ public class BookingDto {
     private String cancelledAt;
 
     private String createdAt;
+
+    /* Details for the customer's booking list (filled by BookingService.toDtoList). */
+    private String workspaceCode;
+    private String workspaceTypeName;
+    private Integer workspaceCapacity;
+    private String floorName;
+    private Integer floorNo;
+    private String branchAddress;
+    private String branchCity;
+    /** Provider of the payment that settled the booking: payos | momo | cash | bank_transfer. */
+    private String paidVia;
+    private String paidAt;
+    /** First check-in and last check-out recorded for the booking, and how many visits it had. */
+    private String firstCheckinAt;
+    private String lastCheckoutAt;
+    private Integer checkinCount;
+    /** Net reputation points this booking earned (+) or cost (-), null when none. */
+    private Integer reputationDelta;
 }

@@ -15,6 +15,8 @@ public interface ReputationEventRepository extends JpaRepository<ReputationEvent
 
     Optional<ReputationEvent> findByBookingIdAndReason(UUID bookingId, String reason);
 
+    List<ReputationEvent> findByBookingIdIn(java.util.Collection<UUID> bookingIds);
+
     long countByUserIdAndReason(UUID userId, String reason);
 
     List<ReputationEvent> findTop20ByUserIdOrderByCreatedAtDesc(UUID userId);

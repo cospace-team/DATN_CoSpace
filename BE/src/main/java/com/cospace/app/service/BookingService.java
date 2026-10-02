@@ -6,6 +6,7 @@ import com.cospace.app.entity.Booking;
 import com.cospace.app.entity.BookingStatus;
 import com.cospace.app.entity.DurationUnit;
 import com.cospace.app.entity.Payment;
+import com.cospace.app.entity.PaymentStatus;
 import com.cospace.app.entity.WorkspaceEntity;
 import com.cospace.app.repository.BookingRepository;
 import com.cospace.app.repository.PaymentRepository;
@@ -49,11 +50,13 @@ public class BookingService {
     private final BookingAddonService bookingAddonService;
     private final BookingExpiryService bookingExpiryService;
     private final ReputationService reputationService;
+    private final com.cospace.app.repository.WorkspaceTypeRepository workspaceTypeRepository;
+    private final com.cospace.app.repository.ReputationEventRepository reputationEventRepository;
 
     /** Business time zone: opening hours and "today" are always Vietnam local time, whatever the server runs in. */
     public static final java.time.ZoneId BUSINESS_ZONE = java.time.ZoneId.of("Asia/Ho_Chi_Minh");
 
-    public BookingService(BookingRepository bookingRepository, PaymentRepository paymentRepository, PricingService pricingService, WorkspaceEntityRepository workspaceEntityRepository, com.cospace.app.repository.FloorRepository floorRepository, BranchEntityRepository branchEntityRepository, UserRepository userRepository, CheckinLogRepository checkinLogRepository, jakarta.persistence.EntityManager entityManager, com.cospace.app.repository.WorkspaceMaintenanceRepository workspaceMaintenanceRepository, com.cospace.app.repository.BookingCancellationRepository bookingCancellationRepository, MembershipService membershipService, PromotionService promotionService, BookingAddonService bookingAddonService, BookingExpiryService bookingExpiryService, ReputationService reputationService) {
+    public BookingService(BookingRepository bookingRepository, PaymentRepository paymentRepository, PricingService pricingService, WorkspaceEntityRepository workspaceEntityRepository, com.cospace.app.repository.FloorRepository floorRepository, BranchEntityRepository branchEntityRepository, UserRepository userRepository, CheckinLogRepository checkinLogRepository, jakarta.persistence.EntityManager entityManager, com.cospace.app.repository.WorkspaceMaintenanceRepository workspaceMaintenanceRepository, com.cospace.app.repository.BookingCancellationRepository bookingCancellationRepository, MembershipService membershipService, PromotionService promotionService, BookingAddonService bookingAddonService, BookingExpiryService bookingExpiryService, ReputationService reputationService, com.cospace.app.repository.WorkspaceTypeRepository workspaceTypeRepository, com.cospace.app.repository.ReputationEventRepository reputationEventRepository) {
         this.bookingRepository = bookingRepository;
         this.paymentRepository = paymentRepository;
         this.pricingService = pricingService;
@@ -70,6 +73,8 @@ public class BookingService {
         this.bookingAddonService = bookingAddonService;
         this.bookingExpiryService = bookingExpiryService;
         this.reputationService = reputationService;
+        this.workspaceTypeRepository = workspaceTypeRepository;
+        this.reputationEventRepository = reputationEventRepository;
     }
 
     @Transactional
@@ -723,7 +728,24 @@ public class BookingService {
         String customerName = customer != null ? customer.getFullName() : null;
         String customerPhone = customer != null ? customer.getPhone() : null;
 
-        return buildDto(b, workspaceName, branchName, customerName, customerPhone, latestPaymentOpt);
+        BookingDto dto = buildDto(b, workspaceName, branchName, customerName, customerPhone, latestPaymentOpt);
+        if (b.getStatus() != BookingStatus.CANCELLED) {
+            return dto;
+        }
+        // Lists attach cancellations in one batch (toDtoList); a single booking looks its own up.
+        BookingDto.BookingDtoBuilder builder = dto.toBuilder();
+        bookingCancellationRepository.findByBookingId(b.getId()).ifPresent(c -> {
+            builder.cancellationReason(c.getReason());
+            builder.refundPercent(c.getRefundPercent());
+            builder.refundAmount(c.getRefundAmount());
+            builder.penaltyAmount(c.getPenaltyAmount());
+            builder.refundStatus(c.getRefundStatus());
+            builder.cancelledAt(c.getCreatedAt() != null ? c.getCreatedAt().toString() : null);
+            if (c.getAppliedRuleJson() != null && c.getAppliedRuleJson().get("policy_name") != null) {
+                builder.policyName(c.getAppliedRuleJson().get("policy_name").toString());
+            }
+        });
+        return builder.build();
     }
 
     /**
@@ -746,21 +768,40 @@ public class BookingService {
         }
 
         // Batch fetch all related entities (1 query each instead of N)
-        java.util.Map<UUID, String> workspaceNames = workspaceEntityRepository.findAllById(workspaceIds)
-                .stream().collect(java.util.stream.Collectors.toMap(WorkspaceEntity::getId, WorkspaceEntity::getName));
-        java.util.Map<UUID, String> branchNames = branchEntityRepository.findAllById(branchIds)
-                .stream().collect(java.util.stream.Collectors.toMap(BranchEntity::getId, BranchEntity::getName));
+        java.util.Map<UUID, WorkspaceEntity> workspaces = workspaceEntityRepository.findAllById(workspaceIds)
+                .stream().collect(java.util.stream.Collectors.toMap(WorkspaceEntity::getId, w -> w));
+        java.util.Map<UUID, BranchEntity> branches = branchEntityRepository.findAllById(branchIds)
+                .stream().collect(java.util.stream.Collectors.toMap(BranchEntity::getId, br -> br));
+        java.util.Map<UUID, com.cospace.app.entity.Floor> floors = floorRepository.findAllById(workspaces.values().stream()
+                        .map(WorkspaceEntity::getFloorId).filter(java.util.Objects::nonNull).collect(java.util.stream.Collectors.toSet()))
+                .stream().collect(java.util.stream.Collectors.toMap(com.cospace.app.entity.Floor::getId, f -> f));
+        java.util.Map<UUID, String> typeNames = workspaceTypeRepository.findAllById(workspaces.values().stream()
+                        .map(WorkspaceEntity::getWorkspaceTypeId).filter(java.util.Objects::nonNull).collect(java.util.stream.Collectors.toSet()))
+                .stream().collect(java.util.stream.Collectors.toMap(com.cospace.app.entity.WorkspaceType::getId,
+                        com.cospace.app.entity.WorkspaceType::getName));
         java.util.Map<UUID, com.cospace.app.entity.User> users = userRepository.findAllById(userIds)
                 .stream().collect(java.util.stream.Collectors.toMap(com.cospace.app.entity.User::getId, u -> u));
 
         // Batch fetch latest payments per booking (single query instead of N)
         java.util.Map<UUID, Payment> latestPayments = new java.util.HashMap<>();
+        // The payment that settled the booking itself (not a later running-tab payment).
+        java.util.Map<UUID, Payment> settlingPayments = new java.util.HashMap<>();
         if (!bookingIds.isEmpty()) {
             for (Payment p : paymentRepository.findByBookingIdInOrderByCreatedAtDesc(bookingIds)) {
                 // Since ordered by createdAt DESC, the first encounter per bookingId is the latest
                 latestPayments.putIfAbsent(p.getBookingId(), p);
+                if (p.getStatus() == PaymentStatus.PAID && Payment.PURPOSE_BOOKING.equals(p.getPurpose())) {
+                    settlingPayments.putIfAbsent(p.getBookingId(), p);
+                }
             }
         }
+
+        // Visits and reputation changes, one query each.
+        java.util.Map<UUID, List<com.cospace.app.entity.CheckinLog>> visits = checkinLogRepository.findByBookingIdIn(bookingIds)
+                .stream().collect(java.util.stream.Collectors.groupingBy(com.cospace.app.entity.CheckinLog::getBookingId));
+        java.util.Map<UUID, Integer> reputationDeltas = reputationEventRepository.findByBookingIdIn(bookingIds)
+                .stream().collect(java.util.stream.Collectors.groupingBy(com.cospace.app.entity.ReputationEvent::getBookingId,
+                        java.util.stream.Collectors.summingInt(com.cospace.app.entity.ReputationEvent::getDelta)));
 
         // Batch fetch cancellations for cancelled bookings (single query instead of N)
         java.util.Map<UUID, com.cospace.app.entity.BookingCancellation> cancellations = new java.util.HashMap<>();
@@ -777,12 +818,35 @@ public class BookingService {
         List<BookingDto> result = new java.util.ArrayList<>(bookings.size());
         for (Booking b : bookings) {
             com.cospace.app.entity.User customer = users.get(b.getUserId());
+            WorkspaceEntity ws = workspaces.get(b.getWorkspaceId());
+            BranchEntity branch = branches.get(b.getBranchId());
+            com.cospace.app.entity.Floor floor = ws != null ? floors.get(ws.getFloorId()) : null;
             BookingDto dto = buildDto(b,
-                    workspaceNames.get(b.getWorkspaceId()),
-                    branchNames.get(b.getBranchId()),
+                    ws != null ? ws.getName() : null,
+                    branch != null ? branch.getName() : null,
                     customer != null ? customer.getFullName() : null,
                     customer != null ? customer.getPhone() : null,
                     Optional.ofNullable(latestPayments.get(b.getId())));
+
+            Payment settled = settlingPayments.get(b.getId());
+            List<com.cospace.app.entity.CheckinLog> logs = visits.getOrDefault(b.getId(), List.of());
+            dto = dto.toBuilder()
+                    .workspaceCode(ws != null ? ws.getCode() : null)
+                    .workspaceTypeName(ws != null ? typeNames.get(ws.getWorkspaceTypeId()) : null)
+                    .workspaceCapacity(ws != null ? ws.getCapacity() : null)
+                    .floorName(floor != null ? floor.getName() : null)
+                    .floorNo(floor != null ? floor.getFloorNo() : null)
+                    .branchAddress(branch != null ? branch.getAddress() : null)
+                    .branchCity(branch != null ? branch.getCity() : null)
+                    .paidVia(settled != null ? settled.getProvider() : null)
+                    .paidAt(settled != null && settled.getPaidAt() != null ? settled.getPaidAt().toString() : null)
+                    .firstCheckinAt(logs.stream().map(com.cospace.app.entity.CheckinLog::getCheckinAt)
+                            .min(java.util.Comparator.naturalOrder()).map(Object::toString).orElse(null))
+                    .lastCheckoutAt(logs.stream().map(com.cospace.app.entity.CheckinLog::getCheckoutAt).filter(java.util.Objects::nonNull)
+                            .max(java.util.Comparator.naturalOrder()).map(Object::toString).orElse(null))
+                    .checkinCount(logs.size())
+                    .reputationDelta(reputationDeltas.get(b.getId()))
+                    .build();
 
             // Attach cancellation info if present
             if (b.getStatus() == BookingStatus.CANCELLED) {
@@ -842,20 +906,6 @@ public class BookingService {
         latestPaymentOpt.ifPresent(p -> builder
                 .paymentStatus(p.getStatus())
                 .latestPaymentId(p.getId()));
-
-        if (b.getStatus() == BookingStatus.CANCELLED) {
-            bookingCancellationRepository.findByBookingId(b.getId()).ifPresent(c -> {
-                builder.cancellationReason(c.getReason());
-                builder.refundPercent(c.getRefundPercent());
-                builder.refundAmount(c.getRefundAmount());
-                builder.penaltyAmount(c.getPenaltyAmount());
-                builder.refundStatus(c.getRefundStatus());
-                builder.cancelledAt(c.getCreatedAt() != null ? c.getCreatedAt().toString() : null);
-                if (c.getAppliedRuleJson() != null && c.getAppliedRuleJson().get("policy_name") != null) {
-                    builder.policyName(c.getAppliedRuleJson().get("policy_name").toString());
-                }
-            });
-        }
 
         return builder.build();
     }

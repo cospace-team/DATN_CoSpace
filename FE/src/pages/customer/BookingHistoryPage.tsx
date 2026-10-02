@@ -1,67 +1,36 @@
 import React, { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import {
   FiCalendar,
   FiClock,
-  FiMapPin,
   FiX,
   FiCheckCircle,
   FiAlertCircle,
   FiMaximize,
-  FiCoffee,
   FiDownload,
-  FiRefreshCw,
   FiCopy,
   FiCheck,
-  FiCreditCard,
-  FiShield,
+  FiPlus,
+  FiSearch,
 } from "react-icons/fi";
-import { Button } from "../../components/ui/button";
 import { formatVND } from "../../utils/formatters";
-import { bookingApi, type BookingResponse } from "../../lib/bookingApi";
+import { bookingApi } from "../../lib/bookingApi";
 import { startPayment } from "../../lib/startPayment";
 import { useAuth } from "../../context/AuthContext";
 import BookingServicesModal from "./history/BookingServicesModal";
 import { reputationApi } from "../../api/loyaltyApi";
 import MyVouchersStrip from "./history/MyVouchersStrip";
+import BookingCard, { type CustomerBookingItem, hasCheckinDeadline } from "./history/BookingCard";
 
-export interface CustomerBookingItem {
-  id: string;
-  code: string;
-  branchId: string;
-  workspaceName: string;
-  branchName: string;
-  date: Date;
-  /** Last day of the booking; differs from `date` for day / week / month passes. */
-  endDate: Date;
-  startTime: string;
-  endTime: string;
-  status: string;
-  totalAmount: number;
-  paymentMethod: string;
-  cancellationReason?: string;
-  refundPercent?: number;
-  refundAmount?: number;
-  penaltyAmount?: number;
-  refundStatus?: string;
-  policyName?: string;
-  cancelledAt?: string;
-  paymentDeadlineAt?: string;
-  unit?: string;
-  unitCount?: number;
-}
-
-/** Remaining hold time as mm:ss. */
-const formatCountdown = (ms: number) => {
-  const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+/** "Bắt đầu sau 2 giờ 15 phút" / "Đã bắt đầu" for the next-booking banner. */
+const relativeStart = (ms: number) => {
+  if (ms <= 0) return "Đã bắt đầu";
+  const minutes = Math.round(ms / 60_000);
+  if (minutes < 60) return `Bắt đầu sau ${minutes} phút`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `Bắt đầu sau ${hours} giờ${minutes % 60 ? ` ${minutes % 60} phút` : ""}`;
+  return `Bắt đầu sau ${Math.floor(hours / 24)} ngày`;
 };
-
-/** Multi-day passes (several days, a week or longer) have no check-in deadline, matching the backend. */
-const hasCheckinDeadline = (unit?: string, unitCount?: number) =>
-  unit === "hour" || (unit === "day" && (unitCount ?? 1) <= 1);
 
 const BookingHistoryPage: React.FC = () => {
   const location = useLocation();
@@ -70,6 +39,7 @@ const BookingHistoryPage: React.FC = () => {
   const [servicesBooking, setServicesBooking] = useState<CustomerBookingItem | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
+  const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState<"upcoming" | "past" | "canceled">(
     "upcoming",
   );
@@ -215,39 +185,29 @@ const BookingHistoryPage: React.FC = () => {
       try {
         const apiBookings = await bookingApi.getMyBookings(reloadKey > 0);
         // Always replace with API data (even empty array) so real state is shown
-        const mapped = (apiBookings || []).map((b) => {
-          return {
-            id: b.id,
-            code: b.bookingCode,
-            branchId: b.branchId,
-            workspaceName: b.workspaceName || `Chỗ ngồi ${b.workspaceId?.slice(0, 6) ?? ''}`,
-            branchName: b.branchName || "CoSpace",
+        const mapped: CustomerBookingItem[] = (apiBookings || []).map((b) => ({
+          id: b.id,
+          code: b.bookingCode,
+          branchId: b.branchId,
+          workspaceName: b.workspaceName || `Chỗ ngồi ${b.workspaceId?.slice(0, 6) ?? ""}`,
+          branchName: b.branchName || "CoSpace",
           date: new Date(b.startAt),
           endDate: new Date(b.endAt),
-          startTime: new Date(b.startAt).toLocaleTimeString("vi-VN", {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-          endTime: new Date(b.endAt).toLocaleTimeString("vi-VN", {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-            // Normalize: Java enum serializes as UPPERCASE → lowercase for filter
-            status: b.status ? (b.status as string).toLowerCase() : "pending_payment",
-            totalAmount: b.totalAmount,
-            paymentMethod: "momo",
-            cancellationReason: b.cancellationReason,
-            refundPercent: b.refundPercent,
-            refundAmount: b.refundAmount,
-            penaltyAmount: b.penaltyAmount,
-            refundStatus: b.refundStatus,
-            policyName: b.policyName,
-            cancelledAt: b.cancelledAt,
-            paymentDeadlineAt: b.paymentDeadlineAt,
-            unit: b.unit,
-            unitCount: b.unitCount,
-          };
-        });
+          // Normalize: Java enum serializes as UPPERCASE → lowercase for filter
+          status: b.status ? (b.status as string).toLowerCase() : "pending_payment",
+          totalAmount: b.totalAmount,
+          cancellationReason: b.cancellationReason,
+          refundPercent: b.refundPercent,
+          refundAmount: b.refundAmount,
+          penaltyAmount: b.penaltyAmount,
+          refundStatus: b.refundStatus,
+          policyName: b.policyName,
+          cancelledAt: b.cancelledAt,
+          paymentDeadlineAt: b.paymentDeadlineAt,
+          unit: b.unit,
+          unitCount: b.unitCount,
+          raw: b,
+        }));
         setBookings(mapped);
         setApiLoaded(true);
       } catch (err: any) {
@@ -261,19 +221,36 @@ const BookingHistoryPage: React.FC = () => {
     fetchBookings();
   }, [reloadKey]);
 
-  const getFilteredBookings = () => {
-    return bookings.filter((b) => {
-      if (activeTab === "canceled")
-        return b.status === "canceled" || b.status === "cancelled" || b.status === "expired" || b.status === "no_show";
-      if (activeTab === "upcoming")
-        return (
-          b.status === "confirmed" ||
-          b.status === "checked_in" ||
-          b.status === "pending_payment"
-        );
-      return b.status === "completed" || b.status === "checked_out";
-    });
+  const TAB_STATUSES: Record<"upcoming" | "past" | "canceled", string[]> = {
+    upcoming: ["pending_payment", "confirmed", "checked_in"],
+    past: ["completed", "checked_out"],
+    canceled: ["canceled", "cancelled", "expired", "no_show"],
   };
+  const tabCount = (tab: keyof typeof TAB_STATUSES) =>
+    bookings.filter((b) => TAB_STATUSES[tab].includes(b.status)).length;
+
+  const getFilteredBookings = () => {
+    const q = search.trim().toLowerCase();
+    const list = bookings.filter(
+      (b) =>
+        TAB_STATUSES[activeTab].includes(b.status) &&
+        (!q ||
+          b.code.toLowerCase().includes(q) ||
+          b.workspaceName.toLowerCase().includes(q) ||
+          b.branchName.toLowerCase().includes(q)),
+    );
+    // Upcoming: soonest first (what the customer needs next); history: most recent first.
+    return list.sort((x, y) =>
+      activeTab === "upcoming" ? x.date.getTime() - y.date.getTime() : y.date.getTime() - x.date.getTime(),
+    );
+  };
+
+  // The next booking to show up for: in use now, or the soonest confirmed one still ahead.
+  const nextBooking =
+    bookings.find((b) => b.status === "checked_in") ??
+    bookings
+      .filter((b) => b.status === "confirmed" && b.endDate.getTime() > now)
+      .sort((x, y) => x.date.getTime() - y.date.getTime())[0];
 
   const [isCanceling, setIsCanceling] = useState(false);
   const selectedCancelBooking = bookings.find((b) => b.id === showCancelModal);
@@ -330,10 +307,15 @@ const BookingHistoryPage: React.FC = () => {
 
   return (
     <div className="max-w-5xl mx-auto py-8 px-4 font-sans animate-fade-in">
-      {/* Header Banner */}
-      <div className="mb-8">
-        <h1 className="text-2xl md:text-3xl font-semibold text-foreground tracking-tight">Đặt chỗ của tôi</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Mã QR check-in, trạng thái thanh toán và lịch sử đặt chỗ.</p>
+      {/* Header */}
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-semibold text-foreground tracking-tight">Đặt chỗ của tôi</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Thời gian, địa điểm, thanh toán và tiến trình của từng đơn.</p>
+        </div>
+        <Link to="/customer/explore" className="btn btn-primary btn-sm self-start sm:self-auto">
+          <FiPlus className="h-4 w-4" /> Đặt chỗ mới
+        </Link>
       </div>
 
       {successMessage && (
@@ -356,44 +338,76 @@ const BookingHistoryPage: React.FC = () => {
 
       <MyVouchersStrip reloadKey={reloadKey} />
 
-      {/* Block-based Navigation Tabs */}
-      <div className="flex flex-wrap gap-4 mb-8">
-        {[
-          { id: "upcoming", label: "Sắp tới", icon: FiClock, color: "#F59E0B" },
-          {
-            id: "past",
-            label: "Hoàn thành",
-            icon: FiCheckCircle,
-            color: "#22C55E",
-          },
-          { id: "canceled", label: "Đã hủy", icon: FiX, color: "#EF4444" },
-        ].map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`flex items-center gap-2 px-6 py-3 font-semibold text-sm tracking-tight rounded-full border border-border transition-all ${
-                isActive
-                  ? "bg-slate-900 text-white shadow-sm -translate-y-1"
-                  : "bg-card text-foreground shadow-sm hover:shadow-sm"
-              }`}
-            >
-              <Icon
-                className="h-5 w-5"
-                style={{ color: isActive ? tab.color : "inherit" }}
-              />
-              {tab.label}
+      {/* Next booking */}
+      {nextBooking && (
+        <section className="mb-6 rounded-2xl border border-primary/30 bg-primary/5 p-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-primary">
+              {nextBooking.status === "checked_in" ? "Đang sử dụng" : "Đơn sắp tới gần nhất"}
+            </p>
+            <p className="font-semibold text-foreground truncate">
+              {nextBooking.workspaceName} · {nextBooking.branchName}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {nextBooking.status === "checked_in"
+                ? `Kết thúc lúc ${nextBooking.endDate.toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })}`
+                : `${relativeStart(nextBooking.date.getTime() - now)} · ${nextBooking.date.toLocaleString("vi-VN", { weekday: "short", hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })}`}
+            </p>
+          </div>
+          {nextBooking.status === "confirmed" && (
+            <button type="button" onClick={() => setShowQrModal(nextBooking)} className="btn btn-primary btn-sm self-start sm:self-auto">
+              <FiMaximize className="h-4 w-4" /> Mã QR check-in
             </button>
-          );
-        })}
+          )}
+        </section>
+      )}
+
+      {/* Tabs + search */}
+      <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div className="grid grid-cols-3 md:flex gap-1 rounded-xl border border-border bg-muted/50 p-1 w-full md:w-fit" role="tablist">
+          {([
+            { id: "upcoming", label: "Sắp tới", icon: FiClock },
+            { id: "past", label: "Hoàn thành", icon: FiCheckCircle },
+            { id: "canceled", label: "Đã hủy", icon: FiX },
+          ] as const).map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                role="tab"
+                aria-selected={isActive}
+                title={tab.id === "canceled" ? "Đơn đã hủy, hết hạn thanh toán hoặc không đến" : undefined}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center justify-center gap-1.5 md:gap-2 whitespace-nowrap px-2 md:px-4 py-2 text-sm font-semibold rounded-lg transition-colors cursor-pointer ${
+                  isActive ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Icon className="h-4 w-4 hidden sm:block" />
+                {tab.label}
+                <span className={`rounded-full px-1.5 text-[11px] ${isActive ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
+                  {tabCount(tab.id)}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <label className="relative md:w-72">
+          <span className="sr-only">Tìm đơn</span>
+          <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Tìm theo mã đơn, chỗ ngồi, chi nhánh"
+            className="w-full rounded-xl border border-border bg-card pl-9 pr-3 py-2 text-sm"
+          />
+        </label>
       </div>
 
       {/* Bookings List */}
-      <div className="space-y-6">
+      <div className="space-y-5">
         {loading ? (
-          /* Loading skeleton */
           <div className="space-y-4">
             {[1, 2].map((i) => (
               <div key={i} className="bg-card border border-border rounded-2xl p-6 animate-pulse">
@@ -404,270 +418,34 @@ const BookingHistoryPage: React.FC = () => {
             ))}
           </div>
         ) : getFilteredBookings().length === 0 ? (
-          <div className="text-center py-20 border-2 border-dashed border-border rounded-3xl bg-muted/50 p-6">
-            <div className="w-20 h-20 rounded-2xl bg-card border border-border shadow-sm flex items-center justify-center mx-auto text-foreground mb-6 ">
-              <FiCalendar className="h-10 w-10" />
-            </div>
-            <p className="text-lg font-semibold  text-foreground">
-              Chưa có dữ liệu
+          <div className="text-center py-16 border border-dashed border-border rounded-2xl bg-muted/30 p-6">
+            <FiCalendar className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
+            <p className="font-semibold text-foreground">
+              {search.trim() ? "Không tìm thấy đơn phù hợp" : "Chưa có đơn nào ở mục này"}
             </p>
-            <p className="text-sm font-medium text-foreground/70 mt-2">
-              Không có đơn đặt chỗ nào trong danh mục này.
+            <p className="text-sm text-muted-foreground mt-1">
+              {search.trim() ? "Thử tìm với mã đơn hoặc tên chi nhánh khác." : "Các đơn đặt chỗ của bạn sẽ hiện ở đây."}
             </p>
+            {activeTab === "upcoming" && !search.trim() && (
+              <Link to="/customer/explore" className="btn btn-primary btn-sm mt-4 inline-flex">
+                <FiPlus className="h-4 w-4" /> Đặt chỗ mới
+              </Link>
+            )}
           </div>
         ) : (
           getFilteredBookings().map((booking) => (
-            <div
+            <BookingCard
               key={booking.id}
-              className="bg-card border border-border rounded-2xl p-6 flex flex-col md:flex-row gap-6 transition-all shadow-sm hover:shadow-sm"
-            >
-              {/* Left Details */}
-              <div className="flex-1 space-y-4">
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className="px-3 py-1 text-xs font-semibold font-mono rounded-lg bg-slate-900 text-white border border-border shadow-sm">
-                    {booking.code}
-                  </span>
-                  <span
-                    className={`px-3 py-1 text-xs font-semibold  rounded-lg border border-border shadow-sm ${
-                      booking.status === "confirmed" || booking.status === "pending_payment" || booking.status === "checked_in"
-                        ? "bg-muted text-foreground"
-                        : booking.status === "completed" || booking.status === "checked_out"
-                          ? "bg-emerald-100 text-emerald-900"
-                          : "bg-rose-100 text-rose-900"
-                    }`}
-                  >
-                    {booking.status === "confirmed"
-                      ? "Đã xác nhận"
-                      : booking.status === "pending_payment"
-                        ? "Chờ thanh toán"
-                        : booking.status === "checked_in"
-                          ? "Đang sử dụng"
-                          : booking.status === "completed" || booking.status === "checked_out"
-                            ? "Hoàn thành"
-                            : booking.status === "no_show"
-                              ? "Không đến"
-                              : booking.status === "expired"
-                                ? "Hết hạn thanh toán"
-                                : "Đã hủy"}
-                  </span>
-                  {booking.status === "pending_payment" && booking.paymentDeadlineAt && (
-                    <span
-                      className="px-3 py-1 text-xs font-semibold font-mono rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 shadow-sm"
-                      title="Hết thời gian này, đơn sẽ tự động hủy và trả lại chỗ"
-                    >
-                      Giữ chỗ còn {formatCountdown(new Date(booking.paymentDeadlineAt).getTime() - now)}
-                    </span>
-                  )}
-                  {booking.status === "confirmed" && hasCheckinDeadline(booking.unit, booking.unitCount) && (() => {
-                    const deadline = checkinDeadlineOf(booking);
-                    const deadlineText = new Date(deadline).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
-                    if (now >= deadline) {
-                      return (
-                        <span
-                          className="px-3 py-1 text-xs font-semibold rounded-lg border border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400 shadow-sm"
-                          title="Nếu bạn đã đến nhưng chưa được check-in, hãy liên hệ quầy để được hoàn điểm"
-                        >
-                          Quá hạn check-in · bị trừ điểm uy tín
-                        </span>
-                      );
-                    }
-                    if (now >= booking.date.getTime()) {
-                      return (
-                        <span
-                          className="px-3 py-1 text-xs font-semibold font-mono rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 shadow-sm"
-                          title="Quá hạn này mà chưa check-in sẽ bị trừ điểm uy tín"
-                        >
-                          Còn {formatCountdown(deadline - now)} để check-in
-                        </span>
-                      );
-                    }
-                    return (
-                      <span
-                        className="px-3 py-1 text-xs font-semibold rounded-lg border border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300 shadow-sm"
-                        title="Check-in tại quầy từ 30 phút trước giờ bắt đầu"
-                      >
-                        Check-in trước {deadlineText}
-                      </span>
-                    );
-                  })()}
-                </div>
-
-                <div>
-                  <h3 className="text-xl md:text-2xl font-semibold  text-foreground">
-                    {booking.workspaceName}
-                  </h3>
-                  <p className="text-sm font-medium text-foreground/70 flex items-center gap-2 mt-1">
-                    <FiMapPin className="h-4 w-4 text-foreground" />{" "}
-                    {booking.branchName}
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap gap-x-6 gap-y-3 text-sm bg-muted/50 p-4 rounded-2xl border border-border">
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 bg-card border border-border rounded-md">
-                      <FiCalendar className="text-muted-foreground h-4 w-4" />
-                    </div>
-                    <span className="font-semibold text-foreground">
-                      {booking.date instanceof Date
-                        ? booking.date.toLocaleDateString("vi-VN")
-                        : String(booking.date)}
-                      {booking.endDate instanceof Date &&
-                        booking.date instanceof Date &&
-                        booking.endDate.toDateString() !== booking.date.toDateString() &&
-                        ` → ${booking.endDate.toLocaleDateString("vi-VN")}`}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 bg-card border border-border rounded-md">
-                      <FiClock className="text-muted-foreground h-4 w-4" />
-                    </div>
-                    <span className="font-semibold text-foreground">
-                      {booking.startTime} → {booking.endTime}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 w-full mt-2 pt-2 border-t border-border">
-                    <span className="font-semibold text-xs tracking-tight text-muted-foreground">
-                      Tổng tiền:
-                    </span>
-                    <span className="font-semibold text-foreground font-mono text-lg ml-auto">
-                      {formatVND(booking.totalAmount)}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Modern Cancellation Breakdown Card */}
-                {(booking.status === "canceled" || booking.status === "cancelled") &&
-                  booking.policyName === "PENDING_PAYMENT_CANCEL" && (
-                  <div className="p-4 rounded-2xl bg-muted/50 border border-border text-xs text-muted-foreground">
-                    Đơn được hủy khi chưa thanh toán: không phát sinh phí và chỗ đã được trả lại.
-                  </div>
-                )}
-                {(booking.status === "canceled" || booking.status === "cancelled") &&
-                  booking.policyName !== "PENDING_PAYMENT_CANCEL" && (
-                  <div className="p-4 rounded-2xl bg-rose-500/5 border border-rose-500/20 text-xs space-y-3 animate-fade-in">
-                    <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-rose-500/15">
-                      <span className="font-semibold text-foreground flex items-center gap-1.5">
-                        <FiShield className="h-4 w-4 text-rose-500" />
-                        Chi tiết hoàn tiền & chính sách hủy
-                      </span>
-                      <span
-                        className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
-                          (booking.refundAmount ?? 0) > 0
-                            ? booking.refundStatus === "processed" || booking.refundStatus === "confirmed"
-                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-                              : booking.refundStatus === "rejected"
-                                ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20"
-                                : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
-                            : "bg-muted text-muted-foreground border border-border"
-                        }`}
-                      >
-                        {(booking.refundAmount ?? 0) > 0
-                          ? booking.refundStatus === "processed" || booking.refundStatus === "confirmed"
-                            ? "Đã hoàn tiền"
-                            : booking.refundStatus === "rejected"
-                              ? "Yêu cầu hoàn tiền bị từ chối"
-                              : "Đang xử lý hoàn tiền"
-                          : "Không áp dụng hoàn tiền"}
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-0.5">
-                      <div className="bg-card/70 p-2.5 rounded-xl border border-border/70">
-                        <span className="text-[10px] text-muted-foreground block mb-0.5">Chính sách áp dụng</span>
-                        <span className="font-bold text-foreground truncate block text-xs" title={booking.policyName || "Chính sách hủy tiêu chuẩn"}>
-                          {booking.policyName || "Chính sách hủy chuẩn"}
-                        </span>
-                      </div>
-                      <div className="bg-card/70 p-2.5 rounded-xl border border-border/70">
-                        <span className="text-[10px] text-muted-foreground block mb-0.5">Tỷ lệ hoàn</span>
-                        <span className="font-bold text-foreground text-xs">
-                          {booking.refundPercent !== undefined ? `${booking.refundPercent}%` : "—"}
-                        </span>
-                      </div>
-                      <div className="bg-card/70 p-2.5 rounded-xl border border-border/70">
-                        <span className="text-[10px] text-muted-foreground block mb-0.5">Số tiền hoàn lại</span>
-                        <span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono text-xs">
-                          {booking.refundAmount !== undefined ? formatVND(booking.refundAmount) : formatVND(0)}
-                        </span>
-                      </div>
-                      <div className="bg-card/70 p-2.5 rounded-xl border border-border/70">
-                        <span className="text-[10px] text-muted-foreground block mb-0.5">Phí hủy giữ lại</span>
-                        <span className="font-bold text-rose-600 dark:text-rose-400 font-mono text-xs">
-                          {booking.penaltyAmount !== undefined
-                            ? formatVND(booking.penaltyAmount)
-                            : formatVND(booking.totalAmount)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Right Quick Actions */}
-              <div className="flex flex-row md:flex-col items-center justify-center gap-3 border-t-4 md:border-t-0 md:border-l border-border pt-6 md:pt-0 md:pl-6 min-w-[180px]">
-                {(booking.status === "confirmed" || booking.status === "checked_in") && (
-                  <button
-                    onClick={() => setServicesBooking(booking)}
-                    className="w-full py-3 bg-card text-foreground font-semibold tracking-tight border border-border rounded-full shadow-sm hover:shadow-sm transition-all flex justify-center items-center gap-2 text-xs"
-                  >
-                    <FiCoffee className="h-4 w-4" /> Dịch vụ & gia hạn
-                  </button>
-                )}
-                {booking.status === "confirmed" && (
-                  <>
-                    <button
-                      onClick={() => setShowQrModal(booking)}
-                      className="w-full py-3 bg-slate-900 text-white font-semibold tracking-tight border border-border rounded-full shadow-sm hover:shadow-sm transition-all flex justify-center items-center gap-2 text-xs"
-                    >
-                      <FiMaximize className="h-4 w-4" /> Mã QR Pass
-                    </button>
-                    {/* Once the booked time has started the server refuses online cancellation
-                        (the counter handles it), so the button would only lead to an error. */}
-                    {booking.date instanceof Date && booking.date.getTime() > Date.now() && (
-                      <button
-                        className="w-full py-3 bg-card text-foreground font-semibold tracking-tight border border-border rounded-full shadow-sm hover:bg-red-50 dark:bg-red-950/30 hover:text-red-700 hover:border-red-200 dark:border-red-900/50 transition-colors flex justify-center items-center gap-2 text-xs"
-                        onClick={() => setShowCancelModal(booking.id)}
-                      >
-                        <FiX className="h-4 w-4" /> Hủy đặt chỗ
-                      </button>
-                    )}
-                  </>
-                )}
-                {booking.status === "pending_payment" && (
-                  <>
-                    <button
-                      onClick={() => void handlePayNow(booking.id, booking.totalAmount)}
-                      disabled={!apiLoaded || payingId === booking.id}
-                      className="w-full py-3 bg-slate-900 text-white font-semibold tracking-tight border border-border rounded-full shadow-sm hover:shadow-sm transition-all flex justify-center items-center gap-2 text-xs disabled:opacity-60"
-                    >
-                      <FiCreditCard className="h-4 w-4" />
-                      {payingId === booking.id ? "Đang chuyển..." : "Thanh toán ngay"}
-                    </button>
-                    <button
-                      className="w-full py-3 bg-card text-foreground font-semibold tracking-tight border border-border rounded-full shadow-sm hover:bg-red-50 dark:bg-red-950/30 hover:text-red-700 hover:border-red-200 dark:border-red-900/50 transition-colors flex justify-center items-center gap-2 text-xs"
-                      onClick={() => setShowCancelModal(booking.id)}
-                    >
-                      <FiX className="h-4 w-4" /> Hủy đặt chỗ
-                    </button>
-                  </>
-                )}
-                {(booking.status === "completed" || booking.status === "checked_out") && (
-                  <div className="py-2.5 px-4 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs font-semibold flex items-center justify-center gap-1.5 w-full">
-                    <FiCheckCircle className="h-4 w-4" /> Đã hoàn thành
-                  </div>
-                )}
-                {booking.status === "expired" && (
-                  <div className="py-2.5 px-4 rounded-xl bg-muted text-muted-foreground border border-border text-xs font-semibold flex items-center justify-center gap-1.5 w-full">
-                    <FiClock className="h-4 w-4" /> Hết hạn thanh toán
-                  </div>
-                )}
-                {(booking.status === "canceled" || booking.status === "cancelled") && (
-                  <div className="py-2.5 px-4 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 text-xs font-semibold flex items-center justify-center gap-1.5 w-full">
-                    <FiX className="h-4 w-4" /> Đơn đã hủy
-                  </div>
-                )}
-              </div>
-            </div>
+              booking={booking}
+              now={now}
+              checkinDeadlineMinutes={checkinDeadlineMinutes}
+              apiLoaded={apiLoaded}
+              paying={payingId === booking.id}
+              onPay={() => void handlePayNow(booking.id, booking.totalAmount)}
+              onCancel={() => setShowCancelModal(booking.id)}
+              onShowQr={() => setShowQrModal(booking)}
+              onServices={() => setServicesBooking(booking)}
+            />
           ))
         )}
       </div>

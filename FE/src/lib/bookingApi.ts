@@ -35,7 +35,7 @@ export interface BookingResponse {
   endAt: string;
   unit: string;
   unitCount: number;
-  status: 'pending_payment' | 'confirmed' | 'checked_in' | 'completed' | 'canceled' | 'expired';
+  status: 'pending_payment' | 'confirmed' | 'checked_in' | 'completed' | 'canceled' | 'expired' | 'no_show';
   subtotalAmount: number;
   discountAmount: number;
   membershipTierCode?: string | null;
@@ -54,6 +54,27 @@ export interface BookingResponse {
   refundStatus?: string;
   policyName?: string;
   cancelledAt?: string;
+  isContract?: boolean;
+  pricePerUnit?: number;
+  taxAmount?: number;
+  serviceFeeAmount?: number;
+  paymentStatus?: string | null;
+  /* Details for the customer's booking list. */
+  workspaceCode?: string | null;
+  workspaceTypeName?: string | null;
+  workspaceCapacity?: number | null;
+  floorName?: string | null;
+  floorNo?: number | null;
+  branchAddress?: string | null;
+  branchCity?: string | null;
+  /** payos | momo | cash | bank_transfer */
+  paidVia?: string | null;
+  paidAt?: string | null;
+  firstCheckinAt?: string | null;
+  lastCheckoutAt?: string | null;
+  checkinCount?: number | null;
+  /** Net reputation points this booking earned (+) or cost (-). */
+  reputationDelta?: number | null;
 }
 
 export interface MomoCreatePaymentResponse {

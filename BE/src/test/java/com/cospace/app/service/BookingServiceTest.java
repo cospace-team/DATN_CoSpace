@@ -88,6 +88,10 @@ class BookingServiceTest {
 
     @Mock
     private ReputationService reputationService;
+    @Mock
+    private com.cospace.app.repository.WorkspaceTypeRepository workspaceTypeRepository;
+    @Mock
+    private com.cospace.app.repository.ReputationEventRepository reputationEventRepository;
 
     @InjectMocks
     private BookingService bookingService;
