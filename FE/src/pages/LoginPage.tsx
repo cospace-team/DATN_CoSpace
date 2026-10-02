@@ -44,7 +44,6 @@ const LoginPage: React.FC = () => {
   const [fullName, setFullName] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [phone, setPhone] = useState("");
-  const [termsAccepted, setTermsAccepted] = useState(false);
 
   const handleGoogleLogin = async () => {
     setErrorMessage(null);
@@ -73,10 +72,6 @@ const LoginPage: React.FC = () => {
     if (password.length < 8) { 
       setErrorMessage("Mật khẩu phải có ít nhất 8 ký tự."); 
       return; 
-    }
-    if (!termsAccepted) {
-      setErrorMessage("Bạn phải đồng ý với Điều khoản và Điều kiện để tiếp tục.");
-      return;
     }
     setErrorMessage(null); 
     setSuccessMessage(null); 
@@ -294,20 +289,6 @@ const LoginPage: React.FC = () => {
                       />
                     </div>
                   </div>
-                </div>
-
-                <div className="flex items-center pt-2">
-                  <input 
-                    className="h-4 w-4 text-foreground border-border/80 rounded focus:ring-slate-900" 
-                    id="terms" 
-                    type="checkbox"
-                    checked={termsAccepted}
-                    onChange={(e) => setTermsAccepted(e.target.checked)}
-                    required 
-                  />
-                  <label className="ml-2 block text-sm text-muted-foreground" htmlFor="terms">
-                    Tôi đồng ý với <a className="text-foreground font-medium hover:underline" href="#">Điều khoản dịch vụ</a>
-                  </label>
                 </div>
 
                 <Button 

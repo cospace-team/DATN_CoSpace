@@ -19,10 +19,8 @@ import {
   FiCreditCard,
   FiSmartphone,
   FiRefreshCw,
-  FiCalendar,
   FiChevronDown,
   FiMonitor,
-  FiPhoneCall,
 } from "react-icons/fi";
 
 interface ServiceCard {
@@ -77,14 +75,16 @@ const serviceFeatures: Record<string, string[]> = {
   ],
 };
 
+// Stock photos, not the branches themselves (branches have no photo field yet).
+// The first three appear nowhere else on the page, so a small network shows no repeats.
 const defaultBranchImages = [
-  "https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&q=80&w=1200",
-  "https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&q=80&w=1200",
-  "https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&q=80&w=1200",
-  "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=1200",
   "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&q=80&w=1200",
   "https://images.unsplash.com/photo-1504384764586-bb4cdc1707b0?auto=format&fit=crop&q=80&w=1200",
   "https://images.unsplash.com/photo-1531973576160-7125cd663d86?auto=format&fit=crop&q=80&w=1200",
+  "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=1200",
+  "https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&q=80&w=1200",
+  "https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&q=80&w=1200",
+  "https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&q=80&w=1200",
   "https://images.unsplash.com/photo-1517502884422-41eaead166d4?auto=format&fit=crop&q=80&w=1200",
 ];
 
@@ -99,8 +99,6 @@ const IMAGES = {
 };
 
 const unitLabel: Record<string, string> = { hour: "giờ", day: "ngày", week: "tuần", month: "tháng" };
-
-const tourTimeSlots = ["09:00 - 10:00", "10:00 - 11:00", "14:00 - 15:00", "16:00 - 17:00"];
 
 const bookingSteps = [
   { icon: FiMapPin, title: "Chọn chi nhánh", text: "Lọc theo thành phố, giờ mở cửa và loại không gian phù hợp." },
@@ -179,13 +177,8 @@ const appear = (delay = 0) => ({
   transition: { duration: 0.4, delay, ease: "easeOut" as const },
 });
 
-const inputClass =
-  "w-full min-h-[48px] bg-background border border-input px-4 py-3 rounded-md text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-primary transition-colors";
-
 const darkInputClass =
   "w-full min-h-[48px] bg-white/5 border border-white/15 px-4 py-3 rounded-md text-base text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary transition-colors";
-
-const labelClass = "block text-sm font-medium text-foreground mb-1.5";
 
 // Short label above a section title.
 const Eyebrow: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -320,23 +313,7 @@ const LandingPage: React.FC = () => {
   const [calcTypeId, setCalcTypeId] = useState("");
   const [calcQty, setCalcQty] = useState("4");
 
-  // Modals state
-  const [isTourModalOpen, setIsTourModalOpen] = useState<boolean>(false);
   const [selectedBranchForDetail, setSelectedBranchForDetail] = useState<BranchCard | null>(null);
-  const [tourForm, setTourForm] = useState({
-    name: user?.fullName || "",
-    email: user?.email || "",
-    phone: "",
-    branchId: "",
-    date: "",
-    time: tourTimeSlots[0],
-  });
-  const [submitted, setSubmitted] = useState<boolean>(false);
-  const tourResetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => () => {
-    if (tourResetTimer.current) clearTimeout(tourResetTimer.current);
-  }, []);
 
   // Dynamic real data logic
   const displayBranches: BranchCard[] = useMemo(() => {
@@ -354,9 +331,9 @@ const LandingPage: React.FC = () => {
         description: `Cơ sở ${b.name} tại ${b.address}${hours ? `, mở cửa ${hours} hằng ngày` : ""}.`,
         hours,
         image: img,
+        // Only what the branch record backs up: amenities live per workspace, not per branch.
         features: [
-          { text: `Vị trí ${b.city || "trung tâm"}` },
-          { text: `Wifi 6 & Lễ tân 24/7` },
+          ...(b.city ? [{ text: `Vị trí ${b.city}` }] : []),
           ...(hours ? [{ text: `Mở cửa ${hours}` }] : []),
           { text: "Sơ đồ chỗ ngồi trực tuyến" },
         ],
@@ -370,9 +347,9 @@ const LandingPage: React.FC = () => {
 
       const image = serviceImages[wt.code] || "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=800";
       const features = serviceFeatures[wt.code] || [
-        "Không gian hiện đại & chuyên nghiệp",
-        "Wifi tốc độ cao 24/7",
-        "Miễn phí trà, cà phê & nước uống",
+        "Chọn chỗ trên sơ đồ tầng",
+        "Thanh toán online qua MoMo hoặc VietQR",
+        "Check-in bằng mã QR tại quầy",
       ];
 
       return {
@@ -394,12 +371,6 @@ const LandingPage: React.FC = () => {
     const pool = hourly.length > 0 ? hourly : workspaceTypes;
     return pool.reduce<StartingPriceResponse | null>((min, wt) => (!min || wt.price < min.price ? wt : min), null);
   }, [workspaceTypes]);
-
-  useEffect(() => {
-    if (displayBranches.length > 0 && !tourForm.branchId) {
-      setTourForm(prev => ({ ...prev, branchId: displayBranches[0].id }));
-    }
-  }, [displayBranches, tourForm.branchId]);
 
   useEffect(() => {
     if (workspaceTypes.length > 0 && !calcTypeId) {
@@ -436,58 +407,6 @@ const LandingPage: React.FC = () => {
       navigate(`/login?redirect=${encodeURIComponent(redirectUrl)}`);
     }
   };
-
-  const openTourModal = (branchId?: string) => {
-    if (branchId) {
-      setTourForm((prev) => ({ ...prev, branchId }));
-    } else if (displayBranches.length > 0) {
-      setTourForm((prev) => ({ ...prev, branchId: displayBranches[0].id }));
-    }
-    setIsTourModalOpen(true);
-  };
-
-  const resetTourForm = () => {
-    setTourForm({
-      name: user?.fullName || "",
-      email: user?.email || "",
-      phone: "",
-      branchId: displayBranches[0]?.id || "",
-      date: "",
-      time: tourTimeSlots[0],
-    });
-  };
-
-  const closeTourModal = () => {
-    if (tourResetTimer.current) clearTimeout(tourResetTimer.current);
-    setIsTourModalOpen(false);
-    if (submitted) {
-      setSubmitted(false);
-      resetTourForm();
-    }
-  };
-
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const rawDigits = e.target.value.replace(/\D/g, "");
-    let formatted = rawDigits;
-    if (rawDigits.length > 4 && rawDigits.length <= 7) {
-      formatted = `${rawDigits.slice(0, 4)} ${rawDigits.slice(4)}`;
-    } else if (rawDigits.length > 7) {
-      formatted = `${rawDigits.slice(0, 4)} ${rawDigits.slice(4, 7)} ${rawDigits.slice(7, 11)}`;
-    }
-    setTourForm((prev) => ({ ...prev, phone: formatted }));
-  };
-
-  const handleTourSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitted(true);
-    tourResetTimer.current = setTimeout(() => {
-      setIsTourModalOpen(false);
-      setSubmitted(false);
-      resetTourForm();
-    }, 4000);
-  };
-
-  const todayIso = new Date().toISOString().slice(0, 10);
 
   const categories: { key: "all" | "office" | "meeting"; label: string }[] = [
     { key: "all", label: "Tất cả" },
@@ -550,21 +469,10 @@ const LandingPage: React.FC = () => {
               Đặt bàn làm việc, phòng họp hay văn phòng riêng theo giờ, ngày hoặc tháng. Chọn chỗ trên sơ đồ,
               thanh toán online và check-in bằng mã QR.
             </p>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Button onClick={() => handleBookingRedirect()} size="lg" className="rounded-sm px-8 group/btn">
-                Đặt chỗ ngay
-                <FiArrowRight className="h-5 w-5 transition-transform group-hover/btn:translate-x-0.5" aria-hidden="true" />
-              </Button>
-              <Button
-                onClick={() => openTourModal()}
-                variant="outline"
-                size="lg"
-                className="rounded-sm px-8 bg-transparent border-white/40 text-white hover:bg-white hover:text-slate-950 hover:border-white"
-              >
-                <FiCalendar className="h-5 w-5" aria-hidden="true" />
-                Đặt lịch tham quan
-              </Button>
-            </div>
+            <Button onClick={() => handleBookingRedirect()} size="lg" className="rounded-sm px-8 group/btn">
+              Đặt chỗ ngay
+              <FiArrowRight className="h-5 w-5 transition-transform group-hover/btn:translate-x-0.5" aria-hidden="true" />
+            </Button>
           </m.div>
         </div>
       </section>
@@ -613,7 +521,7 @@ const LandingPage: React.FC = () => {
             title="Một tài khoản cho mọi chi nhánh"
             description="CoSpace là mạng lưới không gian làm việc chung dành cho freelancer, startup và doanh nghiệp. Mọi thứ từ tìm chỗ, đặt chỗ đến thanh toán đều diễn ra trên một nền tảng."
           />
-          <ul className="grid grid-cols-3 gap-4 my-10">
+          <ul className="grid grid-cols-3 gap-4 mt-10">
             {aboutFeatures.map((f) => (
               <li key={f.label} className="text-center sm:text-left">
                 <f.icon className="w-9 h-9 text-primary mb-3 mx-auto sm:mx-0" aria-hidden="true" />
@@ -621,16 +529,14 @@ const LandingPage: React.FC = () => {
               </li>
             ))}
           </ul>
-          <Button onClick={() => openTourModal()} size="lg" className="rounded-sm px-8 bg-slate-950 text-white hover:bg-primary hover:text-primary-foreground dark:bg-white dark:text-slate-950">
-            Đặt lịch tham quan <FiArrowRight aria-hidden="true" />
-          </Button>
         </m.div>
 
         <m.div {...reveal(0.08)} className="relative flex justify-center">
           <div className="relative w-72 h-72 sm:w-96 sm:h-96">
+            {/* Stock photo: keep alt empty rather than describing it as CoSpace. */}
             <img
               src={withUnsplashSize(IMAGES.about, 768, 768)}
-              alt="Thành viên đang làm việc với laptop tại CoSpace"
+              alt=""
               width={768}
               height={768}
               loading="lazy"
@@ -741,7 +647,7 @@ const LandingPage: React.FC = () => {
           <m.div {...reveal()} className="relative max-w-lg mx-auto lg:mx-0 w-full">
             <img
               src={withUnsplashSize(IMAGES.whyUs, 800, 900)}
-              alt="Nhóm làm việc tại không gian CoSpace"
+              alt=""
               width={800}
               height={900}
               loading="lazy"
@@ -790,7 +696,7 @@ const LandingPage: React.FC = () => {
           <div className="lg:col-span-2 relative min-h-[260px] bg-muted">
             <img
               src={withUnsplashSize(IMAGES.steps, 720, 800)}
-              alt="Nhóm thành viên trao đổi công việc tại CoSpace"
+              alt=""
               width={720}
               height={800}
               loading="lazy"
@@ -991,17 +897,7 @@ const LandingPage: React.FC = () => {
             align="left"
             eyebrow="Câu hỏi thường gặp"
             title="Bạn cần biết thêm?"
-            description="Chưa thấy câu trả lời bạn cần? Gọi cho chúng tôi, đội ngũ CoSpace luôn sẵn sàng hỗ trợ."
           />
-          <a
-            href="tel:19003384"
-            className="inline-flex items-center gap-3 mt-6 font-display font-bold text-2xl text-foreground hover:text-primary transition-colors"
-          >
-            <span className="w-12 h-12 flex items-center justify-center bg-primary text-primary-foreground rounded-full">
-              <FiPhoneCall aria-hidden="true" />
-            </span>
-            1900 3384
-          </a>
         </m.div>
 
         <m.div {...reveal(0.06)} className="lg:col-span-3 space-y-3">
@@ -1045,25 +941,12 @@ const LandingPage: React.FC = () => {
         <div className="absolute inset-0 -z-10 bg-gradient-to-r from-slate-950 via-slate-950/85 to-slate-950/40" />
         <div className="hidden md:block absolute inset-y-0 right-[30%] w-24 bg-primary/80 [clip-path:polygon(60%_0,100%_0,40%_100%,0_100%)] -z-10" aria-hidden="true" />
         <m.div {...reveal()} className="max-w-7xl mx-auto px-4 sm:px-6 py-20 md:py-24">
-          <h2 className="font-display font-bold tracking-tight text-3xl md:text-5xl leading-[1.1] mb-3 max-w-xl text-balance">
-            Cần tư vấn chọn không gian?
+          <h2 className="font-display font-bold tracking-tight text-3xl md:text-5xl leading-[1.1] mb-8 max-w-xl text-balance">
+            Xem chỗ còn trống ở các chi nhánh
           </h2>
-          <p className="font-display font-bold text-2xl md:text-3xl text-primary mb-8">
-            Gọi ngay: <a href="tel:19003384" className="underline-offset-4 hover:underline">1900 3384</a>
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3">
-            <Button onClick={() => openTourModal()} size="lg" className="rounded-sm px-8">
-              <FiCalendar aria-hidden="true" /> Đặt lịch tham quan
-            </Button>
-            <Button
-              onClick={() => handleBookingRedirect()}
-              size="lg"
-              variant="outline"
-              className="rounded-sm px-8 bg-transparent border-white/40 text-white hover:bg-white hover:text-slate-950 hover:border-white"
-            >
-              Đặt chỗ ngay
-            </Button>
-          </div>
+          <Button onClick={() => handleBookingRedirect()} size="lg" className="rounded-sm px-8">
+            Đặt chỗ ngay <FiArrowRight aria-hidden="true" />
+          </Button>
         </m.div>
       </section>
 
@@ -1089,10 +972,6 @@ const LandingPage: React.FC = () => {
             <p className="text-muted-foreground mt-4 leading-relaxed max-w-sm">
               Nền tảng đặt chỗ và quản lý không gian làm việc chung. Đơn giản hóa vận hành, tối ưu trải nghiệm.
             </p>
-            <ul className="mt-6 space-y-2 text-muted-foreground">
-              <li><a className="hover:text-primary transition-colors" href="tel:19003384">1900 3384</a></li>
-              <li><a className="hover:text-primary transition-colors" href="mailto:hello@cospace.vn">hello@cospace.vn</a></li>
-            </ul>
           </div>
           <div className="col-span-2 sm:col-span-1 md:col-span-3">
             <h2 className="font-display font-bold text-foreground mb-4 text-sm">Không gian</h2>
@@ -1110,7 +989,7 @@ const LandingPage: React.FC = () => {
               {displayBranches.slice(0, 4).map(b => (
                 <li key={b.id} className="flex items-center justify-between gap-4 border-b border-border pb-3 last:border-0">
                   <a className="text-muted-foreground hover:text-primary transition-colors truncate" href="#locations">{b.name}</a>
-                  <span className="text-sm font-semibold text-foreground tabular-nums shrink-0">{b.hours ?? "Liên hệ"}</span>
+                  <span className="text-sm font-semibold text-foreground tabular-nums shrink-0">{b.hours ?? "Không cố định"}</span>
                 </li>
               ))}
             </ul>
@@ -1123,109 +1002,6 @@ const LandingPage: React.FC = () => {
       </footer>
 
       {/* ── MODALS ── */}
-      {isTourModalOpen && (
-        <Dialog onClose={closeTourModal} labelledBy="tour-dialog-title" className="max-w-md p-6 sm:p-8 max-h-[90vh] overflow-y-auto">
-          <CloseButton onClick={closeTourModal} className="bg-muted text-muted-foreground hover:text-foreground" />
-          <Eyebrow>Tham quan miễn phí</Eyebrow>
-          <h2 id="tour-dialog-title" className="text-2xl font-display font-bold text-foreground mb-1 pr-12">Đặt lịch tham quan</h2>
-          <p className="text-muted-foreground mb-6">Ghé thăm trực tiếp và trải nghiệm không gian trước khi đặt chỗ.</p>
-
-          {submitted ? (
-            <div className="py-6 text-center" role="status" aria-live="polite">
-              <div className="w-16 h-16 bg-success/10 text-success rounded-full flex items-center justify-center mx-auto mb-5">
-                <FiCheck className="w-8 h-8" aria-hidden="true" />
-              </div>
-              <h3 className="font-display font-bold text-foreground text-xl mb-2">Đã ghi nhận lịch hẹn</h3>
-              <p className="text-muted-foreground mb-6">Nhân viên CoSpace sẽ liên hệ với bạn trong 15 phút tới để xác nhận.</p>
-              <Button onClick={closeTourModal} variant="outline" className="w-full rounded-sm">
-                Đóng
-              </Button>
-            </div>
-          ) : (
-            <form onSubmit={handleTourSubmit} className="space-y-4">
-              <div>
-                <label htmlFor="tour-name" className={labelClass}>Họ và tên <span className="text-destructive" aria-hidden="true">*</span></label>
-                <input
-                  id="tour-name"
-                  type="text"
-                  autoComplete="name"
-                  placeholder="Nguyễn Văn A"
-                  value={tourForm.name}
-                  onChange={(e) => setTourForm({ ...tourForm, name: e.target.value })}
-                  className={inputClass}
-                  required
-                />
-              </div>
-              <div>
-                <label htmlFor="tour-phone" className={labelClass}>Số điện thoại <span className="text-destructive" aria-hidden="true">*</span></label>
-                <input
-                  id="tour-phone"
-                  type="tel"
-                  inputMode="tel"
-                  autoComplete="tel"
-                  placeholder="0912 345 678"
-                  pattern="0\d{3} \d{3} \d{3,4}"
-                  title="Số điện thoại gồm 10–11 chữ số, bắt đầu bằng 0"
-                  value={tourForm.phone}
-                  onChange={handlePhoneChange}
-                  className={`${inputClass} tabular-nums`}
-                  required
-                />
-              </div>
-              <div>
-                <label htmlFor="tour-branch" className={labelClass}>Chi nhánh</label>
-                <div className="relative">
-                  <select
-                    id="tour-branch"
-                    value={tourForm.branchId}
-                    onChange={(e) => setTourForm({ ...tourForm, branchId: e.target.value })}
-                    className={`${inputClass} appearance-none pr-10 cursor-pointer`}
-                  >
-                    {displayBranches.map(b => (
-                      <option key={b.id} value={b.id}>{b.name}</option>
-                    ))}
-                  </select>
-                  <FiChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" aria-hidden="true" />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="tour-date" className={labelClass}>Ngày <span className="text-destructive" aria-hidden="true">*</span></label>
-                  <input
-                    id="tour-date"
-                    type="date"
-                    min={todayIso}
-                    value={tourForm.date}
-                    onChange={(e) => setTourForm({ ...tourForm, date: e.target.value })}
-                    className={inputClass}
-                    required
-                  />
-                </div>
-                <div>
-                  <label htmlFor="tour-time" className={labelClass}>Khung giờ</label>
-                  <div className="relative">
-                    <select
-                      id="tour-time"
-                      value={tourForm.time}
-                      onChange={(e) => setTourForm({ ...tourForm, time: e.target.value })}
-                      className={`${inputClass} appearance-none pr-10 cursor-pointer`}
-                    >
-                      {tourTimeSlots.map((slot) => (
-                        <option key={slot} value={slot}>{slot}</option>
-                      ))}
-                    </select>
-                    <FiChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" aria-hidden="true" />
-                  </div>
-                </div>
-              </div>
-              <Button type="submit" size="lg" className="w-full rounded-sm mt-2">
-                Xác nhận lịch hẹn
-              </Button>
-            </form>
-          )}
-        </Dialog>
-      )}
-
       {selectedBranchForDetail && (
         <Dialog
           onClose={() => setSelectedBranchForDetail(null)}
@@ -1239,7 +1015,7 @@ const LandingPage: React.FC = () => {
           <div className="aspect-[16/7] w-full shrink-0 bg-muted">
             <img
               src={withUnsplashSize(selectedBranchForDetail.image, 1000, 438)}
-              alt={`Không gian chi nhánh ${selectedBranchForDetail.name}`}
+              alt=""
               width={1000}
               height={438}
               className="w-full h-full object-cover"
@@ -1262,23 +1038,13 @@ const LandingPage: React.FC = () => {
                 </li>
               ))}
             </ul>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Button
-                onClick={() => { handleBookingRedirect(selectedBranchForDetail.exploreBranchId); setSelectedBranchForDetail(null); }}
-                size="lg"
-                className="flex-1 rounded-sm"
-              >
-                Xem sơ đồ & đặt chỗ
-              </Button>
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={() => { const id = selectedBranchForDetail.id; setSelectedBranchForDetail(null); openTourModal(id); }}
-                className="flex-1 rounded-sm"
-              >
-                Đặt lịch tham quan
-              </Button>
-            </div>
+            <Button
+              onClick={() => { handleBookingRedirect(selectedBranchForDetail.exploreBranchId); setSelectedBranchForDetail(null); }}
+              size="lg"
+              className="w-full rounded-sm"
+            >
+              Xem sơ đồ & đặt chỗ
+            </Button>
           </div>
         </Dialog>
       )}
