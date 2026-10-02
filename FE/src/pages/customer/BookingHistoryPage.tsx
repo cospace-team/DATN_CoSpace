@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import QRCode from "qrcode";
 import { Link, useLocation } from "react-router-dom";
 import {
   FiCalendar,
@@ -32,6 +33,12 @@ const relativeStart = (ms: number) => {
   return `Bắt đầu sau ${Math.floor(hours / 24)} ngày`;
 };
 
+const TAB_STATUSES: Record<"upcoming" | "past" | "canceled", string[]> = {
+  upcoming: ["pending_payment", "confirmed", "checked_in"],
+  past: ["completed", "checked_out"],
+  canceled: ["canceled", "cancelled", "expired", "no_show"],
+};
+
 const BookingHistoryPage: React.FC = () => {
   const location = useLocation();
   const state = location.state as any;
@@ -46,7 +53,9 @@ const BookingHistoryPage: React.FC = () => {
   const [showCancelModal, setShowCancelModal] = useState<string | null>(null);
   const [showQrModal, setShowQrModal] = useState<any | null>(null);
   const [copiedCode, setCopiedCode] = useState(false);
-  const [downloadingQr, setDownloadingQr] = useState(false);
+  // The check-in QR is drawn here rather than by a third-party QR service: the booking code never
+  // leaves the app, and "Tải ảnh QR" works (the CSP blocks fetching another host's image).
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(
     state?.message || null,
   );
@@ -127,25 +136,23 @@ const BookingHistoryPage: React.FC = () => {
     }
   };
 
-  const handleDownloadQr = async (code: string) => {
-    setDownloadingQr(true);
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=CHECKIN_${code}`;
-    try {
-      const res = await fetch(qrUrl);
-      const blob = await res.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = blobUrl;
-      link.download = `cospace-qr-${code}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(blobUrl);
-    } catch {
-      window.open(qrUrl, "_blank");
-    } finally {
-      setDownloadingQr(false);
-    }
+  const qrCode: string | undefined = showQrModal?.code;
+  useEffect(() => {
+    setQrDataUrl(null);
+    if (!qrCode) return;
+    let active = true;
+    QRCode.toDataURL(`CHECKIN_${qrCode}`, { width: 440, margin: 1 })
+      .then((url) => { if (active) setQrDataUrl(url); })
+      .catch((err) => console.error("Failed to draw check-in QR", err));
+    return () => { active = false; };
+  }, [qrCode]);
+
+  const handleDownloadQr = (code: string) => {
+    if (!qrDataUrl) return;
+    const link = document.createElement("a");
+    link.href = qrDataUrl;
+    link.download = `cospace-qr-${code}.png`;
+    link.click();
   };
 
   const handleCopyCode = async (code: string) => {
@@ -230,15 +237,11 @@ const BookingHistoryPage: React.FC = () => {
     fetchBookings();
   }, [reloadKey]);
 
-  const TAB_STATUSES: Record<"upcoming" | "past" | "canceled", string[]> = {
-    upcoming: ["pending_payment", "confirmed", "checked_in"],
-    past: ["completed", "checked_out"],
-    canceled: ["canceled", "cancelled", "expired", "no_show"],
-  };
   const tabCount = (tab: keyof typeof TAB_STATUSES) =>
     bookings.filter((b) => TAB_STATUSES[tab].includes(b.status)).length;
 
-  const getFilteredBookings = () => {
+  // Memoized: the page re-renders every second while a hold or check-in countdown is running.
+  const filteredBookings = useMemo(() => {
     const q = search.trim().toLowerCase();
     const list = bookings.filter(
       (b) =>
@@ -253,7 +256,7 @@ const BookingHistoryPage: React.FC = () => {
     return list.sort((x, y) =>
       activeTab === "upcoming" ? x.date.getTime() - y.date.getTime() : y.date.getTime() - x.date.getTime(),
     );
-  };
+  }, [bookings, search, activeTab]);
 
   // The next booking to show up for: in use now, or the soonest confirmed one still ahead.
   const nextBooking =
@@ -427,7 +430,7 @@ const BookingHistoryPage: React.FC = () => {
               </div>
             ))}
           </div>
-        ) : getFilteredBookings().length === 0 ? (
+        ) : filteredBookings.length === 0 ? (
           <div className="text-center py-16 border border-dashed border-border rounded-2xl bg-muted/30 p-6">
             <FiCalendar className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
             <p className="font-semibold text-foreground">
@@ -443,7 +446,7 @@ const BookingHistoryPage: React.FC = () => {
             )}
           </div>
         ) : (
-          getFilteredBookings().map((booking) => (
+          filteredBookings.map((booking) => (
             <BookingCard
               key={booking.id}
               booking={booking}
@@ -477,9 +480,10 @@ const BookingHistoryPage: React.FC = () => {
           <div className="w-full max-w-sm rounded-3xl bg-card border border-border shadow-sm p-8 text-center relative">
             <button
               onClick={() => setShowQrModal(null)}
+              aria-label="Đóng mã QR"
               className="absolute -top-4 -right-4 h-12 w-12 rounded-full border border-border bg-slate-900 text-white flex items-center justify-center shadow-sm  transition-transform z-10"
             >
-              <FiX className="h-6 w-6 font-semibold" />
+              <FiX className="h-6 w-6 font-semibold" aria-hidden="true" />
             </button>
 
             <div className="mb-6">
@@ -496,11 +500,17 @@ const BookingHistoryPage: React.FC = () => {
 
             {/* QR Image */}
             <div className="p-4 bg-card rounded-2xl border border-border inline-block shadow-sm mb-4">
-              <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=CHECKIN_${showQrModal.code}`}
-                alt="QR Pass"
-                className="w-48 h-48 mx-auto rounded-lg"
-              />
+              {qrDataUrl ? (
+                <img
+                  src={qrDataUrl}
+                  alt={`Mã QR check-in ${showQrModal.code}`}
+                  width={192}
+                  height={192}
+                  className="w-48 h-48 mx-auto rounded-lg"
+                />
+              ) : (
+                <div className="w-48 h-48 mx-auto rounded-lg bg-muted motion-safe:animate-pulse" aria-hidden="true" />
+              )}
             </div>
 
             {/* Quick Actions: Download & Copy */}
@@ -508,11 +518,11 @@ const BookingHistoryPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => handleDownloadQr(showQrModal.code)}
-                disabled={downloadingQr}
+                disabled={!qrDataUrl}
                 className="btn btn-secondary text-xs py-2 px-3 justify-center border border-border hover:border-primary hover:text-primary transition-colors flex items-center gap-1.5 font-bold"
               >
                 <FiDownload className="h-3.5 w-3.5" />
-                <span>{downloadingQr ? "Đang tải..." : "Tải ảnh QR"}</span>
+                <span>Tải ảnh QR</span>
               </button>
 
               <button

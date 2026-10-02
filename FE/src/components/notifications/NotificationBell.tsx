@@ -49,10 +49,21 @@ export const NotificationBell = React.memo(function NotificationBell() {
     }
   };
 
+  // Poll every 30s while the tab is visible; a background tab skips the request and catches up
+  // as soon as it is shown again.
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30000); // Polling every 30s
-    return () => clearInterval(interval);
+    const interval = setInterval(() => {
+      if (!document.hidden) fetchNotifications();
+    }, 30000);
+    const onVisible = () => {
+      if (!document.hidden) fetchNotifications();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, []);
 
   // Close dropdown on click outside

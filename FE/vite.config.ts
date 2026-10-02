@@ -42,11 +42,16 @@ export default defineConfig(({ mode }) => {
     build: {
       rollupOptions: {
         output: {
-          manualChunks: {
-            'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-            'vendor-icons': ['react-icons'],
-            'vendor-motion': ['framer-motion'],
-            'vendor-supabase': ['@supabase/supabase-js'],
+          // Grouped by package path rather than by entry name: with the name list, react/jsx-runtime
+          // (also imported by framer-motion) ended up inside vendor-motion, so every page preloaded
+          // framer-motion although only the landing page animates with it.
+          manualChunks(id) {
+            if (!id.includes('/node_modules/')) return undefined;
+            if (/\/node_modules\/(react|react-dom|react-router|react-router-dom|scheduler)\//.test(id)) return 'vendor-react';
+            if (id.includes('/node_modules/react-icons/')) return 'vendor-icons';
+            if (id.includes('/node_modules/framer-motion/')) return 'vendor-motion';
+            if (id.includes('/node_modules/@supabase/')) return 'vendor-supabase';
+            return undefined;
           }
         }
       },

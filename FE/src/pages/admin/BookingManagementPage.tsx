@@ -5,7 +5,7 @@ import { customerSpaceApi, type BranchResponse } from '../../lib/spaceApi';
 import { staffBookingActionsApi } from '../../api/staffBookingActionsApi';
 import type { BookingResponse } from '../../lib/bookingApi';
 import { StaffBookingActionModal } from '../../components/staff/StaffBookingActionModal';
-import { formatVND } from '../../utils/formatters';
+import { formatVND, toDateInputValue } from '../../utils/formatters';
 
 const STATUS: Record<string, { label: string; cls: string }> = {
   PENDING_PAYMENT: { label: 'Chờ thanh toán', cls: 'bg-amber-500/10 text-amber-700 dark:text-amber-300' },
@@ -23,7 +23,6 @@ const FILTERS = [
 ] as const;
 
 const startOfDay = (d: Date) => { const r = new Date(d); r.setHours(0, 0, 0, 0); return r; };
-const toInputDate = (d: Date) => new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
 const hm = (iso: string) => new Date(iso).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
 const dm = (iso: string) => {
   const d = new Date(iso);
@@ -105,7 +104,7 @@ const BookingManagementPage: React.FC<{ scope: 'admin' | 'branch' }> = ({ scope 
             <FiCalendar className="h-4 w-4 text-muted-foreground" />
             <input
               type="date"
-              value={toInputDate(day)}
+              value={toDateInputValue(day)}
               onChange={(e) => { const d = new Date(e.target.value + 'T00:00:00'); if (!isNaN(d.getTime())) setDay(d); }}
               className="input-field text-sm !w-auto"
               aria-label="Ngày"

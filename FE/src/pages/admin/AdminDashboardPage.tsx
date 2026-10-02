@@ -101,15 +101,15 @@ const AdminDashboardPage: React.FC = () => {
         const { dateFrom, dateTo } = getDateRange();
         const effectiveGroupBy = granularity === 'auto' ? undefined : granularity;
 
-        // 1. Fetch system-wide overview report
-        const overview = await staffApi.getReportOverview(undefined, dateFrom, dateTo, effectiveGroupBy);
-        setReport(overview);
-
-        // 2. Fetch branches list to query per-branch metrics
+        // System-wide overview and the branch list don't depend on each other: request both at once.
         const token = localStorage.getItem('workhub_access_token');
-        const branchRes = await fetch(`${API_BASE_URL}/api/admin/branches`, {
-          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-        });
+        const [overview, branchRes] = await Promise.all([
+          staffApi.getReportOverview(undefined, dateFrom, dateTo, effectiveGroupBy),
+          fetch(`${API_BASE_URL}/api/admin/branches`, {
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+          }),
+        ]);
+        setReport(overview);
 
         if (branchRes.ok) {
           const branchList: Array<{ id: string; name: string; code: string; status: string }> = await branchRes.json();

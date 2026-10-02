@@ -1,6 +1,7 @@
 import React from 'react';
 import { FiCalendar, FiClock, FiMapPin, FiMonitor, FiSearch, FiUsers, FiLayers } from 'react-icons/fi';
 import { QuantityStepper } from '../../../components/ui/QuantityStepper';
+import { toDateInputValue } from '../../../utils/formatters';
 
 /** What the customer is looking for; the results only show spaces that match it. */
 export interface ExploreFilter {
@@ -36,10 +37,6 @@ interface ExploreFiltersProps {
 }
 
 const pad = (h: number) => `${String(h).padStart(2, '0')}:00`;
-const toInputDate = (d: Date) => {
-  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60_000);
-  return local.toISOString().slice(0, 10);
-};
 const startOfDay = (d: Date) => {
   const r = new Date(d);
   r.setHours(0, 0, 0, 0);
@@ -116,8 +113,8 @@ export const ExploreFilters: React.FC<ExploreFiltersProps> = ({
           <input
             id="f-date"
             type="date"
-            value={toInputDate(value.date)}
-            min={toInputDate(today)}
+            value={toDateInputValue(value.date)}
+            min={toDateInputValue(today)}
             onChange={(e) => {
               const d = new Date(e.target.value + 'T00:00:00');
               if (!isNaN(d.getTime())) set({ date: d });

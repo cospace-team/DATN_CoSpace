@@ -11,11 +11,9 @@ import {
 } from 'react-icons/fi';
 import { useToast } from '../../components/Toast';
 import VietQrImage from '../../components/VietQrImage';
+import { HoldCountdown } from '../../components/HoldCountdown';
 import { API_BASE_URL } from '../../config/api';
-
-const formatVND = (amount: number) => {
-  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
-};
+import { formatVND } from '../../utils/formatters';
 
 
 const VietQrCheckoutPage: React.FC = () => {
@@ -36,8 +34,8 @@ const VietQrCheckoutPage: React.FC = () => {
   // VietQR standard dynamic image URL
   const qrImageUrl = `https://img.vietqr.io/image/${bankBin}-${accountNumber}-compact2.png?amount=${amount}&addInfo=${encodeURIComponent(description)}&accountName=${encodeURIComponent(accountName)}`;
 
-  // 15-Minute Countdown Timer
-  const [timeLeft, setTimeLeft] = useState(15 * 60);
+  // 15-minute hold, counted from when this page opened (ticks inside <HoldCountdown>).
+  const [holdDeadlineMs] = useState(() => Date.now() + 15 * 60_000);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [isPaidSuccess, setIsPaidSuccess] = useState(false);
   const [paymentStep, setPaymentStep] = useState<'WAITING' | 'DETECTING' | 'CONFIRMED'>('WAITING');
@@ -131,15 +129,6 @@ const VietQrCheckoutPage: React.FC = () => {
     return () => clearInterval(pollInterval);
   }, [orderCode, isPaidSuccess, handlePaymentConfirmed]);
 
-  // Countdown timer effect
-  useEffect(() => {
-    if (timeLeft <= 0) return;
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => prev - 1);
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [timeLeft]);
-
   // Secret Demo Hotkey: F2 or Ctrl+Shift+P for keyboard convenience
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -151,12 +140,6 @@ const VietQrCheckoutPage: React.FC = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleTriggerPayment]);
-
-  const formatCountdown = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-  };
 
   const handleCopy = (text: string, fieldName: string) => {
     navigator.clipboard.writeText(text);
@@ -203,12 +186,18 @@ const VietQrCheckoutPage: React.FC = () => {
         </button>
 
         <div className="flex items-center gap-3">
-          <div className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-sm font-semibold font-mono border border-border shadow-sm transition-all ${
-            timeLeft < 180 ? 'bg-rose-500 text-white animate-pulse' : 'bg-card text-foreground'
-          }`}>
-            <FiClock className="h-4 w-4 text-emerald-500" />
-            <span>Thời gian giữ mã: {formatCountdown(timeLeft)}</span>
-          </div>
+          <HoldCountdown
+            deadlineMs={holdDeadlineMs}
+            className="flex items-center gap-2 px-4 py-2 rounded-2xl text-sm font-semibold font-mono tabular-nums border border-border shadow-sm transition-colors bg-card text-foreground"
+            urgentClassName="flex items-center gap-2 px-4 py-2 rounded-2xl text-sm font-semibold font-mono tabular-nums border border-border shadow-sm transition-colors bg-rose-500 text-white motion-safe:animate-pulse"
+          >
+            {(time) => (
+              <>
+                <FiClock className="h-4 w-4 text-emerald-500" aria-hidden="true" />
+                <span>Thời gian giữ mã: {time}</span>
+              </>
+            )}
+          </HoldCountdown>
 
           <button
             onClick={handleCancel}

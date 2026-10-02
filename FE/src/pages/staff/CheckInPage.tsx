@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, Suspense } from 'react';
 import { 
   FiHash, FiCheckCircle, FiAlertCircle, FiLogOut, FiClock, 
   FiInbox, FiSearch, FiUser, FiMapPin, FiCalendar, FiDollarSign, 
@@ -10,7 +10,6 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { useLocation } from 'react-router-dom';
 import { staffApi, BookingWithDetailsDto, BranchTodayBookingDto } from '../../api/staffApi';
 import { useAuth } from '../../context/AuthContext';
-import QrScannerModal from '../../components/QrScannerModal';
 import BookingTabPanel from '../../components/staff/BookingTabPanel';
 import ExtendBookingPanel from '../../components/ExtendBookingPanel';
 import type { BookingTabDto } from '../../api/addonApi';
@@ -21,6 +20,9 @@ import { CustomerReputationModal } from '../../components/reputation/CustomerRep
 import { StaffBookingActionModal } from '../../components/staff/StaffBookingActionModal';
 
 import { BookingPackageDisplay, getBookingPackageDisplay } from '../../utils/bookingPackage';
+
+// html5-qrcode is ~300 kB: load the scanner only when the receptionist opens it.
+const QrScannerModal = React.lazy(() => import('../../components/QrScannerModal'));
 
 export type { BookingPackageDisplay };
 export { getBookingPackageDisplay };
@@ -943,15 +945,19 @@ const CheckInPage: React.FC = () => {
       )}
 
       {/* QR Scanner Modal */}
-      <QrScannerModal
-        isOpen={showQrScanner}
-        onClose={() => setShowQrScanner(false)}
-        onScanSuccess={(scannedCode) => {
-          setShowQrScanner(false);
-          setCode(scannedCode);
-          handleSearchTicket(scannedCode);
-        }}
-      />
+      {showQrScanner && (
+        <Suspense fallback={null}>
+          <QrScannerModal
+            isOpen
+            onClose={() => setShowQrScanner(false)}
+            onScanSuccess={(scannedCode) => {
+              setShowQrScanner(false);
+              setCode(scannedCode);
+              handleSearchTicket(scannedCode);
+            }}
+          />
+        </Suspense>
+      )}
     </div>
   );
 };

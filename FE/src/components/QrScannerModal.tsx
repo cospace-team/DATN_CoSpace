@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Html5Qrcode, Html5QrcodeScannerState } from 'html5-qrcode';
+import { useStableCallback } from '../hooks/useStableCallback';
 import { 
   FiCamera, FiX, FiZap, FiAlertCircle, 
   FiUploadCloud, FiClipboard, FiImage, FiArrowRight, FiCheckCircle
@@ -36,8 +37,11 @@ const parseQrData = (raw: string): string | null => {
 const QrScannerModal: React.FC<QrScannerModalProps> = ({
   isOpen,
   onClose,
-  onScanSuccess,
+  onScanSuccess: onScanSuccessProp,
 }) => {
+  // The parent passes a new arrow on every render (CheckInPage re-renders on its clock tick and
+  // data refresh); depending on it directly restarted the camera each time. Keep one identity.
+  const onScanSuccess = useStableCallback(onScanSuccessProp);
   const [activeTab, setActiveTab] = useState<'camera' | 'upload'>('upload'); // Default to upload/paste for smooth desktop demo
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);

@@ -14,6 +14,7 @@ import { describePromotion, promotionApi, reputationApi, type BookingQuoteDto, t
 import { resolveBranchId } from '../../data/branchAliases';
 import { QuantityStepper } from '../../components/ui/QuantityStepper';
 import { ServiceIcon } from '../../components/ui/ServiceIcon';
+import { HoldCountdown } from '../../components/HoldCountdown';
 
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -100,7 +101,10 @@ const BookingCheckoutPage: React.FC = () => {
   // will last and nothing counts down (a client-only countdown used to reach 00:00 while the guest
   // was still reading the page and then disabled "Thanh toán ngay" for good). Once the booking
   // exists the countdown follows activeBooking.paymentDeadlineAt, the deadline the backend enforces.
-  const [timeLeft, setTimeLeft] = useState(15 * 60);
+  // The ticking itself lives in <HoldCountdown> so this page doesn't re-render every second.
+  const holdDeadlineMs: number | null = activeBooking?.paymentDeadlineAt
+    ? new Date(activeBooking.paymentDeadlineAt).getTime()
+    : null;
 
   // Server-side price quote: applies the membership-tier discount and the promotion code, so the
   // invoice shows exactly what createBooking will charge.
@@ -235,32 +239,6 @@ const BookingCheckoutPage: React.FC = () => {
   const displayBasePrice = quote ? quote.pricePerUnit : basePrice;
   const addonAmount = quote ? quote.addonAmount : addonTotal;
   const grandTotal = quote ? quote.totalAmount : total;
-
-  useEffect(() => {
-    if (!activeBooking?.paymentDeadlineAt) {
-      setTimeLeft(15 * 60);
-      return;
-    }
-    const deadlineMs = new Date(activeBooking.paymentDeadlineAt).getTime();
-
-    const tick = () => {
-      const remaining = Math.max(0, Math.round((deadlineMs - Date.now()) / 1000));
-      setTimeLeft(remaining);
-      if (remaining <= 0 && activeBooking) {
-        setHoldExpired(true);
-      }
-    };
-
-    tick();
-    const timer = setInterval(tick, 1000);
-    return () => clearInterval(timer);
-  }, [activeBooking]);
-
-  const formatCountdown = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-  };
 
   // Once the server-side hold actually expires, the backend's BookingExpiryScheduler releases the
   // workspace within ~60s — send the customer back to Explore instead of leaving them on a stale
@@ -431,12 +409,19 @@ const BookingCheckoutPage: React.FC = () => {
         </button>
 
         {/* Live Countdown Badge */}
-        <div className={`flex items-center gap-2 px-4 py-2 rounded-3xl text-sm font-semibold font-mono  border border-border shadow-sm ${
-          timeLeft < 180 ? 'bg-rose-500 text-white animate-pulse border-rose-600' : 'bg-muted text-foreground'
-        }`}>
-          <FiClock className="h-5 w-5" />
-          <span>Giữ chỗ: {formatCountdown(timeLeft)}</span>
-        </div>
+        <HoldCountdown
+          deadlineMs={holdDeadlineMs}
+          onExpire={() => setHoldExpired(true)}
+          className="flex items-center gap-2 px-4 py-2 rounded-3xl text-sm font-semibold font-mono tabular-nums border border-border shadow-sm bg-muted text-foreground"
+          urgentClassName="flex items-center gap-2 px-4 py-2 rounded-3xl text-sm font-semibold font-mono tabular-nums border shadow-sm bg-rose-500 text-white motion-safe:animate-pulse border-rose-600"
+        >
+          {(time) => (
+            <>
+              <FiClock className="h-5 w-5" aria-hidden="true" />
+              <span>Giữ chỗ: {time}</span>
+            </>
+          )}
+        </HoldCountdown>
       </div>
 
       {/* Header Banner */}
@@ -835,9 +820,9 @@ const BookingCheckoutPage: React.FC = () => {
               )}
               <button 
                 onClick={handleCreateBooking} 
-                disabled={isProcessing || timeLeft <= 0 || (!activeBooking && !quote)}
+                disabled={isProcessing || holdExpired || (!activeBooking && !quote)}
                 className={`w-full py-5 text-lg font-semibold tracking-tight border border-border rounded-3xl shadow-sm hover:shadow-sm transition-all flex justify-center items-center gap-3 ${
-                  isProcessing || timeLeft <= 0 || (!activeBooking && !quote) ? 'bg-gray-600 text-white opacity-50 cursor-not-allowed' : 'bg-[#A50064] text-white hover:bg-[#8A0053]'
+                  isProcessing || holdExpired || (!activeBooking && !quote) ? 'bg-gray-600 text-white opacity-50 cursor-not-allowed' : 'bg-[#A50064] text-white hover:bg-[#8A0053]'
                 }`}
               >
                 {isProcessing ? (
