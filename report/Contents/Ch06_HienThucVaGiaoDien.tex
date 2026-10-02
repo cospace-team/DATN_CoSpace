@@ -401,7 +401,7 @@ Kỹ thuật Docker Multi-stage giúp giảm dung lượng hình ảnh từ \tex
 \subsection{Giao diện Trang chủ và Xác thực định danh tập trung}
 
 \noindent\textbf{1. Trang chủ đón tiếp (Landing Page):}\\
-Trang chủ CoSpace được thiết kế theo phong cách hiện đại với gam màu tối (Dark Theme) sang trọng, kết hợp bố cục Bento Grid và các khối thẻ nổi bật (Glassmorphism). Trang đóng vai trò giới thiệu toàn bộ giá trị cốt lõi của nền tảng đến khách hàng vãng lai thông qua 5 phân đoạn trải nghiệm liền mạch:
+Trang chủ CoSpace giới thiệu nền tảng đến khách hàng vãng lai qua bảy phân đoạn, mỗi phân đoạn đảm nhận một nội dung riêng để không lặp lại thông tin. Phân đoạn mở đầu dùng nền tối, các phân đoạn còn lại dùng nền sáng với một màu nhấn xanh dương thống nhất; mọi nút đặt chỗ trên trang dùng chung nhãn \textit{Đặt chỗ ngay}. Dữ liệu chi nhánh và bảng giá được lấy trực tiếp từ hệ thống:
 
 \begin{figure}[H]
   \centering
@@ -412,34 +412,35 @@ Trang chủ CoSpace được thiết kế theo phong cách hiện đại với g
   \end{subfigure}\hfill
   \begin{subfigure}[b]{0.49\textwidth}
     \includegraphics[width=\linewidth,keepaspectratio]{ui-01-landing-intro.png}
-    \caption{Giới thiệu tiện ích không gian}
+    \caption{Danh sách chi nhánh dạng Bento Grid}
     \label{fig:landing_intro}
   \end{subfigure}\\[0.3cm]
   \begin{subfigure}[b]{0.49\textwidth}
     \includegraphics[width=\linewidth,keepaspectratio]{ui-01-landing-features.png}
-    \caption{Giá trị vận hành nổi bật}
+    \caption{Quy trình đặt chỗ}
     \label{fig:landing_features}
   \end{subfigure}\hfill
   \begin{subfigure}[b]{0.49\textwidth}
     \includegraphics[width=\linewidth,keepaspectratio]{ui-01-landing-steps.png}
-    \caption{Quy trình 4 bước từ tìm chỗ đến Check-in}
+    \caption{Mạng lưới thành viên}
     \label{fig:landing_steps}
   \end{subfigure}\\[0.3cm]
   \begin{subfigure}[b]{0.72\textwidth}
     \includegraphics[width=\linewidth,keepaspectratio]{ui-01-landing-cta.png}
-    \caption{Khối kêu gọi hành động (Call to Action) và Chân trang}
+    \caption{Bảng giá và ước tính chi phí}
     \label{fig:landing_cta}
   \end{subfigure}
-  \caption{Giao diện Trang chủ đón tiếp (Landing Page) với cấu trúc Bento UI hiện đại}
+  \caption{Giao diện Trang chủ đón tiếp (Landing Page)}
   \label{fig:ui-landing-page}
 \end{figure}
 
 \begin{itemize}
-    \item \textbf{Khối chào đón (Hero Banner -- Hình~\ref{fig:landing_hero}):} Nổi bật với thông điệp \textit{``Làm việc đúng chỗ, đúng lúc''}, tích hợp nút điều hướng chính \textit{Đặt chỗ ngay} (dẫn thẳng tới bản đồ số).
-    \item \textbf{Giới thiệu mô hình CoSpace (Hình~\ref{fig:landing_intro}):} Nhấn mạnh 3 trụ cột cơ sở hạ tầng: Internet cáp quang tốc độ cao chuyên dụng, hệ thống phòng họp tiêu chuẩn hội nghị và mạng lưới đối tác nghề nghiệp.
-    \item \textbf{Tính năng vượt trội (Hình~\ref{fig:landing_features}):} Giới thiệu 4 tính năng cốt lõi: Sơ đồ mặt bằng Real-time cập nhật trạng thái từng phút, thanh toán 1 chạm qua VietQR/MoMo, check-in không chạm bằng mã QR và đối soát hoàn tiền tự động theo chính sách.
-    \item \textbf{Quy trình trải nghiệm 4 bước (Hình~\ref{fig:landing_steps}):} Trực quan hóa hành trình khách hàng từ bước chọn chi nhánh, chọn chỗ ngồi trên sơ đồ, thanh toán trực tuyến trong 15 phút đến lúc quét mã tại quầy lễ tân để nhận bàn.
-    \item \textbf{Khối kêu gọi hành động \& Chân trang (CTA -- Hình~\ref{fig:landing_cta}):} Phân đoạn chuyển đổi cuối trang thúc đẩy người dùng đăng ký tài khoản trải nghiệm, đồng thời cung cấp đầy đủ liên kết hỗ trợ, chính sách vận hành và thông tin mạng lưới chi nhánh.
+    \item \textbf{Khối chào đón (Hero Banner -- Hình~\ref{fig:landing_hero}):} Thông điệp \textit{``Làm việc đúng chỗ, đúng lúc''}, số chi nhánh đang mở cửa và nút \textit{Đặt chỗ ngay} dẫn tới trang khám phá không gian.
+    \item \textbf{Danh sách chi nhánh (Hình~\ref{fig:landing_intro}):} Các chi nhánh đang hoạt động hiển thị dạng Bento Grid kèm khu vực và giờ mở cửa; chọn một chi nhánh để xem chi tiết và chuyển tới sơ đồ chỗ ngồi của chi nhánh đó.
+    \item \textbf{Quy trình đặt chỗ (Hình~\ref{fig:landing_features}):} Bốn bước theo đúng luồng nghiệp vụ: chọn chỗ trên sơ đồ tầng, thanh toán qua MoMo hoặc VietQR với thời gian giữ chỗ 15 phút, check-in bằng mã QR tại quầy lễ tân, và gia hạn hoặc hủy đơn theo chính sách của chi nhánh.
+    \item \textbf{Mạng lưới thành viên (Hình~\ref{fig:landing_steps}):} Giới thiệu phân hệ kết nối: gợi ý thành viên có kỹ năng chung kèm mức độ phù hợp, bảng tin cộng đồng (chia sẻ, hỏi đáp, tìm cộng sự, sự kiện) và cơ chế chỉ hiển thị thông tin liên hệ khi hai bên đã đồng ý kết nối.
+    \item \textbf{Bảng giá và ước tính chi phí (Hình~\ref{fig:landing_cta}):} Giá khởi điểm của từng loại không gian, lọc theo nhóm khu làm việc hoặc phòng họp, kèm công cụ ước tính chi phí theo số giờ, ngày, tuần hoặc tháng.
+    \item \textbf{Câu hỏi thường gặp và chân trang:} Giải đáp về thời hạn thuê, chính sách hủy, thời gian giữ chỗ và dịch vụ gọi thêm; cuối trang là nút \textit{Đặt chỗ ngay} và chân trang liệt kê các loại không gian cùng giờ mở cửa của từng chi nhánh.
 \end{itemize}
 
 \noindent\textbf{2. Giao diện Xác thực định danh tập trung (Login Portal):}\\

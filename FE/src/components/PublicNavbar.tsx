@@ -141,7 +141,7 @@ const PublicNavbar: React.FC = () => {
                 onClick={handleDashboard}
                 className="rounded-full font-medium px-5 py-2"
               >
-                Đặt chỗ
+                Đặt chỗ ngay
               </Button>
             </>
           )}
@@ -201,7 +201,7 @@ const PublicNavbar: React.FC = () => {
                   <Button variant="outline" className="w-full rounded-full py-5 border-border text-foreground font-medium">Đăng nhập</Button>
                 </Link>
                 <Button onClick={handleDashboard} className="flex-1 rounded-full py-5 font-medium">
-                  Đặt chỗ
+                  Đặt chỗ ngay
                 </Button>
               </div>
             )}

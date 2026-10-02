@@ -29,7 +29,7 @@ const LoginPage: React.FC = () => {
 
   useSEO({
     title: view === "login" ? "Đăng Nhập" : "Đăng ký tài khoản",
-    description: "Đăng nhập tài khoản CoSpace để trải nghiệm hệ sinh thái không gian làm việc chuyên nghiệp, đặt chỗ tiện lợi.",
+    description: "Đăng nhập hoặc tạo tài khoản CoSpace để đặt chỗ, thanh toán và theo dõi đơn của bạn.",
   });
   const [isSubmittingGoogle, setIsSubmittingGoogle] = useState(false);
   const [isSubmittingEmail, setIsSubmittingEmail] = useState(false);
@@ -188,7 +188,7 @@ const LoginPage: React.FC = () => {
             {isRegisterView ? (
               <>
                 <h2 className="text-3xl font-semibold tracking-tight text-foreground">Tạo tài khoản</h2>
-                <p className="text-muted-foreground">Bắt đầu hành trình làm việc chung của bạn ngay hôm nay.</p>
+                <p className="text-muted-foreground">Đăng ký bằng email hoặc tài khoản Google.</p>
               </>
             ) : (
               <>
