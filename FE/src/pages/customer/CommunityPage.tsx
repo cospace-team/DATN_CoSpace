@@ -436,7 +436,7 @@ const CommunityPage: React.FC = () => {
         <aside className="space-y-4 lg:sticky lg:top-24">
           <section className="bg-card rounded-3xl border border-border p-5 shadow-sm">
             <div className="flex items-center gap-2.5 mb-4">
-              <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+              <div className="p-2 rounded-xl bg-primary/10 text-primary">
                 <FiUsers className="h-4 w-4" />
               </div>
               <div>
@@ -473,7 +473,7 @@ const CommunityPage: React.FC = () => {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2">
                           <p className="text-xs font-bold text-foreground truncate">{p.name}</p>
-                          <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 shrink-0">
+                          <span className="text-[10px] font-bold text-primary shrink-0">
                             {p.matchScore}%
                           </span>
                         </div>

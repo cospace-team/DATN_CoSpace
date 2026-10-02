@@ -118,7 +118,7 @@ const MemberProfileModal: React.FC<Props> = ({ member, onClose, onChanged }) => 
         aria-modal="true"
         aria-label={`Hồ sơ ${name}`}
       >
-        <div className="h-24 bg-gradient-to-r from-indigo-600 to-purple-600 relative">
+        <div className="h-24 bg-primary relative">
           <button
             onClick={onClose}
             className="absolute top-4 right-4 h-9 w-9 rounded-full bg-black/30 hover:bg-black/50 text-white flex items-center justify-center cursor-pointer"
@@ -133,7 +133,7 @@ const MemberProfileModal: React.FC<Props> = ({ member, onClose, onChanged }) => 
             <Avatar src={profile?.avatarUrl || member.avatar} name={name} />
             <div className="flex flex-col items-end gap-1">
               {typeof member.matchScore === 'number' && (
-                <span className="px-3 py-1 rounded-full text-xs font-bold bg-indigo-500 text-white shadow-sm">
+                <span className="px-3 py-1 rounded-full text-xs font-bold bg-primary text-primary-foreground shadow-sm">
                   {member.matchScore}% phù hợp
                 </span>
               )}
