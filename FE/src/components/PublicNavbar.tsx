@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { Button } from "./ui/button";
+import { Button, buttonVariants } from "./ui/button";
 import { FiMenu, FiX, FiLogOut } from "react-icons/fi";
 import { Logo } from "./ui/Logo";
 
@@ -20,7 +20,8 @@ const PublicNavbar: React.FC = () => {
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener("scroll", onScroll);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
@@ -96,7 +97,7 @@ const PublicNavbar: React.FC = () => {
               to={link.to}
               onClick={(e) => handleNavClick(e, link.to)}
               className={`
-                px-4 py-2 text-sm font-medium rounded-sm transition-all duration-200
+                px-4 py-2 text-sm font-medium rounded-sm transition-colors duration-200
                 ${isActive(link.to)
                   ? "bg-muted text-foreground"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
@@ -128,7 +129,7 @@ const PublicNavbar: React.FC = () => {
                 className="rounded-sm text-muted-foreground hover:text-destructive hover:bg-destructive/10 gap-1.5 px-3 py-2 text-sm"
                 title="Đăng xuất"
               >
-                <FiLogOut className="h-4 w-4" />
+                <FiLogOut className="h-4 w-4" aria-hidden="true" />
                 <span>Đăng xuất</span>
               </Button>
             </>
@@ -195,15 +196,19 @@ const PublicNavbar: React.FC = () => {
                     onClick={() => void logout()}
                     className="rounded-sm py-5 px-4 text-destructive border-destructive/30 hover:bg-destructive/10"
                     title="Đăng xuất"
+                    aria-label="Đăng xuất"
                   >
-                    <FiLogOut className="h-5 w-5" />
+                    <FiLogOut className="h-5 w-5" aria-hidden="true" />
                   </Button>
                 </div>
               </>
             ) : (
               <div className="flex gap-3">
-                <Link to="/login" className="flex-1">
-                  <Button variant="outline" className="w-full rounded-sm py-5 border-border text-foreground font-medium">Đăng nhập</Button>
+                <Link
+                  to="/login"
+                  className={buttonVariants({ variant: "outline", className: "flex-1 rounded-sm py-5 border-border text-foreground font-medium" })}
+                >
+                  Đăng nhập
                 </Link>
                 <Button onClick={handleDashboard} className="flex-1 rounded-sm py-5 font-medium">
                   Đặt chỗ ngay

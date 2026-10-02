@@ -219,6 +219,13 @@
   outline-offset: 2px;
 }
 
+/* No 300 ms double-tap-zoom wait on controls, and no grey flash on tap (hover/active states
+   already give feedback). */
+a, button, input, select, textarea, label, summary, [role="button"], [role="tab"] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
 /* ══════════════════════════════════════════════════════════════
    SKIP-TO-CONTENT (a11y)
    ══════════════════════════════════════════════════════════════ */
@@ -262,6 +269,21 @@
 @keyframes fadeScaleIn {
   from { opacity: 0; transform: scale(0.95); }
   to { opacity: 1; transform: scale(1); }
+}
+
+/* Reduced motion: stop decorative animation and transitions app-wide (Tailwind's animate-pulse,
+   animate-float, slide/scale entrances…). Spinners keep turning: they report progress. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-spin {
+    animation-duration: 1s !important;
+    animation-iteration-count: infinite !important;
+  }
 }
 
 /* ── Animation classes (motion-safe) ── */
@@ -337,6 +359,7 @@
   transition: color 150ms ease, transform 150ms ease;
   border: none;
   background: none;
+  text-decoration: none;
   cursor: pointer;
   min-width: 56px;
   position: relative;
@@ -376,6 +399,7 @@
   z-index: 51;
   max-height: 85vh;
   overflow-y: auto;
+  overscroll-behavior: contain;
   background: hsl(var(--card));
   border-top-left-radius: var(--radius-xl);
   border-top-right-radius: var(--radius-xl);
@@ -485,7 +509,7 @@
   border-radius: var(--radius);
   border: none;
   cursor: pointer;
-  transition: all 150ms ease;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, opacity 150ms ease, filter 150ms ease, box-shadow 150ms ease;
   white-space: nowrap;
 }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -511,7 +535,7 @@
   color: hsl(var(--sidebar-foreground));
   border-radius: 10px;
   cursor: pointer;
-  transition: all 180ms ease;
+  transition: background-color 180ms ease, color 180ms ease, box-shadow 180ms ease;
   text-decoration: none;
   position: relative;
 }

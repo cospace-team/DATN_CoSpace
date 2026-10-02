@@ -225,7 +225,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
             value={checkoutNote}
             onChange={e => setCheckoutNote(e.target.value)}
             rows={2}
-            placeholder="Ví dụ: Khách trả trễ 15p, bàn giao thiết bị đầy đủ, đã thu phụ phí..."
+            placeholder="Ví dụ: Khách trả trễ 15p, bàn giao thiết bị đầy đủ, đã thu phụ phí…"
             className="input-field text-xs resize-none w-full !h-auto py-2.5"
           />
         </div>

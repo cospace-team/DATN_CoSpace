@@ -792,7 +792,7 @@ const LandingPage: React.FC = () => {
                   window.history.pushState(null, "", window.location.pathname);
                 }
               }}
-              className="inline-flex items-center group cursor-pointer text-left focus:outline-none hover:opacity-90 transition-opacity"
+              className="inline-flex items-center group cursor-pointer text-left hover:opacity-90 transition-opacity"
               title="Cuộn về đầu trang CoSpace"
             >
               <Logo iconClassName="h-8 w-8" textClassName="text-2xl font-display font-bold tracking-tight text-foreground" />

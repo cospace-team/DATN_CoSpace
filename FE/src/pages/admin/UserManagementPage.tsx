@@ -32,8 +32,9 @@ const ActionDropdown: React.FC<{ children: React.ReactNode }> = ({ children }) =
         onClick={() => setOpen(!open)}
         className="btn btn-ghost btn-sm !min-h-[32px] !p-1.5"
         title="Thao tác"
+        aria-label="Thao tác"
       >
-        <FiMoreVertical className="h-4 w-4" />
+        <FiMoreVertical className="h-4 w-4" aria-hidden="true" />
       </button>
       {open && (
         <div className="absolute right-0 top-full mt-1 z-30 w-52 bg-card rounded-2xl border border-border shadow-xl py-1.5 animate-fade-in">
@@ -101,7 +102,7 @@ const EditRoleModal: React.FC<RoleModalProps> = ({ user, branches, onClose, onSa
             <h3 className="text-lg font-bold font-heading text-foreground">Phân quyền & Chi nhánh</h3>
             <p className="text-xs text-muted-foreground mt-0.5">{user.fullName} ({user.email})</p>
           </div>
-          <button onClick={onClose} className="btn btn-ghost btn-sm !p-1.5"><FiX className="h-4 w-4" /></button>
+          <button onClick={onClose} className="btn btn-ghost btn-sm !p-1.5" aria-label="Đóng"><FiX className="h-4 w-4" aria-hidden="true" /></button>
         </div>
 
         {error && (
@@ -160,7 +161,7 @@ const EditRoleModal: React.FC<RoleModalProps> = ({ user, branches, onClose, onSa
               Hủy
             </button>
             <button type="submit" disabled={isSubmitting} className="btn btn-primary btn-sm">
-              {isSubmitting ? 'Đang lưu...' : 'Cập nhật'}
+              {isSubmitting ? 'Đang lưu…' : 'Cập nhật'}
             </button>
           </div>
         </form>
@@ -328,7 +329,7 @@ const UserManagementPage: React.FC = () => {
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Tìm theo tên, email hoặc số điện thoại..."
+              placeholder="Tìm theo tên, email hoặc số điện thoại…"
               className="input-field !pl-10 !min-h-[40px] w-full"
             />
           </div>
@@ -460,6 +461,9 @@ const UserManagementPage: React.FC = () => {
                           <img
                             src={u.avatarUrl}
                             alt={u.fullName}
+                            width={36}
+                            height={36}
+                            loading="lazy"
                             className="h-9 w-9 rounded-xl object-cover border border-border shrink-0"
                           />
                         ) : (
@@ -509,7 +513,7 @@ const UserManagementPage: React.FC = () => {
                       ) : (
                         <button
                           onClick={() => toggleLock(u)}
-                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition cursor-pointer ${
                             status === 'active'
                               ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 border border-emerald-200 dark:border-emerald-900/50 hover:bg-emerald-100'
                               : 'bg-red-50 dark:bg-red-950/30 text-red-700 border border-red-200 dark:border-red-900/50 hover:bg-red-100'

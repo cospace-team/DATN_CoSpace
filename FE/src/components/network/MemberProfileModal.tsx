@@ -29,7 +29,7 @@ const isImage = (s?: string | null) =>
 
 const Avatar: React.FC<{ src?: string | null; name: string }> = ({ src, name }) =>
   isImage(src) ? (
-    <img src={src as string} alt={name} className="h-20 w-20 rounded-2xl object-cover ring-4 ring-card bg-muted" />
+    <img src={src as string} alt={name} width={80} height={80} className="h-20 w-20 rounded-2xl object-cover ring-4 ring-card bg-muted" />
   ) : (
     <div className="h-20 w-20 rounded-2xl ring-4 ring-card bg-primary/10 text-primary flex items-center justify-center text-3xl font-bold">
       {(name || 'U').charAt(0).toUpperCase()}
@@ -227,7 +227,7 @@ const MemberProfileModal: React.FC<Props> = ({ member, onClose, onChanged }) => 
                 <button
                   onClick={() => act(() => connectionApi.send(member.userId, message.trim() || undefined))}
                   disabled={busy}
-                  className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl text-sm hover:bg-primary/90 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                  className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl text-sm hover:bg-primary/90 transition shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
                 >
                   <FiUserPlus className="h-4 w-4" /> Gửi lời mời kết nối
                 </button>

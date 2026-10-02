@@ -48,6 +48,12 @@ payos:
   return-url: ${PAYOS_RETURN_URL}
   cancel-url: ${PAYOS_CANCEL_URL}
 
+app:
+  backend:
+    # The deployed API (Render). Override with APP_BACKEND_BASE_URL if it moves; never localhost here,
+    # or MoMo callbacks go nowhere.
+    base-url: ${APP_BACKEND_BASE_URL:https://datn-cospace.onrender.com}
+
 logging:
   level:
     root: INFO

@@ -1,9 +1,8 @@
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { LazyMotion, domAnimation, m } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
 import { useSEO } from "../hooks/useSEO";
-import { Button } from "../components/ui/button";
+import { Button, buttonVariants } from "../components/ui/button";
 import { Logo } from "../components/ui/Logo";
 import {
   FiArrowLeft,
@@ -55,13 +54,9 @@ const NotFoundPage: React.FC = () => {
         </Link>
       </header>
 
-      <LazyMotion features={domAnimation} strict>
-      <m.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="relative z-10 w-full max-w-xl mx-auto text-center"
-      >
+      {/* A CSS fade (motion-safe) instead of framer-motion: this page also renders inside the
+          signed-in shell, where pulling the animation library in for one fade isn't worth it. */}
+      <div className="relative z-10 w-full max-w-xl mx-auto text-center motion-safe:animate-fade-in">
         <p className="mb-4 text-7xl sm:text-8xl font-bold tracking-tight text-primary select-none">404</p>
 
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground mb-3">
@@ -77,33 +72,29 @@ const NotFoundPage: React.FC = () => {
             onClick={() => navigate(-1)}
             className="gap-2 rounded-sm px-5 h-11 border-border/80 hover:bg-muted/80 shadow-sm"
           >
-            <FiArrowLeft className="h-4 w-4" />
+            <FiArrowLeft className="h-4 w-4" aria-hidden="true" />
             Quay lại
           </Button>
 
-          <Button
-            onClick={() => navigate(homeRoute)}
-            className="gap-2 rounded-sm px-6 h-11"
-          >
-            <FiHome className="h-4 w-4" />
+          <Link to={homeRoute} className={buttonVariants({ className: "gap-2 rounded-sm px-6 h-11" })}>
+            <FiHome className="h-4 w-4" aria-hidden="true" />
             {homeLabel}
-          </Button>
+          </Link>
 
           {!isAuthenticated && (
-            <Button
-              variant="secondary"
-              onClick={() => navigate("/locations")}
-              className="gap-2 rounded-sm px-5 h-11 border border-border/40"
+            <Link
+              to="/locations"
+              className={buttonVariants({ variant: "secondary", className: "gap-2 rounded-sm px-5 h-11 border border-border/40" })}
             >
-              <FiCompass className="h-4 w-4" />
+              <FiCompass className="h-4 w-4" aria-hidden="true" />
               Xem các chi nhánh
-            </Button>
+            </Link>
           )}
         </div>
 
         <div className="rounded-lg border border-border bg-card p-5 text-left">
           <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-3">
-            <FiHelpCircle className="h-4 w-4 text-primary" />
+            <FiHelpCircle className="h-4 w-4 text-primary" aria-hidden="true" />
             Lối tắt gợi ý
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
@@ -112,7 +103,7 @@ const NotFoundPage: React.FC = () => {
               className="flex items-center gap-3 p-2.5 rounded-sm bg-muted/40 hover:bg-muted transition-colors group"
             >
               <div className="h-8 w-8 rounded-sm bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                <FiMapPin className="h-4 w-4" />
+                <FiMapPin className="h-4 w-4" aria-hidden="true" />
               </div>
               <div className="overflow-hidden">
                 <div className="font-medium text-foreground truncate">Danh sách Chi nhánh</div>
@@ -125,7 +116,7 @@ const NotFoundPage: React.FC = () => {
               className="flex items-center gap-3 p-2.5 rounded-sm bg-muted/40 hover:bg-muted transition-colors group"
             >
               <div className="h-8 w-8 rounded-sm bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                <FiCalendar className="h-4 w-4" />
+                <FiCalendar className="h-4 w-4" aria-hidden="true" />
               </div>
               <div className="overflow-hidden">
                 <div className="font-medium text-foreground truncate">
@@ -138,8 +129,7 @@ const NotFoundPage: React.FC = () => {
             </Link>
           </div>
         </div>
-      </m.div>
-      </LazyMotion>
+      </div>
 
       <footer className="absolute bottom-6 text-center text-xs text-muted-foreground/60">
         &copy; {new Date().getFullYear()} CoSpace. Bảo lưu mọi quyền.

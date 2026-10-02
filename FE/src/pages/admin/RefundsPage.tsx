@@ -215,8 +215,8 @@ const RefundsPage: React.FC<{ scope: 'admin' | 'branch' }> = ({ scope }) => {
                           <button onClick={() => openAction('process', r)} className="btn btn-primary btn-sm whitespace-nowrap">
                             <FiCheckCircle className="h-3.5 w-3.5" /> Hoàn tiền
                           </button>
-                          <button onClick={() => openAction('reject', r)} className="btn btn-ghost btn-sm text-destructive hover:!text-destructive" title="Từ chối">
-                            <FiXCircle className="h-4 w-4" />
+                          <button onClick={() => openAction('reject', r)} className="btn btn-ghost btn-sm text-destructive hover:!text-destructive" title="Từ chối" aria-label="Từ chối">
+                            <FiXCircle className="h-4 w-4" aria-hidden="true" />
                           </button>
                         </div>
                       )}
@@ -237,7 +237,7 @@ const RefundsPage: React.FC<{ scope: 'admin' | 'branch' }> = ({ scope }) => {
               <h3 className="text-lg font-bold font-heading">
                 {action.type === 'process' ? 'Xử lý hoàn tiền' : 'Từ chối hoàn tiền'}
               </h3>
-              <button onClick={() => setAction(null)} className="btn btn-ghost btn-sm !min-h-[32px] !p-2"><FiX className="h-5 w-5" /></button>
+              <button onClick={() => setAction(null)} className="btn btn-ghost btn-sm !min-h-[32px] !p-2" aria-label="Đóng"><FiX className="h-5 w-5" aria-hidden="true" /></button>
             </div>
             <div className="p-6 space-y-4">
               <div className="rounded-2xl bg-muted/50 p-4 text-sm space-y-1">
@@ -287,7 +287,7 @@ const RefundsPage: React.FC<{ scope: 'admin' | 'branch' }> = ({ scope }) => {
               )}
               <div>
                 <label className="text-sm font-medium block mb-1.5">
-                  {action.type === 'process' ? 'Ghi chú (mã giao dịch, hình thức hoàn...)' : 'Lý do từ chối *'}
+                  {action.type === 'process' ? 'Ghi chú (mã giao dịch, hình thức hoàn…)' : 'Lý do từ chối *'}
                 </label>
                 <textarea className="input-field min-h-[90px]" value={note} onChange={(e) => setNote(e.target.value)}
                   placeholder={action.type === 'process' ? 'VD: CK Vietcombank, mã GD 123456' : 'VD: Khách đã nhận hoàn tiền tại quầy trước đó'} />
@@ -295,7 +295,7 @@ const RefundsPage: React.FC<{ scope: 'admin' | 'branch' }> = ({ scope }) => {
               <div className="flex gap-3 pt-2">
                 <button onClick={submit} disabled={isSubmitting}
                   className={`btn btn-sm flex-1 ${action.type === 'process' ? 'btn-primary' : 'btn-danger'}`}>
-                  {isSubmitting ? 'Đang lưu...' : action.type === 'process'
+                  {isSubmitting ? 'Đang lưu…' : action.type === 'process'
                     ? (method === 'voucher' ? 'Phát hành voucher' : 'Xác nhận đã hoàn') : 'Từ chối'}
                 </button>
                 <button onClick={() => setAction(null)} className="btn btn-secondary btn-sm">Hủy</button>

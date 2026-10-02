@@ -1094,7 +1094,7 @@ const ProfilePage: React.FC = () => {
               ══════════════════════════════════════════════════════════════ */}
           <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3.5 pt-4 border-t border-border/80">
             {/* Metric 1: Bookings */}
-            <div className="bg-muted/40 hover:bg-muted/70 p-3.5 rounded-2xl border border-border/60 transition-all flex items-center gap-3.5 group">
+            <div className="bg-muted/40 hover:bg-muted/70 p-3.5 rounded-2xl border border-border/60 transition flex items-center gap-3.5 group">
               <div className="h-11 w-11 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xl shrink-0 group-hover:scale-105 transition-transform">
                 <FiCalendar />
               </div>
@@ -1105,7 +1105,7 @@ const ProfilePage: React.FC = () => {
             </div>
 
             {/* Metric 2: Hours */}
-            <div className="bg-muted/40 hover:bg-muted/70 p-3.5 rounded-2xl border border-border/60 transition-all flex items-center gap-3.5 group">
+            <div className="bg-muted/40 hover:bg-muted/70 p-3.5 rounded-2xl border border-border/60 transition flex items-center gap-3.5 group">
               <div className="h-11 w-11 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xl shrink-0 group-hover:scale-105 transition-transform">
                 <FiClock />
               </div>
@@ -1116,7 +1116,7 @@ const ProfilePage: React.FC = () => {
             </div>
 
             {/* Metric 3: Network Matches */}
-            <div className="bg-muted/40 hover:bg-muted/70 p-3.5 rounded-2xl border border-border/60 transition-all flex items-center gap-3.5 group">
+            <div className="bg-muted/40 hover:bg-muted/70 p-3.5 rounded-2xl border border-border/60 transition flex items-center gap-3.5 group">
               <div className="h-11 w-11 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-xl shrink-0 group-hover:scale-105 transition-transform">
                 <FiUsers />
               </div>
@@ -1127,7 +1127,7 @@ const ProfilePage: React.FC = () => {
             </div>
 
             {/* Metric 4: Tier */}
-            <div className="bg-muted/40 hover:bg-muted/70 p-3.5 rounded-2xl border border-border/60 transition-all flex items-center gap-3.5 group">
+            <div className="bg-muted/40 hover:bg-muted/70 p-3.5 rounded-2xl border border-border/60 transition flex items-center gap-3.5 group">
               <div className="h-11 w-11 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xl shrink-0 group-hover:scale-105 transition-transform">
                 <FiAward />
               </div>
@@ -1158,7 +1158,7 @@ const ProfilePage: React.FC = () => {
 
             {/* Metric 5: Reputation */}
             {reputation && (
-              <div className="bg-muted/40 hover:bg-muted/70 p-3.5 rounded-2xl border border-border/60 transition-all flex items-center gap-3.5 group">
+              <div className="bg-muted/40 hover:bg-muted/70 p-3.5 rounded-2xl border border-border/60 transition flex items-center gap-3.5 group">
                 <div className={`h-11 w-11 rounded-xl flex items-center justify-center text-xl shrink-0 group-hover:scale-105 transition-transform ${
                   reputation.score >= 80
                     ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400'
@@ -1194,7 +1194,7 @@ const ProfilePage: React.FC = () => {
       <div className="flex items-center gap-2 mb-8 bg-muted/50 p-1.5 rounded-2xl border border-border/80 w-fit max-w-full overflow-x-auto">
         <button
           onClick={() => setActiveTab('profile')}
-          className={`flex items-center gap-2 px-5 py-2.5 font-semibold text-sm rounded-xl transition-all cursor-pointer ${
+          className={`flex items-center gap-2 px-5 py-2.5 font-semibold text-sm rounded-xl transition cursor-pointer ${
             activeTab === 'profile'
               ? 'bg-card text-foreground shadow-sm'
               : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
@@ -1206,7 +1206,7 @@ const ProfilePage: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('network')}
-          className={`flex items-center gap-2 px-5 py-2.5 font-semibold text-sm rounded-xl transition-all cursor-pointer ${
+          className={`flex items-center gap-2 px-5 py-2.5 font-semibold text-sm rounded-xl transition cursor-pointer ${
             activeTab === 'network'
               ? 'bg-card text-foreground shadow-sm'
               : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
@@ -1221,7 +1221,7 @@ const ProfilePage: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('security')}
-          className={`flex items-center gap-2 px-5 py-2.5 font-semibold text-sm rounded-xl transition-all cursor-pointer ${
+          className={`flex items-center gap-2 px-5 py-2.5 font-semibold text-sm rounded-xl transition cursor-pointer ${
             activeTab === 'security'
               ? 'bg-card text-foreground shadow-sm'
               : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
@@ -1305,7 +1305,7 @@ const ProfilePage: React.FC = () => {
                     <button
                       type="button"
                       onClick={handleCancelEditPersonal}
-                      className="px-3.5 py-1.5 rounded-xl text-xs font-medium border border-border bg-card hover:bg-muted text-foreground transition-all cursor-pointer"
+                      className="px-3.5 py-1.5 rounded-xl text-xs font-medium border border-border bg-card hover:bg-muted text-foreground transition cursor-pointer"
                     >
                       Hủy
                     </button>
@@ -1313,10 +1313,10 @@ const ProfilePage: React.FC = () => {
                       type="button"
                       onClick={handleSavePersonalInfo}
                       disabled={isSavingPersonal}
-                      className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+                      className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition active:scale-95 disabled:opacity-50 cursor-pointer"
                     >
                       {isSavingPersonal ? <Spinner size="sm" /> : <FiCheck className="h-3.5 w-3.5" />}
-                      <span>{isSavingPersonal ? 'Đang lưu...' : 'Lưu thay đổi'}</span>
+                      <span>{isSavingPersonal ? 'Đang lưu…' : 'Lưu thay đổi'}</span>
                     </button>
                   </div>
                 </div>
@@ -1385,7 +1385,7 @@ const ProfilePage: React.FC = () => {
                         type="text"
                         value={profileForm.profession}
                         onChange={e => setProfileForm({ ...profileForm, profession: e.target.value })}
-                        placeholder="VD: Senior Product Designer, Freelancer..."
+                        placeholder="VD: Senior Product Designer, Freelancer…"
                         className="w-full px-4 py-2.5 bg-muted/40 border border-border rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/30"
                       />
                     </div>
@@ -1397,7 +1397,7 @@ const ProfilePage: React.FC = () => {
                         type="text"
                         value={profileForm.company}
                         onChange={e => setProfileForm({ ...profileForm, company: e.target.value })}
-                        placeholder="VD: FPT Software, Tự do..."
+                        placeholder="VD: FPT Software, Tự do…"
                         className="w-full px-4 py-2.5 bg-muted/40 border border-border rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/30"
                       />
                     </div>
@@ -1411,7 +1411,7 @@ const ProfilePage: React.FC = () => {
                       rows={3}
                       value={profileForm.bio}
                       onChange={e => setProfileForm({ ...profileForm, bio: e.target.value })}
-                      placeholder="Một vài dòng chia sẻ kinh nghiệm, sở thích làm việc hoặc dự án bạn đang tìm kiếm cộng sự..."
+                      placeholder="Một vài dòng chia sẻ kinh nghiệm, sở thích làm việc hoặc dự án bạn đang tìm kiếm cộng sự…"
                       className="w-full px-4 py-2.5 bg-muted/40 border border-border rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
                     />
                   </div>
@@ -1421,7 +1421,7 @@ const ProfilePage: React.FC = () => {
                     <button
                       type="button"
                       onClick={handleCancelEditProfessional}
-                      className="px-3.5 py-1.5 rounded-xl text-xs font-medium border border-border bg-card hover:bg-muted text-foreground transition-all cursor-pointer"
+                      className="px-3.5 py-1.5 rounded-xl text-xs font-medium border border-border bg-card hover:bg-muted text-foreground transition cursor-pointer"
                     >
                       Hủy
                     </button>
@@ -1429,10 +1429,10 @@ const ProfilePage: React.FC = () => {
                       type="button"
                       onClick={handleSaveProfessionalInfo}
                       disabled={isSavingProfessional}
-                      className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+                      className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition active:scale-95 disabled:opacity-50 cursor-pointer"
                     >
                       {isSavingProfessional ? <Spinner size="sm" /> : <FiCheck className="h-3.5 w-3.5" />}
-                      <span>{isSavingProfessional ? 'Đang lưu...' : 'Lưu thay đổi'}</span>
+                      <span>{isSavingProfessional ? 'Đang lưu…' : 'Lưu thay đổi'}</span>
                     </button>
                   </div>
                 </div>
@@ -1483,7 +1483,7 @@ const ProfilePage: React.FC = () => {
                 {isSavingSkills && (
                   <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground animate-pulse">
                     <Spinner className="h-3 w-3" />
-                    <span>Đang cập nhật...</span>
+                    <span>Đang cập nhật…</span>
                   </span>
                 )}
               </div>
@@ -1500,7 +1500,7 @@ const ProfilePage: React.FC = () => {
                       handleAddSkill(newSkillInput);
                     }
                   }}
-                  placeholder="Thêm chuyên môn (VD: React, Spring Boot, AI...)"
+                  placeholder="Thêm chuyên môn (VD: React, Spring Boot, AI…)"
                   className="flex-1 px-3.5 py-2 text-xs bg-muted/50 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 font-medium text-foreground"
                 />
                 <button
@@ -1530,8 +1530,9 @@ const ProfilePage: React.FC = () => {
                         onClick={() => handleRemoveSkill(s.tagName)}
                         className="hover:text-red-500 transition-colors cursor-pointer p-0.5 rounded-full"
                         title={`Xóa ${s.tagName}`}
+                        aria-label={`Xóa ${s.tagName}`}
                       >
-                        <FiX className="h-3 w-3" />
+                        <FiX className="h-3 w-3" aria-hidden="true" />
                       </button>
                     </span>
                   ))
@@ -1555,7 +1556,7 @@ const ProfilePage: React.FC = () => {
                         key={name}
                         type="button"
                         onClick={() => handleAddSkill(name)}
-                        className="text-[11px] font-medium px-2.5 py-1 rounded-lg border border-border/80 bg-card hover:bg-primary/10 hover:border-primary/40 text-muted-foreground hover:text-primary transition-all cursor-pointer flex items-center gap-1"
+                        className="text-[11px] font-medium px-2.5 py-1 rounded-lg border border-border/80 bg-card hover:bg-primary/10 hover:border-primary/40 text-muted-foreground hover:text-primary transition cursor-pointer flex items-center gap-1"
                       >
                         + {name}
                       </button>
@@ -1580,7 +1581,7 @@ const ProfilePage: React.FC = () => {
                   type="button"
                   disabled={isSavingSocial}
                   onClick={handleSaveSocialLinks}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-primary bg-primary/10 hover:bg-primary hover:text-primary-foreground border border-primary/20 active:scale-95 transition-all cursor-pointer disabled:opacity-50 shrink-0 shadow-xs"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-primary bg-primary/10 hover:bg-primary hover:text-primary-foreground border border-primary/20 active:scale-95 transition cursor-pointer disabled:opacity-50 shrink-0 shadow-xs"
                   title="Lưu các liên kết mạng xã hội"
                 >
                   {isSavingSocial ? (
@@ -1588,7 +1589,7 @@ const ProfilePage: React.FC = () => {
                   ) : (
                     <FiCheck className="h-3.5 w-3.5" />
                   )}
-                  <span>{isSavingSocial ? 'Đang lưu...' : 'Lưu'}</span>
+                  <span>{isSavingSocial ? 'Đang lưu…' : 'Lưu'}</span>
                 </button>
               </div>
 
@@ -1598,7 +1599,7 @@ const ProfilePage: React.FC = () => {
                   <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
                     LinkedIn Profile URL
                   </label>
-                  <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border rounded-xl focus-within:ring-2 focus-within:ring-blue-500/30 transition-all">
+                  <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border rounded-xl focus-within:ring-2 focus-within:ring-blue-500/30 transition">
                     <FiLinkedin className="h-4 w-4 text-blue-600 shrink-0" />
                     <input
                       type="url"
@@ -1630,7 +1631,7 @@ const ProfilePage: React.FC = () => {
                   <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
                     GitHub Profile URL
                   </label>
-                  <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border rounded-xl focus-within:ring-2 focus-within:ring-gray-500/30 transition-all">
+                  <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border rounded-xl focus-within:ring-2 focus-within:ring-gray-500/30 transition">
                     <FiGithub className="h-4 w-4 text-foreground shrink-0" />
                     <input
                       type="url"
@@ -1662,7 +1663,7 @@ const ProfilePage: React.FC = () => {
                   <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
                     Facebook Profile URL
                   </label>
-                  <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border rounded-xl focus-within:ring-2 focus-within:ring-blue-600/30 transition-all">
+                  <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border rounded-xl focus-within:ring-2 focus-within:ring-blue-600/30 transition">
                     <FiFacebook className="h-4 w-4 text-blue-600 shrink-0" />
                     <input
                       type="url"
@@ -1694,7 +1695,7 @@ const ProfilePage: React.FC = () => {
                   <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
                     Email / Gmail liên hệ công việc
                   </label>
-                  <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border rounded-xl focus-within:ring-2 focus-within:ring-rose-500/30 transition-all">
+                  <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border rounded-xl focus-within:ring-2 focus-within:ring-rose-500/30 transition">
                     <FiMail className="h-4 w-4 text-rose-500 shrink-0" />
                     <input
                       type="email"
@@ -1720,7 +1721,7 @@ const ProfilePage: React.FC = () => {
                   <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
                     Website / Portfolio cá nhân
                   </label>
-                  <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border rounded-xl focus-within:ring-2 focus-within:ring-emerald-500/30 transition-all">
+                  <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border rounded-xl focus-within:ring-2 focus-within:ring-emerald-500/30 transition">
                     <FiGlobe className="h-4 w-4 text-emerald-600 shrink-0" />
                     <input
                       type="url"

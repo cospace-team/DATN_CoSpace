@@ -1,27 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { FiAlertCircle, FiAlertTriangle, FiCheck, FiEdit2, FiGrid, FiList, FiPlus, FiSave, FiTrash2, FiX } from 'react-icons/fi';
+import { FiAlertCircle, FiAlertTriangle, FiCheck, FiEdit2, FiGrid, FiList, FiPlus, FiSave, FiTrash2 } from 'react-icons/fi';
 import {
   amenityApi,
   type AmenityDto,
   type WorkspaceTypeAmenitiesDto,
 } from '../../api/loyaltyApi';
 import { AMENITY_ICONS, AmenityIcon } from '../../components/AmenityIcon';
-
-const Modal: React.FC<{ open: boolean; onClose: () => void; title: string; children: React.ReactNode }> = ({ open, onClose, title, children }) => {
-  if (!open) return null;
-  return (
-    <>
-      <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-lg max-h-[90vh] overflow-y-auto bg-card rounded-3xl border border-border shadow-xl">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-          <h3 className="text-lg font-bold font-heading">{title}</h3>
-          <button onClick={onClose} className="btn btn-ghost btn-sm !min-h-[32px] !p-2"><FiX className="h-5 w-5" /></button>
-        </div>
-        <div className="p-6">{children}</div>
-      </div>
-    </>
-  );
-};
+import { Modal } from '../../components/ui/Modal';
 
 type Tab = 'catalog' | 'assignment';
 type ModalMode = { type: 'add' } | { type: 'edit'; amenity: AmenityDto } | null;
@@ -231,11 +216,11 @@ const AmenitiesPage: React.FC = () => {
                     </td>
                     <td>
                       <div className="flex gap-1">
-                        <button onClick={() => openEdit(a)} className="btn btn-ghost btn-sm !min-h-[28px] !p-1.5" title="Chỉnh sửa">
-                          <FiEdit2 className="h-3.5 w-3.5" />
+                        <button onClick={() => openEdit(a)} className="btn btn-ghost btn-sm !min-h-[28px] !p-1.5" title="Chỉnh sửa" aria-label="Chỉnh sửa">
+                          <FiEdit2 className="h-3.5 w-3.5" aria-hidden="true" />
                         </button>
-                        <button onClick={() => setDeleteConfirm(a)} className="btn btn-ghost btn-sm !min-h-[28px] !p-1.5 text-destructive hover:!text-destructive" title="Xóa">
-                          <FiTrash2 className="h-3.5 w-3.5" />
+                        <button onClick={() => setDeleteConfirm(a)} className="btn btn-ghost btn-sm !min-h-[28px] !p-1.5 text-destructive hover:!text-destructive" title="Xóa" aria-label="Xóa">
+                          <FiTrash2 className="h-3.5 w-3.5" aria-hidden="true" />
                         </button>
                       </div>
                     </td>
@@ -270,7 +255,7 @@ const AmenitiesPage: React.FC = () => {
                   <p className="text-sm text-muted-foreground">Chọn tiện ích có sẵn cho loại không gian này.</p>
                 </div>
                 <button onClick={saveAssignment} disabled={!isDraftDirty || isSavingAssignment} className="btn btn-primary btn-sm">
-                  <FiSave className="h-4 w-4" /> {isSavingAssignment ? 'Đang lưu...' : 'Lưu thay đổi'}
+                  <FiSave className="h-4 w-4" /> {isSavingAssignment ? 'Đang lưu…' : 'Lưu thay đổi'}
                 </button>
               </div>
               {amenities.length === 0 ? (
@@ -318,55 +303,57 @@ const AmenitiesPage: React.FC = () => {
         </div>
       )}
 
-      <Modal open={!!modal} onClose={() => setModal(null)} title={modal?.type === 'edit' ? 'Chỉnh sửa tiện ích' : 'Thêm tiện ích'}>
-        <div className="space-y-5">
-          {formError && (
-            <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-3 text-sm text-destructive">
-              <FiAlertCircle className="h-4 w-4 shrink-0" />{formError}
+      {modal && (
+        <Modal className="max-w-lg" onClose={() => setModal(null)} title={modal?.type === 'edit' ? 'Chỉnh sửa tiện ích' : 'Thêm tiện ích'}>
+          <div className="space-y-5">
+            {formError && (
+              <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-3 text-sm text-destructive">
+                <FiAlertCircle className="h-4 w-4 shrink-0" />{formError}
+              </div>
+            )}
+            <div>
+              <label className="text-sm font-medium block mb-1.5">Tên tiện ích *</label>
+              <input className="input-field" placeholder="VD: Wi-Fi tốc độ cao" value={form.name}
+                onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} />
             </div>
-          )}
-          <div>
-            <label className="text-sm font-medium block mb-1.5">Tên tiện ích *</label>
-            <input className="input-field" placeholder="VD: Wi-Fi tốc độ cao" value={form.name}
-              onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} />
-          </div>
-          <div>
-            <label className="text-sm font-medium block mb-1.5">Biểu tượng</label>
-            <div className="grid grid-cols-5 gap-2">
-              {AMENITY_ICONS.map(({ key, label, Icon }) => (
-                <button
-                  key={key}
-                  type="button"
-                  title={label}
-                  onClick={() => setForm((p) => ({ ...p, iconName: key }))}
-                  className={`flex flex-col items-center gap-1 p-2 rounded-xl border text-[10px] transition-colors ${
-                    form.iconName === key ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:bg-muted'
-                  }`}
-                >
-                  <Icon className="h-5 w-5" />
-                  <span className="truncate w-full text-center">{label}</span>
-                </button>
-              ))}
+            <div>
+              <label className="text-sm font-medium block mb-1.5">Biểu tượng</label>
+              <div className="grid grid-cols-5 gap-2">
+                {AMENITY_ICONS.map(({ key, label, Icon }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    title={label}
+                    onClick={() => setForm((p) => ({ ...p, iconName: key }))}
+                    className={`flex flex-col items-center gap-1 p-2 rounded-xl border text-[10px] transition-colors ${
+                      form.iconName === key ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:bg-muted'
+                    }`}
+                  >
+                    <Icon className="h-5 w-5" />
+                    <span className="truncate w-full text-center">{label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium block mb-1.5">Mô tả</label>
+              <textarea className="input-field min-h-[72px]" value={form.description}
+                onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} />
+            </div>
+            <div className="flex items-center gap-3">
+              <input type="checkbox" id="amenity-active" checked={form.isActive} className="h-4 w-4 rounded"
+                onChange={(e) => setForm((p) => ({ ...p, isActive: e.target.checked }))} />
+              <label htmlFor="amenity-active" className="text-sm font-medium">Hiển thị với khách hàng</label>
+            </div>
+            <div className="flex gap-3 pt-4 border-t border-border">
+              <button onClick={save} className="btn btn-primary btn-sm flex-1">
+                <FiCheck className="h-4 w-4" /> {modal?.type === 'edit' ? 'Cập nhật' : 'Tạo mới'}
+              </button>
+              <button onClick={() => setModal(null)} className="btn btn-secondary btn-sm">Hủy</button>
             </div>
           </div>
-          <div>
-            <label className="text-sm font-medium block mb-1.5">Mô tả</label>
-            <textarea className="input-field min-h-[72px]" value={form.description}
-              onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} />
-          </div>
-          <div className="flex items-center gap-3">
-            <input type="checkbox" id="amenity-active" checked={form.isActive} className="h-4 w-4 rounded"
-              onChange={(e) => setForm((p) => ({ ...p, isActive: e.target.checked }))} />
-            <label htmlFor="amenity-active" className="text-sm font-medium">Hiển thị với khách hàng</label>
-          </div>
-          <div className="flex gap-3 pt-4 border-t border-border">
-            <button onClick={save} className="btn btn-primary btn-sm flex-1">
-              <FiCheck className="h-4 w-4" /> {modal?.type === 'edit' ? 'Cập nhật' : 'Tạo mới'}
-            </button>
-            <button onClick={() => setModal(null)} className="btn btn-secondary btn-sm">Hủy</button>
-          </div>
-        </div>
-      </Modal>
+        </Modal>
+      )}
 
       {deleteConfirm && (
         <>

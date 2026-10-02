@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { 
-  FiDollarSign, FiEdit2, FiPlus, FiCheckCircle, FiInbox, FiX, FiCheck, 
+  FiDollarSign, FiEdit2, FiPlus, FiCheckCircle, FiInbox, FiCheck,
   FiTrash2, FiAlertCircle, FiGrid, FiList, FiGlobe, FiMapPin, FiZap, FiLayers, 
   FiRefreshCw, FiCoffee, FiShield, FiClock, FiPercent, FiInfo
 } from 'react-icons/fi';
@@ -18,24 +18,9 @@ import { adminWorkspaceTypeApi, adminBranchApi, type WorkspaceTypeResponse, type
 import { staffApi, type ExtraServiceDto, type CancellationPolicyDto } from '../../api/staffApi';
 import { ExtraServicesTab } from './pricing/ExtraServicesTab';
 import { CancellationTab } from './pricing/CancellationTab';
+import { Modal } from '../../components/ui/Modal';
 
 const DURATION_UNITS: Array<AdminPricePolicyDto['durationUnit']> = ['hour', 'day', 'week', 'month'];
-
-const Modal: React.FC<{ title: string; onClose: () => void; children: React.ReactNode; maxWidth?: string }> = ({
-  title, onClose, children, maxWidth = 'max-w-md',
-}) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in" onClick={onClose}>
-    <div className={`bg-card border border-border rounded-2xl shadow-2xl w-full ${maxWidth} animate-scale-in flex flex-col max-h-[90vh]`} onClick={(e) => e.stopPropagation()}>
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-        <h2 className="text-base font-bold font-heading text-foreground">{title}</h2>
-        <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 rounded-full">
-          <FiX className="h-4 w-4" />
-        </Button>
-      </div>
-      <div className="px-6 py-5 overflow-y-auto">{children}</div>
-    </div>
-  </div>
-);
 
 type ModalMode = 
   | { type: 'add'; prefillType?: string; prefillUnit?: AdminPricePolicyDto['durationUnit']; prefillBranch?: string; suggestedPrice?: number }
@@ -521,7 +506,7 @@ const PricingPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setViewMode('matrix')}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition ${
                         viewMode === 'matrix' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
@@ -530,7 +515,7 @@ const PricingPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setViewMode('table')}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition ${
                         viewMode === 'table' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
@@ -561,7 +546,7 @@ const PricingPage: React.FC = () => {
           <div className="mt-6 flex items-center gap-2 border-b border-border pb-3">
             <button
               onClick={() => setPricingHubTab('workspace')}
-              className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl transition-all ${
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl transition ${
                 pricingHubTab === 'workspace'
                   ? 'bg-primary text-primary-foreground shadow-sm'
                   : 'text-muted-foreground hover:bg-muted hover:text-foreground'
@@ -572,7 +557,7 @@ const PricingPage: React.FC = () => {
 
             <button
               onClick={() => setPricingHubTab('services')}
-              className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl transition-all ${
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl transition ${
                 pricingHubTab === 'services'
                   ? 'bg-primary text-primary-foreground shadow-sm'
                   : 'text-muted-foreground hover:bg-muted hover:text-foreground'
@@ -583,7 +568,7 @@ const PricingPage: React.FC = () => {
 
             <button
               onClick={() => setPricingHubTab('cancellation')}
-              className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl transition-all ${
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl transition ${
                 pricingHubTab === 'cancellation'
                   ? 'bg-primary text-primary-foreground shadow-sm'
                   : 'text-muted-foreground hover:bg-muted hover:text-foreground'
@@ -598,7 +583,7 @@ const PricingPage: React.FC = () => {
             <span className="text-xs font-semibold uppercase text-muted-foreground mr-2 shrink-0">Phạm vi xem:</span>
             <button
               onClick={() => setSelectedBranchFilter('global')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition ${
                 selectedBranchFilter === 'global'
                   ? 'bg-foreground text-background shadow-xs'
                   : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground border border-border/50'
@@ -611,7 +596,7 @@ const PricingPage: React.FC = () => {
               <button
                 key={b.id}
                 onClick={() => setSelectedBranchFilter(b.id)}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition ${
                   selectedBranchFilter === b.id
                     ? 'bg-foreground text-background shadow-xs'
                     : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground border border-border/50'
@@ -623,7 +608,7 @@ const PricingPage: React.FC = () => {
 
             <button
               onClick={() => setSelectedBranchFilter('all')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition ${
                 selectedBranchFilter === 'all'
                   ? 'bg-foreground text-background shadow-xs'
                   : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground border border-border/50'
@@ -736,15 +721,15 @@ const PricingPage: React.FC = () => {
                                   const p = cell.policy;
                                   return (
                                     <td key={unit} className="px-3 py-4 text-center align-middle">
-                                      <div className="bg-card border border-border/80 hover:border-primary/50 rounded-xl p-3 shadow-xs hover:shadow-sm transition-all group relative">
+                                      <div className="bg-card border border-border/80 hover:border-primary/50 rounded-xl p-3 shadow-xs hover:shadow-sm transition group relative">
                                         <div className="font-bold text-foreground text-sm">{formatVND(p.price)}</div>
                                         <div className="flex items-center justify-center gap-1.5 mt-1.5">
                                           <span className={`w-1.5 h-1.5 rounded-full ${p.isActive ? 'bg-success' : 'bg-muted-foreground'}`} />
                                           <span className="text-[10px] text-muted-foreground font-medium">{p.isActive ? 'Áp dụng' : 'Tắt'}</span>
                                         </div>
                                         <div className="flex items-center justify-center gap-1 mt-2 border-t border-border/60 pt-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
-                                          <button onClick={() => openEdit(p)} className="text-xs text-muted-foreground hover:text-primary p-1 rounded hover:bg-muted" title="Sửa"><FiEdit2 className="h-3 w-3" /></button>
-                                          <button onClick={() => deleteWorkspacePolicy(p.id)} className="text-xs text-destructive hover:text-destructive/80 p-1 rounded hover:bg-destructive/10" title="Xóa"><FiTrash2 className="h-3 w-3" /></button>
+                                          <button onClick={() => openEdit(p)} className="text-xs text-muted-foreground hover:text-primary p-1 rounded hover:bg-muted" title="Sửa" aria-label="Sửa"><FiEdit2 className="h-3 w-3" aria-hidden="true" /></button>
+                                          <button onClick={() => deleteWorkspacePolicy(p.id)} className="text-xs text-destructive hover:text-destructive/80 p-1 rounded hover:bg-destructive/10" title="Xóa" aria-label="Xóa"><FiTrash2 className="h-3 w-3" aria-hidden="true" /></button>
                                         </div>
                                       </div>
                                     </td>
@@ -752,7 +737,7 @@ const PricingPage: React.FC = () => {
                                 } else {
                                   return (
                                     <td key={unit} className="px-3 py-4 text-center align-middle">
-                                      <div className="border border-dashed border-border rounded-xl p-3 bg-muted/20 hover:bg-muted/40 transition-all flex flex-col items-center justify-center min-h-[90px]">
+                                      <div className="border border-dashed border-border rounded-xl p-3 bg-muted/20 hover:bg-muted/40 transition flex flex-col items-center justify-center min-h-[90px]">
                                         <span className="text-[11px] text-muted-foreground font-medium mb-1.5">Chưa có giá</span>
                                         <button onClick={() => openAdd({ typeId: wt.id, unit, branchId: '' })} className="btn btn-outline btn-sm !h-7 !text-[11px] !px-2.5 flex items-center gap-1">
                                           <FiPlus className="h-3 w-3" /> Đặt giá
@@ -767,14 +752,14 @@ const PricingPage: React.FC = () => {
                                 const p = cell.policy!;
                                 return (
                                   <td key={unit} className="px-3 py-4 text-center align-middle">
-                                    <div className="bg-primary/5 border-2 border-primary/30 rounded-xl p-3 shadow-sm transition-all group">
+                                    <div className="bg-primary/5 border-2 border-primary/30 rounded-xl p-3 shadow-sm transition group">
                                       <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold mb-1">
                                         <FiZap className="h-2.5 w-2.5" /> GIÁ RIÊNG
                                       </div>
                                       <div className="font-bold text-primary text-sm">{formatVND(p.price)}</div>
                                       <div className="flex items-center justify-center gap-1 mt-2 border-t border-primary/20 pt-1.5">
-                                        <button onClick={() => openEdit(p)} className="text-xs text-primary hover:text-primary/80 p-1 rounded hover:bg-primary/10" title="Sửa"><FiEdit2 className="h-3 w-3" /></button>
-                                        <button onClick={() => deleteWorkspacePolicy(p.id, 'Hủy mức giá riêng của chi nhánh để quay lại kế thừa giá tổng bộ?')} className="text-xs text-destructive hover:text-destructive/80 p-1 rounded hover:bg-destructive/10" title="Hủy giá riêng"><FiTrash2 className="h-3 w-3" /></button>
+                                        <button onClick={() => openEdit(p)} className="text-xs text-primary hover:text-primary/80 p-1 rounded hover:bg-primary/10" title="Sửa" aria-label="Sửa"><FiEdit2 className="h-3 w-3" aria-hidden="true" /></button>
+                                        <button onClick={() => deleteWorkspacePolicy(p.id, 'Hủy mức giá riêng của chi nhánh để quay lại kế thừa giá tổng bộ?')} className="text-xs text-destructive hover:text-destructive/80 p-1 rounded hover:bg-destructive/10" title="Hủy giá riêng" aria-label="Hủy giá riêng"><FiTrash2 className="h-3 w-3" aria-hidden="true" /></button>
                                       </div>
                                     </div>
                                   </td>
@@ -785,7 +770,7 @@ const PricingPage: React.FC = () => {
                                 const p = cell.policy!;
                                 return (
                                   <td key={unit} className="px-3 py-4 text-center align-middle">
-                                    <div className="bg-card border border-border/80 rounded-xl p-3 shadow-xs hover:border-primary/40 transition-all flex flex-col items-center justify-center">
+                                    <div className="bg-card border border-border/80 rounded-xl p-3 shadow-xs hover:border-primary/40 transition flex flex-col items-center justify-center">
                                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-[10px] font-medium mb-1">
                                         <FiGlobe className="h-2.5 w-2.5" /> Kế thừa Tổng bộ
                                       </span>
@@ -997,7 +982,7 @@ const PricingPage: React.FC = () => {
       {modal && modal.type === 'preset' && (
         <Modal
           title={`Tạo bộ giá mẫu — ${modal.workspaceType.name}`}
-          maxWidth="max-w-lg"
+          className="max-w-lg"
           onClose={() => setModal(null)}
         >
           <div className="space-y-5">
@@ -1102,7 +1087,7 @@ const PricingPage: React.FC = () => {
                   </select>
                   {!['drink', 'meal', 'printing', 'equipment', 'facility'].includes(serviceForm.serviceType) && (
                     <Input
-                      placeholder="Nhập tên phân loại mới (VD: stationery, locker...)"
+                      placeholder="Nhập tên phân loại mới (VD: stationery, locker…)"
                       value={serviceForm.serviceType === 'other' ? '' : serviceForm.serviceType}
                       onChange={e => setServiceForm(p => ({ ...p, serviceType: e.target.value.toLowerCase().trim() || 'other' }))}
                       className="text-xs"
@@ -1148,7 +1133,7 @@ const PricingPage: React.FC = () => {
             <div>
               <Label className="text-xs">Mô tả chi tiết</Label>
               <Input
-                placeholder="Ghi chú thành phần, mô tả..."
+                placeholder="Ghi chú thành phần, mô tả…"
                 value={serviceForm.description}
                 onChange={e => setServiceForm(p => ({ ...p, description: e.target.value }))}
               />

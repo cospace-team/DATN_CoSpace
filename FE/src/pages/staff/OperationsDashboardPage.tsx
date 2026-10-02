@@ -117,7 +117,7 @@ const OperationsDashboardPage: React.FC = () => {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] text-muted-foreground gap-3">
         <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm font-medium">Đang tải dữ liệu ca trực ban...</p>
+        <p className="text-sm font-medium">Đang tải dữ liệu ca trực ban…</p>
       </div>
     );
   }
@@ -139,25 +139,25 @@ const OperationsDashboardPage: React.FC = () => {
         <div className="flex items-center gap-2 bg-muted/60 p-1.5 rounded-xl border border-border/50">
           <button 
             onClick={() => setTimeFilter('day')} 
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${timeFilter === 'day' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ${timeFilter === 'day' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
           >
             Hôm nay
           </button>
           <button 
             onClick={() => setTimeFilter('week')} 
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${timeFilter === 'week' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ${timeFilter === 'week' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
           >
             Tuần này
           </button>
           <button 
             onClick={() => setTimeFilter('month')} 
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${timeFilter === 'month' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ${timeFilter === 'month' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
           >
             Tháng này
           </button>
           <button 
             onClick={() => setTimeFilter('year')} 
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${timeFilter === 'year' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ${timeFilter === 'year' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
           >
             Năm nay
           </button>
@@ -169,7 +169,7 @@ const OperationsDashboardPage: React.FC = () => {
         <StatCard icon={FiDollarSign} label={`Doanh thu ${timeLabel}`} value={formatVND(stats?.revenue || 0)} sub="Đã gồm dịch vụ thêm" />
         <StatCard icon={FiTrendingUp} label="Tỷ lệ lấp đầy" value={`${stats?.occupancyRate || 0}%`}>
           <div className="w-full bg-muted rounded-full h-1.5 mt-2 overflow-hidden">
-            <div className="bg-primary h-1.5 rounded-full transition-all duration-500" style={{ width: `${Math.min(stats?.occupancyRate || 0, 100)}%` }} />
+            <div className="bg-primary h-1.5 rounded-full transition-[width] duration-500" style={{ width: `${Math.min(stats?.occupancyRate || 0, 100)}%` }} />
           </div>
         </StatCard>
         <StatCard
@@ -283,7 +283,7 @@ const OperationsDashboardPage: React.FC = () => {
                 <div className="flex gap-1 bg-muted/60 p-1 rounded-xl w-full 2xl:w-auto border border-border/50 overflow-x-auto">
                   <button 
                     onClick={() => setActiveTab('all')} 
-                    className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
+                    className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 ${
                       activeTab === 'all' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
                     }`}
                   >
@@ -292,7 +292,7 @@ const OperationsDashboardPage: React.FC = () => {
                   </button>
                   <button 
                     onClick={() => setActiveTab('incoming')} 
-                    className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
+                    className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 ${
                       activeTab === 'incoming' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
                     }`}
                   >
@@ -301,7 +301,7 @@ const OperationsDashboardPage: React.FC = () => {
                   </button>
                   <button 
                     onClick={() => setActiveTab('seated')} 
-                    className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
+                    className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 ${
                       activeTab === 'seated' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
                     }`}
                   >
@@ -310,7 +310,7 @@ const OperationsDashboardPage: React.FC = () => {
                   </button>
                   <button 
                     onClick={() => setActiveTab('completed')} 
-                    className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
+                    className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 ${
                       activeTab === 'completed' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
                     }`}
                   >
@@ -325,17 +325,18 @@ const OperationsDashboardPage: React.FC = () => {
                 <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
                 <input 
                   type="text"
-                  placeholder="Tìm kiếm theo tên khách, số điện thoại, mã vé (#WH-...), tên bàn..."
+                  placeholder="Tìm kiếm theo tên khách, số điện thoại, mã vé (#WH-...), tên bàn…"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-muted/40 border border-border rounded-xl pl-10 pr-8 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary focus:bg-background transition-all"
+                  className="w-full bg-muted/40 border border-border rounded-xl pl-10 pr-8 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary focus:bg-background transition"
                 />
                 {searchTerm && (
                   <button 
                     onClick={() => setSearchTerm('')}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5"
+                    aria-label="Xóa từ khóa tìm kiếm"
                   >
-                    <FiX className="w-3.5 h-3.5" />
+                    <FiX className="w-3.5 h-3.5" aria-hidden="true" />
                   </button>
                 )}
               </div>
@@ -373,7 +374,7 @@ const OperationsDashboardPage: React.FC = () => {
                   return (
                     <div 
                       key={b.id} 
-                      className="flex items-center gap-3.5 rounded-2xl bg-card p-3.5 border border-border/80 transition-all hover:border-primary/40 hover:shadow-sm"
+                      className="flex items-center gap-3.5 rounded-2xl bg-card p-3.5 border border-border/80 transition hover:border-primary/40 hover:shadow-sm"
                     >
                       {/* Cột 1: Thông tin gói & Giờ */}
                       {pkg.isMultiDay ? (
@@ -457,7 +458,7 @@ const OperationsDashboardPage: React.FC = () => {
                         {isSeated && (
                           <button 
                             onClick={() => navigate('/staff/checkin', { state: { bookingCode: b.bookingCode } })}
-                            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 border border-amber-500/30 transition-all flex items-center gap-1.5 shadow-sm"
+                            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 border border-amber-500/30 transition flex items-center gap-1.5 shadow-sm"
                             title="Check-out kết thúc lượt sử dụng"
                           >
                             <span>Check-out</span>

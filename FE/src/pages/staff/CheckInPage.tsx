@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, Suspense } from 'react';
 import { 
   FiHash, FiCheckCircle, FiAlertCircle, FiLogOut, FiClock, 
   FiInbox, FiSearch, FiUser, FiMapPin, FiCalendar, FiDollarSign, 
@@ -10,7 +10,6 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { useLocation } from 'react-router-dom';
 import { staffApi, BookingWithDetailsDto, BranchTodayBookingDto } from '../../api/staffApi';
 import { useAuth } from '../../context/AuthContext';
-import QrScannerModal from '../../components/QrScannerModal';
 import BookingTabPanel from '../../components/staff/BookingTabPanel';
 import ExtendBookingPanel from '../../components/ExtendBookingPanel';
 import type { BookingTabDto } from '../../api/addonApi';
@@ -21,6 +20,9 @@ import { CustomerReputationModal } from '../../components/reputation/CustomerRep
 import { StaffBookingActionModal } from '../../components/staff/StaffBookingActionModal';
 
 import { BookingPackageDisplay, getBookingPackageDisplay } from '../../utils/bookingPackage';
+
+// html5-qrcode is ~300 kB: load the scanner only when the receptionist opens it.
+const QrScannerModal = React.lazy(() => import('../../components/QrScannerModal'));
 
 export type { BookingPackageDisplay };
 export { getBookingPackageDisplay };
@@ -404,9 +406,10 @@ const CheckInPage: React.FC = () => {
             onClick={() => fetchActiveCheckins()} 
             disabled={refreshing}
             title="Làm mới danh sách"
+            aria-label="Làm mới danh sách"
             className="btn btn-outline !p-2.5 rounded-xl text-muted-foreground hover:text-foreground"
           >
-            <FiRefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin text-primary' : ''}`} />
+            <FiRefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin text-primary' : ''}`} aria-hidden="true" />
           </button>
         </div>
       </div>
@@ -453,14 +456,14 @@ const CheckInPage: React.FC = () => {
               <div className="grid grid-cols-2 gap-3">
                 <button 
                   onClick={() => setShowQrScanner(true)} 
-                  className="btn btn-secondary justify-center !h-13 text-base font-bold transition-all border-2 border-dashed hover:border-primary hover:text-primary"
+                  className="btn btn-secondary justify-center !h-13 text-base font-bold transition border-2 border-dashed hover:border-primary hover:text-primary"
                 >
                   <FiCamera className="mr-2 h-5 w-5" /> Quét QR
                 </button>
                 <button 
                   onClick={() => handleSearchTicket(code)} 
                   disabled={!code.trim() || loading} 
-                  className="btn btn-primary justify-center !h-13 shadow-lg shadow-primary/20 text-base font-bold transition-all"
+                  className="btn btn-primary justify-center !h-13 shadow-lg shadow-primary/20 text-base font-bold transition"
                 >
                   {loading && !searchedBooking ? (
                     <span className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -562,7 +565,7 @@ const CheckInPage: React.FC = () => {
                   <button 
                     onClick={handleConfirmCheckin} 
                     disabled={loading}
-                    className="btn btn-primary w-full justify-center !h-14 text-lg font-bold shadow-lg shadow-primary/30 transition-all "
+                    className="btn btn-primary w-full justify-center !h-14 text-lg font-bold shadow-lg shadow-primary/30 transition "
                   >
                     {loading ? (
                       <span className="h-6 w-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -607,7 +610,7 @@ const CheckInPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setActiveView('seated')}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
                     activeView === 'seated'
                       ? 'bg-background text-foreground shadow-sm'
                       : 'text-muted-foreground hover:text-foreground'
@@ -621,7 +624,7 @@ const CheckInPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setActiveView('today_schedule')}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
                     activeView === 'today_schedule'
                       ? 'bg-background text-foreground shadow-sm'
                       : 'text-muted-foreground hover:text-foreground'
@@ -636,11 +639,11 @@ const CheckInPage: React.FC = () => {
               <button
                 onClick={fetchDashboardData}
                 disabled={refreshing}
-                className="p-1.5 px-3 rounded-xl border border-border/60 bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground transition-all text-xs flex items-center gap-1.5 font-medium"
+                className="p-1.5 px-3 rounded-xl border border-border/60 bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground transition text-xs flex items-center gap-1.5 font-medium"
                 title="Làm mới dữ liệu"
               >
                 <FiRefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin text-primary' : ''}`} />
-                <span>{refreshing ? 'Đang tải...' : 'Làm mới'}</span>
+                <span>{refreshing ? 'Đang tải…' : 'Làm mới'}</span>
               </button>
             </div>
 
@@ -671,25 +674,25 @@ const CheckInPage: React.FC = () => {
                   <div className="flex items-center gap-1.5 bg-muted/60 p-1 rounded-xl w-full sm:w-auto overflow-x-auto">
                     <button 
                       onClick={() => setActiveTab('all')} 
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'all' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${activeTab === 'all' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                     >
                       Tất cả ({counts.all})
                     </button>
                     <button 
                       onClick={() => setActiveTab('valid')} 
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'valid' ? 'bg-background text-green-600 shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${activeTab === 'valid' ? 'bg-background text-green-600 shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                     >
                       Trong giờ ({counts.valid})
                     </button>
                     <button 
                       onClick={() => setActiveTab('near_expiry')} 
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'near_expiry' ? 'bg-background text-amber-600 shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${activeTab === 'near_expiry' ? 'bg-background text-amber-600 shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                     >
                       Sắp hết ({counts.near_expiry})
                     </button>
                     <button 
                       onClick={() => setActiveTab('overdue')} 
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'overdue' ? 'bg-background text-red-600 shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${activeTab === 'overdue' ? 'bg-background text-red-600 shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                     >
                       Quá giờ ({counts.overdue})
                     </button>
@@ -701,7 +704,7 @@ const CheckInPage: React.FC = () => {
                       type="text" 
                       value={filterText} 
                       onChange={e => setFilterText(e.target.value)} 
-                      placeholder="Tìm tên, SĐT, mã, phòng..." 
+                      placeholder="Tìm tên, SĐT, mã, phòng…"
                       className="input-field !pl-8 !h-9 text-xs bg-muted/50 focus:bg-background"
                     />
                   </div>
@@ -823,7 +826,7 @@ const CheckInPage: React.FC = () => {
                               </button>
                               <button 
                                 onClick={() => openCheckoutModal(ci)} 
-                                className={`btn btn-sm transition-all shadow-sm ${
+                                className={`btn btn-sm transition shadow-sm ${
                                   ci.meta.timeStatus === 'overdue'
                                     ? 'btn-destructive text-xs font-bold shadow-red-500/20'
                                     : 'btn-outline border-border hover:bg-destructive hover:text-destructive-foreground hover:border-destructive text-xs'
@@ -943,15 +946,19 @@ const CheckInPage: React.FC = () => {
       )}
 
       {/* QR Scanner Modal */}
-      <QrScannerModal
-        isOpen={showQrScanner}
-        onClose={() => setShowQrScanner(false)}
-        onScanSuccess={(scannedCode) => {
-          setShowQrScanner(false);
-          setCode(scannedCode);
-          handleSearchTicket(scannedCode);
-        }}
-      />
+      {showQrScanner && (
+        <Suspense fallback={null}>
+          <QrScannerModal
+            isOpen
+            onClose={() => setShowQrScanner(false)}
+            onScanSuccess={(scannedCode) => {
+              setShowQrScanner(false);
+              setCode(scannedCode);
+              handleSearchTicket(scannedCode);
+            }}
+          />
+        </Suspense>
+      )}
     </div>
   );
 };

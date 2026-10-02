@@ -640,7 +640,7 @@ const BAWorkspacePage: React.FC<BAWorkspacePageProps> = ({ isSuperAdminView = fa
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-muted-foreground text-sm">Đang tải dữ liệu...</div>
+        <div className="text-muted-foreground text-sm">Đang tải dữ liệu…</div>
       </div>
     );
   }
@@ -685,7 +685,7 @@ const BAWorkspacePage: React.FC<BAWorkspacePageProps> = ({ isSuperAdminView = fa
                 <select
                   value={selectedBranchId}
                   onChange={(e) => setSelectedBranchId(e.target.value)}
-                  className="bg-transparent text-sm font-semibold text-foreground focus:outline-none cursor-pointer"
+                  className="bg-transparent text-sm font-semibold text-foreground cursor-pointer"
                 >
                   {branches.map((b) => (
                     <option key={b.id} value={b.id} className="bg-card text-foreground">
@@ -739,7 +739,7 @@ const BAWorkspacePage: React.FC<BAWorkspacePageProps> = ({ isSuperAdminView = fa
               <div key={f.id} className="flex items-center gap-1 group">
                 <button
                   onClick={() => setSelectedFloorId(f.id)}
-                  className={`btn px-4 py-2 text-sm font-medium transition-all ${
+                  className={`btn px-4 py-2 text-sm font-medium transition ${
                     selectedFloorId === f.id
                       ? 'bg-primary text-primary-foreground shadow-md'
                       : 'bg-muted/50 text-foreground hover:bg-muted'
@@ -754,15 +754,17 @@ const BAWorkspacePage: React.FC<BAWorkspacePageProps> = ({ isSuperAdminView = fa
                       onClick={() => openFloorModal('edit', f)}
                       className="btn btn-ghost btn-sm p-1.5 text-muted-foreground hover:text-primary"
                       title="Sửa tầng"
+                      aria-label="Sửa tầng"
                     >
-                      <FiEdit2 className="h-4 w-4" />
+                      <FiEdit2 className="h-4 w-4" aria-hidden="true" />
                     </button>
                     <button
                       onClick={() => deleteFloor(f.id, f.name)}
                       className="btn btn-ghost btn-sm p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                       title="Xóa tầng"
+                      aria-label="Xóa tầng"
                     >
-                      <FiTrash2 className="h-4 w-4" />
+                      <FiTrash2 className="h-4 w-4" aria-hidden="true" />
                     </button>
                   </div>
                 )}
@@ -780,7 +782,7 @@ const BAWorkspacePage: React.FC<BAWorkspacePageProps> = ({ isSuperAdminView = fa
             <div>
               <p className="font-semibold text-sm">Sơ đồ có các phần tử chưa đồng bộ với Database</p>
               <p className="text-xs opacity-95">
-                Phát hiện {orphanWorkspaceElements.length} phần tử (bàn, phòng...) trên sơ đồ mang ID chưa tồn tại trong
+                Phát hiện {orphanWorkspaceElements.length} phần tử (bàn, phòng…) trên sơ đồ mang ID chưa tồn tại trong
                 Database (do mới thêm hoặc import mẫu).
               </p>
             </div>
@@ -793,7 +795,7 @@ const BAWorkspacePage: React.FC<BAWorkspacePageProps> = ({ isSuperAdminView = fa
             {syncing ? (
               <>
                 <span className="animate-spin rounded-full h-3 w-3 border-2 border-warning-foreground border-t-transparent"></span>
-                Đang đồng bộ...
+                Đang đồng bộ…
               </>
             ) : (
               'Đồng bộ & tạo ngay'

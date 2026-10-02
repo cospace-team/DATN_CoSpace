@@ -2,6 +2,7 @@ package com.cospace.app.controller;
 
 import com.cospace.app.dto.api.ReportOverviewDto;
 import com.cospace.app.security.BranchAccessGuard;
+import com.cospace.app.service.BookingService;
 import com.cospace.app.service.ReportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -49,7 +50,9 @@ public class ReportController {
         UUID effectiveBranchId = branchAccessGuard.resolveReportBranchId(jwt, branchId);
         byte[] csvData = reportService.exportBookingsCsv(effectiveBranchId, dateFrom, dateTo);
 
-        String filename = "cospace_bookings_" + LocalDate.now() + ".csv";
+        // Business date, not the server's: the container runs in UTC, so before 07:00 in Vietnam
+        // LocalDate.now() would still name the file after yesterday.
+        String filename = "cospace_bookings_" + LocalDate.now(BookingService.BUSINESS_ZONE) + ".csv";
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
                 .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))

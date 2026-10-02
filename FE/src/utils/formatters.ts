@@ -1,13 +1,22 @@
-export const formatVND = (amount: number): string => {
-  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(amount);
-};
+// Built once: constructing an Intl formatter is far slower than calling format(), and these run
+// for every row of every list.
+const vndFormatter = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 });
+const dateFormatter = new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+const timeFormatter = new Intl.DateTimeFormat('vi-VN', { hour: '2-digit', minute: '2-digit' });
 
-export const formatDate = (iso: string): string => {
-  return new Date(iso).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
-};
+export const formatVND = (amount: number): string => vndFormatter.format(amount);
 
-export const formatTime = (iso: string): string => {
-  return new Date(iso).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+export const formatDate = (iso: string): string => dateFormatter.format(new Date(iso));
+
+export const formatTime = (iso: string): string => timeFormatter.format(new Date(iso));
+
+/**
+ * Local calendar date as "YYYY-MM-DD" for <input type="date">. Not toISOString(): that is UTC,
+ * so local midnight in Vietnam (UTC+7) came out as the previous day.
+ */
+export const toDateInputValue = (date: Date): string => {
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 };
 
 export const formatDateTime = (iso: string): string => {

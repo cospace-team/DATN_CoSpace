@@ -44,6 +44,7 @@ import type { FloorLayout } from "../../types/floorPlan";
 import { resolveBranchId } from "../../data/branchAliases";
 import { addonApi, type ExtraServiceDto } from "../../api/addonApi";
 import { Skeleton } from "../../components/ui/Skeleton";
+import { useMediaQuery } from "../../hooks/useMediaQuery";
 
 import { ExploreFilters, type ExploreFilter } from "./explore/ExploreFilters";
 import { ExploreResults } from "./explore/ExploreResults";
@@ -410,6 +411,14 @@ const ExplorePage: React.FC = () => {
     [mappedWorkspaces, currentFloor],
   );
 
+  // Lookups by id: availability is asked for every seat (and, in the day view, every seat x hour),
+  // so a linear find() per call made those renders quadratic.
+  const workspaceById = useMemo(() => new Map(mappedWorkspaces.map((w) => [w.id, w])), [mappedWorkspaces]);
+  const availabilityByWorkspace = useMemo(
+    () => new Map(branchAvailability.map((a) => [a.workspaceId, a])),
+    [branchAvailability],
+  );
+
   // Extra seats belong to the branch on screen and never include the main seat.
   useEffect(() => {
     setExtraSeatIds([]);
@@ -438,7 +447,7 @@ const ExplorePage: React.FC = () => {
 
   const getWsAvailability = useCallback(
     (wsId: string, checkDate?: Date, checkHour?: number, checkEndDate?: Date, checkEndHour?: number) => {
-      const ws = mappedWorkspaces.find((w) => w.id === wsId);
+      const ws = workspaceById.get(wsId);
       if (!ws) return workspacesLoading ? "available" : "unassigned";
       if (
         ws.status.toLowerCase() === "maintenance" ||
@@ -473,9 +482,7 @@ const ExplorePage: React.FC = () => {
 
       // Check branch-wide availability from API — covers bookings made by ANY customer, not
       // just the current one (bookingApi.getMyBookings() only ever returns the caller's own).
-      const wsAvailability = branchAvailability.find(
-        (a) => a.workspaceId === ws.id,
-      );
+      const wsAvailability = availabilityByWorkspace.get(ws.id);
       const activeBusySlot = wsAvailability?.busySlots.find((slot) => {
         const start = new Date(slot.startAt);
         const end = new Date(slot.endAt);
@@ -488,7 +495,7 @@ const ExplorePage: React.FC = () => {
       }
       return "available";
     },
-    [mappedWorkspaces, selectedDate, selectedHour, branchAvailability, workspacesLoading, filterEndHour],
+    [workspaceById, selectedDate, selectedHour, availabilityByWorkspace, workspacesLoading, filterEndHour],
   );
 
   // Stable adapter for the memoized FloorPlanViewer — an inline arrow would re-render the whole
@@ -505,15 +512,13 @@ const ExplorePage: React.FC = () => {
   // Seat count and type shown on each workspace of the floor plan.
   const getFloorWorkspaceInfo = useCallback(
     (wsId: string) => {
-      const ws = mappedWorkspaces.find((w) => w.id === wsId);
+      const ws = workspaceById.get(wsId);
       return ws ? { code: ws.code, capacity: ws.capacity, typeName: ws.workspaceTypeName } : null;
     },
-    [mappedWorkspaces],
+    [workspaceById],
   );
 
-  const selectedWsData = selectedWs
-    ? mappedWorkspaces.find((w) => w.id === selectedWs)
-    : null;
+  const selectedWsData = selectedWs ? workspaceById.get(selectedWs) : null;
   const selectedWsType = selectedWsData
     ? {
         id: selectedWsData.workspace_type_id,
@@ -611,7 +616,7 @@ const ExplorePage: React.FC = () => {
     // Seats booked together with this one: re-checked here, priced by their own type.
     const extraWorkspaces = [];
     for (const id of extraIds) {
-      const seat = mappedWorkspaces.find((w) => w.id === id);
+      const seat = workspaceById.get(id);
       if (!seat) continue;
       const seatAvail = getWsAvailability(id, selectedDate, selectedHour, endDate, durationUnit === 'hour' ? endHour : undefined);
       if (seatAvail !== "available") {
@@ -647,23 +652,6 @@ const ExplorePage: React.FC = () => {
       },
     });
   };
-
-  /* Stats */
-  const stats = useMemo(() => {
-    const total = mappedWorkspaces.length;
-    const available = mappedWorkspaces.filter(
-      (ws) => getWsAvailability(ws.id) === "available",
-    ).length;
-    const booked = mappedWorkspaces.filter(
-      (ws) => getWsAvailability(ws.id) === "booked",
-    ).length;
-    return {
-      total,
-      available,
-      booked,
-      maintenance: total - available - booked,
-    };
-  }, [mappedWorkspaces, getWsAvailability]);
 
   // Parse layoutJson
   const parsedLayout = useMemo(() => {
@@ -764,6 +752,40 @@ const ExplorePage: React.FC = () => {
     setSelectedEndHour(currentFilter.endHour);
   };
   const branchName = apiBranches.find((b) => b.id === resolveBranchId(selectedBranch))?.name ?? "";
+
+  // One panel, placed by viewport: a side column on desktop, a bottom sheet on mobile. It used to be
+  // rendered twice and hidden with CSS, so both copies fetched stock and kept their own state.
+  const isDesktop = useMediaQuery("(min-width: 1024px)");
+  const bookingPanel = selectedWs && selectedWsData ? (
+    <BookingPanel
+      ws={selectedWsData}
+      wsType={selectedWsType}
+      wsAvail={selectedWsAvail}
+      selectedWs={selectedWs}
+      selectedHour={selectedHour}
+      initialEndHour={selectedEndHour || currentFilter.endHour}
+      initialServices={initialServices}
+      floorNameOf={(floorId) => { const f = branchFloors.find((x) => x.id === floorId); return f ? `Tầng ${f.floorNo}` : ""; }}
+      selectedDate={selectedDate}
+      getPrice={(unit) => getPrice(selectedWsData.workspace_type_id, unit)}
+      addonServices={extraServices as any}
+      openHour={openHour}
+      closeHour={closeHour}
+      onClose={() => setSelectedWs(null)}
+      onChangeStartHour={(h) => setSelectedHour(h)}
+      checkAvailability={(stH, endH, endD, unit) => getWsAvailability(selectedWs, selectedDate, stH, endD, unit === 'hour' ? endH : undefined)}
+      availableServices={extraServices}
+      candidateSeats={mappedWorkspaces}
+      extraSeatIds={extraSeatIds}
+      onToggleExtraSeat={toggleExtraSeat}
+      checkSeatAvailability={(wsId, stH, endH, endD, unit) => getWsAvailability(wsId, selectedDate, stH, endD, unit === 'hour' ? endH : undefined)}
+      getSeatPrice={(typeId, unit) => getPrice(typeId, unit)}
+      maxSeats={MAX_GROUP_SEATS}
+      multiSelect={multiSelect}
+      onToggleMultiSelect={setMultiSelect}
+      onBookNow={handleBookNow}
+    />
+  ) : null;
 
   return (
     <div
@@ -891,7 +913,7 @@ const ExplorePage: React.FC = () => {
                   {loading ? (
                     <div className="flex items-center gap-3 px-6 py-4 bg-card border border-border rounded-2xl shadow-sm">
                       <div className="h-5 w-5 animate-spin rounded-full border-2 border-border border-t-slate-900" />
-                      <span className="text-sm font-medium text-foreground">Đang tải sơ đồ...</span>
+                      <span className="text-sm font-medium text-foreground">Đang tải sơ đồ…</span>
                     </div>
                   ) : errorMsg ? (
                     <div className="text-sm text-foreground font-medium px-6 py-4 bg-card border border-border rounded-2xl shadow-sm">
@@ -1035,7 +1057,7 @@ const ExplorePage: React.FC = () => {
                                           : avail === "booked"
                                             ? "bg-rose-400"
                                             : "bg-slate-300"
-                                    } transition-all hover:opacity-80`}
+                                    } transition hover:opacity-80`}
                                   />
                                 </div>
                               );
@@ -1052,81 +1074,23 @@ const ExplorePage: React.FC = () => {
         </div>
 
         {/* ── Right Panel — Booking Details ── */}
-        {/* ── Right Panel — Desktop */}
-        {selectedWs && selectedWsData && (
-          <>
-            {/* Desktop: side panel */}
-            <div className="hidden lg:block w-80 shrink-0 border-l border-[var(--border-subtle)] bg-[var(--bg-surface)] overflow-y-auto slide-in-right">
-              <BookingPanel
-                ws={selectedWsData}
-                wsType={selectedWsType}
-                wsAvail={selectedWsAvail}
-                selectedWs={selectedWs}
-                selectedHour={selectedHour}
-                initialEndHour={selectedEndHour || currentFilter.endHour}
-                initialServices={initialServices}
-                floorNameOf={(floorId) => { const f = branchFloors.find((x) => x.id === floorId); return f ? `Tầng ${f.floorNo}` : ""; }}
-                selectedDate={selectedDate}
-                getPrice={(unit) => getPrice(selectedWsData.workspace_type_id, unit)}
-                addonServices={extraServices as any}
-                openHour={openHour}
-                closeHour={closeHour}
-                onClose={() => setSelectedWs(null)}
-                onChangeStartHour={(h) => setSelectedHour(h)}
-                checkAvailability={(stH, endH, endD, unit) => getWsAvailability(selectedWs, selectedDate, stH, endD, unit === 'hour' ? endH : undefined)}
-                availableServices={extraServices}
-                candidateSeats={mappedWorkspaces}
-                extraSeatIds={extraSeatIds}
-                onToggleExtraSeat={toggleExtraSeat}
-                checkSeatAvailability={(wsId, stH, endH, endD, unit) => getWsAvailability(wsId, selectedDate, stH, endD, unit === 'hour' ? endH : undefined)}
-                getSeatPrice={(typeId, unit) => getPrice(typeId, unit)}
-                maxSeats={MAX_GROUP_SEATS}
-                multiSelect={multiSelect}
-                onToggleMultiSelect={setMultiSelect}
-                onBookNow={handleBookNow}
-              />
+        {bookingPanel && (isDesktop ? (
+          <div className="w-80 shrink-0 border-l border-[var(--border-subtle)] bg-[var(--bg-surface)] overflow-y-auto slide-in-right">
+            {bookingPanel}
+          </div>
+        ) : (
+          <div>
+            <div
+              className="bottom-sheet-overlay"
+              onClick={() => setSelectedWs(null)}
+              aria-hidden="true"
+            />
+            <div className="bottom-sheet bottom-sheet-enter" role="dialog" aria-modal="true" aria-label={selectedWsData?.name}>
+              <div className="bottom-sheet-handle" aria-hidden="true" />
+              {bookingPanel}
             </div>
-
-            {/* Mobile: bottom sheet */}
-            <div className="lg:hidden">
-              <div
-                className="bottom-sheet-overlay"
-                onClick={() => setSelectedWs(null)}
-              />
-              <div className="bottom-sheet bottom-sheet-enter">
-                <div className="bottom-sheet-handle" />
-                <BookingPanel
-                  ws={selectedWsData}
-                  wsType={selectedWsType}
-                  wsAvail={selectedWsAvail}
-                  selectedWs={selectedWs}
-                  selectedHour={selectedHour}
-                  initialEndHour={selectedEndHour || currentFilter.endHour}
-                initialServices={initialServices}
-                floorNameOf={(floorId) => { const f = branchFloors.find((x) => x.id === floorId); return f ? `Tầng ${f.floorNo}` : ""; }}
-                  selectedDate={selectedDate}
-                  getPrice={(unit) => getPrice(selectedWsData.workspace_type_id, unit)}
-                  addonServices={extraServices as any}
-                  openHour={openHour}
-                  closeHour={closeHour}
-                  onClose={() => setSelectedWs(null)}
-                  onChangeStartHour={(h) => setSelectedHour(h)}
-                  checkAvailability={(stH, endH, endD, unit) => getWsAvailability(selectedWs, selectedDate, stH, endD, unit === 'hour' ? endH : undefined)}
-                  availableServices={extraServices}
-                  candidateSeats={mappedWorkspaces}
-                extraSeatIds={extraSeatIds}
-                onToggleExtraSeat={toggleExtraSeat}
-                checkSeatAvailability={(wsId, stH, endH, endD, unit) => getWsAvailability(wsId, selectedDate, stH, endD, unit === 'hour' ? endH : undefined)}
-                getSeatPrice={(typeId, unit) => getPrice(typeId, unit)}
-                maxSeats={MAX_GROUP_SEATS}
-                multiSelect={multiSelect}
-                onToggleMultiSelect={setMultiSelect}
-                onBookNow={handleBookNow}
-                />
-              </div>
-            </div>
-          </>
-        )}
+          </div>
+        ))}
       </div>
       </>
       )}

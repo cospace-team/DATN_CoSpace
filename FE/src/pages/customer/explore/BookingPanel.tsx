@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { FiX, FiCheck, FiPlus, FiUsers } from 'react-icons/fi';
 import { WorkspaceAmenities } from '../../../components/WorkspaceAmenities';
-import { formatVND, durationUnitLabel } from '../../../utils/formatters';
+import { formatVND, durationUnitLabel, toDateInputValue } from '../../../utils/formatters';
 import { serviceLimitApi, type ExtraServiceDto, type ServiceAvailabilityDto } from '../../../api/addonApi';
 import { QuantityStepper } from '../../../components/ui/QuantityStepper';
 import WorkspaceGallery from '../../../components/workspace/WorkspaceGallery';
@@ -235,8 +235,6 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
     }
   }, [durationUnit, minEndDate, endDate]);
 
-  const toInputDate = (d: Date) => d.toISOString().slice(0, 10);
-
   const currentAvail = checkAvailability
     ? checkAvailability(selectedHour, endHour, endDate, durationUnit)
     : wsAvail;
@@ -339,7 +337,7 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
               <button
                 key={u}
                 onClick={() => setDurationUnit(u)}
-                className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer ${
+                className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition cursor-pointer ${
                   durationUnit === u
                     ? 'bg-card text-foreground shadow-sm'
                     : 'text-[var(--text-tertiary)] hover:text-foreground'
@@ -412,7 +410,7 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
                 <label className="text-xs text-[var(--text-secondary)]">Ngày bắt đầu</label>
                 <input
                   type="date"
-                  value={toInputDate(toMidnight(selectedDate))}
+                  value={toDateInputValue(toMidnight(selectedDate))}
                   className="input-field mt-1 text-sm w-full"
                   readOnly
                 />
@@ -427,8 +425,8 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
                 <input
                   id={`end-date-${selectedWs}`}
                   type="date"
-                  value={toInputDate(endDate)}
-                  min={toInputDate(minEndDate)}
+                  value={toDateInputValue(endDate)}
+                  min={toDateInputValue(minEndDate)}
                   onChange={e => {
                     const d = new Date(e.target.value + 'T00:00:00');
                     if (!isNaN(d.getTime())) setEndDate(d);

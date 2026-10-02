@@ -124,10 +124,10 @@ export const ProfileSecurityTab: React.FC<ProfileSecurityTabProps> = ({
             <button
               type="submit"
               disabled={isSavingPassword}
-              className="inline-flex items-center gap-2 px-6 py-2.5 bg-primary text-primary-foreground font-semibold rounded-xl text-sm hover:bg-primary/90 transition-all shadow-md active:scale-95 disabled:opacity-50 mt-2 cursor-pointer"
+              className="inline-flex items-center gap-2 px-6 py-2.5 bg-primary text-primary-foreground font-semibold rounded-xl text-sm hover:bg-primary/90 transition shadow-md active:scale-95 disabled:opacity-50 mt-2 cursor-pointer"
             >
               {isSavingPassword && <Spinner size="sm" />}
-              {isSavingPassword ? 'Đang cập nhật...' : 'Cập nhật mật khẩu'}
+              {isSavingPassword ? 'Đang cập nhật…' : 'Cập nhật mật khẩu'}
             </button>
           </form>
         </section>
@@ -159,10 +159,11 @@ export const ProfileSecurityTab: React.FC<ProfileSecurityTabProps> = ({
                 <input
                   type="checkbox"
                   className="sr-only peer"
+                  aria-label="Công khai liên hệ"
                   checked={contactPublic}
                   onChange={e => onToggleContactPublic(e.target.checked)}
                 />
-                <div className="w-11 h-6 bg-muted-foreground/30 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                <div className="w-11 h-6 bg-muted-foreground/30 peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-transform peer-checked:bg-primary"></div>
               </label>
             </div>
 

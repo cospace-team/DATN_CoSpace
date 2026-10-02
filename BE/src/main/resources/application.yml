@@ -88,12 +88,17 @@ spring:
           issuer-uri: ${SUPABASE_JWT_ISSUER:https://ozaiknomajljfqiepels.supabase.co/auth/v1}
 
 momo:
-  endpoint: "https://test-payment.momo.vn/v2/gateway/api/create"
-  partner-code: "MOMO"
-  access-key: "F8BBA842ECF85"
-  secret-key: "K951B6PE1waDMi640xX08PD3vg6EkVlz"
-  return-url: "http://localhost:8080/api/payments/momo/return"
-  notify-url: "http://localhost:8080/api/payments/momo/ipn"
+  # Defaults are MoMo's published sandbox test credentials, not a secret; a real merchant account
+  # comes in through the environment.
+  endpoint: ${MOMO_ENDPOINT:https://test-payment.momo.vn/v2/gateway/api/create}
+  partner-code: ${MOMO_PARTNER_CODE:MOMO}
+  access-key: ${MOMO_ACCESS_KEY:F8BBA842ECF85}
+  secret-key: ${MOMO_SECRET_KEY:K951B6PE1waDMi640xX08PD3vg6EkVlz}
+  # MoMo sends the customer back to return-url and posts the payment result (IPN) to notify-url,
+  # so both must be this backend's public address. Hard-coded localhost here meant a deployed
+  # backend sent customers to their own machine and never received the IPN.
+  return-url: ${MOMO_RETURN_URL:${app.backend.base-url}/api/payments/momo/return}
+  notify-url: ${MOMO_NOTIFY_URL:${app.backend.base-url}/api/payments/momo/ipn}
 
 payos:
   endpoint: ${PAYOS_ENDPOINT:https://api-merchant.payos.vn}
@@ -121,6 +126,9 @@ app:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173}
   frontend:
     base-url: ${APP_FRONTEND_BASE_URL:http://localhost:5173}
+  backend:
+    # Public address of this API, used for payment gateway callbacks (MoMo return/IPN).
+    base-url: ${APP_BACKEND_BASE_URL:http://localhost:8080}
   supabase:
     jwt-secret: ${SUPABASE_JWT_SECRET:}
     # Workspace photos go to Supabase Storage through the backend; the service-role key stays
