@@ -98,6 +98,22 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
 
     long countByUserIdAndStatusIn(UUID userId, Collection<BookingStatus> statuses);
 
+    List<Booking> findByGroupIdOrderByCreatedAtAsc(UUID groupId);
+
+    /** Single bookings of a customer in a status (seats of a booking group are counted per group below). */
+    @org.springframework.data.jpa.repository.Query("SELECT COUNT(b) FROM Booking b WHERE b.userId = :userId AND b.status = :status AND b.groupId IS NULL")
+    long countUngroupedByUserIdAndStatus(@org.springframework.data.repository.query.Param("userId") UUID userId,
+                                         @org.springframework.data.repository.query.Param("status") BookingStatus status);
+
+    /** Booking groups of a customer with at least one seat in a status. */
+    @org.springframework.data.jpa.repository.Query("SELECT COUNT(DISTINCT b.groupId) FROM Booking b WHERE b.userId = :userId AND b.status = :status AND b.groupId IS NOT NULL")
+    long countGroupsByUserIdAndStatus(@org.springframework.data.repository.query.Param("userId") UUID userId,
+                                      @org.springframework.data.repository.query.Param("status") BookingStatus status);
+
+    /** [groupId, seat count] for the given groups. */
+    @org.springframework.data.jpa.repository.Query("SELECT b.groupId, COUNT(b) FROM Booking b WHERE b.groupId IN :groupIds GROUP BY b.groupId")
+    List<Object[]> countSeatsByGroupIds(@org.springframework.data.repository.query.Param("groupIds") Collection<UUID> groupIds);
+
     /** Ids of bookings in a status whose start lies in [from, to) — candidates for reminders. */
     @org.springframework.data.jpa.repository.Query("SELECT b.id FROM Booking b WHERE b.status = :status AND b.startAt >= :from AND b.startAt < :to")
     List<UUID> findIdsByStatusAndStartAtBetween(@org.springframework.data.repository.query.Param("status") BookingStatus status,

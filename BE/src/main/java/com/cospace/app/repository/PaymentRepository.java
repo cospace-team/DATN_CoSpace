@@ -31,4 +31,9 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
 
     /** Same check restricted to one purpose, so an add-on settlement never counts as a booking payment. */
     boolean existsByBookingIdAndStatusAndPurposeAndIdNot(UUID bookingId, PaymentStatus status, String purpose, UUID excludedPaymentId);
+
+    /** Every row of a combined (booking group) payment. */
+    List<Payment> findByGroupOrderId(String groupOrderId);
+
+    List<Payment> findByBookingGroupIdAndStatusInOrderByCreatedAtAsc(UUID bookingGroupId, java.util.Collection<com.cospace.app.entity.PaymentStatus> statuses);
 }

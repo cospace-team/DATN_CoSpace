@@ -7,7 +7,7 @@ import {
 import { formatVND, durationUnitLabel } from '../../utils/formatters';
 import { Button } from '../../components/ui/button';
 import { useAuth } from '../../context/AuthContext';
-import { bookingApi } from '../../lib/bookingApi';
+import { bookingApi, bookingGroupApi, type BookingGroupQuote } from '../../lib/bookingApi';
 import { useToast } from '../../components/Toast';
 import { customerSpaceApi, type ExtraServiceResponse } from '../../lib/spaceApi';
 import { describePromotion, promotionApi, reputationApi, type BookingQuoteDto, type MyReputationDto, type PromotionDto } from '../../api/loyaltyApi';
@@ -27,6 +27,10 @@ const BookingCheckoutPage: React.FC = () => {
   const state = location.state as any;
   const workspace = state?.workspace;
   const workspaceType = state?.workspaceType;
+  // Seats booked together with the main one (đặt nhiều chỗ): same time, one payment.
+  const extraWorkspaces: { workspace: any; price: { price: number } }[] = state?.extraWorkspaces || [];
+  const isGroup = extraWorkspaces.length > 0;
+  const seatIds: string[] = workspace ? [workspace.id, ...extraWorkspaces.map((e) => e.workspace.id)] : [];
   const date = (state?.date ? new Date(state.date) : new Date());
   const startHour = state?.hour || 9;
   const endHour = state?.endHour || 11;
@@ -110,8 +114,38 @@ const BookingCheckoutPage: React.FC = () => {
   const [isApplyingPromo, setIsApplyingPromo] = useState(false);
   const [availablePromos, setAvailablePromos] = useState<PromotionDto[]>([]);
 
+  const [groupQuote, setGroupQuote] = useState<BookingGroupQuote | null>(null);
+
+  // A group is priced seat by seat on the server; folded into the single-booking quote shape so
+  // the invoice below renders it the same way (no promotion codes on groups).
+  const requestGroupQuote = async (): Promise<BookingQuoteDto> => {
+    const g = await bookingGroupApi.quote({
+      workspaceIds: seatIds,
+      unit: bookingDurationUnit,
+      startAt: startAtDate.toISOString(),
+      endAt: endAtDate.toISOString(),
+      addons: addonRequest,
+    });
+    setGroupQuote(g);
+    return {
+      pricePerUnit: g.seats[0]?.pricePerUnit ?? 0,
+      unitCount: g.seats[0]?.unitCount ?? 1,
+      subtotalAmount: g.subtotalAmount,
+      membershipTierCode: null,
+      membershipTierName: g.membershipTierName,
+      membershipDiscountPercent: g.membershipDiscountPercent,
+      membershipDiscountAmount: g.discountAmount,
+      promotionCode: null,
+      promotionName: null,
+      promotionDiscountAmount: 0,
+      discountAmount: g.discountAmount,
+      addonAmount: g.addonAmount,
+      totalAmount: g.totalAmount,
+    };
+  };
+
   const requestQuote = (promotionCode: string | null) =>
-    promotionApi.quote({
+    isGroup ? requestGroupQuote() : promotionApi.quote({
       workspaceId: workspace.id,
       unit: bookingDurationUnit,
       startAt: startAtDate.toISOString(),
@@ -157,10 +191,10 @@ const BookingCheckoutPage: React.FC = () => {
     return () => {
       active = false;
     };
-  }, [workspace?.id, bookingDurationUnit, startAtDate.getTime(), endAtDate.getTime(), addonKey]);
+  }, [workspace?.id, seatIds.join(','), bookingDurationUnit, startAtDate.getTime(), endAtDate.getTime(), addonKey]);
 
   useEffect(() => {
-    if (!workspace || !UUID_RE.test(workspace.id)) return;
+    if (!workspace || !UUID_RE.test(workspace.id) || isGroup) return;
     if (UUID_RE.test(branchId)) {
       promotionApi
         .available(branchId, UUID_RE.test(workspaceTypeId) ? workspaceTypeId : undefined)
@@ -265,6 +299,48 @@ const BookingCheckoutPage: React.FC = () => {
       if (startAtDate < now) {
         showToast('Không thể đặt chỗ trong quá khứ. Vui lòng chọn thời gian khác.', 'error');
         setIsProcessing(false);
+        return;
+      }
+
+      if (isGroup) {
+        // All seats are booked in one step (all or nothing), then paid with a single VietQR.
+        let group = activeBooking;
+        if (!group) {
+          const created = await bookingGroupApi.create({
+            workspaceIds: seatIds,
+            startAt: startAtDate.toISOString(),
+            endAt: endAtDate.toISOString(),
+            unit: bookingDurationUnit,
+            addons: addonRequest,
+          });
+          group = {
+            id: created.id,
+            isGroup: true,
+            bookingCode: created.groupCode,
+            totalAmount: created.amountDue,
+            paymentDeadlineAt: created.paymentDeadlineAt,
+          };
+          setActiveBooking(group);
+        }
+        const doneState = {
+          state: {
+            message: `Đặt ${seatIds.length} chỗ thành công! Mã đơn nhóm của bạn là ${group.bookingCode}.`,
+            newBookingCode: group.bookingCode,
+            branchName: state.branchName || "CoSpace Chi nhánh",
+          },
+        };
+        if (group.totalAmount <= 0) {
+          showToast(`Đặt ${seatIds.length} chỗ thành công!`, 'success');
+          navigate('/customer/history', doneState);
+          return;
+        }
+        showToast('Đang kết nối cổng thanh toán VietQR (PayOS)...', 'info');
+        const payRes = await bookingGroupApi.payPayos(group.id);
+        if (payRes.checkoutUrl && payRes.checkoutUrl.startsWith('http')) {
+          window.location.href = payRes.checkoutUrl;
+        } else {
+          navigate('/customer/history', doneState);
+        }
         return;
       }
 
@@ -389,18 +465,51 @@ const BookingCheckoutPage: React.FC = () => {
               
               <div className="relative z-10">
                 <h2 className="text-2xl font-semibold flex items-center gap-2 text-white">
-                  <FiMapPin className="text-slate-300 h-6 w-6" /> {workspace.name}
+                  <FiMapPin className="text-slate-300 h-6 w-6" /> {isGroup ? `Đặt ${seatIds.length} chỗ cùng lúc` : workspace.name}
                 </h2>
                 <p className="text-sm font-medium text-slate-300 mt-2 flex flex-wrap gap-2 items-center">
-                  <span className="bg-card/10 text-white px-2 py-1 rounded border border-white/10 text-[10px] tracking-tight">{workspaceType?.name || 'Không gian'}</span>
-                  <span>·</span>
-                  <span>Sức chứa: {workspace.capacity} chỗ</span>
+                  {isGroup ? (
+                    <span>{state?.branchName} · tổng sức chứa {[workspace, ...extraWorkspaces.map((e) => e.workspace)].reduce((n, w) => n + (w.capacity || 0), 0)} người</span>
+                  ) : (
+                    <>
+                      <span className="bg-card/10 text-white px-2 py-1 rounded border border-white/10 text-[10px] tracking-tight">{workspaceType?.name || 'Không gian'}</span>
+                      <span>·</span>
+                      <span>Sức chứa: {workspace.capacity} chỗ</span>
+                    </>
+                  )}
                 </p>
               </div>
               <span className="px-4 py-2 rounded-3xl text-lg font-semibold font-mono bg-card/10 text-white border border-white/10 relative z-10">
-                {workspace.code}
+                {isGroup ? `${seatIds.length} chỗ` : workspace.code}
               </span>
             </div>
+
+            {isGroup && (
+              <div className="p-6 pb-0 bg-card">
+                <p className="text-sm font-semibold text-foreground mb-3">Các chỗ trong đơn ({seatIds.length})</p>
+                <ul className="divide-y divide-border rounded-2xl border border-border">
+                  {[{ workspace }, ...extraWorkspaces].map(({ workspace: seat }) => {
+                    const sq = groupQuote?.seats.find((x) => x.workspaceId === seat.id);
+                    return (
+                      <li key={seat.id} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
+                        <span className="min-w-0">
+                          <span className="font-semibold text-foreground block truncate">{seat.name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {seat.workspaceTypeName} · {seat.capacity} chỗ · {seat.code}
+                          </span>
+                        </span>
+                        <span className="font-mono text-foreground shrink-0">
+                          {sq ? formatVND(sq.totalAmount) : '—'}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Mỗi chỗ là một đơn riêng với mã check-in riêng; bạn thanh toán tất cả một lần.
+                </p>
+              </div>
+            )}
 
             <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-6 bg-card">
               <div className="space-y-2 p-4 bg-muted/50 rounded-3xl border border-border shadow-inner">
@@ -489,6 +598,16 @@ const BookingCheckoutPage: React.FC = () => {
           )}
 
           {/* Promotion code */}
+          {isGroup ? (
+            <section className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+              <h3 className="font-semibold text-xl text-foreground flex items-center gap-2">
+                <FiGift className="text-foreground" /> Mã khuyến mãi
+              </h3>
+              <p className="text-sm text-muted-foreground mt-2">
+                Mã khuyến mãi chỉ áp dụng cho đơn 1 chỗ. Đơn nhiều chỗ vẫn được giảm giá theo hạng thành viên của bạn.
+              </p>
+            </section>
+          ) : (
           <section className="rounded-3xl border border-border bg-card p-6 shadow-sm space-y-4">
             <h3 className="font-semibold text-xl text-foreground flex items-center gap-2">
               <FiGift className="text-foreground" /> Mã khuyến mãi
@@ -557,6 +676,7 @@ const BookingCheckoutPage: React.FC = () => {
               </div>
             )}
           </section>
+          )}
 
           {/* Payment Method Selector */}
           <section className="rounded-3xl border border-border bg-card p-6 shadow-sm space-y-6">
@@ -591,6 +711,8 @@ const BookingCheckoutPage: React.FC = () => {
                 </div>
               </label>
 
+              {/* MoMo pays one booking per order; a group is paid with one VietQR instead. */}
+              {!isGroup && (
               <label className={`flex items-center justify-between p-4 rounded-3xl border-4 cursor-pointer transition-all ${
                 paymentMethod === 'momo' ? 'border-[#A50064] bg-muted/5 shadow-sm' : 'border-border hover:shadow-sm'
               }`}>
@@ -615,6 +737,7 @@ const BookingCheckoutPage: React.FC = () => {
                   <FiCheckCircle className="h-5 w-5 font-semibold" />
                 </div>
               </label>
+              )}
 
               <div className="p-4 rounded-3xl bg-muted/50 border border-border text-sm font-medium text-foreground flex items-start gap-3 shadow-inner">
                 <FiLock className="h-6 w-6 shrink-0 text-foreground mt-0.5" />
@@ -640,7 +763,11 @@ const BookingCheckoutPage: React.FC = () => {
             <div className="p-6 space-y-4">
               <div className="flex flex-col gap-2 p-4 bg-muted/50 rounded-3xl border border-border">
                 <div className="flex justify-between items-center text-sm font-medium text-foreground/70">
-                  <span className="">Tiền thuê ({formatVND(displayBasePrice)}) × {unitCount}{bookingDurationUnit === 'week' ? ' tuần' : bookingDurationUnit === 'day' ? ' ngày' : 'h'}</span>
+                  <span className="">
+                    {isGroup
+                      ? `Tiền thuê ${seatIds.length} chỗ × ${unitCount}${bookingDurationUnit === 'week' ? ' tuần' : bookingDurationUnit === 'day' ? ' ngày' : 'h'}`
+                      : <>Tiền thuê ({formatVND(displayBasePrice)}) × {unitCount}{bookingDurationUnit === 'week' ? ' tuần' : bookingDurationUnit === 'day' ? ' ngày' : 'h'}</>}
+                  </span>
                   <span className="font-semibold text-foreground font-mono text-lg">{formatVND(rentalSubtotal)}</span>
                 </div>
 

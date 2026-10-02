@@ -182,6 +182,17 @@ const ExplorePage: React.FC = () => {
 
 
 
+  // Further seats booked together with the selected one (same time, same floor), and whether
+  // clicks on the floor plan add seats to that list instead of switching the selected seat.
+  const [extraSeatIds, setExtraSeatIds] = useState<string[]>([]);
+  const [multiSelect, setMultiSelect] = useState(false);
+  const MAX_GROUP_SEATS = 10;
+  const toggleExtraSeat = useCallback((wsId: string) => {
+    setExtraSeatIds((prev) =>
+      prev.includes(wsId) ? prev.filter((id) => id !== wsId) : prev.length + 1 >= MAX_GROUP_SEATS ? prev : [...prev, wsId],
+    );
+  }, []);
+
   const [apiBranches, setApiBranches] = useState<BranchResponse[]>([]);
   const [branchPrices, setBranchPrices] = useState<BranchPriceResponse[]>([]);
   const [extraServices, setExtraServices] = useState<ExtraServiceResponse[]>([]);
@@ -363,6 +374,32 @@ const ExplorePage: React.FC = () => {
 
   const floorWorkspaces = mappedWorkspaces;
 
+  // Extra seats belong to the floor on screen and never include the main seat.
+  useEffect(() => {
+    setExtraSeatIds([]);
+    setMultiSelect(false);
+  }, [currentFloor]);
+  useEffect(() => {
+    if (!selectedWs) {
+      setExtraSeatIds([]);
+      setMultiSelect(false);
+    } else {
+      setExtraSeatIds((prev) => prev.filter((id) => id !== selectedWs));
+    }
+  }, [selectedWs]);
+
+  /** Floor plan click: adds/removes a seat while picking several, otherwise selects it. */
+  const handleMapSelect = useCallback(
+    (wsId: string | null) => {
+      if (multiSelect && selectedWs && wsId && wsId !== selectedWs) {
+        toggleExtraSeat(wsId);
+        return;
+      }
+      setSelectedWs(wsId);
+    },
+    [multiSelect, selectedWs, toggleExtraSeat, setSelectedWs],
+  );
+
   const getWsAvailability = useCallback(
     (wsId: string, checkDate?: Date, checkHour?: number, checkEndDate?: Date, checkEndHour?: number) => {
       const ws = mappedWorkspaces.find((w) => w.id === wsId);
@@ -485,6 +522,7 @@ const ExplorePage: React.FC = () => {
     addonTotal: number,
     endDate: Date,
     durationUnit: DurationUnitMode,
+    extraIds: string[] = [],
   ) => {
     if (!selectedWsData) return;
     
@@ -532,8 +570,27 @@ const ExplorePage: React.FC = () => {
       .filter((a): a is NonNullable<typeof a> => a !== null);
     const selectedServiceDetails = allAddonsList.filter((s: any) => !!services[s.id]);
 
+    // Seats booked together with this one: re-checked here, priced by their own type.
+    const extraWorkspaces = [];
+    for (const id of extraIds) {
+      const seat = mappedWorkspaces.find((w) => w.id === id);
+      if (!seat) continue;
+      const seatAvail = getWsAvailability(id, selectedDate, selectedHour, endDate, durationUnit === 'hour' ? endHour : undefined);
+      if (seatAvail !== "available") {
+        showToast(`Chỗ "${seat.name}" không còn trống trong khoảng thời gian này, vui lòng bỏ chỗ đó ra.`, "error");
+        return;
+      }
+      const seatPrice = getPrice(seat.workspace_type_id, durationUnit);
+      if (!seatPrice) {
+        showToast(`Chỗ "${seat.name}" chưa có giá cho loại thời gian này.`, "error");
+        return;
+      }
+      extraWorkspaces.push({ workspace: seat, price: seatPrice });
+    }
+
     navigate("/customer/checkout", {
       state: {
+        extraWorkspaces,
         workspace: selectedWsData,
         workspaceType: selectedWsType,
         branchName: branchName,
@@ -744,9 +801,10 @@ const ExplorePage: React.FC = () => {
                     <FloorPlanViewer
                       layout={parsedLayout}
                       selectedWsId={selectedWs}
-                      onSelectWorkspace={setSelectedWs}
+                      onSelectWorkspace={handleMapSelect}
                       getAvailability={getFloorAvailability}
                       getWorkspaceInfo={getFloorWorkspaceInfo}
+                      extraSelectedIds={extraSeatIds}
                     />
                   ) : (
                     <div className="flex flex-col items-center justify-center p-10 text-center bg-card border border-border rounded-3xl max-w-md shadow-sm animate-fade-in">
@@ -1072,6 +1130,14 @@ const ExplorePage: React.FC = () => {
                 onChangeStartHour={(h) => setSelectedHour(h)}
                 checkAvailability={(stH, endH, endD, unit) => getWsAvailability(selectedWs, selectedDate, stH, endD, unit === 'hour' ? endH : undefined)}
                 availableServices={extraServices}
+                candidateSeats={mappedWorkspaces}
+                extraSeatIds={extraSeatIds}
+                onToggleExtraSeat={toggleExtraSeat}
+                checkSeatAvailability={(wsId, stH, endH, endD, unit) => getWsAvailability(wsId, selectedDate, stH, endD, unit === 'hour' ? endH : undefined)}
+                getSeatPrice={(typeId, unit) => getPrice(typeId, unit)}
+                maxSeats={MAX_GROUP_SEATS}
+                multiSelect={multiSelect}
+                onToggleMultiSelect={setMultiSelect}
                 onBookNow={handleBookNow}
               />
             </div>
@@ -1100,7 +1166,15 @@ const ExplorePage: React.FC = () => {
                   onChangeStartHour={(h) => setSelectedHour(h)}
                   checkAvailability={(stH, endH, endD, unit) => getWsAvailability(selectedWs, selectedDate, stH, endD, unit === 'hour' ? endH : undefined)}
                   availableServices={extraServices}
-                  onBookNow={handleBookNow}
+                  candidateSeats={mappedWorkspaces}
+                extraSeatIds={extraSeatIds}
+                onToggleExtraSeat={toggleExtraSeat}
+                checkSeatAvailability={(wsId, stH, endH, endD, unit) => getWsAvailability(wsId, selectedDate, stH, endD, unit === 'hour' ? endH : undefined)}
+                getSeatPrice={(typeId, unit) => getPrice(typeId, unit)}
+                maxSeats={MAX_GROUP_SEATS}
+                multiSelect={multiSelect}
+                onToggleMultiSelect={setMultiSelect}
+                onBookNow={handleBookNow}
                 />
               </div>
             </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { FiX, FiCheck } from 'react-icons/fi';
+import { FiX, FiCheck, FiPlus, FiUsers } from 'react-icons/fi';
 import { WorkspaceAmenities } from '../../../components/WorkspaceAmenities';
 import { formatVND, durationUnitLabel } from '../../../utils/formatters';
 import type { ExtraServiceDto } from '../../../api/addonApi';
@@ -65,13 +65,26 @@ interface BookingPanelProps {
   onChangeStartHour: (hour: number) => void;
   checkAvailability?: (startHour: number, endHour: number, endDate: Date, unit: string) => string;
   availableServices?: ExtraServiceResponse[];
+  /** Other seats of the floor that can be booked together with this one (same time). */
+  candidateSeats?: ExploreWorkspace[];
+  /** Extra seats chosen to book together with this one. */
+  extraSeatIds?: string[];
+  onToggleExtraSeat?: (wsId: string) => void;
+  /** Availability of another seat for the time being chosen here. */
+  checkSeatAvailability?: (wsId: string, startHour: number, endHour: number, endDate: Date, unit: string) => string;
+  getSeatPrice?: (wsTypeId: string, unit: DurationUnitMode) => UnitPrice | undefined;
+  maxSeats?: number;
+  /** Whether clicks on the floor plan add seats instead of switching to them. */
+  multiSelect?: boolean;
+  onToggleMultiSelect?: (on: boolean) => void;
   onBookNow: (
     endHour: number,
     services: Record<string, number>,
     subtotal: number,
     addonTotal: number,
     endDate: Date,
-    durationUnit: DurationUnitMode
+    durationUnit: DurationUnitMode,
+    extraSeatIds: string[]
   ) => void;
 }
 
@@ -91,6 +104,14 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
   onChangeStartHour,
   checkAvailability,
   availableServices = [],
+  candidateSeats = [],
+  extraSeatIds = [],
+  onToggleExtraSeat,
+  checkSeatAvailability,
+  getSeatPrice,
+  maxSeats = 10,
+  multiSelect = false,
+  onToggleMultiSelect,
   onBookNow,
 }) => {
   const [endHour, setEndHour] = useState(initialEndHour);
@@ -132,7 +153,25 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
     return Math.max(1, Math.ceil(daysDiff(toMidnight(selectedDate), endDate) / 7));
   }, [durationUnit, endHour, selectedHour, selectedDate, endDate]);
 
-  const subtotal = (price?.price || 0) * unitCount;
+  // Extra seats booked for the same time: each priced by its own type for the chosen unit.
+  const extraSeats = useMemo(
+    () =>
+      extraSeatIds
+        .map((id) => candidateSeats.find((c) => c.id === id))
+        .filter((c): c is ExploreWorkspace => !!c)
+        .map((seat) => {
+          const avail = checkSeatAvailability
+            ? checkSeatAvailability(seat.id, selectedHour, endHour, endDate, durationUnit)
+            : 'available';
+          const seatPrice = getSeatPrice?.(seat.workspace_type_id, durationUnit);
+          return { seat, avail, price: seatPrice, subtotal: (seatPrice?.price || 0) * unitCount };
+        }),
+    [extraSeatIds, candidateSeats, checkSeatAvailability, getSeatPrice, selectedHour, endHour, endDate, durationUnit, unitCount],
+  );
+  const blockedExtras = extraSeats.filter((e) => e.avail !== 'available' || !e.price);
+  const seatCount = 1 + extraSeats.length;
+
+  const subtotal = (price?.price || 0) * unitCount + extraSeats.reduce((sum, e) => sum + e.subtotal, 0);
   const allAddons = addonServices && addonServices.length > 0 ? addonServices : availableServices;
   const addonTotal = Object.keys(services).reduce((sum, id) => {
     const s = allAddons.find((x: any) => x.id === id);
@@ -368,6 +407,96 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
           </p>
         </div>
 
+        {/* Book more seats at the same time */}
+        {onToggleExtraSeat && (
+          <div className="rounded-2xl bg-[var(--bg-surface-hover)] p-3 border border-border">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <p className="text-xs text-[var(--text-tertiary)] flex items-center gap-1.5">
+                <FiUsers className="h-3.5 w-3.5" /> Đặt thêm chỗ cùng khung giờ
+              </p>
+              {onToggleMultiSelect && (
+                <label className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)] cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={multiSelect}
+                    onChange={(e) => onToggleMultiSelect(e.target.checked)}
+                    className="rounded accent-[var(--brand-primary)]"
+                  />
+                  Chọn trên sơ đồ
+                </label>
+              )}
+            </div>
+            {multiSelect && (
+              <p className="mb-2 text-[11px] text-[var(--text-secondary)]">
+                Bấm vào các chỗ còn trống trên sơ đồ để thêm hoặc bỏ khỏi đơn.
+              </p>
+            )}
+            {extraSeats.length > 0 && (
+              <ul className="space-y-1.5 mb-2">
+                {extraSeats.map(({ seat, avail, price: seatPrice, subtotal: seatSubtotal }) => {
+                  const ok = avail === 'available' && !!seatPrice;
+                  return (
+                    <li key={seat.id} className={`flex items-center gap-2 text-sm rounded-lg px-2 py-1.5 ${ok ? 'bg-card' : 'bg-[var(--state-danger-bg)]'}`}>
+                      <span className="min-w-0 flex-1">
+                        <span className="font-medium truncate block">{seat.name}</span>
+                        <span className={`text-[11px] ${ok ? 'text-[var(--text-tertiary)]' : 'text-[var(--state-danger)]'}`}>
+                          {!seatPrice
+                            ? 'Chưa có giá cho loại thời gian này'
+                            : avail !== 'available'
+                              ? 'Đã có người đặt khung giờ này'
+                              : `${seat.workspaceTypeName} · ${seat.capacity} chỗ`}
+                        </span>
+                      </span>
+                      <span className="text-xs shrink-0">{seatPrice ? formatVND(seatSubtotal) : '—'}</span>
+                      <button
+                        type="button"
+                        onClick={() => onToggleExtraSeat(seat.id)}
+                        className="p-1 rounded hover:bg-[var(--border-subtle)] cursor-pointer"
+                        aria-label={`Bỏ ${seat.name}`}
+                      >
+                        <FiX className="h-3.5 w-3.5" />
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            {(() => {
+              const addable = candidateSeats.filter(
+                (c) =>
+                  c.id !== ws.id &&
+                  !extraSeatIds.includes(c.id) &&
+                  (checkSeatAvailability ? checkSeatAvailability(c.id, selectedHour, endHour, endDate, durationUnit) : 'available') === 'available' &&
+                  !!getSeatPrice?.(c.workspace_type_id, durationUnit),
+              );
+              if (seatCount >= maxSeats) {
+                return <p className="text-[11px] text-[var(--text-tertiary)]">Đã đạt tối đa {maxSeats} chỗ cho một lần đặt.</p>;
+              }
+              if (addable.length === 0) {
+                return <p className="text-[11px] text-[var(--text-tertiary)] italic">Không còn chỗ trống nào khác trên tầng này cho khung giờ đã chọn.</p>;
+              }
+              return (
+                <select
+                  value=""
+                  onChange={(e) => e.target.value && onToggleExtraSeat(e.target.value)}
+                  className="input-field text-sm w-full"
+                  aria-label="Thêm chỗ"
+                >
+                  <option value="">+ Thêm chỗ trống ({addable.length})</option>
+                  {addable.map((c) => {
+                    const p = getSeatPrice?.(c.workspace_type_id, durationUnit);
+                    return (
+                      <option key={c.id} value={c.id}>
+                        {c.name} · {c.capacity} chỗ{p ? ` · ${formatVND(p.price)}/${durationUnitLabel[p.duration_unit]?.toLowerCase()}` : ''}
+                      </option>
+                    );
+                  })}
+                </select>
+              );
+            })()}
+          </div>
+        )}
+
         {/* Add-on services */}
         <div className="rounded-2xl bg-[var(--bg-surface-hover)] p-3 border border-border">
           <p className="text-xs text-[var(--text-tertiary)] mb-2">Dịch vụ thêm</p>
@@ -417,7 +546,9 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
 
         {/* Total Price summary */}
         <div className="flex justify-between items-center pt-2 border-t border-[var(--border-subtle)]">
-          <span className="text-sm font-semibold">Tổng cộng</span>
+          <span className="text-sm font-semibold">
+            Tổng cộng{seatCount > 1 && <span className="font-normal text-[var(--text-tertiary)]"> · {seatCount} chỗ</span>}
+          </span>
           <span className="text-lg font-medium text-[var(--brand-primary)]">
             {formatVND(total)}
           </span>
@@ -426,12 +557,21 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
 
       {/* Book button */}
       {currentAvail === 'available' && price && (
-        <button
-          className="btn btn-primary w-full mt-5 cursor-pointer"
-          onClick={() => onBookNow(endHour, services, subtotal, addonTotal, endDate, durationUnit)}
-        >
-          <FiCheck className="h-4 w-4" /> Đặt chỗ ngay
-        </button>
+        <>
+          {blockedExtras.length > 0 && (
+            <p className="mt-4 text-xs text-[var(--state-danger)]">
+              Bỏ {blockedExtras.length === 1 ? 'chỗ' : `${blockedExtras.length} chỗ`} không đặt được ở trên để tiếp tục.
+            </p>
+          )}
+          <button
+            className="btn btn-primary w-full mt-5 cursor-pointer disabled:opacity-50"
+            disabled={blockedExtras.length > 0}
+            onClick={() => onBookNow(endHour, services, subtotal, addonTotal, endDate, durationUnit, extraSeats.map((e) => e.seat.id))}
+          >
+            {seatCount > 1 ? <FiPlus className="h-4 w-4" /> : <FiCheck className="h-4 w-4" />}
+            {seatCount > 1 ? `Đặt ${seatCount} chỗ cùng lúc` : 'Đặt chỗ ngay'}
+          </button>
+        </>
       )}
       {currentAvail?.startsWith('booked') && (
         <div className="mt-5 rounded-2xl bg-[var(--state-danger-bg)] border border-[var(--state-danger-border)] p-3 text-center">

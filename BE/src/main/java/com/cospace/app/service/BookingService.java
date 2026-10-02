@@ -3,6 +3,7 @@ package com.cospace.app.service;
 import com.cospace.app.dto.api.BookingCreateRequest;
 import com.cospace.app.dto.api.BookingDto;
 import com.cospace.app.entity.Booking;
+import com.cospace.app.entity.BookingGroup;
 import com.cospace.app.entity.BookingStatus;
 import com.cospace.app.entity.DurationUnit;
 import com.cospace.app.entity.Payment;
@@ -52,11 +53,16 @@ public class BookingService {
     private final ReputationService reputationService;
     private final com.cospace.app.repository.WorkspaceTypeRepository workspaceTypeRepository;
     private final com.cospace.app.repository.ReputationEventRepository reputationEventRepository;
+    private final com.cospace.app.repository.BookingGroupRepository bookingGroupRepository;
+
+    /** Most seats one booking group may hold. */
+    @org.springframework.beans.factory.annotation.Value("${app.booking.max-group-size:10}")
+    private int maxGroupSize = 10;
 
     /** Business time zone: opening hours and "today" are always Vietnam local time, whatever the server runs in. */
     public static final java.time.ZoneId BUSINESS_ZONE = java.time.ZoneId.of("Asia/Ho_Chi_Minh");
 
-    public BookingService(BookingRepository bookingRepository, PaymentRepository paymentRepository, PricingService pricingService, WorkspaceEntityRepository workspaceEntityRepository, com.cospace.app.repository.FloorRepository floorRepository, BranchEntityRepository branchEntityRepository, UserRepository userRepository, CheckinLogRepository checkinLogRepository, jakarta.persistence.EntityManager entityManager, com.cospace.app.repository.WorkspaceMaintenanceRepository workspaceMaintenanceRepository, com.cospace.app.repository.BookingCancellationRepository bookingCancellationRepository, MembershipService membershipService, PromotionService promotionService, BookingAddonService bookingAddonService, BookingExpiryService bookingExpiryService, ReputationService reputationService, com.cospace.app.repository.WorkspaceTypeRepository workspaceTypeRepository, com.cospace.app.repository.ReputationEventRepository reputationEventRepository) {
+    public BookingService(BookingRepository bookingRepository, PaymentRepository paymentRepository, PricingService pricingService, WorkspaceEntityRepository workspaceEntityRepository, com.cospace.app.repository.FloorRepository floorRepository, BranchEntityRepository branchEntityRepository, UserRepository userRepository, CheckinLogRepository checkinLogRepository, jakarta.persistence.EntityManager entityManager, com.cospace.app.repository.WorkspaceMaintenanceRepository workspaceMaintenanceRepository, com.cospace.app.repository.BookingCancellationRepository bookingCancellationRepository, MembershipService membershipService, PromotionService promotionService, BookingAddonService bookingAddonService, BookingExpiryService bookingExpiryService, ReputationService reputationService, com.cospace.app.repository.WorkspaceTypeRepository workspaceTypeRepository, com.cospace.app.repository.ReputationEventRepository reputationEventRepository, com.cospace.app.repository.BookingGroupRepository bookingGroupRepository) {
         this.bookingRepository = bookingRepository;
         this.paymentRepository = paymentRepository;
         this.pricingService = pricingService;
@@ -75,21 +81,28 @@ public class BookingService {
         this.reputationService = reputationService;
         this.workspaceTypeRepository = workspaceTypeRepository;
         this.reputationEventRepository = reputationEventRepository;
+        this.bookingGroupRepository = bookingGroupRepository;
     }
 
     @Transactional
     public BookingDto createBooking(UUID userId, BookingCreateRequest req) {
-        return createBookingInternal(userId, req, BookingSource.web);
+        return createBookingInternal(userId, req, BookingSource.web, null, true);
     }
 
     @Transactional
     public BookingDto createWalkinBooking(UUID staffId, UUID customerId, BookingCreateRequest req) {
         // Staff should check branch matching etc.
         // For now, assuming staff has permission.
-        return createBookingInternal(customerId, req, BookingSource.counter);
+        return createBookingInternal(customerId, req, BookingSource.counter, null, true);
     }
 
-    private BookingDto createBookingInternal(UUID userId, BookingCreateRequest req, BookingSource source) {
+    /**
+     * @param groupId    booking group the seat belongs to, or null for a single booking
+     * @param checkLimits whether to apply the per-customer limits (pending orders, reputation); a
+     *                    booking group checks them once for the whole group instead of per seat
+     */
+    private BookingDto createBookingInternal(UUID userId, BookingCreateRequest req, BookingSource source,
+                                             UUID groupId, boolean checkLimits) {
         if (userId == null) {
             throw new IllegalArgumentException("Missing user id");
         }
@@ -103,18 +116,12 @@ public class BookingService {
             throw new IllegalArgumentException("unit_count must be >= 1");
         }
 
-        // Rule #33: Rate limit - Tối đa 3 đơn chờ thanh toán cho mỗi người dùng
-        // Advisory Lock on user to prevent race condition: 2 concurrent requests both reading count=2
-        entityManager.createNativeQuery("SELECT pg_advisory_xact_lock(hashtext(:key))")
-                .setParameter("key", "rate_limit:" + userId.toString())
-                .getSingleResult();
-        int pendingCount = bookingRepository.countByUserIdAndStatus(userId, BookingStatus.PENDING_PAYMENT);
-        if (pendingCount >= 3) {
-            throw new IllegalStateException("Bạn đang có 3 đơn đặt chỗ chờ thanh toán. Vui lòng hoàn tất thanh toán hoặc hủy đơn cũ trước khi đặt tiếp.");
-        }
-        // A low reputation score limits online booking; the counter can still book for the customer.
-        if (source == BookingSource.web) {
-            reputationService.requireCanBookOnline(userId);
+        if (checkLimits) {
+            requirePendingOrderSlot(userId);
+            // A low reputation score limits online booking; the counter can still book for the customer.
+            if (source == BookingSource.web) {
+                reputationService.requireCanBookOnline(userId, 1);
+            }
         }
 
         // Rule #42: Compute branchId server-side from Workspace -> Floor
@@ -235,9 +242,190 @@ public class BookingService {
                 .paymentDeadlineAt(nothingToPay ? null : now.plusMinutes(15))
                 .build();
 
+        booking.setGroupId(groupId);
         Booking savedBooking = bookingRepository.save(booking);
         bookingAddonService.attachToNewBooking(savedBooking, userId, addonLines);
         return toDto(savedBooking);
+    }
+
+    /**
+     * Rule #33: at most 3 orders awaiting payment per customer, a booking group counting as one order.
+     * The advisory lock on the customer keeps two concurrent requests from both reading count = 2.
+     */
+    private void requirePendingOrderSlot(UUID userId) {
+        entityManager.createNativeQuery("SELECT pg_advisory_xact_lock(hashtext(:key))")
+                .setParameter("key", "rate_limit:" + userId.toString())
+                .getSingleResult();
+        long pendingOrders = bookingRepository.countUngroupedByUserIdAndStatus(userId, BookingStatus.PENDING_PAYMENT)
+                + bookingRepository.countGroupsByUserIdAndStatus(userId, BookingStatus.PENDING_PAYMENT);
+        if (pendingOrders >= 3) {
+            throw new IllegalStateException("Bạn đang có 3 đơn đặt chỗ chờ thanh toán. Vui lòng hoàn tất thanh toán hoặc hủy đơn cũ trước khi đặt tiếp.");
+        }
+    }
+
+    /* ─────────────── Booking groups: several seats at once ─────────────── */
+
+    /**
+     * Books several seats of one branch for the same time in a single step (đơn nhóm). Each seat
+     * becomes its own booking, priced and checked like a single booking, all linked to one group the
+     * customer pays for together. It is all or nothing: if any seat cannot be booked, none is.
+     */
+    @Transactional
+    public com.cospace.app.dto.api.BookingGroupDto.GroupResponse createGroupBooking(
+            UUID userId, com.cospace.app.dto.api.BookingGroupDto.CreateRequest req) {
+        if (userId == null) {
+            throw new IllegalArgumentException("Missing user id");
+        }
+        List<UUID> seatIds = req.getWorkspaceIds() == null ? List.of()
+                : req.getWorkspaceIds().stream().filter(java.util.Objects::nonNull).distinct().toList();
+        if (seatIds.isEmpty()) {
+            throw new IllegalArgumentException("Vui lòng chọn ít nhất một chỗ.");
+        }
+        if (seatIds.size() > maxGroupSize) {
+            throw new IllegalArgumentException("Mỗi lần chỉ đặt được tối đa " + maxGroupSize + " chỗ.");
+        }
+        if (req.getPromotionCode() != null && !req.getPromotionCode().isBlank() && seatIds.size() > 1) {
+            throw new IllegalArgumentException("Mã khuyến mãi chỉ áp dụng cho đơn 1 chỗ. Đơn nhiều chỗ vẫn được giảm giá theo hạng thành viên.");
+        }
+
+        // All seats must be in one branch: the group is paid, checked in and supported there.
+        java.util.Map<UUID, UUID> branchOfSeat = new java.util.HashMap<>();
+        java.util.Map<UUID, WorkspaceEntity> seats = workspaceEntityRepository.findAllById(seatIds).stream()
+                .collect(Collectors.toMap(WorkspaceEntity::getId, w -> w));
+        for (UUID id : seatIds) {
+            WorkspaceEntity ws = seats.get(id);
+            if (ws == null) {
+                throw new IllegalArgumentException("Không tìm thấy không gian làm việc.");
+            }
+            branchOfSeat.put(id, floorRepository.findById(ws.getFloorId())
+                    .map(com.cospace.app.entity.Floor::getBranchId)
+                    .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thông tin tầng của không gian làm việc.")));
+        }
+        UUID branchId = branchOfSeat.get(seatIds.get(0));
+        if (branchOfSeat.values().stream().anyMatch(b -> !b.equals(branchId))) {
+            throw new IllegalArgumentException("Các chỗ trong một lần đặt phải thuộc cùng một chi nhánh.");
+        }
+
+        requirePendingOrderSlot(userId);
+        reputationService.requireCanBookOnline(userId, seatIds.size());
+
+        BookingGroup group = bookingGroupRepository.save(BookingGroup.builder()
+                .id(UUID.randomUUID())
+                .groupCode(generateGroupCode())
+                .userId(userId)
+                .branchId(branchId)
+                .startAt(req.getStartAt())
+                .endAt(req.getEndAt())
+                .build());
+
+        // Seats are locked in a fixed order so two overlapping group requests cannot deadlock.
+        List<UUID> lockOrder = seatIds.stream().sorted().toList();
+        for (UUID seatId : lockOrder) {
+            BookingCreateRequest seatReq = new BookingCreateRequest();
+            seatReq.setWorkspaceId(seatId);
+            seatReq.setBranchId(branchId);
+            seatReq.setStartAt(req.getStartAt());
+            seatReq.setEndAt(req.getEndAt());
+            seatReq.setUnit(req.getUnit());
+            seatReq.setUnitCount(1);
+            seatReq.setPromotionCode(seatIds.size() == 1 ? req.getPromotionCode() : null);
+            // Add-ons are served once for the group, so they ride on the first seat chosen.
+            seatReq.setAddons(seatId.equals(seatIds.get(0)) ? req.getAddons() : null);
+            try {
+                createBookingInternal(userId, seatReq, BookingSource.web, group.getId(), false);
+            } catch (IllegalArgumentException | IllegalStateException e) {
+                // Name the seat, then let the exception roll the whole group back.
+                throw new IllegalArgumentException("Chỗ \"" + seats.get(seatId).getName() + "\": " + e.getMessage(), e);
+            }
+        }
+        entityManager.flush();
+        return toGroupResponse(group);
+    }
+
+    /** Price preview of a group, seat by seat, with the same rules as createGroupBooking. */
+    @Transactional
+    public com.cospace.app.dto.api.BookingGroupDto.QuoteResponse quoteGroup(
+            UUID userId, com.cospace.app.dto.api.BookingGroupDto.QuoteRequest req) {
+        List<UUID> seatIds = req.getWorkspaceIds() == null ? List.of()
+                : req.getWorkspaceIds().stream().filter(java.util.Objects::nonNull).distinct().toList();
+        if (seatIds.isEmpty()) {
+            throw new IllegalArgumentException("Vui lòng chọn ít nhất một chỗ.");
+        }
+        if (seatIds.size() > maxGroupSize) {
+            throw new IllegalArgumentException("Mỗi lần chỉ đặt được tối đa " + maxGroupSize + " chỗ.");
+        }
+        List<com.cospace.app.dto.api.BookingGroupDto.SeatQuote> seatQuotes = new java.util.ArrayList<>();
+        long subtotal = 0, discount = 0, addonAmount = 0;
+        com.cospace.app.dto.api.PromotionDto.QuoteResponse first = null;
+        for (UUID seatId : seatIds) {
+            com.cospace.app.dto.api.PromotionDto.QuoteRequest q = new com.cospace.app.dto.api.PromotionDto.QuoteRequest();
+            q.setWorkspaceId(seatId);
+            q.setUnit(req.getUnit());
+            q.setStartAt(req.getStartAt());
+            q.setEndAt(req.getEndAt());
+            q.setAddons(seatId.equals(seatIds.get(0)) ? req.getAddons() : null);
+            com.cospace.app.dto.api.PromotionDto.QuoteResponse r = quote(userId, q);
+            if (first == null) first = r;
+            String name = workspaceEntityRepository.findById(seatId).map(WorkspaceEntity::getName).orElse(null);
+            seatQuotes.add(com.cospace.app.dto.api.BookingGroupDto.SeatQuote.builder()
+                    .workspaceId(seatId)
+                    .workspaceName(name)
+                    .pricePerUnit(r.getPricePerUnit())
+                    .unitCount(r.getUnitCount())
+                    .subtotalAmount(r.getSubtotalAmount())
+                    .discountAmount(r.getDiscountAmount())
+                    .totalAmount(r.getTotalAmount() - r.getAddonAmount())
+                    .build());
+            subtotal += r.getSubtotalAmount();
+            discount += r.getDiscountAmount();
+            addonAmount += r.getAddonAmount();
+        }
+        return com.cospace.app.dto.api.BookingGroupDto.QuoteResponse.builder()
+                .seats(seatQuotes)
+                .membershipTierName(first.getMembershipTierName())
+                .membershipDiscountPercent(first.getMembershipDiscountPercent())
+                .subtotalAmount(subtotal)
+                .discountAmount(discount)
+                .addonAmount(addonAmount)
+                .totalAmount(Math.max(0, subtotal - discount) + addonAmount)
+                .build();
+    }
+
+    /** A customer's own booking group with all its seats. */
+    @Transactional(readOnly = true)
+    public com.cospace.app.dto.api.BookingGroupDto.GroupResponse getMyGroup(UUID userId, UUID groupId) {
+        BookingGroup group = bookingGroupRepository.findByIdAndUserId(groupId, userId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn nhóm."));
+        return toGroupResponse(group);
+    }
+
+    private com.cospace.app.dto.api.BookingGroupDto.GroupResponse toGroupResponse(BookingGroup group) {
+        List<BookingDto> seats = toDtoList(bookingRepository.findByGroupIdOrderByCreatedAtAsc(group.getId()));
+        List<BookingDto> due = seats.stream().filter(b -> b.getStatus() == BookingStatus.PENDING_PAYMENT).toList();
+        return com.cospace.app.dto.api.BookingGroupDto.GroupResponse.builder()
+                .id(group.getId())
+                .groupCode(group.getGroupCode())
+                .branchId(group.getBranchId())
+                .startAt(group.getStartAt().toString())
+                .endAt(group.getEndAt().toString())
+                .seatCount(seats.size())
+                .totalAmount(seats.stream().mapToLong(BookingDto::getTotalAmount).sum())
+                .amountDue(due.stream().mapToLong(BookingDto::getTotalAmount).sum())
+                .paymentDeadlineAt(due.stream().map(BookingDto::getPaymentDeadlineAt).filter(java.util.Objects::nonNull)
+                        .min(java.util.Comparator.naturalOrder()).orElse(null))
+                .bookings(seats)
+                .build();
+    }
+
+    private String generateGroupCode() {
+        for (int attempt = 0; attempt < 5; attempt++) {
+            StringBuilder sb = new StringBuilder("GR-");
+            for (int i = 0; i < 6; i++) {
+                sb.append(CODE_CHARS.charAt(RANDOM.nextInt(CODE_CHARS.length())));
+            }
+            if (!bookingGroupRepository.existsByGroupCode(sb.toString())) return sb.toString();
+        }
+        throw new IllegalStateException("Không tạo được mã đơn nhóm, vui lòng thử lại.");
     }
 
     /**
@@ -796,6 +984,18 @@ public class BookingService {
             }
         }
 
+        // Booking groups the seats belong to: codes and sizes, one query each.
+        java.util.Set<UUID> groupIds = bookings.stream().map(Booking::getGroupId).filter(java.util.Objects::nonNull)
+                .collect(Collectors.toSet());
+        java.util.Map<UUID, String> groupCodes = new java.util.HashMap<>();
+        java.util.Map<UUID, Integer> groupSizes = new java.util.HashMap<>();
+        if (!groupIds.isEmpty()) {
+            bookingGroupRepository.findAllById(groupIds).forEach(g -> groupCodes.put(g.getId(), g.getGroupCode()));
+            for (Object[] row : bookingRepository.countSeatsByGroupIds(groupIds)) {
+                groupSizes.put((UUID) row[0], ((Number) row[1]).intValue());
+            }
+        }
+
         // Visits and reputation changes, one query each.
         java.util.Map<UUID, List<com.cospace.app.entity.CheckinLog>> visits = checkinLogRepository.findByBookingIdIn(bookingIds)
                 .stream().collect(java.util.stream.Collectors.groupingBy(com.cospace.app.entity.CheckinLog::getBookingId));
@@ -846,6 +1046,8 @@ public class BookingService {
                             .max(java.util.Comparator.naturalOrder()).map(Object::toString).orElse(null))
                     .checkinCount(logs.size())
                     .reputationDelta(reputationDeltas.get(b.getId()))
+                    .groupCode(b.getGroupId() != null ? groupCodes.get(b.getGroupId()) : null)
+                    .groupSize(b.getGroupId() != null ? groupSizes.get(b.getGroupId()) : null)
                     .build();
 
             // Attach cancellation info if present
@@ -875,6 +1077,7 @@ public class BookingService {
                 .id(b.getId())
                 .bookingCode(b.getBookingCode())
                 .userId(b.getUserId())
+                .groupId(b.getGroupId())
                 .customerName(customerName)
                 .customerPhone(customerPhone)
                 .workspaceId(b.getWorkspaceId())

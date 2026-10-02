@@ -59,6 +59,34 @@ public class CancellationService {
     }
 
     /**
+     * Cancels every seat of a customer's booking group that can still be cancelled online (awaiting
+     * payment, or paid and not started yet), each under the normal cancellation policy. Seats already
+     * in use, finished or cancelled are left as they are.
+     *
+     * @return the cancellations made, one per seat
+     */
+    @Transactional
+    public List<BookingCancellation> cancelGroup(UUID userId, UUID groupId, String reason) {
+        List<Booking> seats = bookingRepository.findByGroupIdOrderByCreatedAtAsc(groupId);
+        if (seats.isEmpty() || !seats.get(0).getUserId().equals(userId)) {
+            throw new IllegalArgumentException("Không tìm thấy đơn nhóm.");
+        }
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        List<BookingCancellation> done = new ArrayList<>();
+        for (Booking seat : seats) {
+            boolean cancellable = seat.getStatus() == BookingStatus.PENDING_PAYMENT
+                    || (seat.getStatus() == BookingStatus.CONFIRMED && now.isBefore(seat.getStartAt()));
+            if (cancellable) {
+                done.add(cancelBooking(userId, seat.getId(), reason != null ? reason : "Khách hàng hủy đơn nhóm"));
+            }
+        }
+        if (done.isEmpty()) {
+            throw new IllegalStateException("Đơn nhóm không còn chỗ nào hủy được trực tuyến. Vui lòng liên hệ quầy lễ tân.");
+        }
+        return done;
+    }
+
+    /**
      * Cancels a booking on the customer's behalf at the counter. Staff reach cases the customer no
      * longer can — a booking whose time has started, a branch-side failure — so a reason is required
      * and, when the fault is ours, the penalty can be waived entirely. The caller is responsible for

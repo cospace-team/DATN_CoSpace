@@ -185,6 +185,15 @@ public class ReputationService {
      */
     @Transactional(readOnly = true)
     public void requireCanBookOnline(UUID userId) {
+        requireCanBookOnline(userId, 1);
+    }
+
+    /**
+     * Same as {@link #requireCanBookOnline(UUID)} for a request of several seats at once: a limited
+     * score may hold one unused seat, so it cannot book a group of more than one either.
+     */
+    @Transactional(readOnly = true)
+    public void requireCanBookOnline(UUID userId, int seatCount) {
         User user = userRepository.findById(userId).orElse(null);
         if (user == null || user.getRole() != User.Role.customer) {
             return;
@@ -193,6 +202,10 @@ public class ReputationService {
         if (score < blockedBelow) {
             throw new IllegalStateException("Điểm uy tín của bạn (" + score + "/" + MAX_SCORE + ") dưới " + blockedBelow
                     + " nên tạm thời không thể đặt chỗ online. Vui lòng đặt trực tiếp tại quầy.");
+        }
+        if (score < limitedBelow && seatCount > 1) {
+            throw new IllegalStateException("Điểm uy tín của bạn (" + score + "/" + MAX_SCORE + ") dưới " + limitedBelow
+                    + " nên mỗi lần chỉ được đặt 1 chỗ.");
         }
         if (score < limitedBelow && bookingRepository.countByUserIdAndStatusIn(userId, UPCOMING_STATUSES) >= 1) {
             throw new IllegalStateException("Điểm uy tín của bạn (" + score + "/" + MAX_SCORE + ") dưới " + limitedBelow

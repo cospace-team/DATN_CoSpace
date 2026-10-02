@@ -169,3 +169,11 @@ Sử dụng ký hiệu: `[ ]` Chưa làm | `[/]` Đang làm | `[x]` Đã xong.
 - [x] **Nhắc lịch**: thông báo trước giờ bắt đầu 60 phút và lúc bắt đầu (còn bao nhiêu phút để check-in), mỗi đơn mỗi loại một lần.
 - [x] **Giao diện**: quy tắc check-in và cảnh báo hạn chế ở bước thanh toán; đếm ngược check-in trong Lịch sử đặt chỗ; huy hiệu điểm uy tín + lịch sử + nút hoàn điểm ở màn Check-in và Quản lý người dùng; ô điểm uy tín ở Hồ sơ.
 - [x] **Kiểm thử**: 334/334 unit test BE pass; chạy thật trên Postgres 16 (migration V5, job nhắc lịch, job trừ điểm, cộng điểm, hoàn điểm, chặn đặt online, phân quyền 403); build FE pass, chụp màn hình 4 vai trò.
+
+## 🪑 17. Đặt nhiều chỗ cùng lúc (đơn nhóm)
+- [x] **Migration V6**: bảng `booking_groups`, `bookings.group_id`, `payments.booking_group_id` / `group_order_id`.
+- [x] **Tạo đơn nhóm** (`POST /api/bookings/groups`): 1–10 chỗ cùng chi nhánh, cùng khung giờ; mỗi chỗ là một đơn riêng; tất cả hoặc không (báo đúng chỗ lỗi); khóa theo thứ tự cố định chống deadlock; nhóm tính là 1 đơn trong giới hạn 3 đơn chờ thanh toán; uy tín dưới 50 chỉ đặt 1 chỗ; mã khuyến mãi chỉ cho đơn 1 chỗ.
+- [x] **Thanh toán gộp**: một mã VietQR cho cả nhóm, mỗi chỗ một dòng `payments`; webhook / trang trả về / mô phỏng xác nhận mọi dòng, chỗ đã hết hạn thì tự hoàn tiền phần của chỗ đó.
+- [x] **Hủy cả nhóm** (`POST /api/bookings/groups/{id}/cancel`), mỗi chỗ hoàn tiền theo chính sách như đơn lẻ.
+- [x] **Giao diện**: chọn thêm chỗ trong panel đặt chỗ hoặc bấm trực tiếp trên sơ đồ (tô sáng các chỗ đã chọn); trang thanh toán liệt kê từng chỗ và giá; Lịch sử hiện nhãn nhóm, nút "Thanh toán cả nhóm", tìm theo mã nhóm.
+- [x] **Kiểm thử**: 344/344 unit test BE pass (thêm 10 test đơn nhóm); chạy thật trên Postgres 16 (tạo nhóm 3 chỗ, đặt trùng bị chặn và không để lại nhóm rác, thanh toán gộp, xác nhận đủ 3 chỗ, hủy nhóm hoàn tiền từng chỗ); luồng trình duyệt chọn 3 chỗ → thanh toán → VietQR → lịch sử. Tài liệu: `docs/api-contracts/booking-groups.md`.

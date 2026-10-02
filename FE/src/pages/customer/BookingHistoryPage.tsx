@@ -14,7 +14,7 @@ import {
   FiSearch,
 } from "react-icons/fi";
 import { formatVND } from "../../utils/formatters";
-import { bookingApi } from "../../lib/bookingApi";
+import { bookingApi, bookingGroupApi } from "../../lib/bookingApi";
 import { startPayment } from "../../lib/startPayment";
 import { useAuth } from "../../context/AuthContext";
 import BookingServicesModal from "./history/BookingServicesModal";
@@ -103,7 +103,16 @@ const BookingHistoryPage: React.FC = () => {
     setPayingId(bookingId);
     setErrorMessage(null);
     try {
-      const redirected = await startPayment("payos", bookingId, amount);
+      // A seat of a booking group is paid together with the rest of its group.
+      const groupId = bookings.find((b) => b.id === bookingId)?.raw.groupId;
+      let redirected: boolean;
+      if (groupId) {
+        const res = await bookingGroupApi.payPayos(groupId);
+        redirected = !!res.checkoutUrl && res.checkoutUrl.startsWith("http");
+        if (redirected) window.location.href = res.checkoutUrl;
+      } else {
+        redirected = await startPayment("payos", bookingId, amount);
+      }
       if (!redirected) {
         setSuccessMessage(
           "Đã tạo yêu cầu thanh toán VietQR. Vui lòng hoàn tất thanh toán để giữ chỗ.",
@@ -236,6 +245,7 @@ const BookingHistoryPage: React.FC = () => {
         TAB_STATUSES[activeTab].includes(b.status) &&
         (!q ||
           b.code.toLowerCase().includes(q) ||
+          (b.raw.groupCode ?? "").toLowerCase().includes(q) ||
           b.workspaceName.toLowerCase().includes(q) ||
           b.branchName.toLowerCase().includes(q)),
     );
@@ -399,7 +409,7 @@ const BookingHistoryPage: React.FC = () => {
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Tìm theo mã đơn, chỗ ngồi, chi nhánh"
+            placeholder="Tìm theo mã đơn, mã nhóm, chỗ ngồi, chi nhánh"
             className="w-full rounded-xl border border-border bg-card pl-9 pr-3 py-2 text-sm"
           />
         </label>

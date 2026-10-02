@@ -213,6 +213,12 @@ const BookingCard: React.FC<BookingCardProps> = ({
             <span className={`${pill} ${status.className}`}>{status.label}</span>
             {timingPill}
             {raw.isContract && <span className={`${pill} border-border bg-muted text-foreground`}>Hợp đồng</span>}
+            {raw.groupCode && (
+              <span className={`${pill} border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-300`}
+                title="Các chỗ được đặt cùng lúc và thanh toán chung">
+                <FiUsers className="h-3 w-3" /> Nhóm {raw.groupCode}{raw.groupSize ? ` · ${raw.groupSize} chỗ` : ""}
+              </span>
+            )}
           </div>
           <h3 className="text-lg md:text-xl font-semibold text-foreground truncate">{booking.workspaceName}</h3>
           {spaceMeta.length > 0 && (
@@ -403,7 +409,8 @@ const BookingCard: React.FC<BookingCardProps> = ({
           )}
           {booking.status === "pending_payment" && (
             <button type="button" onClick={onPay} disabled={!apiLoaded || paying} className="btn btn-primary btn-sm disabled:opacity-60">
-              <FiCreditCard className="h-4 w-4" /> {paying ? "Đang chuyển..." : "Thanh toán ngay"}
+              <FiCreditCard className="h-4 w-4" />{" "}
+              {paying ? "Đang chuyển..." : raw.groupId && (raw.groupSize ?? 1) > 1 ? `Thanh toán cả nhóm (${raw.groupSize} chỗ)` : "Thanh toán ngay"}
             </button>
           )}
         </div>

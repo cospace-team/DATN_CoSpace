@@ -74,6 +74,10 @@ public class BookingDto {
     private String firstCheckinAt;
     private String lastCheckoutAt;
     private Integer checkinCount;
+    /** Booking group (several seats booked together) this seat belongs to, with its size. */
+    private UUID groupId;
+    private String groupCode;
+    private Integer groupSize;
     /** Net reputation points this booking earned (+) or cost (-), null when none. */
     private Integer reputationDelta;
 }
