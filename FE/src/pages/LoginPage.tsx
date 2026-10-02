@@ -8,14 +8,16 @@ import {
   FiMail, 
   FiLock, 
   FiUser, 
-  FiPhone, 
   FiEye,
   FiEyeOff,
   FiLoader,
-  FiZap,
-  FiMapPin,
+  FiCheckCircle,
   FiX
 } from "react-icons/fi";
+
+// Shape rule for public pages: controls rounded-sm (12px), containers rounded-lg (16px).
+const fieldClass =
+  "block w-full rounded-sm border border-border bg-card px-4 py-3.5 pl-11 text-foreground placeholder:text-muted-foreground focus:border-ring focus:ring-1 focus:ring-ring transition-colors duration-200 outline-none text-sm";
 
 const LoginPage: React.FC = () => {
   const {
@@ -43,7 +45,6 @@ const LoginPage: React.FC = () => {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [phone, setPhone] = useState("");
 
   const handleGoogleLogin = async () => {
     setErrorMessage(null);
@@ -77,7 +78,7 @@ const LoginPage: React.FC = () => {
     setSuccessMessage(null); 
     setIsSubmittingRegister(true);
     try {
-      await registerWithEmail(cleanEmail, password, cleanName, confirmPassword, phone.trim());
+      await registerWithEmail(cleanEmail, password, cleanName, confirmPassword);
       setSuccessMessage("Đăng ký thành công! Đang đăng nhập...");
     } catch (error) {
       const msg = error instanceof Error && error.message && error.message !== "No message available"
@@ -116,7 +117,6 @@ const LoginPage: React.FC = () => {
     setSuccessMessage(null);
   };
 
-  // Dynamic content configuration based on view state
   const isRegisterView = view === "register";
 
   const leftPanelContent = {
@@ -132,12 +132,11 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="flex min-h-screen lg:h-screen lg:max-h-screen w-full flex-col lg:flex-row bg-muted/50 font-sans selection:bg-blue-100 selection:text-blue-900">
+    <div className="flex min-h-screen lg:h-screen lg:max-h-screen w-full flex-col lg:flex-row bg-muted/50 font-sans selection:bg-primary/25 selection:text-foreground">
       
       {/* ── Left Column: Visual Brand Section ── */}
       <div className="relative hidden w-full lg:flex lg:w-1/2 xl:w-7/12 flex-col justify-between p-12 overflow-hidden h-full">
-        {/* Background Image with elegant overlay */}
-        <div className="absolute inset-0 z-0 m-4 rounded-[2.5rem] overflow-hidden shadow-sm border border-border">
+        <div className="absolute inset-0 z-0 m-4 rounded-lg overflow-hidden shadow-sm border border-border">
           <div 
             className="absolute inset-0 bg-cover bg-center transition-all duration-1000 transform " 
             style={{ backgroundImage: leftPanelContent.bgImage }}
@@ -149,14 +148,13 @@ const LoginPage: React.FC = () => {
         <div className="relative z-20 self-start mt-8 ml-8">
           <Link
             to="/"
-            className="bg-card/90 backdrop-blur-md text-foreground px-6 py-3 rounded-full shadow-sm border border-white/20 inline-flex items-center hover:opacity-90 transition-opacity cursor-pointer group"
+            className="bg-card/90 backdrop-blur-md text-foreground px-6 py-3 rounded-sm shadow-sm border border-white/20 inline-flex items-center hover:opacity-90 transition-opacity cursor-pointer group"
             title="Về trang chủ CoSpace"
           >
             <Logo iconClassName="h-6 w-6" textClassName="text-xl font-semibold tracking-tight" />
           </Link>
         </div>
 
-        {/* Dynamic Value Prop */}
         <div className="relative z-20 mt-auto ml-8 mb-8 max-w-lg space-y-6">
           <h1 className="text-5xl font-semibold leading-[1.1] text-white tracking-tight">
             {leftPanelContent.title}
@@ -164,7 +162,6 @@ const LoginPage: React.FC = () => {
           <p className="text-lg text-slate-200 leading-relaxed font-normal">
             {leftPanelContent.description}
           </p>
-          
         </div>
       </div>
 
@@ -176,7 +173,7 @@ const LoginPage: React.FC = () => {
           <div className="flex lg:hidden justify-center mb-8">
             <Link
               to="/"
-              className="bg-card text-foreground px-6 py-3 rounded-full shadow-sm border border-border inline-flex items-center hover:opacity-90 transition-opacity cursor-pointer group"
+              className="bg-card text-foreground px-6 py-3 rounded-sm shadow-sm border border-border inline-flex items-center hover:opacity-90 transition-opacity cursor-pointer group"
               title="Về trang chủ CoSpace"
             >
               <Logo textClassName="text-xl font-semibold tracking-tight" />
@@ -200,13 +197,13 @@ const LoginPage: React.FC = () => {
 
           {/* Success/Error Alerts */}
           {successMessage && (
-            <div className="rounded-2xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-950/30 p-4 text-sm font-medium text-emerald-800 dark:text-emerald-400 flex items-start gap-3">
-              <FiZap className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+            <div className="rounded-lg border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-950/30 p-4 text-sm font-medium text-emerald-800 dark:text-emerald-400 flex items-start gap-3">
+              <FiCheckCircle className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
               <span>{successMessage}</span>
             </div>
           )}
           {errorMessage && (
-            <div className="rounded-2xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 p-4 text-sm font-medium text-red-800 dark:text-red-400 flex items-start gap-3">
+            <div className="rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 p-4 text-sm font-medium text-red-800 dark:text-red-400 flex items-start gap-3">
               <FiX className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
               <span>{errorMessage}</span>
             </div>
@@ -227,7 +224,7 @@ const LoginPage: React.FC = () => {
                       id="fullName"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      className="block w-full rounded-xl border border-border bg-card px-4 py-3.5 pl-11 text-foreground placeholder:text-muted-foreground focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition-all duration-200 outline-none text-sm"
+                      className={fieldClass}
                       placeholder="Nguyễn Văn A" 
                       required 
                     />
@@ -245,7 +242,7 @@ const LoginPage: React.FC = () => {
                       id="reg-email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="block w-full rounded-xl border border-border bg-card px-4 py-3.5 pl-11 text-foreground placeholder:text-muted-foreground focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition-all duration-200 outline-none text-sm"
+                      className={fieldClass}
                       placeholder="ten@congty.com" 
                       required 
                     />
@@ -264,7 +261,7 @@ const LoginPage: React.FC = () => {
                         id="reg-password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="block w-full rounded-xl border border-border bg-card px-4 py-3.5 pl-11 text-foreground placeholder:text-muted-foreground focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition-all duration-200 outline-none text-sm"
+                        className={fieldClass}
                         placeholder="••••••••" 
                         required 
                         minLength={8}
@@ -282,7 +279,7 @@ const LoginPage: React.FC = () => {
                         id="confirm-password"
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="block w-full rounded-xl border border-border bg-card px-4 py-3.5 pl-11 text-foreground placeholder:text-muted-foreground focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition-all duration-200 outline-none text-sm"
+                        className={fieldClass}
                         placeholder="••••••••" 
                         required 
                         minLength={8}
@@ -294,7 +291,7 @@ const LoginPage: React.FC = () => {
                 <Button 
                   type="submit" 
                   disabled={isSubmittingRegister || isLoading} 
-                  className="w-full py-3.5 mt-4 bg-slate-900 hover:bg-secondary text-white font-medium rounded-full shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2"
+                  className="w-full py-3.5 mt-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-sm shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2"
                 >
                   {isSubmittingRegister && <FiLoader className="w-5 h-5 animate-spin" />}
                   {isSubmittingRegister ? "Đang xử lý..." : "Tạo tài khoản"}
@@ -322,7 +319,7 @@ const LoginPage: React.FC = () => {
                 type="button"
                 onClick={handleGoogleLogin}
                 disabled={isSubmittingGoogle || isSubmittingRegister || isLoading}
-                className="flex w-full items-center justify-center gap-3 rounded-full border border-border bg-card px-4 py-3.5 text-sm font-medium text-foreground shadow-sm transition-all duration-200 hover:bg-muted/50 active:scale-[0.98] focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100"
+                className="flex w-full items-center justify-center gap-3 rounded-sm border border-border bg-card px-4 py-3.5 text-sm font-medium text-foreground shadow-sm transition-all duration-200 hover:bg-muted/50 active:scale-[0.98] focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100"
               >
                 {isSubmittingGoogle ? (
                   <FiLoader className="w-5 h-5 animate-spin" />
@@ -351,7 +348,7 @@ const LoginPage: React.FC = () => {
                       id="login-email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="block w-full rounded-xl border border-border bg-card px-4 py-3.5 pl-11 text-foreground placeholder:text-muted-foreground focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition-all duration-200 outline-none text-sm"
+                      className={fieldClass}
                       placeholder="ten@congty.com" 
                       required 
                     />
@@ -370,16 +367,18 @@ const LoginPage: React.FC = () => {
                       id="login-password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="block w-full rounded-xl border border-border bg-card px-4 py-3.5 pl-11 pr-12 text-foreground placeholder:text-muted-foreground focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition-all duration-200 outline-none text-sm"
+                      className={`${fieldClass} pr-12`}
                       placeholder="••••••••" 
                       required 
                     />
                     <button 
                       type="button" 
                       onClick={() => setShowPassword(!showPassword)}
+                      aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                      aria-pressed={showPassword}
                       className="absolute inset-y-0 right-0 flex items-center px-4 text-muted-foreground hover:text-foreground transition-all duration-200 active:scale-[0.98]"
                     >
-                      {showPassword ? <FiEyeOff className="w-4 h-4" /> : <FiEye className="w-4 h-4" />}
+                      {showPassword ? <FiEyeOff className="w-4 h-4" aria-hidden="true" /> : <FiEye className="w-4 h-4" aria-hidden="true" />}
                     </button>
                   </div>
                 </div>
@@ -387,7 +386,7 @@ const LoginPage: React.FC = () => {
                 <Button 
                   type="submit" 
                   disabled={isSubmittingEmail || isSubmittingGoogle || isLoading} 
-                  className="w-full py-3.5 mt-2 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-full shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2"
+                  className="w-full py-3.5 mt-2 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-sm shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2"
                 >
                   {isSubmittingEmail && <FiLoader className="w-5 h-5 animate-spin" />}
                   {isSubmittingEmail ? "Đang đăng nhập..." : "Đăng nhập"}
@@ -415,7 +414,7 @@ const LoginPage: React.FC = () => {
                 type="button"
                 onClick={handleGoogleLogin}
                 disabled={isSubmittingGoogle || isSubmittingEmail || isLoading}
-                className="flex w-full items-center justify-center gap-3 rounded-full border border-border bg-card px-4 py-3.5 text-sm font-medium text-foreground shadow-sm transition-all duration-200 hover:bg-muted/50 active:scale-[0.98] focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100"
+                className="flex w-full items-center justify-center gap-3 rounded-sm border border-border bg-card px-4 py-3.5 text-sm font-medium text-foreground shadow-sm transition-all duration-200 hover:bg-muted/50 active:scale-[0.98] focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100"
               >
                 {isSubmittingGoogle ? (
                   <FiLoader className="w-5 h-5 animate-spin" />

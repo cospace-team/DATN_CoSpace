@@ -193,7 +193,7 @@ export const ChatWidget = React.memo(function ChatWidget() {
         {payFor && (
           <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 space-y-2.5">
             <p className="text-[13px] text-foreground">
-              Đơn <span className="font-semibold">{payFor.bookingCode}</span> đang chờ thanh toán —{" "}
+              Đơn <span className="font-semibold">{payFor.bookingCode}</span> đang chờ thanh toán:{" "}
               <span className="font-semibold">{formatVND(payFor.totalAmount)}</span>
             </p>
             <div className="flex gap-2">

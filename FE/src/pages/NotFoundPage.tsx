@@ -43,7 +43,6 @@ const NotFoundPage: React.FC = () => {
 
   return (
     <div className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-background px-6 py-12 selection:bg-primary/20">
-      {/* Header bar */}
       <header className="absolute top-6 left-6 right-6 flex items-center justify-between max-w-6xl mx-auto w-full z-10">
         <Link to="/" className="inline-flex items-center group">
           <Logo iconClassName="h-9 w-9" textClassName="text-lg font-bold tracking-tight" />
@@ -56,7 +55,6 @@ const NotFoundPage: React.FC = () => {
         </Link>
       </header>
 
-      {/* Main card */}
       <LazyMotion features={domAnimation} strict>
       <m.div
         initial={{ opacity: 0, y: 20 }}
@@ -66,7 +64,6 @@ const NotFoundPage: React.FC = () => {
       >
         <p className="mb-4 text-7xl sm:text-8xl font-bold tracking-tight text-primary select-none">404</p>
 
-        {/* Heading & description */}
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground mb-3">
           Không tìm thấy trang bạn yêu cầu
         </h1>
@@ -74,12 +71,11 @@ const NotFoundPage: React.FC = () => {
           Đường dẫn có thể đã sai hoặc trang này không còn tồn tại.
         </p>
 
-        {/* Action Buttons */}
         <div className="flex flex-wrap items-center justify-center gap-3 mb-10">
           <Button
             variant="outline"
             onClick={() => navigate(-1)}
-            className="gap-2 rounded-xl px-5 h-11 border-border/80 hover:bg-muted/80 shadow-sm"
+            className="gap-2 rounded-sm px-5 h-11 border-border/80 hover:bg-muted/80 shadow-sm"
           >
             <FiArrowLeft className="h-4 w-4" />
             Quay lại
@@ -87,7 +83,7 @@ const NotFoundPage: React.FC = () => {
 
           <Button
             onClick={() => navigate(homeRoute)}
-            className="gap-2 rounded-xl px-6 h-11"
+            className="gap-2 rounded-sm px-6 h-11"
           >
             <FiHome className="h-4 w-4" />
             {homeLabel}
@@ -97,7 +93,7 @@ const NotFoundPage: React.FC = () => {
             <Button
               variant="secondary"
               onClick={() => navigate("/locations")}
-              className="gap-2 rounded-xl px-5 h-11 border border-border/40"
+              className="gap-2 rounded-sm px-5 h-11 border border-border/40"
             >
               <FiCompass className="h-4 w-4" />
               Xem các chi nhánh
@@ -105,8 +101,7 @@ const NotFoundPage: React.FC = () => {
           )}
         </div>
 
-        {/* Quick Help Card */}
-        <div className="rounded-xl border border-border bg-card p-5 text-left">
+        <div className="rounded-lg border border-border bg-card p-5 text-left">
           <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-3">
             <FiHelpCircle className="h-4 w-4 text-primary" />
             Lối tắt gợi ý
@@ -114,9 +109,9 @@ const NotFoundPage: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
             <Link
               to="/locations"
-              className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/40 hover:bg-muted transition-colors group"
+              className="flex items-center gap-3 p-2.5 rounded-sm bg-muted/40 hover:bg-muted transition-colors group"
             >
-              <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <div className="h-8 w-8 rounded-sm bg-primary/10 text-primary flex items-center justify-center shrink-0">
                 <FiMapPin className="h-4 w-4" />
               </div>
               <div className="overflow-hidden">
@@ -127,9 +122,9 @@ const NotFoundPage: React.FC = () => {
 
             <Link
               to={isAuthenticated ? "/customer/explore" : "/login"}
-              className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/40 hover:bg-muted transition-colors group"
+              className="flex items-center gap-3 p-2.5 rounded-sm bg-muted/40 hover:bg-muted transition-colors group"
             >
-              <div className="h-8 w-8 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <div className="h-8 w-8 rounded-sm bg-primary/10 text-primary flex items-center justify-center shrink-0">
                 <FiCalendar className="h-4 w-4" />
               </div>
               <div className="overflow-hidden">
@@ -146,9 +141,8 @@ const NotFoundPage: React.FC = () => {
       </m.div>
       </LazyMotion>
 
-      {/* Footer copyright */}
       <footer className="absolute bottom-6 text-center text-xs text-muted-foreground/60">
-        &copy; {new Date().getFullYear()} CoSpace. Mọi quyền được bảo lưu.
+        &copy; {new Date().getFullYear()} CoSpace. Bảo lưu mọi quyền.
       </footer>
     </div>
   );

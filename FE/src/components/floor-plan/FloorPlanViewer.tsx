@@ -8,6 +8,7 @@ import { FiPlus, FiMinus, FiMaximize2 } from 'react-icons/fi';
 import type { FloorLayout, LayoutElement } from '../../types/floorPlan';
 import ElementRenderer from './ElementRenderer';
 import { ELEMENT_CATALOG } from '../../data/elementCatalog';
+import { ElementTypeIcon, getElementIcon } from './elementIcons';
 
 interface Props {
   layout: FloorLayout;
@@ -44,31 +45,29 @@ const STATUS_COLOR: Record<string, string> = {
  */
 const WorkspaceBadge: React.FC<{
   el: LayoutElement;
-  icon?: string;
   info: WorkspaceMapInfo | null;
   status: string | null;
-}> = React.memo(({ el, icon, info, status }) => {
+}> = React.memo(({ el, info, status }) => {
+  const Icon = getElementIcon(el.type);
   const capacity = info?.capacity ?? el.seatCount;
   const compact = el.width < 90;
   const chipText = capacity ? (compact ? `${capacity}` : `${capacity} chỗ`) : '';
   const chipHeight = 18;
-  const chipWidth = (icon ? 18 : 6) + chipText.length * 6.6 + 7;
+  const chipWidth = 18 + chipText.length * 6.6 + 7;
   const color = status ? STATUS_COLOR[status] || '#94A3B8' : '#64748B';
   return (
     <g transform={`translate(${el.x}, ${el.y})`} style={{ pointerEvents: 'none', userSelect: 'none' }}>
-      {(icon || chipText) && (
-        // Sits on the element's top edge like a tab, so it never covers the drawing inside.
-        <g transform={`translate(6, ${-chipHeight / 2})`}>
-          <rect width={chipWidth} height={chipHeight} rx={chipHeight / 2} fill="var(--bg-surface, #fff)"
-            stroke={color} strokeWidth={1.4} />
-          {icon && <text x={5} y={13} fontSize={11}>{icon}</text>}
-          {chipText && (
-            <text x={icon ? 19 : 6} y={12.8} fontSize={10.5} fontWeight={800} fill="var(--text-main, #0F172A)">
-              {chipText}
-            </text>
-          )}
-        </g>
-      )}
+      {/* Sits on the element's top edge like a tab, so it never covers the drawing inside. */}
+      <g transform={`translate(6, ${-chipHeight / 2})`}>
+        <rect width={chipWidth} height={chipHeight} rx={chipHeight / 2} fill="var(--bg-surface, #fff)"
+          stroke={color} strokeWidth={1.4} />
+        <Icon x={4} y={3} size={12} color="var(--text-secondary, #64748B)" aria-hidden="true" />
+        {chipText && (
+          <text x={19} y={12.8} fontSize={10.5} fontWeight={800} fill="var(--text-main, #0F172A)">
+            {chipText}
+          </text>
+        )}
+      </g>
       {status && (
         <circle cx={el.width - 7} cy={7} r={4.5} fill={color} stroke="var(--bg-surface, #fff)" strokeWidth={1.5} />
       )}
@@ -255,7 +254,6 @@ const FloorPlanViewer: React.FC<Props> = ({
         .filter((el) => el.visible && el.workspaceId)
         .map((el) => ({
           el,
-          icon: ELEMENT_CATALOG.find((c) => c.type === el.type)?.icon,
           info: getWorkspaceInfo ? getWorkspaceInfo(el.workspaceId as string) : null,
           status: getAvailability ? getAvailability(el.workspaceId as string) : null,
         })),
@@ -290,9 +288,6 @@ const FloorPlanViewer: React.FC<Props> = ({
   // Hovered element info
   const hoveredEl = hoveredId
     ? layout.elements.find((e) => e.id === hoveredId)
-    : null;
-  const hoveredCatalog = hoveredEl
-    ? ELEMENT_CATALOG.find((c) => c.type === hoveredEl.type)
     : null;
 
   return (
@@ -345,7 +340,9 @@ const FloorPlanViewer: React.FC<Props> = ({
           </div>
           {getWorkspaceInfo && (
             <div className="hidden sm:flex items-center gap-1.5 pl-3 border-l border-border">
-              <span className="rounded-full border border-border bg-card px-1.5 text-[10px] font-bold">💻 4 chỗ</span>
+              <span className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-1.5 text-[10px] font-bold">
+                <ElementTypeIcon type="desk" className="h-3 w-3 text-muted-foreground" /> 4 chỗ
+              </span>
               <span className="text-xs font-medium text-muted-foreground">= loại & số chỗ</span>
             </div>
           )}
@@ -355,7 +352,7 @@ const FloorPlanViewer: React.FC<Props> = ({
       {/* Hover tooltip */}
       {hoveredEl && (
         <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 px-4 py-2 rounded-lg bg-card border border-border shadow-lg text-sm animate-fade-in">
-          <span className="mr-1">{hoveredCatalog?.icon}</span>
+          <ElementTypeIcon type={hoveredEl.type} className="inline h-4 w-4 mr-1.5 -mt-0.5 text-muted-foreground" />
           <span className="font-semibold">{hoveredEl.label}</span>
           {hoveredEl.sublabel && (
             <span className="ml-2 text-muted-foreground text-xs">
@@ -452,7 +449,7 @@ const FloorPlanViewer: React.FC<Props> = ({
           ))}
 
           {badges.map((b) => (
-            <WorkspaceBadge key={`badge-${b.el.id}`} el={b.el} icon={b.icon} info={b.info} status={b.status} />
+            <WorkspaceBadge key={`badge-${b.el.id}`} el={b.el} info={b.info} status={b.status} />
           ))}
         </svg>
       </div>

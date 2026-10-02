@@ -167,7 +167,7 @@ const appear = (delay = 0) => ({
 });
 
 const inputClass =
-  "w-full min-h-[48px] bg-background border border-input px-4 py-3 rounded-md text-base text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-primary transition-colors";
+  "w-full min-h-[48px] bg-background border border-input px-4 py-3 rounded-sm text-base text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-primary transition-colors";
 
 const labelClass = "block text-sm font-medium text-foreground mb-1.5";
 
@@ -259,7 +259,7 @@ const CloseButton: React.FC<{ onClick: () => void; className?: string }> = ({ on
 );
 
 const RetryBlock: React.FC<{ message: string; onRetry: () => void }> = ({ message, onRetry }) => (
-  <div role="alert" className="text-center py-14 border border-dashed border-border text-muted-foreground bg-card">
+  <div role="alert" className="text-center py-14 border border-dashed border-border rounded-lg text-muted-foreground bg-card">
     <p className="mb-4">{message}</p>
     <Button onClick={onRetry} variant="outline" className="rounded-sm">
       <FiRefreshCw aria-hidden="true" /> Thử lại
@@ -314,12 +314,11 @@ const LandingPage: React.FC = () => {
 
   const [selectedBranchForDetail, setSelectedBranchForDetail] = useState<BranchCard | null>(null);
 
-  // Dynamic real data logic
   const displayBranches: BranchCard[] = useMemo(() => {
     const hhmm = (t?: string | null) => (t ? t.slice(0, 5) : null);
     return branches.map((b, idx) => {
       const img = defaultBranchImages[idx % defaultBranchImages.length];
-      const hours = hhmm(b.openTime) && hhmm(b.closeTime) ? `${hhmm(b.openTime)} – ${hhmm(b.closeTime)}` : null;
+      const hours = hhmm(b.openTime) && hhmm(b.closeTime) ? `${hhmm(b.openTime)} - ${hhmm(b.closeTime)}` : null;
 
       return {
         id: b.id,
@@ -411,7 +410,7 @@ const LandingPage: React.FC = () => {
     <div className="min-h-screen bg-background text-foreground font-sans selection:bg-primary/25 selection:text-foreground">
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[60] focus:px-4 focus:py-3 focus:rounded-md focus:bg-primary focus:text-primary-foreground"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[60] focus:px-4 focus:py-3 focus:rounded-sm focus:bg-primary focus:text-primary-foreground"
       >
         Bỏ qua tới nội dung chính
       </a>
@@ -476,7 +475,7 @@ const LandingPage: React.FC = () => {
                 ? Array.from({ length: 5 }).map((_, i) => (
                     <div
                       key={i}
-                      className={`bg-muted animate-pulse min-h-[220px] ${branchTileSpan(i, 5)}`}
+                      className={`bg-muted animate-pulse rounded-lg min-h-[220px] ${branchTileSpan(i, 5)}`}
                       aria-hidden="true"
                     />
                   ))
@@ -489,7 +488,7 @@ const LandingPage: React.FC = () => {
                         {...appear((idx % 4) * 0.05)}
                         onClick={() => setSelectedBranchForDetail(branch)}
                         aria-label={`Xem chi tiết chi nhánh ${branch.name}`}
-                        className={`group relative overflow-hidden bg-slate-900 text-left min-h-[220px] cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary ${branchTileSpan(idx, displayBranches.length)}`}
+                        className={`group relative overflow-hidden rounded-lg bg-slate-900 text-left min-h-[220px] cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary ${branchTileSpan(idx, displayBranches.length)}`}
                       >
                         <img
                           src={withUnsplashSize(branch.image, isFeatured ? 900 : 480, isFeatured ? 700 : 360)}
@@ -508,12 +507,12 @@ const LandingPage: React.FC = () => {
                             {branch.name}
                           </h3>
                           {branch.hours && (
-                            <span className="inline-block bg-primary text-primary-foreground text-xs font-bold px-2.5 py-1 tabular-nums">
+                            <span className="inline-block rounded-full bg-primary text-primary-foreground text-xs font-bold px-2.5 py-1 tabular-nums">
                               {branch.hours}
                             </span>
                           )}
                         </div>
-                        <span className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center bg-primary text-primary-foreground opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity" aria-hidden="true">
+                        <span className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-primary text-primary-foreground opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity" aria-hidden="true">
                           <FiArrowRight />
                         </span>
                       </m.button>
@@ -606,7 +605,7 @@ const LandingPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {isLoading
                 ? Array.from({ length: 3 }).map((_, i) => (
-                    <div key={i} className="bg-card border border-border" aria-hidden="true">
+                    <div key={i} className="bg-card border border-border rounded-lg overflow-hidden" aria-hidden="true">
                       <div className="h-40 bg-muted animate-pulse" />
                       <div className="p-8 space-y-3">
                         <div className="h-8 w-1/2 mx-auto bg-muted animate-pulse" />
@@ -619,7 +618,7 @@ const LandingPage: React.FC = () => {
                     <m.article
                       key={service.id}
                       {...appear((idx % 3) * 0.06)}
-                      className="bg-card border border-border flex flex-col text-center"
+                      className="bg-card border border-border rounded-lg overflow-hidden flex flex-col text-center"
                     >
                       <div className="relative h-40 overflow-hidden bg-slate-900">
                         <img
@@ -665,7 +664,7 @@ const LandingPage: React.FC = () => {
               {...reveal()}
               aria-labelledby="calculator-title"
               onSubmit={(e) => { e.preventDefault(); handleBookingRedirect(); }}
-              className="mt-12 bg-card border border-border p-6 md:p-8"
+              className="mt-12 bg-card border border-border rounded-lg p-6 md:p-8"
             >
               <h3 id="calculator-title" className="font-display font-bold text-xl text-foreground mb-1">
                 Ước tính chi phí
@@ -733,7 +732,7 @@ const LandingPage: React.FC = () => {
           {faqs.map((item, idx) => {
             const isOpen = openFaq === idx;
             return (
-              <div key={item.q} className={`border bg-card transition-colors ${isOpen ? "border-primary" : "border-border"}`}>
+              <div key={item.q} className={`border rounded-lg overflow-hidden bg-card transition-colors ${isOpen ? "border-primary" : "border-border"}`}>
                 <h3>
                   <button
                     type="button"
@@ -744,7 +743,7 @@ const LandingPage: React.FC = () => {
                     className="w-full flex items-center justify-between gap-4 px-5 py-4 min-h-[56px] text-left font-display font-bold text-foreground cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                   >
                     {item.q}
-                    <span className={`w-8 h-8 shrink-0 flex items-center justify-center transition-colors ${isOpen ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+                    <span className={`w-8 h-8 shrink-0 flex items-center justify-center rounded-full transition-colors ${isOpen ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
                       <FiChevronDown className={`w-4 h-4 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} aria-hidden="true" />
                     </span>
                   </button>
@@ -861,7 +860,7 @@ const LandingPage: React.FC = () => {
 
             <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
               {selectedBranchForDetail.features.map((feat) => (
-                <li key={feat.text} className="flex items-center gap-3 text-sm text-foreground bg-muted/60 px-4 py-3">
+                <li key={feat.text} className="flex items-center gap-3 text-sm text-foreground bg-muted/60 rounded-lg px-4 py-3">
                   <FiCheck className="text-primary shrink-0" aria-hidden="true" />
                   <span>{feat.text}</span>
                 </li>

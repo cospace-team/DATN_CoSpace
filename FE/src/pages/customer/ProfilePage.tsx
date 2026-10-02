@@ -1356,7 +1356,7 @@ const ProfilePage: React.FC = () => {
             <section className="bg-card rounded-3xl border border-border p-6 shadow-sm relative">
               <div className="flex items-center justify-between mb-5">
                 <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-xl bg-secondary/10 text-secondary">
+                  <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
                     <FiBriefcase className="h-5 w-5" />
                   </div>
                   <div>

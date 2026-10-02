@@ -167,7 +167,7 @@ const CommunityPage: React.FC = () => {
             Cộng đồng CoSpace
           </h1>
           <p className="text-sm font-medium bg-white/10 text-slate-200 px-3 py-1.5 rounded-lg border border-white/10 inline-block mt-3">
-            Viết về điều bạn đang làm — hệ thống sẽ gợi ý bạn tới đúng người cùng lĩnh vực.
+            Viết về điều bạn đang làm. Hệ thống sẽ gợi ý bạn tới đúng người cùng lĩnh vực.
           </p>
         </div>
       </div>
@@ -233,7 +233,7 @@ const CommunityPage: React.FC = () => {
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   maxLength={200}
-                  placeholder="Tiêu đề — VD: Tìm co-founder kỹ thuật cho nền tảng EdTech"
+                  placeholder="Tiêu đề, ví dụ: Tìm co-founder kỹ thuật cho nền tảng EdTech"
                   className="w-full px-4 py-2.5 bg-muted/40 border border-border rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary/30"
                 />
 

@@ -1,6 +1,6 @@
 /**
- * Line icons for each element type, used in the editor's library and properties panel.
- * The emoji in ELEMENT_CATALOG stay for the drawing itself, where they act as map glyphs.
+ * Line icons for each element type: the editor's library and properties panel, the shapes drawn
+ * on the floor plan itself, and the plan's badges and hover tooltip.
  */
 
 import React from 'react';
@@ -53,7 +53,10 @@ const ICONS: Partial<Record<ElementType, IconType>> = {
   label: MdOutlineLabel,
 };
 
+/** The icon for an element type; unknown types fall back to a plain square. */
+export const getElementIcon = (type: string): IconType => ICONS[type as ElementType] ?? MdOutlineCropSquare;
+
 export const ElementTypeIcon: React.FC<{ type: string; className?: string }> = ({ type, className = 'h-4 w-4' }) => {
-  const Icon = ICONS[type as ElementType] ?? MdOutlineCropSquare;
+  const Icon = getElementIcon(type);
   return <Icon className={className} aria-hidden="true" />;
 };

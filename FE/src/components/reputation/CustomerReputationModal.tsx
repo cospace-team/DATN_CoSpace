@@ -60,7 +60,7 @@ export const CustomerReputationModal: React.FC<CustomerReputationModalProps> = (
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={onClose}>
       <div
-        className="bg-card border border-border rounded-2xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-scale-up space-y-5"
+        className="bg-card border border-border rounded-2xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-scale-in space-y-5"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"

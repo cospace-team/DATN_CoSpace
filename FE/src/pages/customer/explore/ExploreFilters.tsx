@@ -164,7 +164,7 @@ export const ExploreFilters: React.FC<ExploreFiltersProps> = ({
                 .map((h) => <option key={h} value={h}>{pad(h)}</option>)}
             </select>
           </div>
-          <p className="text-xs text-muted-foreground">{value.endHour - value.startHour} giờ · chi nhánh mở {pad(openHour)}–{pad(closeHour)}</p>
+          <p className="text-xs text-muted-foreground">{value.endHour - value.startHour} giờ · chi nhánh mở {pad(openHour)}-{pad(closeHour)}</p>
         </Field>
 
         <Field label="Số người" icon={<FiUsers className="h-3.5 w-3.5" />}>
