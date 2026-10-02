@@ -26,6 +26,8 @@ export interface BookingResponse {
   id: string;
   bookingCode: string;
   userId: string;
+  customerName?: string | null;
+  customerPhone?: string | null;
   workspaceId: string;
   workspaceName?: string;
   workspaceTypeId: string;

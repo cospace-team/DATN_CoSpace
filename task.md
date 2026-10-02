@@ -185,3 +185,9 @@ Sử dụng ký hiệu: `[ ]` Chưa làm | `[/]` Đang làm | `[x]` Đã xong.
 - [x] **Khách hàng**: panel đặt chỗ hiện "Còn x/y" / "Hết", giới hạn số lượng chọn được.
 - [x] **Khám phá không gian 2 bước**: (1) bộ lọc chi nhánh, ngày, khung giờ, số người, loại không gian, thiết bị cần dùng; (2) kết quả chỉ gồm chỗ phù hợp, gom theo tầng, chỗ trống trước, báo thiết bị đã hết trong khung giờ; vẫn xem được Sơ đồ tầng và Lịch theo giờ. Nạp chỗ của mọi tầng nên đặt nhiều chỗ được khác tầng. Thiết bị đã lọc được chọn sẵn khi mở chỗ.
 - [x] **Kiểm thử**: 351/351 unit test BE pass (thêm 7 test giới hạn); chạy thật trên Postgres 16 (đặt giới hạn 1 máy chiếu, đơn thứ hai trùng giờ bị chặn, báo giá vượt bị chặn, khách không sửa được giới hạn); chụp màn hình bộ lọc, kết quả, panel, trang quản trị, bản điện thoại.
+
+## 🛑 19. Nhân viên/Admin hủy hoặc kết thúc sớm đơn và hoàn tiền
+- [x] **Kết thúc sớm đơn đang sử dụng** (`POST /api/staff/bookings/{id}/end-early`): check-out khách ngay, hoàn phần thời gian chưa dùng (làm tròn 1.000đ), hoàn toàn bộ, hoặc số tiền tự nhập (0 → tối đa số đã trả); bắt buộc lý do, ghi nhật ký, báo khách. Migration V8 thêm loại hoàn tiền `STAFF_ENDED`.
+- [x] **Hủy đơn chưa sử dụng thay khách** (API có sẵn) nay có giao diện: "Lỗi do cơ sở – hoàn 100%" hoặc "Theo chính sách hủy". Xem trước số tiền hoàn qua `GET /api/staff/bookings/{id}/refund-preview`.
+- [x] **Trang "Đơn đặt chỗ"** cho Super Admin (chọn chi nhánh) và Branch Admin: xem đơn theo ngày, lọc trạng thái, tìm theo mã/khách/SĐT; nút hủy/kết thúc sớm ngay trên từng đơn (`GET /api/staff/bookings?branchId&from&to`). Màn Check-in của nhân viên cũng có nút này.
+- [x] **Kiểm thử**: 356/356 unit test BE pass (thêm 5 test kết thúc sớm); chạy thật trên Postgres 16: kết thúc sớm qua giao diện admin (đơn → Hoàn thành, khách được check-out, khoản hoàn vào hàng đợi, có nhật ký và thông báo), hủy hoàn 100%, hoàn số tiền tự nhập, chặn kết thúc sớm đơn đã hủy.

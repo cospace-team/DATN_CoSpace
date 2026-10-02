@@ -672,6 +672,18 @@ public class BookingService {
         return toBookingWithDetailsDto(booking);
     }
 
+    /** Bookings of a branch overlapping [from, to), for the staff / admin booking list. */
+    @Transactional(readOnly = true)
+    public List<BookingDto> listBranchBookings(UUID branchId, OffsetDateTime from, OffsetDateTime to) {
+        if (from == null || to == null || !to.isAfter(from)) {
+            throw new IllegalArgumentException("Khoảng thời gian không hợp lệ.");
+        }
+        if (java.time.Duration.between(from, to).toDays() > 62) {
+            throw new IllegalArgumentException("Chỉ xem được tối đa 62 ngày mỗi lần.");
+        }
+        return toDtoList(bookingRepository.findBookingsInInterval(branchId, from, to));
+    }
+
     @Transactional(readOnly = true)
     public List<BookingDto> getBranchTodayBookings(UUID branchId) {
         java.time.ZoneId vnZone = java.time.ZoneId.of("Asia/Ho_Chi_Minh");

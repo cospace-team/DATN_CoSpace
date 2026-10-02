@@ -18,6 +18,7 @@ import { CheckoutModal } from './checkin/CheckoutModal';
 import { TodayScheduleTab } from './checkin/TodayScheduleTab';
 import { ReputationBadge } from '../../components/reputation/ReputationBadge';
 import { CustomerReputationModal } from '../../components/reputation/CustomerReputationModal';
+import { StaffBookingActionModal } from '../../components/staff/StaffBookingActionModal';
 
 import { BookingPackageDisplay, getBookingPackageDisplay } from '../../utils/bookingPackage';
 
@@ -51,6 +52,8 @@ const CheckInPage: React.FC = () => {
   const [searchedBooking, setSearchedBooking] = useState<BookingWithDetailsDto | null>(null);
   /** Customer whose reputation history is open, if any. */
   const [reputationUserId, setReputationUserId] = useState<string | null>(null);
+  /** Booking being cancelled / ended early with a refund, if any. */
+  const [actionTarget, setActionTarget] = useState<{ id: string; customerName?: string; workspaceName?: string } | null>(null);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -579,6 +582,19 @@ const CheckInPage: React.FC = () => {
                     </p>
                   </div>
                 )}
+                {['CONFIRMED', 'PENDING_PAYMENT', 'CHECKED_IN'].includes(searchedBooking.booking?.status) && (
+                  <button
+                    type="button"
+                    onClick={() => setActionTarget({
+                      id: searchedBooking.booking.id,
+                      customerName: searchedBooking.customer?.fullName,
+                      workspaceName: searchedBooking.workspace?.name,
+                    })}
+                    className="mt-3 w-full text-sm font-medium text-red-600 hover:text-red-700 hover:underline cursor-pointer"
+                  >
+                    {searchedBooking.booking.status === 'CHECKED_IN' ? 'Kết thúc sớm & hoàn tiền' : 'Hủy đơn & hoàn tiền'}
+                  </button>
+                )}
               </div>
             );
           })()}
@@ -817,6 +833,17 @@ const CheckInPage: React.FC = () => {
                                 <FiLogOut className="h-3.5 w-3.5 mr-1" />
                                 {ci.meta.pkg?.isMultiDay ? 'Check-out hôm nay' : 'Ra về (Check-out)'}
                               </button>
+                              <button
+                                onClick={() => setActionTarget({
+                                  id: ci.booking.id,
+                                  customerName: ci.customer?.fullName,
+                                  workspaceName: ci.workspace?.name,
+                                })}
+                                className="btn btn-sm btn-ghost text-xs ml-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
+                                title="Kết thúc sớm vì sự cố / lý do khác và hoàn tiền"
+                              >
+                                Kết thúc sớm
+                              </button>
                             </td>
                           </tr>
                         ))}
@@ -886,6 +913,19 @@ const CheckInPage: React.FC = () => {
             )}
           </div>
         </div>
+      )}
+
+      {actionTarget && (
+        <StaffBookingActionModal
+          bookingId={actionTarget.id}
+          customerName={actionTarget.customerName}
+          workspaceName={actionTarget.workspaceName}
+          onClose={() => setActionTarget(null)}
+          onDone={() => {
+            setSearchedBooking(null);
+            fetchDashboardData();
+          }}
+        />
       )}
 
       {reputationUserId && (

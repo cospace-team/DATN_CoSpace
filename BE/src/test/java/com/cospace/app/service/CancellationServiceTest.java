@@ -45,6 +45,8 @@ class CancellationServiceTest {
     private RefundService refundService;
     @Mock
     private BookingAddonService bookingAddonService;
+    @Mock
+    private com.cospace.app.repository.CheckinLogRepository checkinLogRepository;
 
     @InjectMocks
     private CancellationService cancellationService;
@@ -446,5 +448,76 @@ class CancellationServiceTest {
 
         verify(notificationService).createNotification(
                 eq(userId), anyString(), anyString(), eq("BOOKING"), eq(booking.getId()), eq("BOOKING"));
+    }
+
+    @org.junit.jupiter.api.Nested
+    class StaffEndEarly {
+
+        /** A 4-hour booking that started 1 hour ago and is checked in. */
+        private Booking inUse() {
+            OffsetDateTime start = OffsetDateTime.now(ZoneOffset.UTC).minusHours(1);
+            Booking b = Booking.builder().id(UUID.randomUUID()).bookingCode("WH-USE001").userId(userId).branchId(branchId)
+                    .status(BookingStatus.CHECKED_IN).startAt(start).endAt(start.plusHours(4))
+                    .totalAmount(400_000L).build();
+            when(bookingRepository.findByIdWithLock(b.getId())).thenReturn(Optional.of(b));
+            org.mockito.Mockito.lenient().when(refundService.refundableAmount(b.getId())).thenReturn(400_000L);
+            return b;
+        }
+
+        @Test
+        void refundsTheUnusedShareAndChecksTheGuestOut() {
+            Booking b = inUse();
+            com.cospace.app.entity.CheckinLog log = com.cospace.app.entity.CheckinLog.builder()
+                    .id(UUID.randomUUID()).bookingId(b.getId()).checkinAt(b.getStartAt()).build();
+            when(checkinLogRepository.findActiveCheckinByBookingId(b.getId())).thenReturn(Optional.of(log));
+
+            long refunded = cancellationService.endEarlyByStaff(UUID.randomUUID(), b.getId(), "Mất điện",
+                    CancellationService.EndEarlyRefund.UNUSED, null);
+
+            // 3 of 4 hours left: about 300.000đ, rounded down to whole thousands.
+            assertThat(refunded).isBetween(299_000L, 300_000L);
+            assertThat(refunded % 1000).isZero();
+            assertThat(b.getStatus()).isEqualTo(BookingStatus.COMPLETED);
+            assertThat(log.getCheckoutAt()).isNotNull();
+            assertThat(log.getNote()).contains("Mất điện");
+            verify(refundService).requestRefund(eq(b), eq(null), eq(refunded),
+                    eq(com.cospace.app.entity.Refund.REASON_STAFF_ENDED), any());
+        }
+
+        @Test
+        void fullRefundGivesBackEverythingRefundable() {
+            Booking b = inUse();
+
+            assertThat(cancellationService.endEarlyByStaff(UUID.randomUUID(), b.getId(), "Sự cố phòng",
+                    CancellationService.EndEarlyRefund.FULL, null)).isEqualTo(400_000L);
+        }
+
+        @Test
+        void customAmountCannotExceedWhatWasPaid() {
+            Booking b = inUse();
+
+            assertThatThrownBy(() -> cancellationService.endEarlyByStaff(UUID.randomUUID(), b.getId(), "Khách yêu cầu",
+                    CancellationService.EndEarlyRefund.CUSTOM, 500_000L))
+                    .isInstanceOf(IllegalArgumentException.class);
+            assertThat(b.getStatus()).isEqualTo(BookingStatus.CHECKED_IN);
+        }
+
+        @Test
+        void bookingNotStartedYetMustBeCancelledInstead() {
+            Booking b = booking(BookingStatus.CONFIRMED, 100_000L, hoursFromNow(5));
+            when(bookingRepository.findByIdWithLock(b.getId())).thenReturn(Optional.of(b));
+
+            assertThatThrownBy(() -> cancellationService.endEarlyByStaff(UUID.randomUUID(), b.getId(), "x",
+                    CancellationService.EndEarlyRefund.UNUSED, null))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("Hủy đơn");
+        }
+
+        @Test
+        void reasonIsRequired() {
+            assertThatThrownBy(() -> cancellationService.endEarlyByStaff(UUID.randomUUID(), UUID.randomUUID(), " ",
+                    CancellationService.EndEarlyRefund.UNUSED, null))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
     }
 }

@@ -72,6 +72,7 @@ const ExtraServicesPage = React.lazy(() => import("./pages/admin/ExtraServicesPa
 const AmenitiesPage = React.lazy(() => import("./pages/admin/AmenitiesPage"));
 const PromotionsPage = React.lazy(() => import("./pages/admin/PromotionsPage"));
 const MembershipTiersPage = React.lazy(() => import("./pages/admin/MembershipTiersPage"));
+const BookingManagementPage = React.lazy(() => import("./pages/admin/BookingManagementPage"));
 const RefundsPage = React.lazy(() => import("./pages/admin/RefundsPage"));
 const AuditLogPage = React.lazy(() => import("./pages/admin/AuditLogPage"));
 const ReportsPage = React.lazy(() => import("./pages/admin/ReportsPage"));
@@ -112,6 +113,7 @@ const branchAdminNav: NavItem[] = [
   { to: "/branch-admin/staff",       label: "Nhân viên",      icon: <FiUsers className="h-4 w-4" />   },
   { to: "/branch-admin/maintenance", label: "Bảo trì",        icon: <FiTool className="h-4 w-4" />    },
   { to: "/branch-admin/services",    label: "Dịch vụ thêm",   icon: <FiCoffee className="h-4 w-4" />  },
+  { to: "/branch-admin/bookings",    label: "Đơn đặt chỗ",    icon: <FiCalendar className="h-4 w-4" /> },
   { to: "/branch-admin/refunds",     label: "Hoàn tiền",      icon: <FiRotateCcw className="h-4 w-4" /> },
 ];
 
@@ -126,6 +128,7 @@ const adminNav: NavItem[] = [
   { to: "/admin/amenities", label: "Tiện ích", icon: <FiStar className="h-4 w-4" /> },
   { to: "/admin/promotions", label: "Khuyến mãi", icon: <FiGift className="h-4 w-4" /> },
   { to: "/admin/membership", label: "Hạng thành viên", icon: <FiAward className="h-4 w-4" /> },
+  { to: "/admin/bookings", label: "Đơn đặt chỗ", icon: <FiCalendar className="h-4 w-4" /> },
   { to: "/admin/refunds", label: "Hoàn tiền", icon: <FiRotateCcw className="h-4 w-4" /> },
   { to: "/admin/audit", label: "Nhật ký", icon: <FiFileText className="h-4 w-4" /> },
   { to: "/admin/reports", label: "Báo cáo", icon: <FiBarChart2 className="h-4 w-4" /> },
@@ -188,6 +191,7 @@ const AppRoutes = React.memo<{ role: UserRole }>(({ role }) => (
         <Route path="/admin/amenities"   element={<AmenitiesPage />} />
         <Route path="/admin/promotions"  element={<PromotionsPage />} />
         <Route path="/admin/membership"  element={<MembershipTiersPage />} />
+        <Route path="/admin/bookings"    element={<BookingManagementPage scope="admin" />} />
         <Route path="/admin/refunds"     element={<RefundsPage scope="admin" />} />
         <Route path="/admin/audit"       element={<AuditLogPage />} />
         <Route path="/admin/reports"     element={<ReportsPage />} />
@@ -204,6 +208,7 @@ const AppRoutes = React.memo<{ role: UserRole }>(({ role }) => (
         <Route path="/branch-admin/staff"       element={<BAStaffPage />} />
         <Route path="/branch-admin/maintenance" element={<BAMaintenancePage />} />
         <Route path="/branch-admin/services"    element={<BAServicesPage />} />
+        <Route path="/branch-admin/bookings"    element={<BookingManagementPage scope="branch" />} />
         <Route path="/branch-admin/refunds"     element={<RefundsPage scope="branch" />} />
       </>
     )}

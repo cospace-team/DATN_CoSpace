@@ -29,6 +29,7 @@ public class CancellationService {
     private final NotificationService notificationService;
     private final RefundService refundService;
     private final BookingAddonService bookingAddonService;
+    private final com.cospace.app.repository.CheckinLogRepository checkinLogRepository;
 
     @Transactional
     public BookingCancellation cancelBooking(UUID userId, UUID bookingId, String reason) {
@@ -112,6 +113,132 @@ public class CancellationService {
         outcome.appliedRule().put("cancelled_by_staff_id", staffId.toString());
 
         return applyCancellation(booking, staffId, reason.trim(), outcome, now);
+    }
+
+    /* ─────────────── Staff: refund preview & ending a booking in use ─────────────── */
+
+    /**
+     * What staff may refund on a booking: what was paid and is still refundable, the policy refund if
+     * it were cancelled now, and — for a booking in use — the share of the rental for the time left.
+     */
+    public record StaffRefundPreview(String bookingCode, String status, boolean inUse, long paid, long refundable,
+                                     int policyPercent, String policyName, long policyRefund, long unusedRefund,
+                                     long unpaidAddons, String startAt, String endAt) {
+    }
+
+    @Transactional(readOnly = true)
+    public StaffRefundPreview previewStaffRefund(UUID bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thông tin đặt chỗ."));
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        long refundable = refundService.refundableAmount(bookingId);
+        long paid = refundable + refundRepositoryAmount(bookingId);
+        long rental = Math.max(0, booking.getTotalAmount() - booking.getAddonAmount());
+
+        int policyPercent = 0;
+        String policyName = null;
+        long policyRefund = 0;
+        if (booking.getStatus() == BookingStatus.CONFIRMED || booking.getStatus() == BookingStatus.PENDING_PAYMENT) {
+            RefundOutcome outcome = resolveRefundPercent(booking, now);
+            policyPercent = outcome.refundPercent();
+            Object name = outcome.appliedRule().get("policy_name");
+            policyName = name != null ? name.toString() : null;
+            long paidAddons = booking.getStatus() == BookingStatus.CONFIRMED ? booking.getAddonAmount() : 0;
+            policyRefund = Math.min(rental * policyPercent / 100L + paidAddons, refundable);
+        }
+        boolean inUse = isInUse(booking, now);
+        long unusedRefund = inUse ? Math.min(unusedShare(booking, rental, now), refundable) : 0;
+        return new StaffRefundPreview(booking.getBookingCode(), booking.getStatus().name(), inUse, paid, refundable,
+                policyPercent, policyName, policyRefund, unusedRefund, bookingAddonService.unpaidAmount(bookingId),
+                booking.getStartAt().toString(), booking.getEndAt().toString());
+    }
+
+    /** How staff choose the refund when ending a booking early. */
+    public enum EndEarlyRefund { UNUSED, FULL, CUSTOM }
+
+    /**
+     * Ends a booking that is in use right now — an outage, an incident, a guest asked to leave — checks
+     * the guest out and queues a refund: the unused share of the rental, everything refundable, or an
+     * amount staff enter (0 for none). The caller checks branch access and writes the audit entry.
+     *
+     * @return the amount queued for refund
+     */
+    @Transactional
+    public long endEarlyByStaff(UUID staffId, UUID bookingId, String reason, EndEarlyRefund mode, Long customAmount) {
+        if (reason == null || reason.isBlank()) {
+            throw new IllegalArgumentException("Vui lòng nhập lý do kết thúc sớm.");
+        }
+        Booking booking = bookingRepository.findByIdWithLock(bookingId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thông tin đặt chỗ."));
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        if (!isInUse(booking, now)) {
+            throw new IllegalStateException(booking.getStatus() == BookingStatus.CONFIRMED && now.isBefore(booking.getStartAt())
+                    ? "Đơn chưa đến giờ sử dụng, hãy dùng chức năng Hủy đơn."
+                    : "Chỉ kết thúc sớm được đơn đang sử dụng (trạng thái hiện tại: " + BookingStateMachine.label(booking.getStatus()) + ").");
+        }
+        long refundable = refundService.refundableAmount(bookingId);
+        long rental = Math.max(0, booking.getTotalAmount() - booking.getAddonAmount());
+        long amount = switch (mode == null ? EndEarlyRefund.UNUSED : mode) {
+            case UNUSED -> Math.min(unusedShare(booking, rental, now), refundable);
+            case FULL -> refundable;
+            case CUSTOM -> {
+                if (customAmount == null || customAmount < 0) {
+                    throw new IllegalArgumentException("Số tiền hoàn không hợp lệ.");
+                }
+                if (customAmount > refundable) {
+                    throw new IllegalArgumentException("Số tiền hoàn tối đa là " + RefundService.vnd(refundable) + ".");
+                }
+                yield customAmount;
+            }
+        };
+
+        String trimmed = reason.trim();
+        checkinLogRepository.findActiveCheckinByBookingId(bookingId).ifPresent(log -> {
+            log.setCheckoutAt(now.isAfter(log.getCheckinAt()) ? now : log.getCheckinAt());
+            String note = (log.getNote() != null ? log.getNote() + " | " : "") + "Nhân viên kết thúc sớm: " + trimmed;
+            log.setNote(note.length() > 255 ? note.substring(0, 255) : note);
+            checkinLogRepository.save(log);
+        });
+        if (now.isAfter(booking.getStartAt()) && now.isBefore(booking.getEndAt())) {
+            booking.setEndAt(now);
+        }
+        BookingStateMachine.transition(booking, BookingStatus.COMPLETED);
+        bookingRepository.save(booking);
+
+        refundService.requestRefund(booking, null, amount, Refund.REASON_STAFF_ENDED,
+                "Kết thúc sớm: " + trimmed + ".");
+        long owed = bookingAddonService.unpaidAmount(bookingId);
+        notificationService.createNotification(booking.getUserId(),
+                "Đơn đặt chỗ được kết thúc sớm",
+                "Đơn " + booking.getBookingCode() + " đã được nhân viên kết thúc sớm. Lý do: " + trimmed + "."
+                        + (amount > 0 ? " Bạn sẽ được hoàn " + RefundService.vnd(amount) + "." : "")
+                        + (owed > 0 ? " Bạn còn " + RefundService.vnd(owed) + " tiền dịch vụ gọi thêm chưa thanh toán." : ""),
+                "BOOKING", booking.getId(), "BOOKING");
+        log.info("Staff {} ended booking {} early, refund {}", staffId, booking.getBookingCode(), amount);
+        return amount;
+    }
+
+    /** In use: checked in, or a started multi-day pass between visits. */
+    private static boolean isInUse(Booking booking, OffsetDateTime now) {
+        return booking.getStatus() == BookingStatus.CHECKED_IN
+                || (booking.getStatus() == BookingStatus.CONFIRMED
+                    && !now.isBefore(booking.getStartAt()) && now.isBefore(booking.getEndAt()));
+    }
+
+    /** The rental share for the time left in the booking, rounded down to 1.000đ. */
+    private static long unusedShare(Booking booking, long rental, OffsetDateTime now) {
+        long booked = Duration.between(booking.getStartAt(), booking.getEndAt()).getSeconds();
+        OffsetDateTime from = now.isAfter(booking.getStartAt()) ? now : booking.getStartAt();
+        long left = Math.max(0, Duration.between(from, booking.getEndAt()).getSeconds());
+        if (booked <= 0) return 0;
+        long share = (long) Math.floor((double) rental * left / booked);
+        return share / 1000 * 1000; // whole thousands of đồng, rounded down
+
+    }
+
+    /** Refunds already owed or paid on the booking (paid = refundable + this). */
+    private long refundRepositoryAmount(UUID bookingId) {
+        return refundService.refundedOrOwed(bookingId);
     }
 
     /** A booking that exists, may still be cancelled, and is locked for the rest of the transaction. */
