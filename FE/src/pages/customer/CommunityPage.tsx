@@ -167,7 +167,7 @@ const CommunityPage: React.FC = () => {
             Cộng đồng CoSpace
           </h1>
           <p className="text-sm font-medium bg-white/10 text-slate-200 px-3 py-1.5 rounded-lg border border-white/10 inline-block mt-3">
-            Viết về điều bạn đang làm — hệ thống sẽ gợi ý bạn tới đúng người cùng lĩnh vực.
+            Viết về điều bạn đang làm. Hệ thống sẽ gợi ý bạn tới đúng người cùng lĩnh vực.
           </p>
         </div>
       </div>
@@ -233,7 +233,7 @@ const CommunityPage: React.FC = () => {
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   maxLength={200}
-                  placeholder="Tiêu đề — VD: Tìm co-founder kỹ thuật cho nền tảng EdTech"
+                  placeholder="Tiêu đề, ví dụ: Tìm co-founder kỹ thuật cho nền tảng EdTech"
                   className="w-full px-4 py-2.5 bg-muted/40 border border-border rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary/30"
                 />
 
@@ -436,7 +436,7 @@ const CommunityPage: React.FC = () => {
         <aside className="space-y-4 lg:sticky lg:top-24">
           <section className="bg-card rounded-3xl border border-border p-5 shadow-sm">
             <div className="flex items-center gap-2.5 mb-4">
-              <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+              <div className="p-2 rounded-xl bg-primary/10 text-primary">
                 <FiUsers className="h-4 w-4" />
               </div>
               <div>
@@ -473,7 +473,7 @@ const CommunityPage: React.FC = () => {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2">
                           <p className="text-xs font-bold text-foreground truncate">{p.name}</p>
-                          <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 shrink-0">
+                          <span className="text-[10px] font-bold text-primary shrink-0">
                             {p.matchScore}%
                           </span>
                         </div>

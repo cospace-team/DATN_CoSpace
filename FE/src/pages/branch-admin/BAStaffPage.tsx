@@ -107,7 +107,7 @@ const BAStaffPage: React.FC = () => {
     <div className="space-y-6 animate-fade-in relative">
       {/* Toast Notification */}
       {successMessage && (
-        <div className="fixed top-4 right-4 z-50 animate-slide-up flex items-center gap-2 bg-success text-success-foreground px-4 py-3 rounded-xl shadow-xl">
+        <div className="fixed top-4 right-4 z-50 animate-slide-in-up flex items-center gap-2 bg-success text-success-foreground px-4 py-3 rounded-xl shadow-xl">
           <FiCheckCircle className="h-5 w-5" />
           <p className="font-medium text-sm">{successMessage}</p>
         </div>

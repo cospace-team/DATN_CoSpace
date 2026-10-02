@@ -10,6 +10,3 @@ Disallow: /staff/
 Disallow: /admin/
 Disallow: /branch-admin/
 Disallow: /api/
-
-# Sitemap location
-Sitemap: https://cospace.vn/sitemap.xml

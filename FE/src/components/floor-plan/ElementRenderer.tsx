@@ -4,7 +4,9 @@
  */
 
 import React from 'react';
+import { MdOutlineLock } from 'react-icons/md';
 import type { LayoutElement } from '../../types/floorPlan';
+import { getElementIcon } from './elementIcons';
 
 interface Props {
   element: LayoutElement;
@@ -18,12 +20,27 @@ interface Props {
   cursor?: string;
 }
 
+/** The element type's line icon, centred and sized as a share of the element's shorter side. */
+const CentredIcon: React.FC<{ el: LayoutElement; scale: number }> = ({ el, scale }) => {
+  const Icon = getElementIcon(el.type);
+  const size = Math.min(el.width, el.height) * scale;
+  return (
+    <Icon
+      x={(el.width - size) / 2}
+      y={(el.height - size) / 2}
+      size={size}
+      color="var(--text-secondary, #64748B)"
+      style={{ pointerEvents: 'none' }}
+      aria-hidden="true"
+    />
+  );
+};
+
 /** Render type-specific inner decoration inside the element bounds */
 const InnerDecoration: React.FC<{
   el: LayoutElement;
   isSelected: boolean;
 }> = ({ el }) => {
-  const cx = el.width / 2;
   const cy = el.height / 2;
 
   switch (el.type) {
@@ -252,17 +269,7 @@ const InnerDecoration: React.FC<{
       );
 
     case 'plant':
-      return (
-        <text
-          x={cx}
-          y={cy + 4}
-          fontSize={Math.min(el.width, el.height) * 0.6}
-          textAnchor="middle"
-          dominantBaseline="middle"
-        >
-          🌿
-        </text>
-      );
+      return <CentredIcon el={el} scale={0.6} />;
 
     case 'staircase':
       return (
@@ -282,110 +289,28 @@ const InnerDecoration: React.FC<{
       );
 
     case 'elevator':
-      return (
-        <g>
-          <text
-            x={cx}
-            y={cy + 4}
-            fontSize={Math.min(el.width, el.height) * 0.45}
-            textAnchor="middle"
-            dominantBaseline="middle"
-          >
-            🛗
-          </text>
-        </g>
-      );
+      return <CentredIcon el={el} scale={0.45} />;
 
     case 'restroom':
-      return (
-        <text
-          x={cx}
-          y={cy + 4}
-          fontSize={Math.min(el.width, el.height) * 0.45}
-          textAnchor="middle"
-          dominantBaseline="middle"
-        >
-          🚻
-        </text>
-      );
+      return <CentredIcon el={el} scale={0.45} />;
 
     case 'kitchen':
-      return (
-        <text
-          x={cx}
-          y={cy + 4}
-          fontSize={Math.min(el.width, el.height) * 0.45}
-          textAnchor="middle"
-          dominantBaseline="middle"
-        >
-          🍳
-        </text>
-      );
+      return <CentredIcon el={el} scale={0.45} />;
 
     case 'lounge':
-      return (
-        <text
-          x={cx}
-          y={cy + 4}
-          fontSize={Math.min(el.width, el.height) * 0.35}
-          textAnchor="middle"
-          dominantBaseline="middle"
-        >
-          ☕
-        </text>
-      );
+      return <CentredIcon el={el} scale={0.35} />;
 
     case 'reception':
-      return (
-        <text
-          x={cx}
-          y={cy + 3}
-          fontSize={Math.min(el.width, el.height) * 0.4}
-          textAnchor="middle"
-          dominantBaseline="middle"
-        >
-          📋
-        </text>
-      );
+      return <CentredIcon el={el} scale={0.4} />;
 
     case 'phone_booth':
-      return (
-        <text
-          x={cx}
-          y={cy + 3}
-          fontSize={Math.min(el.width, el.height) * 0.45}
-          textAnchor="middle"
-          dominantBaseline="middle"
-        >
-          📞
-        </text>
-      );
+      return <CentredIcon el={el} scale={0.45} />;
 
     case 'event_space':
-      return (
-        <text
-          x={cx}
-          y={cy + 3}
-          fontSize={Math.min(el.width, el.height) * 0.25}
-          textAnchor="middle"
-          dominantBaseline="middle"
-        >
-          🎤
-        </text>
-      );
+      return <CentredIcon el={el} scale={0.25} />;
 
     case 'custom_workspace':
-      return (
-        <text
-          x={cx}
-          y={cy + 3}
-          fontSize={Math.min(el.width, el.height) * 0.35}
-          textAnchor="middle"
-          dominantBaseline="middle"
-        >
-          ✨
-        </text>
-      );
+      return <CentredIcon el={el} scale={0.35} />;
 
     default:
       return null;
@@ -503,15 +428,14 @@ const ElementRenderer: React.FC<Props> = ({
       {/* Lock indicator: only the editor (the one view that drags elements) needs it; on the
           read-only plans it would put padlocks on every locked wall. */}
       {el.locked && onMouseDown && (
-        <text
-          x={el.width - 8}
-          y={12}
-          fontSize={10}
-          textAnchor="middle"
+        <MdOutlineLock
+          x={el.width - 14}
+          y={3}
+          size={11}
+          color="var(--text-secondary, #64748B)"
           style={{ pointerEvents: 'none' }}
-        >
-          🔒
-        </text>
+          aria-hidden="true"
+        />
       )}
     </g>
   );

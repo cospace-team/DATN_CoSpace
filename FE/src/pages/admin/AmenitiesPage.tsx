@@ -157,7 +157,7 @@ const AmenitiesPage: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in relative">
       {successMsg && (
-        <div className="fixed top-4 right-4 z-50 animate-slide-up flex items-center gap-2 bg-success text-success-foreground px-4 py-3 rounded-xl shadow-xl">
+        <div className="fixed top-4 right-4 z-50 animate-slide-in-up flex items-center gap-2 bg-success text-success-foreground px-4 py-3 rounded-xl shadow-xl">
           <FiCheck className="h-5 w-5" />
           <p className="font-medium text-sm">{successMsg}</p>
         </div>

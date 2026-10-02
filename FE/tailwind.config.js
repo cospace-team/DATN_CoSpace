@@ -58,33 +58,26 @@ module.exports = {
           "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
         },
       },
+      // Public pages (landing, login, 404, navbar) follow one rule: text buttons, inputs and
+      // filter pills use rounded-sm (12px); cards, tiles, panels, dialogs, images and alerts
+      // use rounded-lg (16px); badges and icon-only round buttons use rounded-full.
       borderRadius: {
         xl: "calc(var(--radius) + 4px)",
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      // One family, drawn for Vietnamese diacritics. `heading` and `display` are kept as
+      // aliases so existing markup doesn't change; they no longer switch fonts.
       fontFamily: {
-        sans: ["Inter", "system-ui", "-apple-system", "sans-serif"],
-        heading: ["Be Vietnam Pro", "Inter", "system-ui", "sans-serif"],
-        display: ["Space Grotesk", "Be Vietnam Pro", "Inter", "system-ui", "sans-serif"],
+        sans: ["Be Vietnam Pro", "system-ui", "-apple-system", "sans-serif"],
+        heading: ["Be Vietnam Pro", "system-ui", "-apple-system", "sans-serif"],
+        display: ["Be Vietnam Pro", "system-ui", "-apple-system", "sans-serif"],
       },
       keyframes: {
-        "accordion-down": {
-          from: { height: "0" },
-          to: { height: "var(--radix-accordion-content-height)" },
-        },
-        "accordion-up": {
-          from: { height: "var(--radix-accordion-content-height)" },
-          to: { height: "0" },
-        },
         "fade-in": {
           from: { opacity: "0" },
           to: { opacity: "1" },
-        },
-        "fade-out": {
-          from: { opacity: "1" },
-          to: { opacity: "0" },
         },
         "slide-in-up": {
           from: { transform: "translateY(16px)", opacity: "0" },
@@ -98,30 +91,24 @@ module.exports = {
           from: { transform: "scale(0.95)", opacity: "0" },
           to: { transform: "scale(1)", opacity: "1" },
         },
-        shimmer: {
-          "0%": { backgroundPosition: "-200% 0" },
-          "100%": { backgroundPosition: "200% 0" },
-        },
         float: {
           "0%, 100%": { transform: "translateY(0px)" },
           "50%": { transform: "translateY(-8px)" },
         },
-        glow: {
-          "0%, 100%": { opacity: "1" },
-          "50%": { opacity: "0.6" },
+        // Error feedback, e.g. a QR code that fails to scan.
+        shake: {
+          "0%, 100%": { transform: "translateX(0)" },
+          "20%, 60%": { transform: "translateX(-4px)" },
+          "40%, 80%": { transform: "translateX(4px)" },
         },
       },
       animation: {
-        "accordion-down": "accordion-down 0.2s ease-out",
-        "accordion-up": "accordion-up 0.2s ease-out",
         "fade-in": "fade-in 0.2s ease-out",
-        "fade-out": "fade-out 0.2s ease-out",
         "slide-in-up": "slide-in-up 0.3s ease-out",
         "slide-in-right": "slide-in-right 0.3s ease-out",
         "scale-in": "scale-in 0.2s ease-out",
-        shimmer: "shimmer 1.5s ease-in-out infinite",
         float: "float 3s ease-in-out infinite",
-        glow: "glow 2s ease-in-out infinite",
+        shake: "shake 0.4s ease-in-out",
       },
     },
   },

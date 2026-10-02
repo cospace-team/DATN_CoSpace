@@ -53,31 +53,14 @@ import { ProfileSecurityTab } from './profile/ProfileSecurityTab';
 import { ProfileNetworkTab } from './profile/ProfileNetworkTab';
 
 // ── BANNER THEMES ──
+// Flat cover colours; each swatch in the picker shows its cover colour as-is. Fixed shades, not
+// bg-primary: the member's name overlaps the cover's lower edge, and dark mode's light primary
+// would leave the white name text unreadable there.
 const BANNER_THEMES = [
-  {
-    id: 'indigo',
-    name: 'Cyber Indigo',
-    gradient: 'from-indigo-600 via-blue-600 to-sky-500',
-    accent: 'bg-indigo-500',
-  },
-  {
-    id: 'teal',
-    name: 'Aurora Teal',
-    gradient: 'from-teal-600 via-emerald-600 to-cyan-500',
-    accent: 'bg-teal-500',
-  },
-  {
-    id: 'sunset',
-    name: 'Sunset Amber',
-    gradient: 'from-amber-600 via-rose-600 to-orange-500',
-    accent: 'bg-amber-500',
-  },
-  {
-    id: 'violet',
-    name: 'Cosmic Violet',
-    gradient: 'from-purple-600 via-fuchsia-600 to-indigo-600',
-    accent: 'bg-purple-500',
-  },
+  { id: 'brand', name: 'Xanh CoSpace', cover: 'bg-blue-600' },
+  { id: 'teal', name: 'Xanh ngọc', cover: 'bg-teal-700' },
+  { id: 'amber', name: 'Hổ phách', cover: 'bg-amber-600' },
+  { id: 'violet', name: 'Tím', cover: 'bg-violet-600' },
 ];
 
 // ── POPULAR SUGGESTED SKILLS ──
@@ -101,7 +84,7 @@ const ProfilePage: React.FC = () => {
   const { showToast } = useToast();
 
   const [activeTab, setActiveTab] = useState<'profile' | 'network' | 'security'>('profile');
-  const [selectedTheme, setSelectedTheme] = useState('indigo');
+  const [selectedTheme, setSelectedTheme] = useState('brand');
 
   // ── Tab 1: Personal & Professional Profile States ──
   const [isEditingPersonalInfo, setIsEditingPersonalInfo] = useState(false);
@@ -996,13 +979,10 @@ const ProfilePage: React.FC = () => {
           1. HERO COVER BANNER & PROFILE HEADER
           ══════════════════════════════════════════════════════════════ */}
       <div className="relative rounded-3xl overflow-hidden bg-card border border-border shadow-md mb-8">
-        {/* Cover Gradient Mesh Banner */}
+        {/* Cover banner */}
         <div
-          className={`h-44 sm:h-56 w-full bg-gradient-to-r ${currentTheme.gradient} relative overflow-hidden transition-all duration-700`}
+          className={`h-44 sm:h-56 w-full ${currentTheme.cover} relative overflow-hidden transition-colors duration-300`}
         >
-          {/* Glass / Mesh Overlay Glows */}
-          <div className="absolute inset-0 bg-black/10 backdrop-blur-[2px]" />
-
           {/* Banner Preset Switcher */}
           <div className="absolute top-4 right-4 z-20 flex items-center gap-1.5 bg-black/30 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/20">
             <span className="text-[11px] font-medium text-white/80 hidden sm:inline mr-1">
@@ -1013,7 +993,9 @@ const ProfilePage: React.FC = () => {
                 key={theme.id}
                 onClick={() => setSelectedTheme(theme.id)}
                 title={theme.name}
-                className={`w-5 h-5 rounded-full ${theme.accent} border-2 transition-transform  ${
+                aria-label={theme.name}
+                aria-pressed={selectedTheme === theme.id}
+                className={`w-5 h-5 rounded-full ${theme.cover} border-2 transition-transform  ${
                   selectedTheme === theme.id
                     ? 'border-white scale-110 shadow-sm'
                     : 'border-transparent opacity-75'
@@ -1230,9 +1212,9 @@ const ProfilePage: React.FC = () => {
               : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
           }`}
         >
-          <FiUsers className="h-4 w-4 text-indigo-500" />
+          <FiUsers className="h-4 w-4 text-primary" />
           <span>Mạng lưới kết nối</span>
-          <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+          <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-primary/10 text-primary">
             {partnersList.length}
           </span>
         </button>
@@ -1374,7 +1356,7 @@ const ProfilePage: React.FC = () => {
             <section className="bg-card rounded-3xl border border-border p-6 shadow-sm relative">
               <div className="flex items-center justify-between mb-5">
                 <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-xl bg-secondary/10 text-secondary">
+                  <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
                     <FiBriefcase className="h-5 w-5" />
                   </div>
                   <div>

@@ -137,7 +137,7 @@ export const ProfileSecurityTab: React.FC<ProfileSecurityTabProps> = ({
       <div className="space-y-6">
         <section className="bg-card rounded-3xl border border-border p-6 shadow-sm">
           <div className="flex items-center gap-3 mb-4">
-            <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+            <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
               <FiSettings className="h-5 w-5" />
             </div>
             <div>

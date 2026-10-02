@@ -63,7 +63,7 @@ export const ProfileNetworkTab: React.FC<ProfileNetworkTabProps> = ({
       <div className="bg-card rounded-3xl border border-border p-6 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
-            <FiUsers className="text-indigo-500" /> Mạng lưới Đối tác & Đồng nghiệp
+            <FiUsers className="text-primary" /> Mạng lưới Đối tác & Đồng nghiệp
           </h2>
           <p className="text-xs text-muted-foreground mt-0.5">
             Gợi ý đối tác tiềm năng dựa trên kỹ năng, lĩnh vực quan tâm và không gian làm việc chung
