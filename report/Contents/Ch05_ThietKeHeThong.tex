@@ -235,56 +235,57 @@ Cơ sở dữ liệu được thiết kế theo hai bước: mô hình thực th
 \subsection{Mô hình thực thể -- kết hợp (ký pháp Chen)}
 \label{ssec:erd_quan_niem}
 
-Trong ký pháp Chen, thực thể là hình chữ nhật, mối kết hợp là hình thoi, thuộc tính là hình elip (thuộc tính khóa được gạch chân, thuộc tính dẫn xuất vẽ nét đứt), trên cạnh ghi bản số $1$, $N$, $M$ hoặc $0..1$. Mô hình được chia thành bảy phần.
+Trong ký pháp Chen, thực thể là hình chữ nhật, mối kết hợp là hình thoi, thuộc tính là hình elip; thuộc tính khóa được gạch chân. Thực thể yếu và mối kết hợp xác định của nó được vẽ viền đôi. Trên mỗi cạnh nối thực thể với mối kết hợp ghi bản số $1$, $N$ hoặc $M$, ứng với các mối kết hợp $1:1$, $1:N$ và $M:N$. Mô hình được chia thành bảy phần theo nhóm chức năng; thực thể có viền nét đứt đã được mô tả thuộc tính ở hình khác, và mỗi hình chỉ nêu các thuộc tính chính. Các cột chỉ dùng để ghi vết người thao tác (người tạo, người thu tiền, người hủy) và các cột lặp lại thông tin suy ra được từ đơn hoặc không gian (khách hàng, chi nhánh trên các bảng đặt chỗ, thanh toán, hoàn tiền) không được vẽ thành mối kết hợp.
 
-\subsubsection{Định danh và hồ sơ năng lực}
-\emph{Người dùng} có nhiều \emph{Tài khoản liên kết} (nhà cung cấp đăng nhập) và một \emph{Hồ sơ năng lực}. Hồ sơ có quan hệ nhiều -- nhiều với \emph{Thẻ} qua hai mối kết hợp \emph{Có kỹ năng} (thuộc tính mức độ) và \emph{Quan tâm} (thuộc tính độ ưu tiên). Mối kết hợp đệ quy \emph{Gợi ý} giữa hai hồ sơ mang điểm tương đồng và lý do gợi ý (Hình~\ref{fig:erd_chen_dinhdanh}).
+\subsubsection{Định danh, hồ sơ năng lực và kết nối đối tác}
+\emph{Người dùng} có nhiều \emph{Tài khoản liên kết} (nhà cung cấp đăng nhập) và một \emph{Hồ sơ năng lực}; hồ sơ là thực thể yếu, được xác định bởi người dùng sở hữu nó. Hồ sơ có quan hệ nhiều -- nhiều với \emph{Thẻ} qua hai mối kết hợp \emph{Có kỹ năng} (thuộc tính mức độ) và \emph{Quan tâm} (thuộc tính độ ưu tiên), và ghi nhận chi nhánh mà thành viên thường đến. Hai mối kết hợp đệ quy nhiều -- nhiều là \emph{Gợi ý} giữa hai hồ sơ (điểm tương đồng, lý do gợi ý) và \emph{Kết nối} giữa hai người dùng (trạng thái lời mời, lời nhắn) (Hình~\ref{fig:erd_chen_dinhdanh}).
 
-\hinherd{erd-chen-01-dinhdanh.jpg}{ERD ký pháp Chen: định danh, hồ sơ năng lực và gợi ý đối tác}{fig:erd_chen_dinhdanh}
+\hinherd{erd-chen-01-dinhdanh.png}{ERD ký pháp Chen: định danh, hồ sơ năng lực và kết nối đối tác}{fig:erd_chen_dinhdanh}
 
 \subsubsection{Không gian làm việc}
-\emph{Chi nhánh} có nhiều \emph{Tầng}, mỗi tầng có nhiều \emph{Không gian}. Mỗi không gian thuộc một \emph{Loại không gian}; loại không gian có nhiều \emph{Tiện ích} (nhiều -- nhiều). Lịch \emph{Bảo trì} gắn với từng không gian (Hình~\ref{fig:erd_chen_khonggian}).
+\emph{Chi nhánh} có nhiều \emph{Tầng}, mỗi tầng có nhiều \emph{Không gian}; nhân viên và quản lý chi nhánh làm việc tại một chi nhánh. Mỗi không gian thuộc một \emph{Loại không gian}; loại không gian có nhiều \emph{Tiện ích} (nhiều -- nhiều, kèm số lượng). Mỗi không gian có nhiều \emph{Ảnh không gian} và nhiều lịch \emph{Bảo trì} (Hình~\ref{fig:erd_chen_khonggian}).
 
-\hinherd{erd-chen-02-khonggian.jpg}{ERD ký pháp Chen: không gian làm việc}{fig:erd_chen_khonggian}
+\hinherd{erd-chen-02-khonggian.png}{ERD ký pháp Chen: không gian làm việc}{fig:erd_chen_khonggian}
 
 \subsubsection{Bảng giá, dịch vụ thêm và hạng thành viên}
-\emph{Bảng giá} tính cho một loại không gian và có thể riêng cho một chi nhánh. \emph{Dịch vụ thêm} do chi nhánh cung cấp (hoặc dùng chung) và có mối kết hợp \emph{Gọi thêm} với \emph{Đặt chỗ}, mang số lượng, đơn giá lúc gọi và trạng thái trả tiền. \emph{Hạng thành viên} được gắn với người dùng qua mã hạng (Hình~\ref{fig:erd_chen_gia}).
+\emph{Bảng giá} tính cho một loại không gian và có thể áp dụng riêng cho một chi nhánh; bảng giá không gắn chi nhánh là giá chung. \emph{Dịch vụ thêm} do một chi nhánh cung cấp hoặc dùng chung. Mỗi đơn có nhiều \emph{Dòng phát sinh} (dịch vụ gọi thêm, phí gia hạn, phí trả muộn) lưu số lượng, đơn giá lúc ghi nhận và trạng thái thanh toán; dòng dịch vụ thuộc một dịch vụ thêm. Mỗi người dùng đạt một \emph{Hạng thành viên} (Hình~\ref{fig:erd_chen_gia}).
 
-\hinherd{erd-chen-03-gia.jpg}{ERD ký pháp Chen: bảng giá, dịch vụ thêm và hạng thành viên}{fig:erd_chen_gia}
+\hinherd{erd-chen-03-gia.png}{ERD ký pháp Chen: bảng giá, dịch vụ thêm và hạng thành viên}{fig:erd_chen_gia}
 
 \subsubsection{Chính sách hủy và khuyến mãi}
-\emph{Chính sách hủy} có loại quy tắc, ngưỡng nhỏ nhất, ngưỡng lớn nhất, phần trăm hoàn, độ ưu tiên và thời gian hiệu lực, có thể áp dụng riêng cho một chi nhánh. \emph{Khuyến mãi} có thể giới hạn theo chi nhánh và loại không gian (Hình~\ref{fig:erd_chen_chinhsach}).
+\emph{Chính sách hủy} có loại quy tắc, ngưỡng nhỏ nhất, ngưỡng lớn nhất, phần trăm hoàn, độ ưu tiên và thời gian hiệu lực, có thể áp dụng riêng cho một chi nhánh. \emph{Khuyến mãi} có thể giới hạn theo chi nhánh và loại không gian; voucher cá nhân là khuyến mãi thuộc sở hữu của một người dùng (Hình~\ref{fig:erd_chen_chinhsach}).
 
-\hinherd{erd-chen-04-chinhsach.jpg}{ERD ký pháp Chen: chính sách hủy và khuyến mãi}{fig:erd_chen_chinhsach}
+\hinherd{erd-chen-04-chinhsach.png}{ERD ký pháp Chen: chính sách hủy và khuyến mãi}{fig:erd_chen_chinhsach}
 
 \subsubsection{Đặt chỗ, check-in và hủy đơn}
-\emph{Đặt chỗ} là thực thể trung tâm, nối \emph{Người dùng} với \emph{Không gian} trong một khoảng thời gian. Mỗi đơn có nhiều \emph{Lượt check-in} và tối đa một bản ghi \emph{Hủy đơn} lưu lý do, phần trăm và số tiền hoàn (Hình~\ref{fig:erd_chen_datcho}).
+\emph{Đặt chỗ} là thực thể trung tâm, nối \emph{Người dùng} với \emph{Không gian} trong một khoảng thời gian và có thể áp dụng một mã \emph{Khuyến mãi}. Mỗi đơn có nhiều \emph{Lượt check-in} do nhân viên thực hiện và có một \emph{Bản ghi hủy} khi bị hủy, lưu lý do, phần trăm và số tiền hoàn (Hình~\ref{fig:erd_chen_datcho}).
 
-\hinherd{erd-chen-05-datcho.jpg}{ERD ký pháp Chen: đặt chỗ, check-in và hủy đơn}{fig:erd_chen_datcho}
+\hinherd{erd-chen-05-datcho.png}{ERD ký pháp Chen: đặt chỗ, check-in và hủy đơn}{fig:erd_chen_datcho}
 
 \subsubsection{Thanh toán và hoàn tiền}
-Mỗi đơn có nhiều \emph{Giao dịch}; mỗi giao dịch có nhiều \emph{Sự kiện thanh toán}. \emph{Hoàn tiền} gắn với đơn và (nếu có) với giao dịch được hoàn (Hình~\ref{fig:erd_chen_thanhtoan}).
+Mỗi đơn có nhiều \emph{Thanh toán}; mỗi thanh toán có nhiều \emph{Sự kiện thanh toán} và có thể dùng để trả các \emph{Dòng phát sinh}. \emph{Hoàn tiền} gắn với đơn và với giao dịch được hoàn, do một người dùng (quản lý chi nhánh hoặc quản trị viên) xử lý; khi hoàn bằng voucher, hệ thống cấp một \emph{Khuyến mãi} cá nhân (Hình~\ref{fig:erd_chen_thanhtoan}).
 
-\hinherd{erd-chen-06-thanhtoan.jpg}{ERD ký pháp Chen: thanh toán và hoàn tiền}{fig:erd_chen_thanhtoan}
+\hinherd{erd-chen-06-thanhtoan.png}{ERD ký pháp Chen: thanh toán và hoàn tiền}{fig:erd_chen_thanhtoan}
 
 \subsubsection{Cộng đồng, thông báo và nhật ký kiểm toán}
-\emph{Bài viết} có nhiều \emph{Thẻ}; \emph{Người dùng} nhận nhiều \emph{Thông báo}; mỗi \emph{Nhật ký kiểm toán} ghi người thực hiện, hành động, đối tượng, giá trị cũ và mới (Hình~\ref{fig:erd_chen_congdong}).
+\emph{Người dùng} viết nhiều \emph{Bài viết}; bài viết có thể đăng tại một chi nhánh và gắn nhiều \emph{Thẻ} (thuộc tính nguồn gắn thẻ). Người dùng nhận nhiều \emph{Thông báo}; mỗi \emph{Nhật ký kiểm toán} ghi người thực hiện, hành động, đối tượng, giá trị cũ và mới (Hình~\ref{fig:erd_chen_congdong}).
 
-\hinherd{erd-chen-07-congdong.jpg}{ERD ký pháp Chen: cộng đồng, thông báo và nhật ký kiểm toán}{fig:erd_chen_congdong}
+\hinherd{erd-chen-07-congdong.png}{ERD ký pháp Chen: cộng đồng, thông báo và nhật ký kiểm toán}{fig:erd_chen_congdong}
 
 \subsection{Mô hình quan hệ}
 \label{ssec:erd_vat_ly}
 
 Mô hình quan niệm được ánh xạ sang mô hình quan hệ theo các nguyên tắc:
 \begin{itemize}
-    \item mỗi thực thể thành một bảng, khóa chính kiểu \mt{UUID} (\mt{gen\_random\_uuid()});
-    \item mối kết hợp $1:N$ thành khóa ngoại ở bảng phía nhiều;
-    \item mối kết hợp $N:M$ thành bảng trung gian, ví dụ \mt{workspace\_type\_amenities}, \mt{profile\_skills}, \mt{profile\_interests}, \mt{post\_tags}; mối kết hợp \emph{Gọi thêm} thành bảng \mt{booking\_services}.
+    \item mỗi thực thể thành một bảng, khóa chính kiểu \mt{UUID} (\mt{gen\_random\_uuid()}); riêng thực thể yếu \emph{Hồ sơ năng lực} dùng mã người dùng làm khóa chính (\mt{profiles.user\_id});
+    \item mối kết hợp $1:N$ thành khóa ngoại ở bảng phía nhiều; hai mối kết hợp $1:1$ thành khóa ngoại ở một phía: \emph{Hủy} thành \mt{booking\_cancellations.booking\_id} có ràng buộc duy nhất, \emph{Cấp voucher} thành \mt{refunds.voucher\_promotion\_id};
+    \item mối kết hợp $M:N$ thành bảng trung gian: \mt{workspace\_type\_amenities}, \mt{profile\_skills}, \mt{profile\_interests}, \mt{profile\_match\_scores}, \mt{partner\_connections}, \mt{post\_tags}.
 \end{itemize}
+Hai mối kết hợp \emph{Làm việc tại} (người dùng -- chi nhánh) và \emph{Đạt hạng} (người dùng -- hạng thành viên) được lưu bằng cột \mt{users.branch\_id} và \mt{users.membership\_tier} nhưng chưa khai báo ràng buộc khóa ngoại.
 
-Lược đồ được quản lý bằng Flyway với ba tệp migration: \mt{V1\_\_baseline.sql} tạo lược đồ gốc gồm 30 bảng, \mt{V2\_\_constraints.sql} bổ sung ràng buộc toàn vẹn, \mt{V3} thêm hai bảng \mt{workspace\_images}, \mt{partner\_connections} và các cột cho phí phát sinh, voucher hoàn tiền. Tổng cộng có 32 bảng. Hình~\ref{fig:erd} là bản đồ 30 bảng của V1--V2 theo bảy nhóm; Bảng~\ref{tab:bang_theo_module} liệt kê đầy đủ 32 bảng.
+Lược đồ được quản lý bằng Flyway với ba tệp migration: \mt{V1\_\_baseline.sql} tạo lược đồ gốc gồm 30 bảng, \mt{V2\_\_constraints.sql} bổ sung ràng buộc toàn vẹn, \mt{V3} thêm hai bảng \mt{workspace\_images}, \mt{partner\_connections} và các cột cho phí phát sinh, voucher hoàn tiền. Tổng cộng có 32 bảng, chia thành bảy nhóm (Hình~\ref{fig:erd} và Bảng~\ref{tab:bang_theo_module}). Mỗi đường nối trong hình cho biết giữa hai nhóm có ít nhất một khóa ngoại. Bảng \mt{users} và \mt{branches} được bảng của hầu hết các nhóm khác tham chiếu, nên hai nhóm chứa chúng được vẽ thành hai trục hai bên.
 
-\hinhdo{Chuong6/erd-00-tongquan}{Bản đồ các nhóm bảng của cơ sở dữ liệu (V1--V2)}{fig:erd}
+\hinhdo{Chuong6/erd-00-tongquan}{Bản đồ các nhóm bảng của cơ sở dữ liệu}{fig:erd}
 
 \begin{table}[!htbp]
 \centering
@@ -298,9 +299,9 @@ Lược đồ được quản lý bằng Flyway với ba tệp migration: \mt{V1
 \hline
 Định danh và hồ sơ & 3 & \mt{users}, \mt{auth\_accounts}, \mt{profiles} \\
 \hline
-Gợi ý đối tác & 4 & \mt{tags}, \mt{profile\_skills}, \mt{profile\_interests}, \mt{profile\_match\_scores} \\
+Gợi ý đối tác và kết nối & 5 & \mt{tags}, \mt{profile\_skills}, \mt{profile\_interests}, \mt{profile\_match\_scores}, \mt{partner\_connections} \\
 \hline
-Không gian làm việc & 7 & \mt{branches}, \mt{floors}, \mt{workspaces}, \mt{workspace\_types}, \mt{amenities}, \mt{workspace\_type\_amenities}, \mt{workspace\_maintenance} \\
+Không gian làm việc & 8 & \mt{branches}, \mt{floors}, \mt{workspaces}, \mt{workspace\_types}, \mt{amenities}, \mt{workspace\_type\_amenities}, \mt{workspace\_maintenance}, \mt{workspace\_images} \\
 \hline
 Giá, khuyến mãi, hạng & 5 & \mt{price\_policies}, \mt{extra\_services}, \mt{cancellation\_policies}, \mt{promotions}, \mt{membership\_tiers} \\
 \hline
@@ -309,8 +310,6 @@ Giá, khuyến mãi, hạng & 5 & \mt{price\_policies}, \mt{extra\_services}, \m
 Thanh toán và hoàn tiền & 3 & \mt{payments}, \mt{payment\_events}, \mt{refunds} \\
 \hline
 Cộng đồng, thông báo, kiểm toán & 4 & \mt{posts}, \mt{post\_tags}, \mt{notifications}, \mt{audit\_logs} \\
-\hline
-Bổ sung ở V3 & 2 & \mt{workspace\_images}, \mt{partner\_connections} \\
 \hline
 \textbf{Tổng cộng} & \textbf{32} & \\
 \hline
