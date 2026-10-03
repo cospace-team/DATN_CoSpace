@@ -37,7 +37,9 @@ public class BranchAccessGuard {
      */
     public UUID requireBranchAccess(Jwt jwt, UUID requestedBranchId) {
         User caller = loadCaller(jwt);
-        if (caller.getRole() == User.Role.super_admin) {
+        boolean isGlobalAdmin = caller.getRole() == User.Role.super_admin
+                || (caller.getRole() == User.Role.admin && caller.getBranchId() == null);
+        if (isGlobalAdmin) {
             if (requestedBranchId == null) {
                 throw new IllegalArgumentException("branchId là bắt buộc.");
             }
@@ -94,7 +96,9 @@ public class BranchAccessGuard {
      */
     public void requireAccessToBranch(Jwt jwt, UUID resourceBranchId) {
         User caller = loadCaller(jwt);
-        if (caller.getRole() == User.Role.super_admin) {
+        boolean isGlobalAdmin = caller.getRole() == User.Role.super_admin
+                || (caller.getRole() == User.Role.admin && caller.getBranchId() == null);
+        if (isGlobalAdmin) {
             return;
         }
         UUID ownBranchId = requireOwnBranch(caller);

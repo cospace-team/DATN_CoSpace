@@ -2,7 +2,7 @@ import { API_BASE_URL } from '../config/api';
 
 export type RefundStatus = 'pending' | 'processed' | 'rejected';
 export type RefundMethod = 'cash' | 'bank_transfer' | 'voucher';
-export type RefundReason = 'CANCELLATION' | 'MAINTENANCE' | 'LATE_PAYMENT' | 'DUPLICATE_PAYMENT';
+export type RefundReason = 'CANCELLATION' | 'MAINTENANCE' | 'LATE_PAYMENT' | 'DUPLICATE_PAYMENT' | 'STAFF_ENDED';
 
 export interface RefundDto {
   id: string;
@@ -35,6 +35,7 @@ export const REFUND_REASON_LABEL: Record<RefundReason, string> = {
   MAINTENANCE: 'Bảo trì đột xuất',
   LATE_PAYMENT: 'Thanh toán về muộn',
   DUPLICATE_PAYMENT: 'Thanh toán trùng',
+  STAFF_ENDED: 'Nhân viên kết thúc sớm',
 };
 
 export const REFUND_METHOD_LABEL: Record<RefundMethod, string> = {

@@ -260,25 +260,32 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const registerWithEmail = useCallback(async (email: string, password: string, fullName: string, confirmPassword?: string, phone?: string) => {
+    const cleanEmail = email.trim();
     const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ 
-        email, 
+        email: cleanEmail, 
         password, 
-        fullName, 
+        fullName: fullName.trim(), 
         confirmPassword: confirmPassword || password,
-        phone: phone || ""
+        phone: phone ? phone.trim() : ""
       }),
     });
 
-    const data = await response.json();
+    const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      if (data.fields) {
-         const firstError = Object.values(data.fields)[0];
-         throw new Error(firstError as string);
-      }
-      throw new Error(data.message || "Đăng ký thất bại");
+      const msg =
+        data.fields
+          ? Object.values(data.fields)[0]
+          : (data.message && data.message !== "No message available")
+          ? data.message
+          : response.status === 409
+          ? "Email này đã được đăng ký."
+          : response.status === 400
+          ? "Dữ liệu đăng ký không hợp lệ."
+          : "Đăng ký thất bại. Vui lòng kiểm tra lại thông tin.";
+      throw new Error(msg as string);
     }
 
     if (data.data?.user && data.data?.accessToken) {
@@ -294,15 +301,30 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const loginWithEmail = useCallback(async (email: string, password: string) => {
+    const cleanEmail = email.trim();
     const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email: cleanEmail, password }),
     });
 
-    const data = await response.json();
+    const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      throw new Error(data.message || "Đăng nhập thất bại");
+      const msg =
+        (data.message && data.message !== "No message available")
+          ? data.message
+          : data.fields
+          ? Object.values(data.fields)[0]
+          : data.error && typeof data.error === "string" && data.error !== "Bad Request" && data.error !== "Unauthorized"
+          ? data.error
+          : response.status === 401
+          ? "Email hoặc mật khẩu không chính xác."
+          : response.status === 400
+          ? "Thông tin đăng nhập không hợp lệ. Vui lòng kiểm tra lại email và mật khẩu."
+          : response.status === 403
+          ? "Tài khoản của bạn đã bị khóa hoặc không có quyền truy cập."
+          : "Đăng nhập thất bại. Vui lòng thử lại sau.";
+      throw new Error(msg as string);
     }
 
     if (data.data?.user && data.data?.accessToken) {

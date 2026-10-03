@@ -20,6 +20,7 @@ export interface FloorResponse {
   mapVersion: number;
   isPublished: boolean;
   workspaceCount: number;
+  branchId?: string;
 }
 
 export interface WorkspaceResponse {
@@ -416,36 +417,108 @@ export interface ExtraServiceResponse {
   branchId?: string;
 }
 
+/* ─── Fast Memory Cache for Space Data ─── */
+const spaceCache = new Map<string, { data: any; expiry: number }>();
+
+function getCached<T>(key: string): T | null {
+  const item = spaceCache.get(key);
+  if (item && item.expiry > Date.now()) {
+    return item.data as T;
+  }
+  spaceCache.delete(key);
+  return null;
+}
+
+function setCached<T>(key: string, data: T, ttlMs: number): T {
+  spaceCache.set(key, { data, expiry: Date.now() + ttlMs });
+  return data;
+}
+
+export function clearSpaceCache() {
+  spaceCache.clear();
+}
+
 /* ─── Customer Space APIs ─── */
 export const customerSpaceApi = {
-  listBranches: () =>
-    apiFetch<BranchResponse[]>(`${API}/api/customer/spaces/branches`),
+  listBranches: async (force = false) => {
+    const key = "customer:branches";
+    if (!force) {
+      const cached = getCached<BranchResponse[]>(key);
+      if (cached) return cached;
+    }
+    const data = await apiFetch<BranchResponse[]>(`${API}/api/customer/spaces/branches`);
+    return setCached(key, data, 5 * 60 * 1000);
+  },
 
-  listFloors: (branchId: string) =>
-    apiFetch<FloorResponse[]>(`${API}/api/customer/spaces/branches/${branchId}/floors`),
+  listFloors: async (branchId: string, force = false) => {
+    const key = `customer:floors:${branchId}`;
+    if (!force) {
+      const cached = getCached<FloorResponse[]>(key);
+      if (cached) return cached;
+    }
+    const data = await apiFetch<FloorResponse[]>(`${API}/api/customer/spaces/branches/${branchId}/floors`);
+    return setCached(key, data, 5 * 60 * 1000);
+  },
 
-  listPrices: (branchId: string) =>
-    apiFetch<BranchPriceResponse[]>(`${API}/api/customer/spaces/branches/${branchId}/prices`),
+  listPrices: async (branchId: string, force = false) => {
+    const key = `customer:prices:${branchId}`;
+    if (!force) {
+      const cached = getCached<BranchPriceResponse[]>(key);
+      if (cached) return cached;
+    }
+    const data = await apiFetch<BranchPriceResponse[]>(`${API}/api/customer/spaces/branches/${branchId}/prices`);
+    return setCached(key, data, 5 * 60 * 1000);
+  },
 
-  pricingSummary: () =>
-    apiFetch<StartingPriceResponse[]>(`${API}/api/customer/spaces/pricing-summary`),
+  pricingSummary: async (force = false) => {
+    const key = "customer:pricing-summary";
+    if (!force) {
+      const cached = getCached<StartingPriceResponse[]>(key);
+      if (cached) return cached;
+    }
+    const data = await apiFetch<StartingPriceResponse[]>(`${API}/api/customer/spaces/pricing-summary`);
+    return setCached(key, data, 5 * 60 * 1000);
+  },
 
-  listWorkspaces: (branchId: string, floorId: string) =>
-    apiFetch<WorkspaceResponse[]>(
+  listWorkspaces: async (branchId: string, floorId: string, force = false) => {
+    const key = `customer:workspaces:${branchId}:${floorId}`;
+    if (!force) {
+      const cached = getCached<WorkspaceResponse[]>(key);
+      if (cached) return cached;
+    }
+    const data = await apiFetch<WorkspaceResponse[]>(
       `${API}/api/customer/spaces/branches/${branchId}/floors/${floorId}/workspaces`
-    ),
+    );
+    return setCached(key, data, 3 * 60 * 1000);
+  },
 
   /**
    * Busy time ranges for every workspace in the branch, across ALL customers — unlike
    * bookingApi.getMyBookings(), which only reflects the caller's own bookings.
    */
-  getBookingStatus: (branchId: string, from: Date, to: Date) =>
-    apiFetch<PublicWorkspaceAvailability[]>(
-      `${API}/api/customer/spaces/branches/${branchId}/booking-status?from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(to.toISOString())}`
-    ),
+  getBookingStatus: async (branchId: string, from: Date, to: Date, force = false) => {
+    const fromStr = from.toISOString();
+    const toStr = to.toISOString();
+    const key = `customer:availability:${branchId}:${fromStr}:${toStr}`;
+    if (!force) {
+      const cached = getCached<PublicWorkspaceAvailability[]>(key);
+      if (cached) return cached;
+    }
+    const data = await apiFetch<PublicWorkspaceAvailability[]>(
+      `${API}/api/customer/spaces/branches/${branchId}/booking-status?from=${encodeURIComponent(fromStr)}&to=${encodeURIComponent(toStr)}`
+    );
+    return setCached(key, data, 30 * 1000);
+  },
 
-  listExtraServices: (branchId?: string) =>
-    apiFetch<ExtraServiceResponse[]>(
+  listExtraServices: async (branchId?: string, force = false) => {
+    const key = `customer:services:${branchId || 'global'}`;
+    if (!force) {
+      const cached = getCached<ExtraServiceResponse[]>(key);
+      if (cached) return cached;
+    }
+    const data = await apiFetch<ExtraServiceResponse[]>(
       branchId ? `${API}/api/extra-services?branchId=${branchId}` : `${API}/api/extra-services`
-    ),
+    );
+    return setCached(key, data, 5 * 60 * 1000);
+  },
 };

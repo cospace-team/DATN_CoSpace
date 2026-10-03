@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { FiAlertCircle, FiAlertTriangle, FiCheck, FiCopy, FiEdit2, FiGift, FiPlus, FiTrash2, FiX } from 'react-icons/fi';
+import { FiAlertCircle, FiAlertTriangle, FiCheck, FiCopy, FiEdit2, FiGift, FiPlus, FiTrash2 } from 'react-icons/fi';
 import {
   describePromotion,
   membershipApi,
@@ -11,22 +11,7 @@ import {
 } from '../../api/loyaltyApi';
 import { adminBranchApi, adminWorkspaceTypeApi, type AdminBranchDto, type WorkspaceTypeResponse } from '../../lib/spaceApi';
 import { formatDateTime, formatDateTimeLocal, formatVND } from '../../utils/formatters';
-
-const Modal: React.FC<{ open: boolean; onClose: () => void; title: string; children: React.ReactNode }> = ({ open, onClose, title, children }) => {
-  if (!open) return null;
-  return (
-    <>
-      <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-2xl max-h-[90vh] overflow-y-auto bg-card rounded-3xl border border-border shadow-xl">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border sticky top-0 bg-card z-10">
-          <h3 className="text-lg font-bold font-heading">{title}</h3>
-          <button onClick={onClose} className="btn btn-ghost btn-sm !min-h-[32px] !p-2"><FiX className="h-5 w-5" /></button>
-        </div>
-        <div className="p-6">{children}</div>
-      </div>
-    </>
-  );
-};
+import { Modal } from '../../components/ui/Modal';
 
 const STATE_META: Record<PromotionState, { label: string; badge: string }> = {
   running: { label: 'Đang chạy', badge: 'badge-success' },
@@ -216,7 +201,7 @@ const PromotionsPage: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in relative">
       {successMsg && (
-        <div className="fixed top-4 right-4 z-[70] animate-slide-up flex items-center gap-2 bg-success text-success-foreground px-4 py-3 rounded-xl shadow-xl max-w-sm">
+        <div className="fixed top-4 right-4 z-[70] animate-slide-in-up flex items-center gap-2 bg-success text-success-foreground px-4 py-3 rounded-xl shadow-xl max-w-sm">
           <FiCheck className="h-5 w-5 shrink-0" />
           <p className="font-medium text-sm">{successMsg}</p>
         </div>
@@ -250,7 +235,7 @@ const PromotionsPage: React.FC = () => {
               </button>
             ))}
           </div>
-          <input className="input-field !w-full sm:!w-64" placeholder="Tìm theo mã hoặc tên..." value={search}
+          <input className="input-field !w-full sm:!w-64" placeholder="Tìm theo mã hoặc tên…" value={search}
             onChange={(e) => setSearch(e.target.value)} />
         </div>
 
@@ -306,11 +291,11 @@ const PromotionsPage: React.FC = () => {
                     <td><span className={`badge ${STATE_META[p.state].badge}`}>{STATE_META[p.state].label}</span></td>
                     <td>
                       <div className="flex gap-1">
-                        <button onClick={() => openEdit(p)} className="btn btn-ghost btn-sm !min-h-[28px] !p-1.5" title="Chỉnh sửa">
-                          <FiEdit2 className="h-3.5 w-3.5" />
+                        <button onClick={() => openEdit(p)} className="btn btn-ghost btn-sm !min-h-[28px] !p-1.5" title="Chỉnh sửa" aria-label="Chỉnh sửa">
+                          <FiEdit2 className="h-3.5 w-3.5" aria-hidden="true" />
                         </button>
-                        <button onClick={() => setDeleteConfirm(p)} className="btn btn-ghost btn-sm !min-h-[28px] !p-1.5 text-destructive hover:!text-destructive" title="Xóa">
-                          <FiTrash2 className="h-3.5 w-3.5" />
+                        <button onClick={() => setDeleteConfirm(p)} className="btn btn-ghost btn-sm !min-h-[28px] !p-1.5 text-destructive hover:!text-destructive" title="Xóa" aria-label="Xóa">
+                          <FiTrash2 className="h-3.5 w-3.5" aria-hidden="true" />
                         </button>
                       </div>
                     </td>
@@ -322,134 +307,136 @@ const PromotionsPage: React.FC = () => {
         </div>
       </div>
 
-      <Modal open={!!modal} onClose={() => setModal(null)} title={modal?.type === 'edit' ? 'Chỉnh sửa khuyến mãi' : 'Tạo khuyến mãi'}>
-        <div className="space-y-5">
-          {formError && (
-            <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-3 text-sm text-destructive">
-              <FiAlertCircle className="h-4 w-4 shrink-0" />{formError}
-            </div>
-          )}
+      {modal && (
+        <Modal className="max-w-2xl" onClose={() => setModal(null)} title={modal?.type === 'edit' ? 'Chỉnh sửa khuyến mãi' : 'Tạo khuyến mãi'}>
+          <div className="space-y-5">
+            {formError && (
+              <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-3 text-sm text-destructive">
+                <FiAlertCircle className="h-4 w-4 shrink-0" />{formError}
+              </div>
+            )}
 
-          <div className="grid gap-3 sm:grid-cols-[180px_1fr]">
+            <div className="grid gap-3 sm:grid-cols-[180px_1fr]">
+              <div>
+                <label className="text-sm font-medium block mb-1.5">Mã khuyến mãi *</label>
+                <input className="input-field font-mono uppercase" placeholder="SUMMER10" value={form.code}
+                  onChange={(e) => setForm((p) => ({ ...p, code: e.target.value.toUpperCase() }))} />
+              </div>
+              <div>
+                <label className="text-sm font-medium block mb-1.5">Tên chương trình *</label>
+                <input className="input-field" placeholder="Ưu đãi mùa hè" value={form.name}
+                  onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} />
+              </div>
+            </div>
             <div>
-              <label className="text-sm font-medium block mb-1.5">Mã khuyến mãi *</label>
-              <input className="input-field font-mono uppercase" placeholder="SUMMER10" value={form.code}
-                onChange={(e) => setForm((p) => ({ ...p, code: e.target.value.toUpperCase() }))} />
+              <label className="text-sm font-medium block mb-1.5">Mô tả</label>
+              <textarea className="input-field min-h-[64px]" value={form.description}
+                onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} />
             </div>
-            <div>
-              <label className="text-sm font-medium block mb-1.5">Tên chương trình *</label>
-              <input className="input-field" placeholder="Ưu đãi mùa hè" value={form.name}
-                onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} />
-            </div>
-          </div>
-          <div>
-            <label className="text-sm font-medium block mb-1.5">Mô tả</label>
-            <textarea className="input-field min-h-[64px]" value={form.description}
-              onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} />
-          </div>
 
-          <fieldset className="rounded-2xl border border-border p-4 space-y-3">
-            <legend className="text-sm font-semibold px-1">Mức giảm</legend>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div>
-                <label className="text-sm font-medium block mb-1.5">Loại</label>
-                <select className="input-field" value={form.discountType}
-                  onChange={(e) => setForm((p) => ({ ...p, discountType: e.target.value as 'percent' | 'fixed' }))}>
-                  <option value="percent">Phần trăm (%)</option>
-                  <option value="fixed">Số tiền (VND)</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-sm font-medium block mb-1.5">{form.discountType === 'percent' ? 'Giảm (%) *' : 'Giảm (VND) *'}</label>
-                <input type="number" min={1} max={form.discountType === 'percent' ? 100 : undefined}
-                  step={form.discountType === 'percent' ? 1 : 1000} className="input-field" value={form.discountValue}
-                  onChange={(e) => setForm((p) => ({ ...p, discountValue: e.target.value }))} />
-              </div>
-              {form.discountType === 'percent' && (
+            <fieldset className="rounded-2xl border border-border p-4 space-y-3">
+              <legend className="text-sm font-semibold px-1">Mức giảm</legend>
+              <div className="grid gap-3 sm:grid-cols-3">
                 <div>
-                  <label className="text-sm font-medium block mb-1.5">Giảm tối đa (VND)</label>
-                  <input type="number" min={0} step={1000} className="input-field" placeholder="Không giới hạn" value={form.maxDiscountAmount}
-                    onChange={(e) => setForm((p) => ({ ...p, maxDiscountAmount: e.target.value }))} />
-                </div>
-              )}
-            </div>
-            <div className="sm:w-1/2">
-              <label className="text-sm font-medium block mb-1.5">Giá trị đơn tối thiểu (VND)</label>
-              <input type="number" min={0} step={10000} className="input-field" value={form.minOrderAmount}
-                onChange={(e) => setForm((p) => ({ ...p, minOrderAmount: e.target.value }))} />
-            </div>
-          </fieldset>
-
-          <fieldset className="rounded-2xl border border-border p-4 space-y-3">
-            <legend className="text-sm font-semibold px-1">Điều kiện áp dụng</legend>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div>
-                <label className="text-sm font-medium block mb-1.5">Bắt đầu *</label>
-                <input type="datetime-local" className="input-field" value={form.startAt}
-                  onChange={(e) => setForm((p) => ({ ...p, startAt: e.target.value }))} />
-              </div>
-              <div>
-                <label className="text-sm font-medium block mb-1.5">Kết thúc *</label>
-                <input type="datetime-local" className="input-field" value={form.endAt}
-                  onChange={(e) => setForm((p) => ({ ...p, endAt: e.target.value }))} />
-              </div>
-              <div>
-                <label className="text-sm font-medium block mb-1.5">Chi nhánh</label>
-                <select className="input-field" value={form.branchId} onChange={(e) => setForm((p) => ({ ...p, branchId: e.target.value }))}>
-                  <option value="">Mọi chi nhánh</option>
-                  {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="text-sm font-medium block mb-1.5">Loại không gian</label>
-                <select className="input-field" value={form.workspaceTypeId} onChange={(e) => setForm((p) => ({ ...p, workspaceTypeId: e.target.value }))}>
-                  <option value="">Mọi loại không gian</option>
-                  {workspaceTypes.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="text-sm font-medium block mb-1.5">Hạng thành viên tối thiểu</label>
-                <select className="input-field" value={form.minTierCode} onChange={(e) => setForm((p) => ({ ...p, minTierCode: e.target.value }))}>
-                  <option value="">Mọi khách hàng</option>
-                  {tiers.map((t) => <option key={t.code} value={t.code}>{t.name}</option>)}
-                </select>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-sm font-medium block mb-1.5">Tổng lượt</label>
-                  <input type="number" min={1} className="input-field" placeholder="∞" value={form.usageLimit}
-                    onChange={(e) => setForm((p) => ({ ...p, usageLimit: e.target.value }))} />
+                  <label className="text-sm font-medium block mb-1.5">Loại</label>
+                  <select className="input-field" value={form.discountType}
+                    onChange={(e) => setForm((p) => ({ ...p, discountType: e.target.value as 'percent' | 'fixed' }))}>
+                    <option value="percent">Phần trăm (%)</option>
+                    <option value="fixed">Số tiền (VND)</option>
+                  </select>
                 </div>
                 <div>
-                  <label className="text-sm font-medium block mb-1.5">Lượt/khách</label>
-                  <input type="number" min={1} className="input-field" placeholder="∞" value={form.perUserLimit}
-                    onChange={(e) => setForm((p) => ({ ...p, perUserLimit: e.target.value }))} />
+                  <label className="text-sm font-medium block mb-1.5">{form.discountType === 'percent' ? 'Giảm (%) *' : 'Giảm (VND) *'}</label>
+                  <input type="number" min={1} max={form.discountType === 'percent' ? 100 : undefined}
+                    step={form.discountType === 'percent' ? 1 : 1000} className="input-field" value={form.discountValue}
+                    onChange={(e) => setForm((p) => ({ ...p, discountValue: e.target.value }))} />
+                </div>
+                {form.discountType === 'percent' && (
+                  <div>
+                    <label className="text-sm font-medium block mb-1.5">Giảm tối đa (VND)</label>
+                    <input type="number" min={0} step={1000} className="input-field" placeholder="Không giới hạn" value={form.maxDiscountAmount}
+                      onChange={(e) => setForm((p) => ({ ...p, maxDiscountAmount: e.target.value }))} />
+                  </div>
+                )}
+              </div>
+              <div className="sm:w-1/2">
+                <label className="text-sm font-medium block mb-1.5">Giá trị đơn tối thiểu (VND)</label>
+                <input type="number" min={0} step={10000} className="input-field" value={form.minOrderAmount}
+                  onChange={(e) => setForm((p) => ({ ...p, minOrderAmount: e.target.value }))} />
+              </div>
+            </fieldset>
+
+            <fieldset className="rounded-2xl border border-border p-4 space-y-3">
+              <legend className="text-sm font-semibold px-1">Điều kiện áp dụng</legend>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="text-sm font-medium block mb-1.5">Bắt đầu *</label>
+                  <input type="datetime-local" className="input-field" value={form.startAt}
+                    onChange={(e) => setForm((p) => ({ ...p, startAt: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="text-sm font-medium block mb-1.5">Kết thúc *</label>
+                  <input type="datetime-local" className="input-field" value={form.endAt}
+                    onChange={(e) => setForm((p) => ({ ...p, endAt: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="text-sm font-medium block mb-1.5">Chi nhánh</label>
+                  <select className="input-field" value={form.branchId} onChange={(e) => setForm((p) => ({ ...p, branchId: e.target.value }))}>
+                    <option value="">Mọi chi nhánh</option>
+                    {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium block mb-1.5">Loại không gian</label>
+                  <select className="input-field" value={form.workspaceTypeId} onChange={(e) => setForm((p) => ({ ...p, workspaceTypeId: e.target.value }))}>
+                    <option value="">Mọi loại không gian</option>
+                    {workspaceTypes.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium block mb-1.5">Hạng thành viên tối thiểu</label>
+                  <select className="input-field" value={form.minTierCode} onChange={(e) => setForm((p) => ({ ...p, minTierCode: e.target.value }))}>
+                    <option value="">Mọi khách hàng</option>
+                    {tiers.map((t) => <option key={t.code} value={t.code}>{t.name}</option>)}
+                  </select>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-sm font-medium block mb-1.5">Tổng lượt</label>
+                    <input type="number" min={1} className="input-field" placeholder="∞" value={form.usageLimit}
+                      onChange={(e) => setForm((p) => ({ ...p, usageLimit: e.target.value }))} />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium block mb-1.5">Lượt/khách</label>
+                    <input type="number" min={1} className="input-field" placeholder="∞" value={form.perUserLimit}
+                      onChange={(e) => setForm((p) => ({ ...p, perUserLimit: e.target.value }))} />
+                  </div>
                 </div>
               </div>
+            </fieldset>
+
+            <div className="flex flex-wrap gap-x-6 gap-y-3">
+              <label className="flex items-center gap-2 text-sm font-medium">
+                <input type="checkbox" className="h-4 w-4 rounded" checked={form.isPublic}
+                  onChange={(e) => setForm((p) => ({ ...p, isPublic: e.target.checked }))} />
+                Hiển thị cho khách ở trang thanh toán
+              </label>
+              <label className="flex items-center gap-2 text-sm font-medium">
+                <input type="checkbox" className="h-4 w-4 rounded" checked={form.isActive}
+                  onChange={(e) => setForm((p) => ({ ...p, isActive: e.target.checked }))} />
+                Kích hoạt
+              </label>
             </div>
-          </fieldset>
 
-          <div className="flex flex-wrap gap-x-6 gap-y-3">
-            <label className="flex items-center gap-2 text-sm font-medium">
-              <input type="checkbox" className="h-4 w-4 rounded" checked={form.isPublic}
-                onChange={(e) => setForm((p) => ({ ...p, isPublic: e.target.checked }))} />
-              Hiển thị cho khách ở trang thanh toán
-            </label>
-            <label className="flex items-center gap-2 text-sm font-medium">
-              <input type="checkbox" className="h-4 w-4 rounded" checked={form.isActive}
-                onChange={(e) => setForm((p) => ({ ...p, isActive: e.target.checked }))} />
-              Kích hoạt
-            </label>
+            <div className="flex gap-3 pt-4 border-t border-border">
+              <button onClick={save} disabled={isSaving} className="btn btn-primary btn-sm flex-1">
+                <FiCheck className="h-4 w-4" /> {isSaving ? 'Đang lưu…' : modal?.type === 'edit' ? 'Cập nhật' : 'Tạo mới'}
+              </button>
+              <button onClick={() => setModal(null)} className="btn btn-secondary btn-sm">Hủy</button>
+            </div>
           </div>
-
-          <div className="flex gap-3 pt-4 border-t border-border">
-            <button onClick={save} disabled={isSaving} className="btn btn-primary btn-sm flex-1">
-              <FiCheck className="h-4 w-4" /> {isSaving ? 'Đang lưu...' : modal?.type === 'edit' ? 'Cập nhật' : 'Tạo mới'}
-            </button>
-            <button onClick={() => setModal(null)} className="btn btn-secondary btn-sm">Hủy</button>
-          </div>
-        </div>
-      </Modal>
+        </Modal>
+      )}
 
       {deleteConfirm && (
         <>

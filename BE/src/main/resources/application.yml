@@ -3,6 +3,8 @@ server:
   port: ${PORT:8080}
   servlet:
     context-path: /
+  error:
+    include-message: always
 
 spring:
   config:
@@ -86,12 +88,17 @@ spring:
           issuer-uri: ${SUPABASE_JWT_ISSUER:https://ozaiknomajljfqiepels.supabase.co/auth/v1}
 
 momo:
-  endpoint: "https://test-payment.momo.vn/v2/gateway/api/create"
-  partner-code: "MOMO"
-  access-key: "F8BBA842ECF85"
-  secret-key: "K951B6PE1waDMi640xX08PD3vg6EkVlz"
-  return-url: "http://localhost:8080/api/payments/momo/return"
-  notify-url: "http://localhost:8080/api/payments/momo/ipn"
+  # Defaults are MoMo's published sandbox test credentials, not a secret; a real merchant account
+  # comes in through the environment.
+  endpoint: ${MOMO_ENDPOINT:https://test-payment.momo.vn/v2/gateway/api/create}
+  partner-code: ${MOMO_PARTNER_CODE:MOMO}
+  access-key: ${MOMO_ACCESS_KEY:F8BBA842ECF85}
+  secret-key: ${MOMO_SECRET_KEY:K951B6PE1waDMi640xX08PD3vg6EkVlz}
+  # MoMo sends the customer back to return-url and posts the payment result (IPN) to notify-url,
+  # so both must be this backend's public address. Hard-coded localhost here meant a deployed
+  # backend sent customers to their own machine and never received the IPN.
+  return-url: ${MOMO_RETURN_URL:${app.backend.base-url}/api/payments/momo/return}
+  notify-url: ${MOMO_NOTIFY_URL:${app.backend.base-url}/api/payments/momo/ipn}
 
 payos:
   endpoint: ${PAYOS_ENDPOINT:https://api-merchant.payos.vn}
@@ -119,6 +126,9 @@ app:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173}
   frontend:
     base-url: ${APP_FRONTEND_BASE_URL:http://localhost:5173}
+  backend:
+    # Public address of this API, used for payment gateway callbacks (MoMo return/IPN).
+    base-url: ${APP_BACKEND_BASE_URL:http://localhost:8080}
   supabase:
     jwt-secret: ${SUPABASE_JWT_SECRET:}
     # Workspace photos go to Supabase Storage through the backend; the service-role key stays
@@ -131,6 +141,21 @@ app:
     late-fee-grace-minutes: ${APP_BOOKING_LATE_FEE_GRACE_MINUTES:15}
     # Guests nobody checked out are closed automatically this long after the booked end.
     auto-checkout-after-minutes: ${APP_BOOKING_AUTO_CHECKOUT_AFTER_MINUTES:120}
+    # Most seats one booking group (several seats booked at once) may hold.
+    max-group-size: ${APP_BOOKING_MAX_GROUP_SIZE:10}
+  reputation:
+    # A customer who has not checked in this long after the booked start loses reputation points
+    # (once per booking). Multi-day passes are only penalised if they end without any check-in.
+    checkin-deadline-minutes: ${APP_REPUTATION_CHECKIN_DEADLINE_MINUTES:30}
+    missed-checkin-penalty: ${APP_REPUTATION_MISSED_CHECKIN_PENALTY:10}
+    # Points given back for each booking checked in on time (score is capped at 100).
+    on-time-checkin-reward: ${APP_REPUTATION_ON_TIME_CHECKIN_REWARD:2}
+    # Below limited-below a customer may hold only one unused booking online; below blocked-below
+    # online booking is refused (staff can still book at the counter).
+    limited-below: ${APP_REPUTATION_LIMITED_BELOW:50}
+    blocked-below: ${APP_REPUTATION_BLOCKED_BELOW:30}
+    # Reminder this long before the start; a second one at the start while check-in is still open.
+    reminder-before-minutes: ${APP_REPUTATION_REMINDER_BEFORE_MINUTES:60}
 
 logging:
   level:

@@ -93,7 +93,7 @@ export const FloorModal: React.FC<FloorModalProps> = ({
                 Hủy
               </button>
               <button type="submit" className="btn btn-primary flex items-center gap-2" disabled={isSubmitting}>
-                <FiCheck className="h-4 w-4" /> {isSubmitting ? 'Đang lưu...' : 'Lưu thông tin'}
+                <FiCheck className="h-4 w-4" /> {isSubmitting ? 'Đang lưu…' : 'Lưu thông tin'}
               </button>
             </div>
           </form>

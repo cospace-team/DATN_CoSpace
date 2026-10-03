@@ -118,8 +118,6 @@ public class SecurityConfig {
                                 .authorizeHttpRequests(auth -> auth
                                                 .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                                                 .requestMatchers(
-                                                                new AntPathRequestMatcher("/momo/**"),
-                                                                new AntPathRequestMatcher("/payos/**"),
                                                                 new AntPathRequestMatcher("/api/health"),
                                                                 new AntPathRequestMatcher("/api/payments/momo/ipn"),
                                                                 new AntPathRequestMatcher("/api/payments/momo/return"),
@@ -133,7 +131,6 @@ public class SecurityConfig {
                                                                 new AntPathRequestMatcher("/api/auth/refresh"),
                                                                 new AntPathRequestMatcher("/api/customer/spaces/branches"),
                                                                 new AntPathRequestMatcher("/api/customer/spaces/pricing-summary"),
-                                                                new AntPathRequestMatcher("/h2-console/**"),
                                                                 new AntPathRequestMatcher("/error"))
                                                 .permitAll()
                                                 .requestMatchers("/api/staff/**").hasAnyRole("STAFF", "BRANCH_ADMIN", "SUPER_ADMIN", "ADMIN", "staff", "branch_admin", "admin")

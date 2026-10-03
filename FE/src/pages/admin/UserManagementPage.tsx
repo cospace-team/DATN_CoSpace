@@ -10,6 +10,8 @@ import { adminApi, type AdminUserDto } from '../../api/adminApi';
 import { customerSpaceApi, type BranchResponse } from '../../lib/spaceApi';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../components/Toast';
+import { ReputationBadge } from '../../components/reputation/ReputationBadge';
+import { CustomerReputationModal } from '../../components/reputation/CustomerReputationModal';
 
 /* ── Dropdown Menu ── */
 const ActionDropdown: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -30,8 +32,9 @@ const ActionDropdown: React.FC<{ children: React.ReactNode }> = ({ children }) =
         onClick={() => setOpen(!open)}
         className="btn btn-ghost btn-sm !min-h-[32px] !p-1.5"
         title="Thao tác"
+        aria-label="Thao tác"
       >
-        <FiMoreVertical className="h-4 w-4" />
+        <FiMoreVertical className="h-4 w-4" aria-hidden="true" />
       </button>
       {open && (
         <div className="absolute right-0 top-full mt-1 z-30 w-52 bg-card rounded-2xl border border-border shadow-xl py-1.5 animate-fade-in">
@@ -99,7 +102,7 @@ const EditRoleModal: React.FC<RoleModalProps> = ({ user, branches, onClose, onSa
             <h3 className="text-lg font-bold font-heading text-foreground">Phân quyền & Chi nhánh</h3>
             <p className="text-xs text-muted-foreground mt-0.5">{user.fullName} ({user.email})</p>
           </div>
-          <button onClick={onClose} className="btn btn-ghost btn-sm !p-1.5"><FiX className="h-4 w-4" /></button>
+          <button onClick={onClose} className="btn btn-ghost btn-sm !p-1.5" aria-label="Đóng"><FiX className="h-4 w-4" aria-hidden="true" /></button>
         </div>
 
         {error && (
@@ -158,7 +161,7 @@ const EditRoleModal: React.FC<RoleModalProps> = ({ user, branches, onClose, onSa
               Hủy
             </button>
             <button type="submit" disabled={isSubmitting} className="btn btn-primary btn-sm">
-              {isSubmitting ? 'Đang lưu...' : 'Cập nhật'}
+              {isSubmitting ? 'Đang lưu…' : 'Cập nhật'}
             </button>
           </div>
         </form>
@@ -167,7 +170,7 @@ const EditRoleModal: React.FC<RoleModalProps> = ({ user, branches, onClose, onSa
   );
 };
 
-/* ── Trang Quản Lý Người Dùng ── */
+/* ── Trang quản lý người dùng ── */
 const UserManagementPage: React.FC = () => {
   const { user: authUser } = useAuth();
   const { showToast } = useToast();
@@ -190,6 +193,8 @@ const UserManagementPage: React.FC = () => {
 
   // Editing User
   const [editingUser, setEditingUser] = useState<AdminUserDto | null>(null);
+  /** Customer whose reputation history is open, if any. */
+  const [reputationUserId, setReputationUserId] = useState<string | null>(null);
 
   // Load branches
   useEffect(() => {
@@ -324,7 +329,7 @@ const UserManagementPage: React.FC = () => {
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Tìm theo tên, email hoặc số điện thoại..."
+              placeholder="Tìm theo tên, email hoặc số điện thoại…"
               className="input-field !pl-10 !min-h-[40px] w-full"
             />
           </div>
@@ -456,10 +461,13 @@ const UserManagementPage: React.FC = () => {
                           <img
                             src={u.avatarUrl}
                             alt={u.fullName}
+                            width={36}
+                            height={36}
+                            loading="lazy"
                             className="h-9 w-9 rounded-xl object-cover border border-border shrink-0"
                           />
                         ) : (
-                          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-sm font-bold shrink-0 shadow-sm">
+                          <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary text-sm font-bold shrink-0">
                             {u.fullName ? u.fullName.charAt(0).toUpperCase() : '?'}
                           </div>
                         )}
@@ -479,6 +487,11 @@ const UserManagementPage: React.FC = () => {
                       </span>
                       {u.role === 'customer' && u.membershipTier && u.membershipTier !== 'standard' && (
                         <span className="block text-xs text-muted-foreground mt-1 capitalize">Hạng {u.membershipTier}</span>
+                      )}
+                      {u.role === 'customer' && u.reputationScore != null && (
+                        <div className="mt-1">
+                          <ReputationBadge score={u.reputationScore} onClick={() => setReputationUserId(u.id)} />
+                        </div>
                       )}
                     </td>
                     <td className="max-w-[180px]">
@@ -500,7 +513,7 @@ const UserManagementPage: React.FC = () => {
                       ) : (
                         <button
                           onClick={() => toggleLock(u)}
-                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition cursor-pointer ${
                             status === 'active'
                               ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 border border-emerald-200 dark:border-emerald-900/50 hover:bg-emerald-100'
                               : 'bg-red-50 dark:bg-red-950/30 text-red-700 border border-red-200 dark:border-red-900/50 hover:bg-red-100'
@@ -561,6 +574,14 @@ const UserManagementPage: React.FC = () => {
             </button>
           </div>
         </div>
+      )}
+
+      {reputationUserId && (
+        <CustomerReputationModal
+          userId={reputationUserId}
+          onClose={() => setReputationUserId(null)}
+          onChanged={() => fetchUsers()}
+        />
       )}
 
       {/* Modal Edit Role & Branch */}

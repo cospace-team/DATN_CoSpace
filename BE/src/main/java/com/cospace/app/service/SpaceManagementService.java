@@ -60,8 +60,17 @@ public class SpaceManagementService {
     /* ═══════════════════════ Floors ═══════════════════════ */
 
     public List<FloorResponse> listFloors(UUID branchId) {
-        return floorRepository.findByBranchIdOrderByFloorNo(branchId).stream()
-                .map(this::toResponse)
+        List<Floor> floors = floorRepository.findByBranchIdOrderByFloorNo(branchId);
+        if (floors.isEmpty()) return List.of();
+
+        List<UUID> floorIds = floors.stream().map(Floor::getId).toList();
+        Map<UUID, Integer> counts = new HashMap<>();
+        for (Object[] row : workspaceRepository.countWorkspacesGroupedByFloorId(floorIds)) {
+            counts.put((UUID) row[0], ((Number) row[1]).intValue());
+        }
+
+        return floors.stream()
+                .map(floor -> toResponse(floor, counts.getOrDefault(floor.getId(), 0)))
                 .toList();
     }
 
@@ -205,15 +214,20 @@ public class SpaceManagementService {
         }
 
         List<WorkspaceEntity> workspaces = workspaceRepository.findByFloorIdOrderByCode(floorId);
-        java.util.Map<UUID, List<com.cospace.app.dto.api.SpaceDto.WorkspaceImageResponse>> images = workspaces.isEmpty()
-                ? java.util.Map.of()
-                : workspaceImageRepository.findByWorkspaceIdInOrderBySortOrderAscCreatedAtAsc(
+        if (workspaces.isEmpty()) return List.of();
+
+        // Batch pre-fetch all workspace types in one single map instead of N queries
+        Map<UUID, String> typeNames = workspaceTypeRepository.findAll().stream()
+                .collect(java.util.stream.Collectors.toMap(WorkspaceType::getId, WorkspaceType::getName, (a, b) -> a));
+
+        java.util.Map<UUID, List<com.cospace.app.dto.api.SpaceDto.WorkspaceImageResponse>> images =
+                workspaceImageRepository.findByWorkspaceIdInOrderBySortOrderAscCreatedAtAsc(
                                 workspaces.stream().map(WorkspaceEntity::getId).toList()).stream()
                         .collect(java.util.stream.Collectors.groupingBy(com.cospace.app.entity.WorkspaceImage::getWorkspaceId,
                                 java.util.stream.Collectors.mapping(WorkspaceImageService::toResponse, java.util.stream.Collectors.toList())));
         return workspaces.stream()
                 .map(ws -> {
-                    WorkspaceResponse r = toResponse(ws);
+                    WorkspaceResponse r = toResponse(ws, typeNames);
                     r.setImages(images.getOrDefault(ws.getId(), List.of()));
                     return r;
                 })
@@ -346,6 +360,10 @@ public class SpaceManagementService {
 
     private FloorResponse toResponse(Floor floor) {
         int wsCount = workspaceRepository.countByFloorId(floor.getId());
+        return toResponse(floor, wsCount);
+    }
+
+    private FloorResponse toResponse(Floor floor, int wsCount) {
         return FloorResponse.builder()
                 .id(floor.getId())
                 .floorNo(floor.getFloorNo())
@@ -363,6 +381,13 @@ public class SpaceManagementService {
                 ? workspaceTypeRepository.findById(ws.getWorkspaceTypeId())
                         .map(WorkspaceType::getName)
                         .orElse("—")
+                : "—";
+        return toResponse(ws, ws.getWorkspaceTypeId() != null ? Map.of(ws.getWorkspaceTypeId(), typeName) : Map.of());
+    }
+
+    private WorkspaceResponse toResponse(WorkspaceEntity ws, Map<UUID, String> typeNames) {
+        String typeName = ws.getWorkspaceTypeId() != null
+                ? typeNames.getOrDefault(ws.getWorkspaceTypeId(), "—")
                 : "—";
 
         return WorkspaceResponse.builder()

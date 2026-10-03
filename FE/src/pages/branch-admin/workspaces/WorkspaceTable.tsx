@@ -89,7 +89,7 @@ export const WorkspaceTable: React.FC<WorkspaceTableProps> = ({
                           onClick={() => {
                             onSelectWorkspace(selectedWsId === ws.id ? null : ws.id);
                           }}
-                          className={`px-2 py-1 rounded-lg text-xs font-semibold transition-all ${
+                          className={`px-2 py-1 rounded-lg text-xs font-semibold transition ${
                             selectedWsId === ws.id
                               ? 'bg-primary text-primary-foreground shadow-sm'
                               : 'bg-success/10 text-success hover:bg-success/20'
@@ -101,14 +101,14 @@ export const WorkspaceTable: React.FC<WorkspaceTableProps> = ({
                       ) : (
                         <button
                           onClick={() => onToggleAssigning(ws.id, ws.code)}
-                          className={`px-2 py-1 rounded-lg text-xs font-semibold transition-all ${
+                          className={`px-2 py-1 rounded-lg text-xs font-semibold transition ${
                             assigningWsId === ws.id
-                              ? 'bg-warning text-warning-foreground animate-pulse'
+                              ? 'bg-warning text-warning-foreground'
                               : 'bg-muted hover:bg-muted-foreground/20 text-muted-foreground'
                           }`}
                           title="Click để chọn vị trí trên sơ đồ"
                         >
-                          {assigningWsId === ws.id ? 'Đang gán...' : '➕ Gán sơ đồ'}
+                          {assigningWsId === ws.id ? 'Đang gán…' : 'Gán sơ đồ'}
                         </button>
                       )}
                     </td>
@@ -124,23 +124,26 @@ export const WorkspaceTable: React.FC<WorkspaceTableProps> = ({
                             onClick={() => onUnlinkWorkspace(linkedEl.id)}
                             className="btn btn-ghost btn-sm text-muted-foreground hover:text-warning p-2"
                             title="Hủy liên kết vị trí"
+                            aria-label="Hủy liên kết vị trí"
                           >
-                            <FiX className="h-4 w-4" />
+                            <FiX className="h-4 w-4" aria-hidden="true" />
                           </button>
                         )}
                         <button
                           onClick={() => onEditWorkspace(ws)}
                           className="btn btn-ghost btn-sm text-muted-foreground hover:text-primary p-2"
                           title="Chỉnh sửa"
+                          aria-label="Chỉnh sửa"
                         >
-                          <FiEdit2 className="h-4 w-4" />
+                          <FiEdit2 className="h-4 w-4" aria-hidden="true" />
                         </button>
                         <button
                           onClick={() => onDeleteWorkspace(ws.id, ws.code)}
                           className="btn btn-ghost btn-sm text-muted-foreground hover:text-destructive hover:bg-destructive/10 p-2"
                           title="Xóa"
+                          aria-label="Xóa"
                         >
-                          <FiTrash2 className="h-4 w-4" />
+                          <FiTrash2 className="h-4 w-4" aria-hidden="true" />
                         </button>
                       </div>
                     </td>

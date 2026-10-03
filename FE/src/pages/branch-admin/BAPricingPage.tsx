@@ -1,23 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { FiDollarSign, FiEdit2, FiPlus, FiX, FiCheck, FiTrash2, FiAlertCircle, FiGlobe, FiMapPin } from 'react-icons/fi';
+import { FiDollarSign, FiEdit2, FiPlus, FiCheck, FiTrash2, FiAlertCircle, FiGlobe, FiMapPin } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import { staffApi, type PricePolicyDto } from '../../api/staffApi';
 import { formatVND, durationUnitLabel } from '../../utils/formatters';
-
-// ─── Modal wrapper ────────────────────────────────────────────────────────────
-const Modal: React.FC<{ title: string; onClose: () => void; children: React.ReactNode }> = ({
-  title, onClose, children,
-}) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in" onClick={onClose}>
-    <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md animate-scale-in flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-        <h2 className="text-base font-bold font-heading">{title}</h2>
-        <button onClick={onClose} className="btn btn-ghost btn-sm p-1"><FiX className="h-4 w-4" /></button>
-      </div>
-      <div className="px-6 py-5 overflow-y-auto">{children}</div>
-    </div>
-  </div>
-);
+import { Modal } from '../../components/ui/Modal';
 
 type ModalMode = { type: 'add' } | { type: 'edit'; policy: PricePolicyDto } | null;
 
@@ -164,7 +150,7 @@ const BAPricingPage: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in relative pb-10">
       {successMsg && (
-        <div className="fixed top-4 right-4 z-50 animate-slide-up flex items-center gap-2 bg-success text-success-foreground px-4 py-3 rounded-xl shadow-xl">
+        <div className="fixed top-4 right-4 z-50 animate-slide-in-up flex items-center gap-2 bg-success text-success-foreground px-4 py-3 rounded-xl shadow-xl">
           <FiCheck className="h-5 w-5" />
           <p className="font-medium text-sm">{successMsg}</p>
         </div>
@@ -254,7 +240,7 @@ const BAPricingPage: React.FC = () => {
                   );
 
                   return (
-                    <tr key={pp.id} className={`hover:bg-muted/30 transition-all duration-200 group ${isOverridden ? 'bg-muted/10 opacity-60' : 'bg-card'}`}>
+                    <tr key={pp.id} className={`hover:bg-muted/30 transition duration-200 group ${isOverridden ? 'bg-muted/10 opacity-60' : 'bg-card'}`}>
                       <td className="px-6 py-4 align-middle font-semibold text-foreground max-w-[150px]">
                         <div className="flex items-center gap-2">
                           <div className={`w-1.5 h-1.5 rounded-full ${isBranchSpecific ? 'bg-primary' : 'bg-muted-foreground/50'}`} />
@@ -291,20 +277,22 @@ const BAPricingPage: React.FC = () => {
                         <div className="flex items-center justify-end gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
                           {!isOverridden && (
                             <button
-                              className="p-2 rounded-full hover:bg-primary/10 hover:text-primary transition-colors focus:outline-none"
+                              className="p-2 rounded-full hover:bg-primary/10 hover:text-primary transition-colors"
                               onClick={() => openEdit(pp)}
                               title={isBranchSpecific ? 'Chỉnh sửa' : 'Tạo giá ghi đè'}
+                              aria-label={isBranchSpecific ? 'Chỉnh sửa' : 'Tạo giá ghi đè'}
                             >
-                              <FiEdit2 className="h-4 w-4" />
+                              <FiEdit2 className="h-4 w-4" aria-hidden="true" />
                             </button>
                           )}
                           {isBranchSpecific && (
                             <button
-                              className="p-2 rounded-full hover:bg-destructive/10 text-destructive/70 hover:text-destructive transition-colors focus:outline-none"
+                              className="p-2 rounded-full hover:bg-destructive/10 text-destructive/70 hover:text-destructive transition-colors"
                               onClick={() => deletePolicy(pp.id)}
                               title="Xóa"
+                              aria-label="Xóa"
                             >
-                              <FiTrash2 className="h-4 w-4" />
+                              <FiTrash2 className="h-4 w-4" aria-hidden="true" />
                             </button>
                           )}
                         </div>

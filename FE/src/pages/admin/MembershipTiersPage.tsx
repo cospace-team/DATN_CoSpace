@@ -1,23 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { FiAlertCircle, FiAlertTriangle, FiAward, FiCheck, FiEdit2, FiInfo, FiPlus, FiRefreshCw, FiTrash2, FiUsers, FiX } from 'react-icons/fi';
+import { FiAlertCircle, FiAlertTriangle, FiAward, FiCheck, FiEdit2, FiInfo, FiPlus, FiRefreshCw, FiTrash2, FiUsers } from 'react-icons/fi';
 import { membershipApi, type MembershipTierDto } from '../../api/loyaltyApi';
 import { formatVND } from '../../utils/formatters';
-
-const Modal: React.FC<{ open: boolean; onClose: () => void; title: string; children: React.ReactNode }> = ({ open, onClose, title, children }) => {
-  if (!open) return null;
-  return (
-    <>
-      <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-lg max-h-[90vh] overflow-y-auto bg-card rounded-3xl border border-border shadow-xl">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-          <h3 className="text-lg font-bold font-heading">{title}</h3>
-          <button onClick={onClose} className="btn btn-ghost btn-sm !min-h-[32px] !p-2"><FiX className="h-5 w-5" /></button>
-        </div>
-        <div className="p-6">{children}</div>
-      </div>
-    </>
-  );
-};
+import { Modal } from '../../components/ui/Modal';
 
 type ModalMode = { type: 'add' } | { type: 'edit'; tier: MembershipTierDto } | null;
 
@@ -149,7 +134,7 @@ const MembershipTiersPage: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in relative">
       {successMsg && (
-        <div className="fixed top-4 right-4 z-50 animate-slide-up flex items-center gap-2 bg-success text-success-foreground px-4 py-3 rounded-xl shadow-xl max-w-sm">
+        <div className="fixed top-4 right-4 z-50 animate-slide-in-up flex items-center gap-2 bg-success text-success-foreground px-4 py-3 rounded-xl shadow-xl max-w-sm">
           <FiCheck className="h-5 w-5 shrink-0" />
           <p className="font-medium text-sm">{successMsg}</p>
         </div>
@@ -234,11 +219,11 @@ const MembershipTiersPage: React.FC = () => {
                     <FiUsers className="h-4 w-4" /> {t.memberCount ?? 0} khách
                   </span>
                   <div className="flex gap-1">
-                    <button onClick={() => openEdit(t)} className="btn btn-ghost btn-sm !min-h-[28px] !p-1.5" title="Chỉnh sửa">
-                      <FiEdit2 className="h-3.5 w-3.5" />
+                    <button onClick={() => openEdit(t)} className="btn btn-ghost btn-sm !min-h-[28px] !p-1.5" title="Chỉnh sửa" aria-label="Chỉnh sửa">
+                      <FiEdit2 className="h-3.5 w-3.5" aria-hidden="true" />
                     </button>
-                    <button onClick={() => setDeleteConfirm(t)} className="btn btn-ghost btn-sm !min-h-[28px] !p-1.5 text-destructive hover:!text-destructive" title="Xóa">
-                      <FiTrash2 className="h-3.5 w-3.5" />
+                    <button onClick={() => setDeleteConfirm(t)} className="btn btn-ghost btn-sm !min-h-[28px] !p-1.5 text-destructive hover:!text-destructive" title="Xóa" aria-label="Xóa">
+                      <FiTrash2 className="h-3.5 w-3.5" aria-hidden="true" />
                     </button>
                   </div>
                 </div>
@@ -248,78 +233,80 @@ const MembershipTiersPage: React.FC = () => {
         </div>
       )}
 
-      <Modal open={!!modal} onClose={() => setModal(null)} title={modal?.type === 'edit' ? 'Chỉnh sửa hạng thành viên' : 'Thêm hạng thành viên'}>
-        <div className="space-y-4">
-          {formError && (
-            <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-3 text-sm text-destructive">
-              <FiAlertCircle className="h-4 w-4 shrink-0" />{formError}
+      {modal && (
+        <Modal className="max-w-lg" onClose={() => setModal(null)} title={modal?.type === 'edit' ? 'Chỉnh sửa hạng thành viên' : 'Thêm hạng thành viên'}>
+          <div className="space-y-4">
+            {formError && (
+              <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-3 text-sm text-destructive">
+                <FiAlertCircle className="h-4 w-4 shrink-0" />{formError}
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm font-medium block mb-1.5">Mã hạng *</label>
+                <input className="input-field font-mono" placeholder="gold" value={form.code} disabled={modal?.type === 'edit'}
+                  onChange={(e) => setForm((p) => ({ ...p, code: e.target.value.toLowerCase() }))} />
+                {modal?.type === 'edit' && <p className="text-xs text-muted-foreground mt-1">Không thể đổi mã sau khi tạo</p>}
+              </div>
+              <div>
+                <label className="text-sm font-medium block mb-1.5">Tên hạng *</label>
+                <input className="input-field" placeholder="Gold" value={form.name}
+                  onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} />
+              </div>
             </div>
-          )}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-sm font-medium block mb-1.5">Mã hạng *</label>
-              <input className="input-field font-mono" placeholder="gold" value={form.code} disabled={modal?.type === 'edit'}
-                onChange={(e) => setForm((p) => ({ ...p, code: e.target.value.toLowerCase() }))} />
-              {modal?.type === 'edit' && <p className="text-xs text-muted-foreground mt-1">Không thể đổi mã sau khi tạo</p>}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm font-medium block mb-1.5">Chi tiêu tối thiểu (VND)</label>
+                <input type="number" min={0} step={100000} className="input-field" value={form.minTotalSpent}
+                  onChange={(e) => setForm((p) => ({ ...p, minTotalSpent: e.target.value }))} />
+              </div>
+              <div>
+                <label className="text-sm font-medium block mb-1.5">Hoặc số đơn tối thiểu</label>
+                <input type="number" min={0} className="input-field" value={form.minBookings}
+                  onChange={(e) => setForm((p) => ({ ...p, minBookings: e.target.value }))} />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="text-sm font-medium block mb-1.5">Giảm giá (%)</label>
+                <input type="number" min={0} max={100} className="input-field" value={form.discountPercent}
+                  onChange={(e) => setForm((p) => ({ ...p, discountPercent: e.target.value }))} />
+              </div>
+              <div>
+                <label className="text-sm font-medium block mb-1.5">Thứ tự</label>
+                <input type="number" className="input-field" value={form.sortOrder}
+                  onChange={(e) => setForm((p) => ({ ...p, sortOrder: e.target.value }))} />
+              </div>
+              <div>
+                <label className="text-sm font-medium block mb-1.5">Màu</label>
+                <input type="color" className="input-field !p-1 h-[42px]" value={form.color}
+                  onChange={(e) => setForm((p) => ({ ...p, color: e.target.value }))} />
+              </div>
             </div>
             <div>
-              <label className="text-sm font-medium block mb-1.5">Tên hạng *</label>
-              <input className="input-field" placeholder="Gold" value={form.name}
-                onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} />
+              <label className="text-sm font-medium block mb-1.5">Mô tả</label>
+              <input className="input-field" value={form.description}
+                onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} />
+            </div>
+            <div>
+              <label className="text-sm font-medium block mb-1.5">Quyền lợi (mỗi dòng một quyền lợi)</label>
+              <textarea className="input-field min-h-[80px]" value={form.benefits}
+                onChange={(e) => setForm((p) => ({ ...p, benefits: e.target.value }))} />
+            </div>
+            <div className="flex items-center gap-3">
+              <input type="checkbox" id="tier-active" checked={form.isActive} className="h-4 w-4 rounded"
+                onChange={(e) => setForm((p) => ({ ...p, isActive: e.target.checked }))} />
+              <label htmlFor="tier-active" className="text-sm font-medium">Kích hoạt hạng</label>
+            </div>
+            <div className="flex gap-3 pt-4 border-t border-border">
+              <button onClick={save} className="btn btn-primary btn-sm flex-1">
+                <FiCheck className="h-4 w-4" /> {modal?.type === 'edit' ? 'Cập nhật' : 'Tạo mới'}
+              </button>
+              <button onClick={() => setModal(null)} className="btn btn-secondary btn-sm">Hủy</button>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-sm font-medium block mb-1.5">Chi tiêu tối thiểu (VND)</label>
-              <input type="number" min={0} step={100000} className="input-field" value={form.minTotalSpent}
-                onChange={(e) => setForm((p) => ({ ...p, minTotalSpent: e.target.value }))} />
-            </div>
-            <div>
-              <label className="text-sm font-medium block mb-1.5">Hoặc số đơn tối thiểu</label>
-              <input type="number" min={0} className="input-field" value={form.minBookings}
-                onChange={(e) => setForm((p) => ({ ...p, minBookings: e.target.value }))} />
-            </div>
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="text-sm font-medium block mb-1.5">Giảm giá (%)</label>
-              <input type="number" min={0} max={100} className="input-field" value={form.discountPercent}
-                onChange={(e) => setForm((p) => ({ ...p, discountPercent: e.target.value }))} />
-            </div>
-            <div>
-              <label className="text-sm font-medium block mb-1.5">Thứ tự</label>
-              <input type="number" className="input-field" value={form.sortOrder}
-                onChange={(e) => setForm((p) => ({ ...p, sortOrder: e.target.value }))} />
-            </div>
-            <div>
-              <label className="text-sm font-medium block mb-1.5">Màu</label>
-              <input type="color" className="input-field !p-1 h-[42px]" value={form.color}
-                onChange={(e) => setForm((p) => ({ ...p, color: e.target.value }))} />
-            </div>
-          </div>
-          <div>
-            <label className="text-sm font-medium block mb-1.5">Mô tả</label>
-            <input className="input-field" value={form.description}
-              onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} />
-          </div>
-          <div>
-            <label className="text-sm font-medium block mb-1.5">Quyền lợi (mỗi dòng một quyền lợi)</label>
-            <textarea className="input-field min-h-[80px]" value={form.benefits}
-              onChange={(e) => setForm((p) => ({ ...p, benefits: e.target.value }))} />
-          </div>
-          <div className="flex items-center gap-3">
-            <input type="checkbox" id="tier-active" checked={form.isActive} className="h-4 w-4 rounded"
-              onChange={(e) => setForm((p) => ({ ...p, isActive: e.target.checked }))} />
-            <label htmlFor="tier-active" className="text-sm font-medium">Kích hoạt hạng</label>
-          </div>
-          <div className="flex gap-3 pt-4 border-t border-border">
-            <button onClick={save} className="btn btn-primary btn-sm flex-1">
-              <FiCheck className="h-4 w-4" /> {modal?.type === 'edit' ? 'Cập nhật' : 'Tạo mới'}
-            </button>
-            <button onClick={() => setModal(null)} className="btn btn-secondary btn-sm">Hủy</button>
-          </div>
-        </div>
-      </Modal>
+        </Modal>
+      )}
 
       {deleteConfirm && (
         <>

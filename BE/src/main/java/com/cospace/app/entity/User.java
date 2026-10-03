@@ -73,6 +73,11 @@ public class User {
     @Builder.Default
     private String membershipTier = "standard";
 
+    /** Điểm uy tín (0..100), lowered by ReputationService e.g. when a booking is not checked in on time. */
+    @Column(name = "reputation_score", nullable = false)
+    @Builder.Default
+    private int reputationScore = 100;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 

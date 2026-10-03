@@ -24,6 +24,7 @@ import java.util.UUID;
 public class ExtraServiceController {
 
     private final ExtraServiceService extraServiceService;
+    private final com.cospace.app.service.ServiceLimitService serviceLimitService;
     private final ExtraServiceRepository extraServiceRepository;
     private final BranchAccessGuard branchAccessGuard;
     private final AuditLogService auditLogService;
@@ -89,5 +90,36 @@ public class ExtraServiceController {
         auditLogService.log(httpServletRequest, UUID.fromString(jwt.getSubject()), "DELETE", "extra_services", existing.getId(),
                 Map.of("name", existing.getName(), "code", existing.getCode()), null);
         return ResponseEntity.ok(Map.of("success", true, "message", "Đã xóa vĩnh viễn dịch vụ."));
+    }
+
+    /* ─────────────── Per-branch limits (how many of an item a branch can lend at once) ─────────────── */
+
+    /** Services offered at a branch with how many of each it can lend at once (null = unlimited). */
+    @GetMapping("/extra-services/limits")
+    @PreAuthorize("hasAnyRole('BRANCH_ADMIN', 'SUPER_ADMIN', 'ADMIN', 'branch_admin', 'admin', 'super_admin')")
+    public List<com.cospace.app.dto.api.ServiceLimitDto.LimitResponse> listLimits(
+            @AuthenticationPrincipal Jwt jwt, @RequestParam(name = "branchId", required = false) UUID branchId) {
+        return serviceLimitService.listLimits(branchAccessGuard.requireBranchAccess(jwt, branchId));
+    }
+
+    @PutMapping("/extra-services/limits")
+    @PreAuthorize("hasAnyRole('BRANCH_ADMIN', 'SUPER_ADMIN', 'ADMIN', 'branch_admin', 'admin', 'super_admin')")
+    public List<com.cospace.app.dto.api.ServiceLimitDto.LimitResponse> setLimit(
+            @AuthenticationPrincipal Jwt jwt, @RequestBody com.cospace.app.dto.api.ServiceLimitDto.LimitRequest req) {
+        UUID branchId = branchAccessGuard.requireBranchAccess(jwt, req.getBranchId());
+        UUID actorId = UUID.fromString(jwt.getSubject());
+        serviceLimitService.setLimit(actorId, branchId, req.getServiceKey(), req.getMaxConcurrent());
+        auditLogService.log(httpServletRequest, actorId, "UPDATE", "branch_service_limits", branchId, null,
+                java.util.Collections.singletonMap(req.getServiceKey(), req.getMaxConcurrent()));
+        return serviceLimitService.listLimits(branchId);
+    }
+
+    /** How many of each limited service are still free at a branch for a time window. */
+    @GetMapping("/extra-services/availability")
+    public List<com.cospace.app.dto.api.ServiceLimitDto.AvailabilityResponse> availability(
+            @RequestParam("branchId") UUID branchId,
+            @RequestParam("startAt") @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) java.time.OffsetDateTime startAt,
+            @RequestParam("endAt") @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) java.time.OffsetDateTime endAt) {
+        return serviceLimitService.availability(branchId, startAt, endAt);
     }
 }

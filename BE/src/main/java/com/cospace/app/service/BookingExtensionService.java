@@ -152,7 +152,7 @@ public class BookingExtensionService {
         }
         List<WorkspaceMaintenanceEntity> maintenances = maintenanceRepository.findOverlappingMaintenances(
                 booking.getWorkspaceId(), end.toZonedDateTime(), horizon.toZonedDateTime(),
-                List.of(MaintenanceStatus.active, MaintenanceStatus.scheduled));
+                List.of(MaintenanceStatus.active, MaintenanceStatus.in_progress, MaintenanceStatus.scheduled));
         for (WorkspaceMaintenanceEntity m : maintenances) {
             OffsetDateTime start = m.getStartAt().toOffsetDateTime();
             OffsetDateTime from = start.isBefore(end) ? end : start;

@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS users (
   role varchar(32) NOT NULL DEFAULT 'customer',
   branch_id uuid,
   membership_tier varchar(32) NOT NULL DEFAULT 'standard',
+  reputation_score int NOT NULL DEFAULT 100 CHECK (reputation_score BETWEEN 0 AND 100),
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
@@ -275,6 +276,24 @@ CREATE TABLE IF NOT EXISTS checkin_logs (
   CONSTRAINT fk_checkin_staff FOREIGN KEY (staff_user_id) REFERENCES users(id),
   CONSTRAINT check_checkout_time CHECK (checkout_at IS NULL OR checkout_at >= checkin_at)
 );
+
+-- Điểm uy tín: nhật ký cộng/trừ điểm (vd. phạt không check-in đúng hạn), mỗi đơn tối đa một lần cho mỗi lý do
+CREATE TABLE IF NOT EXISTS reputation_events (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  booking_id uuid,
+  reason varchar(32) NOT NULL,
+  delta int NOT NULL,
+  score_after int NOT NULL,
+  note varchar(255),
+  created_at timestamptz NOT NULL DEFAULT now(),
+
+  CONSTRAINT fk_reputation_events_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  CONSTRAINT fk_reputation_events_booking FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE,
+  CONSTRAINT uq_reputation_events_booking_reason UNIQUE (booking_id, reason)
+);
+
+CREATE INDEX IF NOT EXISTS idx_reputation_events_user ON reputation_events (user_id, created_at DESC);
 
 -- 5. PAYMENT TABLES
 CREATE TABLE IF NOT EXISTS payments (

@@ -12,7 +12,9 @@ import java.util.UUID;
 @Repository
 public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<User> findByEmail(String email);
+    Optional<User> findByEmailIgnoreCase(String email);
     boolean existsByEmail(String email);
+    boolean existsByEmailIgnoreCase(String email);
 
     @org.springframework.data.jpa.repository.Modifying
     @org.springframework.data.jpa.repository.Query(value = "UPDATE users SET id = :newId WHERE id = :oldId", nativeQuery = true)
@@ -23,9 +25,16 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     java.util.List<User> findByBranchIdAndRole(UUID branchId, User.Role role);
 
+    /** The oldest walk-in account (email ending in {@code emailSuffix}) with this phone and name. */
+    Optional<User> findFirstByPhoneAndFullNameIgnoreCaseAndEmailEndingWithOrderByCreatedAtAsc(String phone, String fullName, String emailSuffix);
+
     boolean existsByEmailAndIdNot(String email, UUID id);
 
     java.util.List<User> findByRole(User.Role role);
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("SELECT u FROM User u WHERE u.id = :id")
+    Optional<User> findByIdWithLock(@org.springframework.data.repository.query.Param("id") UUID id);
 
     /** [membership_tier code, user count] pairs for users with the given role. */
     @org.springframework.data.jpa.repository.Query("SELECT u.membershipTier, COUNT(u) FROM User u WHERE u.role = :role GROUP BY u.membershipTier")

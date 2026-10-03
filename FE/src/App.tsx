@@ -5,8 +5,8 @@ import {
   Route,
   Navigate,
   NavLink,
+  Link,
   useLocation,
-  useNavigate,
 } from "react-router-dom";
 import { AuthProvider, useAuth, UserRole } from "./context/AuthContext";
 import { ThemeProvider, useTheme } from "./context/ThemeProvider";
@@ -71,6 +71,7 @@ const ExtraServicesPage = React.lazy(() => import("./pages/admin/ExtraServicesPa
 const AmenitiesPage = React.lazy(() => import("./pages/admin/AmenitiesPage"));
 const PromotionsPage = React.lazy(() => import("./pages/admin/PromotionsPage"));
 const MembershipTiersPage = React.lazy(() => import("./pages/admin/MembershipTiersPage"));
+const BookingManagementPage = React.lazy(() => import("./pages/admin/BookingManagementPage"));
 const RefundsPage = React.lazy(() => import("./pages/admin/RefundsPage"));
 const AuditLogPage = React.lazy(() => import("./pages/admin/AuditLogPage"));
 const ReportsPage = React.lazy(() => import("./pages/admin/ReportsPage"));
@@ -111,6 +112,7 @@ const branchAdminNav: NavItem[] = [
   { to: "/branch-admin/staff",       label: "Nhân viên",      icon: <FiUsers className="h-4 w-4" />   },
   { to: "/branch-admin/maintenance", label: "Bảo trì",        icon: <FiTool className="h-4 w-4" />    },
   { to: "/branch-admin/services",    label: "Dịch vụ thêm",   icon: <FiCoffee className="h-4 w-4" />  },
+  { to: "/branch-admin/bookings",    label: "Đơn đặt chỗ",    icon: <FiCalendar className="h-4 w-4" /> },
   { to: "/branch-admin/refunds",     label: "Hoàn tiền",      icon: <FiRotateCcw className="h-4 w-4" /> },
 ];
 
@@ -125,6 +127,7 @@ const adminNav: NavItem[] = [
   { to: "/admin/amenities", label: "Tiện ích", icon: <FiStar className="h-4 w-4" /> },
   { to: "/admin/promotions", label: "Khuyến mãi", icon: <FiGift className="h-4 w-4" /> },
   { to: "/admin/membership", label: "Hạng thành viên", icon: <FiAward className="h-4 w-4" /> },
+  { to: "/admin/bookings", label: "Đơn đặt chỗ", icon: <FiCalendar className="h-4 w-4" /> },
   { to: "/admin/refunds", label: "Hoàn tiền", icon: <FiRotateCcw className="h-4 w-4" /> },
   { to: "/admin/audit", label: "Nhật ký", icon: <FiFileText className="h-4 w-4" /> },
   { to: "/admin/reports", label: "Báo cáo", icon: <FiBarChart2 className="h-4 w-4" /> },
@@ -187,6 +190,7 @@ const AppRoutes = React.memo<{ role: UserRole }>(({ role }) => (
         <Route path="/admin/amenities"   element={<AmenitiesPage />} />
         <Route path="/admin/promotions"  element={<PromotionsPage />} />
         <Route path="/admin/membership"  element={<MembershipTiersPage />} />
+        <Route path="/admin/bookings"    element={<BookingManagementPage scope="admin" />} />
         <Route path="/admin/refunds"     element={<RefundsPage scope="admin" />} />
         <Route path="/admin/audit"       element={<AuditLogPage />} />
         <Route path="/admin/reports"     element={<ReportsPage />} />
@@ -203,6 +207,7 @@ const AppRoutes = React.memo<{ role: UserRole }>(({ role }) => (
         <Route path="/branch-admin/staff"       element={<BAStaffPage />} />
         <Route path="/branch-admin/maintenance" element={<BAMaintenancePage />} />
         <Route path="/branch-admin/services"    element={<BAServicesPage />} />
+        <Route path="/branch-admin/bookings"    element={<BookingManagementPage scope="branch" />} />
         <Route path="/branch-admin/refunds"     element={<RefundsPage scope="branch" />} />
       </>
     )}
@@ -214,24 +219,22 @@ const AppRoutes = React.memo<{ role: UserRole }>(({ role }) => (
 AppRoutes.displayName = "AppRoutes";
 
 // ── Mobile Bottom Nav ──
+// Links, not buttons: navigation should open in a new tab on long-press / middle-click like any link.
 const MobileBottomNav: React.FC<{ items: NavItem[] }> = ({ items }) => {
-  const location = useLocation();
-  const navigate = useNavigate();
   const visibleItems = items.slice(0, 5);
 
   return (
     <nav className="mobile-bottom-nav" aria-label="Điều hướng di động">
       {visibleItems.map((item) => (
-        <button
+        <NavLink
           key={item.to}
-          onClick={() => navigate(item.to)}
-          className={`nav-item ${location.pathname === item.to ? "active" : ""}`}
-          aria-label={item.label}
-          aria-current={location.pathname === item.to ? "page" : undefined}
+          to={item.to}
+          end
+          className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
         >
-          {item.icon}
+          <span aria-hidden="true">{item.icon}</span>
           <span>{item.label}</span>
-        </button>
+        </NavLink>
       ))}
     </nav>
   );
@@ -286,7 +289,7 @@ const AppShell: React.FC = () => {
           <div className="rounded-2xl border border-border bg-card/80 backdrop-blur-sm px-8 py-5 text-sm text-muted-foreground shadow-lg">
             <div className="flex items-center gap-3">
               <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-              Đang kiểm tra phiên đăng nhập...
+              Đang kiểm tra phiên đăng nhập…
             </div>
           </div>
         </div>
@@ -297,7 +300,7 @@ const AppShell: React.FC = () => {
   // ── Public Routes ──
   if (location.pathname === "/" || location.pathname === "/locations") {
     return (
-      <Suspense fallback={<SuspenseLoader fullScreen label="Đang tải trang..." />}>
+      <Suspense fallback={<SuspenseLoader fullScreen label="Đang tải trang…" />}>
         <LandingPage />
       </Suspense>
     );
@@ -307,7 +310,7 @@ const AppShell: React.FC = () => {
   if (!isAuthenticated || !user) {
     if (location.pathname === "/login") {
       return (
-        <Suspense fallback={<SuspenseLoader fullScreen label="Đang tải trang đăng nhập..." />}>
+        <Suspense fallback={<SuspenseLoader fullScreen label="Đang tải trang đăng nhập…" />}>
           <LoginPage />
         </Suspense>
       );
@@ -325,7 +328,7 @@ const AppShell: React.FC = () => {
 
     // Unknown public URLs show 404
     return (
-      <Suspense fallback={<SuspenseLoader fullScreen label="Đang tải trang..." />}>
+      <Suspense fallback={<SuspenseLoader fullScreen label="Đang tải trang…" />}>
         <NotFoundPage />
       </Suspense>
     );
@@ -361,15 +364,6 @@ const AppShell: React.FC = () => {
     return <Navigate to={defaultRoute} replace />;
   }
 
-  const backendPillClass =
-    backendStatus === "ok"
-      ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-400"
-      : backendStatus === "error"
-        ? "bg-red-500/10 text-red-600 border-red-500/20 dark:text-red-400"
-        : "bg-muted text-muted-foreground border-border";
-  const backendLabel =
-    backendStatus === "ok" ? "Online" : backendStatus === "error" ? "Offline" : "Checking";
-
   return (
     <div className="flex h-screen overflow-hidden">
       {/* Skip-to-content link (a11y) */}
@@ -390,32 +384,36 @@ const AppShell: React.FC = () => {
 
       {/* ─── Sidebar ─── */}
       <aside
-        className={`fixed lg:static z-50 h-full flex flex-col bg-sidebar transition-all duration-300 ${
+        className={`fixed lg:static z-50 h-full flex flex-col bg-sidebar transition-[transform,width] duration-300 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         } ${collapsed ? "w-[68px]" : "w-[260px]"}`}
         aria-label="Điều hướng chính"
       >
         {/* Logo area */}
         <div className={`flex items-center gap-3 h-[68px] border-b border-sidebar-border shrink-0 ${collapsed ? "justify-center px-3" : "px-5"}`}>
-          <Logo
-            showText={!collapsed}
-            isDarkBackground
-            iconClassName="h-9 w-9"
-            textClassName="text-lg font-bold tracking-tight"
-          />
+          <Link
+            to={defaultRoute}
+            onClick={() => {
+              window.scrollTo({ top: 0, behavior: "smooth" });
+              const main = document.getElementById("main-content");
+              if (main) {
+                main.scrollTo({ top: 0, behavior: "smooth" });
+              }
+            }}
+            className="flex items-center gap-3 group hover:opacity-90 transition-opacity cursor-pointer"
+            title="Trang chính"
+          >
+            <Logo
+              showText={!collapsed}
+              isDarkBackground
+              iconClassName="h-9 w-9"
+              textClassName="text-lg font-bold tracking-tight"
+            />
+          </Link>
         </div>
 
-        {/* Section label */}
-        {!collapsed && (
-          <div className="px-5 pt-5 pb-1">
-            <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-sidebar-foreground/40">
-              Điều hướng
-            </p>
-          </div>
-        )}
-
         {/* Nav links */}
-        <nav className="flex-1 overflow-y-auto py-2 px-3 space-y-0.5" aria-label="Menu chính">
+        <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-0.5" aria-label="Menu chính">
           {navItems.map((item) => (
             <NavLink
               key={item.to}
@@ -426,7 +424,7 @@ const AppShell: React.FC = () => {
               title={item.label}
               aria-current={location.pathname === item.to ? "page" : undefined}
             >
-              <span className="transition-transform duration-200 group-hover:scale-110 shrink-0">
+              <span className="shrink-0" aria-hidden="true">
                 {item.icon}
               </span>
               {!collapsed && <span className="truncate">{item.label}</span>}
@@ -451,7 +449,7 @@ const AppShell: React.FC = () => {
         <div className={`shrink-0 border-t border-sidebar-border ${collapsed ? "px-2 py-3" : "p-3"}`}>
           {!collapsed ? (
             <div className="flex items-center gap-3 p-2.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.10] transition-colors cursor-default">
-              <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-sm font-bold shrink-0 shadow-lg shadow-blue-500/30">
+              <div className="h-9 w-9 rounded-lg bg-white/10 flex items-center justify-center text-white text-sm font-semibold shrink-0">
                 {user.fullName.charAt(0)}
               </div>
               <div className="min-w-0 flex-1">
@@ -460,7 +458,7 @@ const AppShell: React.FC = () => {
               </div>
               <button
                 onClick={() => void handleLogout()}
-                className="p-1.5 rounded-lg text-sidebar-foreground/40 hover:text-red-400 hover:bg-red-500/10 transition-all shrink-0"
+                className="p-1.5 rounded-lg text-sidebar-foreground/40 hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0"
                 aria-label="Đăng xuất"
                 title="Đăng xuất"
               >
@@ -469,7 +467,7 @@ const AppShell: React.FC = () => {
             </div>
           ) : (
             <div className="flex justify-center">
-              <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-sm font-bold shadow-lg shadow-blue-500/30" title={user.fullName}>
+              <div className="h-9 w-9 rounded-lg bg-white/10 flex items-center justify-center text-white text-sm font-semibold" title={user.fullName}>
                 {user.fullName.charAt(0)}
               </div>
             </div>
@@ -480,7 +478,7 @@ const AppShell: React.FC = () => {
       {/* ─── Main Content Area ─── */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top header bar */}
-        <header className="relative z-40 h-[60px] flex items-center justify-between px-6 border-b border-border bg-card/90 backdrop-blur-xl shrink-0">
+        <header className="relative z-40 h-[60px] flex items-center justify-between px-6 border-b border-border bg-card shrink-0">
           {/* Left: mobile menu + page context */}
           <div className="flex items-center gap-4">
             <button
@@ -504,18 +502,13 @@ const AppShell: React.FC = () => {
             </div>
           </div>
 
-          {/* Right: status + actions */}
+          {/* Right: actions. The server status only shows up when there is something to report. */}
           <div className="flex items-center gap-2">
-            <span
-              className={`hidden sm:inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-semibold ${backendPillClass}`}
-            >
-              <span className={`mr-1.5 h-1.5 w-1.5 rounded-full ${
-                backendStatus === "ok" ? "bg-emerald-500 animate-glow" : backendStatus === "error" ? "bg-red-500" : "bg-gray-400"
-              }`} />
-              {backendLabel}
-            </span>
-
-            <div className="w-px h-5 bg-border hidden sm:block" />
+            {backendStatus === "error" && (
+              <span className="hidden sm:inline-flex items-center rounded-full border border-red-500/20 bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-600 dark:text-red-400">
+                Mất kết nối máy chủ
+              </span>
+            )}
 
             <NotificationBell />
 
@@ -553,7 +546,7 @@ const AppShell: React.FC = () => {
           className="flex-1 overflow-y-auto px-6 py-6 bg-background mobile-main-content"
         >
           <ErrorBoundary>
-            <Suspense fallback={<SuspenseLoader label="Đang tải trang..." />}>
+            <Suspense fallback={<SuspenseLoader label="Đang tải trang…" />}>
               <AppRoutes role={user.role} />
             </Suspense>
           </ErrorBoundary>

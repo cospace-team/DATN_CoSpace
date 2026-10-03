@@ -10,6 +10,7 @@ import {
   FiUsers,
   FiMessageSquare,
   FiCreditCard,
+  FiShield,
 } from 'react-icons/fi';
 import { API_BASE_URL } from '../../config/api';
 
@@ -48,10 +49,21 @@ export const NotificationBell = React.memo(function NotificationBell() {
     }
   };
 
+  // Poll every 30s while the tab is visible; a background tab skips the request and catches up
+  // as soon as it is shown again.
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30000); // Polling every 30s
-    return () => clearInterval(interval);
+    const interval = setInterval(() => {
+      if (!document.hidden) fetchNotifications();
+    }, 30000);
+    const onVisible = () => {
+      if (!document.hidden) fetchNotifications();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, []);
 
   // Close dropdown on click outside
@@ -115,6 +127,18 @@ export const NotificationBell = React.memo(function NotificationBell() {
           colorClass: 'text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20',
           badge: 'Nhắc nhở',
         };
+      case 'CHECKIN_REMINDER':
+        return {
+          icon: <FiClock className="h-4 w-4" />,
+          colorClass: 'text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20',
+          badge: 'Check-in',
+        };
+      case 'REPUTATION':
+        return {
+          icon: <FiShield className="h-4 w-4" />,
+          colorClass: 'text-sky-600 dark:text-sky-400 bg-sky-500/10 border-sky-500/20',
+          badge: 'Uy tín',
+        };
       case 'REFUND':
       case 'REFUND_PROCESSED':
         return {
@@ -177,7 +201,7 @@ export const NotificationBell = React.memo(function NotificationBell() {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-all cursor-pointer"
+        className="relative p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/80 transition cursor-pointer"
         aria-label="Thông báo"
         title="Thông báo hệ thống"
       >

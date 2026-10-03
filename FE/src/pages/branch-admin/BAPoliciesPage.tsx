@@ -2,21 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { FiShield, FiPlus, FiX, FiCheck, FiGlobe, FiMapPin, FiAlertCircle, FiEdit2 } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import { staffApi, type CancellationPolicyDto } from '../../api/staffApi';
+import { Modal } from '../../components/ui/Modal';
 
-
-const Modal: React.FC<{ title: string; onClose: () => void; children: React.ReactNode }> = ({
-  title, onClose, children,
-}) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in" onClick={onClose}>
-    <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md animate-scale-in" onClick={(e) => e.stopPropagation()}>
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-        <h2 className="text-base font-bold font-heading">{title}</h2>
-        <button onClick={onClose} className="btn btn-ghost btn-sm p-1"><FiX className="h-4 w-4" /></button>
-      </div>
-      <div className="px-6 py-5">{children}</div>
-    </div>
-  </div>
-);
 
 const RULE_TYPE_LABEL: Record<string, string> = {
   GRACE_HOURS: 'Trong vòng N giờ đầu',
@@ -216,15 +203,17 @@ const BAPoliciesPage: React.FC = () => {
                           className="btn btn-ghost btn-sm p-1 hover:bg-primary/10 hover:text-primary"
                           onClick={() => openEdit(p)}
                           title="Chỉnh sửa chính sách"
+                          aria-label="Chỉnh sửa chính sách"
                         >
-                          <FiEdit2 className="h-3.5 w-3.5" />
+                          <FiEdit2 className="h-3.5 w-3.5" aria-hidden="true" />
                         </button>
                         <button
                           className="btn btn-ghost btn-sm p-1 text-destructive hover:bg-destructive/10"
                           onClick={() => deactivatePolicy(p.id)}
                           title="Xóa chính sách chi nhánh"
+                          aria-label="Xóa chính sách chi nhánh"
                         >
-                          <FiX className="h-3.5 w-3.5" />
+                          <FiX className="h-3.5 w-3.5" aria-hidden="true" />
                         </button>
                         </div>
                       )}

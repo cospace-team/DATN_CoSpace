@@ -20,8 +20,6 @@ import jakarta.persistence.Enumerated;
 import io.hypersistence.utils.hibernate.type.basic.PostgreSQLEnumType;
 import org.hibernate.annotations.Type;
 
-import java.math.BigDecimal;
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -65,6 +63,10 @@ public class Booking {
 
     @Column(name = "unit_count", nullable = false)
     private int unitCount;
+
+    /** The booking group (several seats booked together) this seat belongs to, if any. */
+    @Column(name = "group_id")
+    private UUID groupId;
 
     @Column(name = "is_contract", nullable = false)
     @Builder.Default

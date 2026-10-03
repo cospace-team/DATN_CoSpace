@@ -39,7 +39,7 @@ const WorkspaceGallery: React.FC<Props> = ({ images, alt }) => {
     <div className="space-y-2">
       <div className="relative aspect-[16/9] rounded-2xl overflow-hidden bg-muted border border-border">
         <button type="button" onClick={() => setZoomed(true)} className="h-full w-full cursor-zoom-in" aria-label="Xem ảnh lớn">
-          <img src={current.url} alt={`${alt} — ảnh ${index + 1}`} className="h-full w-full object-cover" />
+          <img src={current.url} alt={`${alt}, ảnh ${index + 1}`} className="h-full w-full object-cover" />
         </button>
         {images.length > 1 && (
           <>

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Html5Qrcode, Html5QrcodeScannerState } from 'html5-qrcode';
+import { useStableCallback } from '../hooks/useStableCallback';
 import { 
   FiCamera, FiX, FiZap, FiAlertCircle, 
   FiUploadCloud, FiClipboard, FiImage, FiArrowRight, FiCheckCircle
@@ -36,8 +37,11 @@ const parseQrData = (raw: string): string | null => {
 const QrScannerModal: React.FC<QrScannerModalProps> = ({
   isOpen,
   onClose,
-  onScanSuccess,
+  onScanSuccess: onScanSuccessProp,
 }) => {
+  // The parent passes a new arrow on every render (CheckInPage re-renders on its clock tick and
+  // data refresh); depending on it directly restarted the camera each time. Keep one identity.
+  const onScanSuccess = useStableCallback(onScanSuccessProp);
   const [activeTab, setActiveTab] = useState<'camera' | 'upload'>('upload'); // Default to upload/paste for smooth desktop demo
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -250,7 +254,7 @@ const QrScannerModal: React.FC<QrScannerModalProps> = ({
           <button
             type="button"
             onClick={() => handleTabChange('upload')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-2xl text-xs font-bold transition-all ${
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-2xl text-xs font-bold transition ${
               activeTab === 'upload'
                 ? 'bg-card text-foreground shadow-sm border border-border'
                 : 'text-muted-foreground hover:text-foreground'
@@ -263,7 +267,7 @@ const QrScannerModal: React.FC<QrScannerModalProps> = ({
           <button
             type="button"
             onClick={() => handleTabChange('camera')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-2xl text-xs font-bold transition-all ${
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-2xl text-xs font-bold transition ${
               activeTab === 'camera'
                 ? 'bg-card text-foreground shadow-sm border border-border'
                 : 'text-muted-foreground hover:text-foreground'
@@ -291,7 +295,7 @@ const QrScannerModal: React.FC<QrScannerModalProps> = ({
                   }
                 }}
                 onClick={() => fileInputRef.current?.click()}
-                className={`relative rounded-3xl border-2 border-dashed p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center min-h-[220px] ${
+                className={`relative rounded-3xl border-2 border-dashed p-6 text-center cursor-pointer transition flex flex-col items-center justify-center min-h-[220px] ${
                   dragOver 
                     ? 'border-primary bg-primary/5 scale-[0.99]' 
                     : 'border-border hover:border-primary/60 bg-muted/20 hover:bg-muted/30'
@@ -312,7 +316,7 @@ const QrScannerModal: React.FC<QrScannerModalProps> = ({
                 {isProcessingImage ? (
                   <div className="flex flex-col items-center py-6">
                     <div className="h-12 w-12 border-3 border-primary/30 border-t-primary rounded-full animate-spin mb-3" />
-                    <p className="text-sm font-bold text-foreground">Đang xử lý và quét mã QR...</p>
+                    <p className="text-sm font-bold text-foreground">Đang xử lý và quét mã QR…</p>
                     <p className="text-xs text-muted-foreground mt-1">Đang phân tích dữ liệu hình ảnh</p>
                   </div>
                 ) : pastedImagePreview ? (
@@ -362,7 +366,7 @@ const QrScannerModal: React.FC<QrScannerModalProps> = ({
               {isStartingCamera && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 z-10">
                   <div className="h-10 w-10 border-3 border-white/30 border-t-white rounded-full animate-spin mb-3" />
-                  <p className="text-white text-xs font-medium">Đang khởi động camera...</p>
+                  <p className="text-white text-xs font-medium">Đang khởi động camera…</p>
                 </div>
               )}
 
@@ -381,7 +385,7 @@ const QrScannerModal: React.FC<QrScannerModalProps> = ({
 
           {/* Error Message display */}
           {error && (
-            <div className="p-3.5 rounded-2xl bg-destructive/10 border border-destructive/20 text-destructive text-xs flex items-start gap-2.5 animate-shake">
+            <div className="p-3.5 rounded-2xl bg-destructive/10 border border-destructive/20 text-destructive text-xs flex items-start gap-2.5 motion-safe:animate-shake">
               <FiAlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
               <div className="flex-1 leading-relaxed">
                 <p className="font-medium">{error}</p>

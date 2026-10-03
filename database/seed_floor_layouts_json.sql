@@ -1,426 +1,624 @@
 -- =============================================================================
--- CoSpace Seed Script: Update layout_json for all 9 Floors
--- Uses element types & schema matching FE (FloorPlanEditor & elementCatalog)
--- Element Types: desk, meeting_room, private_office, wall, door, window,
---                lounge, reception, restroom, kitchen, plant, elevator, staircase
--- Date: 2026-08-03
+-- CoSpace: sơ đồ tầng (layout_json) cho 9 tầng / 3 chi nhánh demo
+-- File này được sinh bởi database/tools/floor_layouts.py — sửa ở đó rồi chạy lại:
+--     python3 database/tools/floor_layouts.py
+--
+-- Mỗi chi nhánh là một tòa nhà: vỏ, mặt kính và lõi thang (cầu thang bộ, 2 thang
+-- máy, WC) giống nhau ở cả ba tầng. 29 chỗ đặt trong dữ liệu demo đều được đặt lên
+-- sơ đồ; các phần tử khác là kết cấu / tiện ích nên lưu trong trình chỉnh sửa không
+-- tự sinh thêm chỗ đặt.
+--
+-- Chạy được nhiều lần (chỉ ghi đè layout_json của 9 tầng này).
+-- Supabase: SQL Editor -> dán toàn bộ file -> Run.
 -- =============================================================================
 
 BEGIN;
 
 -- =============================================================================
--- BRANCH 1: CoSpace Nguyễn Huệ (Quận 1, TP.HCM)
+-- BRANCH 1: CoSpace Nguyễn Huệ (Quận 1) — b1000000-0000-0000-0000-000000000001 — lõi thang phía Đông
 -- =============================================================================
 
--- Floor 1: Open Hotdesking & Café Lounge (Layout A)
+-- Tầng 1 - Open Hotdesking & Café Lounge
 UPDATE floors
 SET layout_json = '{
   "version": 1,
   "canvas": { "width": 1200, "height": 800, "gridSize": 20, "backgroundColor": "#f8fafc" },
   "elements": [
-    {
-      "id": "el-b1f1-wall-outer",
-      "type": "wall",
-      "x": 40, "y": 40, "width": 1120, "height": 12, "rotation": 0,
-      "label": "Tường ngoài",
-      "fillColor": "#94A3B8", "strokeColor": "#64748B", "opacity": 1, "cornerRadius": 2,
-      "workspaceId": null, "locked": true, "visible": true
-    },
-    {
-      "id": "el-b1f1-rec",
-      "type": "reception",
-      "x": 80, "y": 80, "width": 160, "height": 50, "rotation": 0,
-      "label": "Lễ Tân CoSpace", "sublabel": "Check-in Desk",
-      "fillColor": "rgba(168,85,247,0.12)", "strokeColor": "#A855F7", "opacity": 1, "cornerRadius": 6,
-      "workspaceId": null, "locked": false, "visible": true
-    },
-    {
-      "id": "el-b1f1-elev",
-      "type": "elevator",
-      "x": 1050, "y": 80, "width": 70, "height": 70, "rotation": 0,
-      "label": "Thang Máy E1",
-      "fillColor": "rgba(100,116,139,0.15)", "strokeColor": "#64748B", "opacity": 1, "cornerRadius": 4,
-      "workspaceId": null, "locked": false, "visible": true
-    },
-    {
-      "id": "el-b1f1-stair",
-      "type": "staircase",
-      "x": 1050, "y": 170, "width": 70, "height": 100, "rotation": 0,
-      "label": "Cầu Thang",
-      "fillColor": "rgba(148,163,184,0.15)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 4,
-      "workspaceId": null, "locked": false, "visible": true
-    },
-    {
-      "id": "el-b1f1-pantry",
-      "type": "kitchen",
-      "x": 80, "y": 640, "width": 180, "height": 100, "rotation": 0,
-      "label": "Pantry & Coffee Bar",
-      "fillColor": "rgba(251,191,36,0.15)", "strokeColor": "#FBBF24", "opacity": 1, "cornerRadius": 6,
-      "workspaceId": null, "locked": false, "visible": true
-    },
-    {
-      "id": "el-b1f1-wc",
-      "type": "restroom",
-      "x": 980, "y": 640, "width": 140, "height": 100, "rotation": 0,
-      "label": "Restroom WC",
-      "fillColor": "rgba(148,163,184,0.15)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 4,
-      "workspaceId": null, "locked": false, "visible": true
-    },
-    {
-      "id": "el-b1f1-plant1",
-      "type": "plant",
-      "x": 260, "y": 90, "width": 30, "height": 30, "rotation": 0,
-      "label": "Cây cảnh",
-      "fillColor": "rgba(34,197,94,0.25)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 15,
-      "workspaceId": null, "locked": false, "visible": true
-    },
-
-    {
-      "id": "el-b1f1-hd101",
-      "type": "desk",
-      "x": 100, "y": 200, "width": 120, "height": 80, "rotation": 0,
-      "label": "HD-101", "sublabel": "Bàn Hotdesk 101",
-      "fillColor": "rgba(34,197,94,0.12)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 4,
-      "workspaceId": "c1010001-0000-0000-0000-000000000001", "locked": false, "visible": true
-    },
-    {
-      "id": "el-b1f1-hd102",
-      "type": "desk",
-      "x": 260, "y": 200, "width": 120, "height": 80, "rotation": 0,
-      "label": "HD-102", "sublabel": "Bàn Hotdesk 102",
-      "fillColor": "rgba(34,197,94,0.12)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 4,
-      "workspaceId": "c1010002-0000-0000-0000-000000000002", "locked": false, "visible": true
-    },
-    {
-      "id": "el-b1f1-hd103",
-      "type": "desk",
-      "x": 420, "y": 200, "width": 120, "height": 80, "rotation": 0,
-      "label": "HD-103", "sublabel": "Bàn Hotdesk 103",
-      "fillColor": "rgba(34,197,94,0.12)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 4,
-      "workspaceId": "c1010003-0000-0000-0000-000000000003", "locked": false, "visible": true
-    },
-    {
-      "id": "el-b1f1-hd104",
-      "type": "desk",
-      "x": 100, "y": 340, "width": 120, "height": 80, "rotation": 0,
-      "label": "HD-104", "sublabel": "Bàn Hotdesk 104",
-      "fillColor": "rgba(34,197,94,0.12)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 4,
-      "workspaceId": "c1010004-0000-0000-0000-000000000004", "locked": false, "visible": true
-    },
-    {
-      "id": "el-b1f1-hd105",
-      "type": "desk",
-      "x": 260, "y": 340, "width": 120, "height": 80, "rotation": 0,
-      "label": "HD-105", "sublabel": "Bàn Hotdesk 105",
-      "fillColor": "rgba(34,197,94,0.12)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 4,
-      "workspaceId": "c1010005-0000-0000-0000-000000000005", "locked": false, "visible": true
-    },
-    {
-      "id": "el-b1f1-mr101",
-      "type": "meeting_room",
-      "x": 620, "y": 200, "width": 340, "height": 260, "rotation": 0,
-      "label": "MR-101", "sublabel": "Phòng họp Lounge", "seatCount": 8,
-      "fillColor": "rgba(59,130,246,0.12)", "strokeColor": "#3B82F6", "opacity": 1, "cornerRadius": 8,
-      "workspaceId": "c1010006-0000-0000-0000-000000000006", "locked": false, "visible": true
-    }
+    { "id": "el-b1f1-corridor", "type": "label", "x": 52, "y": 338, "width": 1096, "height": 84, "rotation": 0, "label": "", "fillColor": "rgba(148,163,184,0.10)", "strokeColor": "transparent", "opacity": 1, "cornerRadius": 0, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-label-1", "type": "label", "x": 60, "y": 60, "width": 532, "height": 262, "rotation": 0, "label": "Khu hotdesk", "fillColor": "rgba(34,197,94,0.06)", "strokeColor": "rgba(34,197,94,0.30)", "opacity": 1, "cornerRadius": 12, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-label-3", "type": "label", "x": 60, "y": 438, "width": 352, "height": 314, "rotation": 0, "label": "Café Lounge", "fillColor": "rgba(245,158,11,0.06)", "strokeColor": "rgba(245,158,11,0.30)", "opacity": 1, "cornerRadius": 12, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-wall-n", "type": "wall", "x": 40, "y": 40, "width": 1120, "height": 12, "rotation": 0, "label": "Tường Bắc", "fillColor": "#64748B", "strokeColor": "#475569", "opacity": 1, "cornerRadius": 2, "workspaceId": null, "locked": true, "visible": true },
+    { "id": "el-b1f1-wall-s", "type": "wall", "x": 40, "y": 760, "width": 1120, "height": 12, "rotation": 0, "label": "Tường Nam", "fillColor": "#64748B", "strokeColor": "#475569", "opacity": 1, "cornerRadius": 2, "workspaceId": null, "locked": true, "visible": true },
+    { "id": "el-b1f1-wall-w", "type": "wall", "x": 40, "y": 40, "width": 12, "height": 732, "rotation": 0, "label": "Tường Tây", "fillColor": "#64748B", "strokeColor": "#475569", "opacity": 1, "cornerRadius": 2, "workspaceId": null, "locked": true, "visible": true },
+    { "id": "el-b1f1-wall-e", "type": "wall", "x": 1148, "y": 40, "width": 12, "height": 732, "rotation": 0, "label": "Tường Đông", "fillColor": "#64748B", "strokeColor": "#475569", "opacity": 1, "cornerRadius": 2, "workspaceId": null, "locked": true, "visible": true },
+    { "id": "el-b1f1-window-1", "type": "window", "x": 80, "y": 40, "width": 220, "height": 12, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-window-2", "type": "window", "x": 330, "y": 40, "width": 240, "height": 12, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-window-3", "type": "window", "x": 630, "y": 40, "width": 300, "height": 12, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-window-4", "type": "window", "x": 80, "y": 760, "width": 320, "height": 12, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-window-5", "type": "window", "x": 440, "y": 760, "width": 70, "height": 12, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-window-6", "type": "window", "x": 670, "y": 760, "width": 70, "height": 12, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-window-7", "type": "window", "x": 790, "y": 760, "width": 140, "height": 12, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-window-8", "type": "window", "x": 40, "y": 90, "width": 12, "height": 220, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-window-9", "type": "window", "x": 40, "y": 470, "width": 12, "height": 260, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-entrance", "type": "door", "x": 530, "y": 760, "width": 120, "height": 12, "rotation": 0, "label": "Cửa chính", "fillColor": "#FEF3C7", "strokeColor": "#D97706", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-wall-1", "type": "wall", "x": 960, "y": 52, "width": 8, "height": 286, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-wall-2", "type": "wall", "x": 960, "y": 422, "width": 8, "height": 338, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-wall-3", "type": "wall", "x": 968, "y": 422, "width": 32, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-wall-4", "type": "wall", "x": 1056, "y": 422, "width": 92, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-window-10", "type": "window", "x": 600, "y": 52, "width": 8, "height": 278, "rotation": 0, "label": "Vách kính", "fillColor": "#E0F2FE", "strokeColor": "#7DD3FC", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-window-11", "type": "window", "x": 600, "y": 330, "width": 256, "height": 8, "rotation": 0, "label": "Vách kính", "fillColor": "#E0F2FE", "strokeColor": "#7DD3FC", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-window-12", "type": "window", "x": 912, "y": 330, "width": 48, "height": 8, "rotation": 0, "label": "Vách kính", "fillColor": "#E0F2FE", "strokeColor": "#7DD3FC", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-door-1", "type": "door", "x": 1000, "y": 422, "width": 56, "height": 8, "rotation": 0, "label": "Cửa khu vệ sinh", "fillColor": "#FEF3C7", "strokeColor": "#D97706", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-door-2", "type": "door", "x": 856, "y": 330, "width": 56, "height": 8, "rotation": 0, "label": "Cửa phòng họp", "fillColor": "#FEF3C7", "strokeColor": "#D97706", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-stair", "type": "staircase", "x": 984, "y": 68, "width": 148, "height": 150, "rotation": 0, "label": "Cầu thang bộ", "fillColor": "rgba(148,163,184,0.10)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-elev-a", "type": "elevator", "x": 984, "y": 236, "width": 68, "height": 84, "rotation": 0, "label": "Thang máy A", "fillColor": "rgba(100,116,139,0.12)", "strokeColor": "#64748B", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-elev-b", "type": "elevator", "x": 1064, "y": 236, "width": 68, "height": 84, "rotation": 0, "label": "Thang máy B", "fillColor": "rgba(100,116,139,0.12)", "strokeColor": "#64748B", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-wc-f", "type": "restroom", "x": 984, "y": 450, "width": 148, "height": 92, "rotation": 0, "label": "WC Nữ", "fillColor": "rgba(148,163,184,0.12)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-wc-m", "type": "restroom", "x": 984, "y": 560, "width": 148, "height": 92, "rotation": 0, "label": "WC Nam", "fillColor": "rgba(148,163,184,0.12)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-tech", "type": "label", "x": 984, "y": 670, "width": 148, "height": 74, "rotation": 0, "label": "Phòng kỹ thuật", "fillColor": "rgba(148,163,184,0.10)", "strokeColor": "#CBD5E1", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-label-2", "type": "label", "x": 424, "y": 196, "width": 120, "height": 80, "rotation": 0, "label": "Tủ locker", "fillColor": "rgba(148,163,184,0.14)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 8, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-kitchen-1", "type": "kitchen", "x": 76, "y": 452, "width": 200, "height": 84, "rotation": 0, "label": "Coffee bar", "fillColor": "rgba(245,158,11,0.10)", "strokeColor": "#F59E0B", "opacity": 1, "cornerRadius": 8, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-label-4", "type": "label", "x": 88, "y": 576, "width": 44, "height": 44, "rotation": 0, "label": "", "fillColor": "rgba(148,163,184,0.14)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 22, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-label-5", "type": "label", "x": 168, "y": 576, "width": 44, "height": 44, "rotation": 0, "label": "", "fillColor": "rgba(148,163,184,0.14)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 22, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-label-6", "type": "label", "x": 88, "y": 652, "width": 44, "height": 44, "rotation": 0, "label": "", "fillColor": "rgba(148,163,184,0.14)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 22, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-label-7", "type": "label", "x": 168, "y": 652, "width": 44, "height": 44, "rotation": 0, "label": "", "fillColor": "rgba(148,163,184,0.14)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 22, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-lounge-1", "type": "lounge", "x": 252, "y": 572, "width": 140, "height": 88, "rotation": 0, "label": "Sofa", "fillColor": "rgba(139,92,246,0.08)", "strokeColor": "#8B5CF6", "opacity": 1, "cornerRadius": 10, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-reception-1", "type": "reception", "x": 480, "y": 466, "width": 200, "height": 84, "rotation": 0, "label": "Lễ tân CoSpace", "fillColor": "rgba(20,184,166,0.10)", "strokeColor": "#14B8A6", "opacity": 1, "cornerRadius": 8, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-lounge-2", "type": "lounge", "x": 432, "y": 628, "width": 88, "height": 84, "rotation": 0, "label": "Sofa chờ", "fillColor": "rgba(139,92,246,0.08)", "strokeColor": "#8B5CF6", "opacity": 1, "cornerRadius": 10, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-reception-2", "type": "reception", "x": 784, "y": 462, "width": 152, "height": 84, "rotation": 0, "label": "Print & Scan", "fillColor": "rgba(20,184,166,0.10)", "strokeColor": "#14B8A6", "opacity": 1, "cornerRadius": 8, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-label-9", "type": "label", "x": 784, "y": 580, "width": 152, "height": 56, "rotation": 0, "label": "Hộp thư thành viên", "fillColor": "rgba(148,163,184,0.14)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 8, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-plant-1", "type": "plant", "x": 372, "y": 452, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-plant-2", "type": "plant", "x": 496, "y": 718, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-plant-3", "type": "plant", "x": 656, "y": 718, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-plant-4", "type": "plant", "x": 712, "y": 466, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-plant-5", "type": "plant", "x": 786, "y": 700, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-plant-6", "type": "plant", "x": 908, "y": 700, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-lift-lobby", "type": "label", "x": 980, "y": 362, "width": 156, "height": 30, "rotation": 0, "label": "Sảnh thang máy", "fillColor": "transparent", "strokeColor": "transparent", "opacity": 1, "cornerRadius": 4, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-label-8", "type": "label", "x": 520, "y": 582, "width": 140, "height": 30, "rotation": 0, "label": "Sảnh chính", "fillColor": "transparent", "strokeColor": "transparent", "opacity": 1, "cornerRadius": 4, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f1-ws-hd-101", "type": "desk", "x": 96, "y": 88, "width": 120, "height": 80, "rotation": 0, "label": "HD-101", "fillColor": "rgba(34,197,94,0.10)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 6, "workspaceId": "c1010001-0000-0000-0000-000000000001", "locked": false, "visible": true, "sublabel": "Bàn hotdesk", "seatCount": 1 },
+    { "id": "el-b1f1-ws-hd-102", "type": "desk", "x": 260, "y": 88, "width": 120, "height": 80, "rotation": 0, "label": "HD-102", "fillColor": "rgba(34,197,94,0.10)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 6, "workspaceId": "c1010002-0000-0000-0000-000000000002", "locked": false, "visible": true, "sublabel": "Bàn hotdesk", "seatCount": 1 },
+    { "id": "el-b1f1-ws-hd-103", "type": "desk", "x": 424, "y": 88, "width": 120, "height": 80, "rotation": 0, "label": "HD-103", "fillColor": "rgba(34,197,94,0.10)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 6, "workspaceId": "c1010003-0000-0000-0000-000000000003", "locked": false, "visible": true, "sublabel": "Bàn hotdesk", "seatCount": 1 },
+    { "id": "el-b1f1-ws-hd-104", "type": "desk", "x": 96, "y": 196, "width": 120, "height": 80, "rotation": 0, "label": "HD-104", "fillColor": "rgba(34,197,94,0.10)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 6, "workspaceId": "c1010004-0000-0000-0000-000000000004", "locked": false, "visible": true, "sublabel": "Bàn hotdesk", "seatCount": 1 },
+    { "id": "el-b1f1-ws-hd-105", "type": "desk", "x": 260, "y": 196, "width": 120, "height": 80, "rotation": 0, "label": "HD-105", "fillColor": "rgba(34,197,94,0.10)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 6, "workspaceId": "c1010005-0000-0000-0000-000000000005", "locked": false, "visible": true, "sublabel": "Bàn hotdesk", "seatCount": 1 },
+    { "id": "el-b1f1-ws-mr-101", "type": "meeting_room", "x": 624, "y": 68, "width": 320, "height": 246, "rotation": 0, "label": "MR-101", "fillColor": "rgba(59,130,246,0.08)", "strokeColor": "#3B82F6", "opacity": 1, "cornerRadius": 10, "workspaceId": "c1010006-0000-0000-0000-000000000006", "locked": false, "visible": true, "sublabel": "Phòng họp Lounge", "seatCount": 8 }
   ]
-}'::jsonb
+}'::jsonb,
+    updated_at = now()
 WHERE id = 'f1010000-0000-0000-0000-000000000001'::uuid;
 
-
--- Floor 2: Meeting Suites & Dedicated Workstations (Layout B)
-UPDATE floors
-SET layout_json = '{
-  "version": 1,
-  "canvas": { "width": 1200, "height": 800, "gridSize": 20, "backgroundColor": "#f1f5f9" },
-  "elements": [
-    {
-      "id": "el-b1f2-elev",
-      "type": "elevator",
-      "x": 1050, "y": 80, "width": 70, "height": 70, "rotation": 0,
-      "label": "Thang Máy E2",
-      "fillColor": "rgba(100,116,139,0.15)", "strokeColor": "#64748B", "opacity": 1, "cornerRadius": 4,
-      "workspaceId": null, "locked": false, "visible": true
-    },
-    {
-      "id": "el-b1f2-lounge",
-      "type": "lounge",
-      "x": 80, "y": 80, "width": 200, "height": 100, "rotation": 0,
-      "label": "Khu Vực Chờ / Lounge",
-      "fillColor": "rgba(251,146,60,0.12)", "strokeColor": "#FB923C", "opacity": 1, "cornerRadius": 8,
-      "workspaceId": null, "locked": false, "visible": true
-    },
-    {
-      "id": "el-b1f2-mr201",
-      "type": "meeting_room",
-      "x": 80, "y": 240, "width": 340, "height": 240, "rotation": 0,
-      "label": "MR-201", "sublabel": "Phòng họp Meeting-A", "seatCount": 6,
-      "fillColor": "rgba(249,115,22,0.12)", "strokeColor": "#F97316", "opacity": 1, "cornerRadius": 8,
-      "workspaceId": "c1020001-0000-0000-0000-000000000001", "locked": false, "visible": true
-    },
-    {
-      "id": "el-b1f2-mr202",
-      "type": "meeting_room",
-      "x": 480, "y": 240, "width": 380, "height": 240, "rotation": 0,
-      "label": "MR-202", "sublabel": "Phòng họp Meeting-B", "seatCount": 10,
-      "fillColor": "rgba(249,115,22,0.12)", "strokeColor": "#F97316", "opacity": 1, "cornerRadius": 8,
-      "workspaceId": "c1020002-0000-0000-0000-000000000002", "locked": false, "visible": true
-    },
-    {
-      "id": "el-b1f2-dd201",
-      "type": "desk",
-      "x": 80, "y": 540, "width": 200, "height": 180, "rotation": 0,
-      "label": "DD-201", "sublabel": "Cụm bàn Dedicated 201", "seatCount": 2,
-      "fillColor": "rgba(34,197,94,0.12)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 6,
-      "workspaceId": "c1020003-0000-0000-0000-000000000003", "locked": false, "visible": true
-    },
-    {
-      "id": "el-b1f2-dd202",
-      "type": "desk",
-      "x": 340, "y": 540, "width": 200, "height": 180, "rotation": 0,
-      "label": "DD-202", "sublabel": "Cụm bàn Dedicated 202", "seatCount": 2,
-      "fillColor": "rgba(34,197,94,0.12)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 6,
-      "workspaceId": "c1020004-0000-0000-0000-000000000004", "locked": false, "visible": true
-    }
-  ]
-}'::jsonb
-WHERE id = 'f1020000-0000-0000-0000-000000000002'::uuid;
-
-
--- Floor 3: Executive Private Offices Suite (Layout C)
-UPDATE floors
-SET layout_json = '{
-  "version": 1,
-  "canvas": { "width": 1200, "height": 800, "gridSize": 20, "backgroundColor": "#fafafa" },
-  "elements": [
-    {
-      "id": "el-b1f3-po301",
-      "type": "private_office",
-      "x": 80, "y": 100, "width": 380, "height": 260, "rotation": 0,
-      "label": "PO-301", "sublabel": "Văn phòng riêng PO-301", "seatCount": 4,
-      "fillColor": "rgba(37,99,235,0.12)", "strokeColor": "#2563EB", "opacity": 1, "cornerRadius": 8,
-      "workspaceId": "c1030001-0000-0000-0000-000000000001", "locked": false, "visible": true
-    },
-    {
-      "id": "el-b1f3-po302",
-      "type": "private_office",
-      "x": 500, "y": 100, "width": 380, "height": 260, "rotation": 0,
-      "label": "PO-302", "sublabel": "Văn phòng riêng PO-302", "seatCount": 6,
-      "fillColor": "rgba(37,99,235,0.12)", "strokeColor": "#2563EB", "opacity": 1, "cornerRadius": 8,
-      "workspaceId": "c1030002-0000-0000-0000-000000000002", "locked": false, "visible": true
-    },
-    {
-      "id": "el-b1f3-po303",
-      "type": "private_office",
-      "x": 80, "y": 420, "width": 800, "height": 280, "rotation": 0,
-      "label": "PO-303", "sublabel": "Director Penthouse Suite PO-303", "seatCount": 12,
-      "fillColor": "rgba(79,70,229,0.15)", "strokeColor": "#4F46E5", "opacity": 1, "cornerRadius": 10,
-      "workspaceId": "c1030003-0000-0000-0000-000000000003", "locked": false, "visible": true
-    }
-  ]
-}'::jsonb
-WHERE id = 'f1030000-0000-0000-0000-000000000003'::uuid;
-
-
--- =============================================================================
--- BRANCH 2: CoSpace Nam Kỳ Khởi Nghĩa (Quận 3, TP.HCM)
--- =============================================================================
-
--- Floor 1: Creative Pods & Flex Workspace (Layout D)
-UPDATE floors
-SET layout_json = '{
-  "version": 1,
-  "canvas": { "width": 1200, "height": 800, "gridSize": 20, "backgroundColor": "#fdf4ff" },
-  "elements": [
-    {
-      "id": "el-b2f1-fl101",
-      "type": "custom_circle",
-      "x": 120, "y": 120, "width": 180, "height": 180, "rotation": 0,
-      "label": "FL-101", "sublabel": "Creative Pod 101", "seatCount": 2,
-      "fillColor": "rgba(192,132,252,0.18)", "strokeColor": "#C084FC", "opacity": 1, "cornerRadius": 90,
-      "workspaceId": "c2010001-0000-0000-0000-000000000001", "locked": false, "visible": true
-    },
-    {
-      "id": "el-b2f1-fl102",
-      "type": "custom_circle",
-      "x": 480, "y": 120, "width": 180, "height": 180, "rotation": 0,
-      "label": "FL-102", "sublabel": "Creative Pod 102", "seatCount": 2,
-      "fillColor": "rgba(192,132,252,0.18)", "strokeColor": "#C084FC", "opacity": 1, "cornerRadius": 90,
-      "workspaceId": "c2010002-0000-0000-0000-000000000002", "locked": false, "visible": true
-    },
-    {
-      "id": "el-b2f1-mr102",
-      "type": "meeting_room",
-      "x": 120, "y": 380, "width": 540, "height": 260, "rotation": 0,
-      "label": "MR-102", "sublabel": "Phòng họp Sáng Tạo", "seatCount": 12,
-      "fillColor": "rgba(236,72,153,0.12)", "strokeColor": "#EC4899", "opacity": 1, "cornerRadius": 12,
-      "workspaceId": "c2010003-0000-0000-0000-000000000003", "locked": false, "visible": true
-    }
-  ]
-}'::jsonb
-WHERE id = 'f2010000-0000-0000-0000-000000000001'::uuid;
-
-
--- Floor 2: Team Studios & Brainstorm Hub (Layout E)
-UPDATE floors
-SET layout_json = '{
-  "version": 1,
-  "canvas": { "width": 1200, "height": 800, "gridSize": 20, "backgroundColor": "#f0fdf4" },
-  "elements": [
-    {
-      "id": "el-b2f2-bs201",
-      "type": "meeting_room",
-      "x": 80, "y": 100, "width": 260, "height": 220, "rotation": 0,
-      "label": "BS-201", "sublabel": "Brainstorm Room 1", "seatCount": 6,
-      "fillColor": "rgba(22,163,74,0.12)", "strokeColor": "#16A34A", "opacity": 1, "cornerRadius": 8,
-      "workspaceId": "c2020001-0000-0000-0000-000000000001", "locked": false, "visible": true
-    },
-    {
-      "id": "el-b2f2-bs202",
-      "type": "meeting_room",
-      "x": 380, "y": 100, "width": 260, "height": 220, "rotation": 0,
-      "label": "BS-202", "sublabel": "Brainstorm Room 2", "seatCount": 6,
-      "fillColor": "rgba(22,163,74,0.12)", "strokeColor": "#16A34A", "opacity": 1, "cornerRadius": 8,
-      "workspaceId": "c2020002-0000-0000-0000-000000000002", "locked": false, "visible": true
-    },
-    {
-      "id": "el-b2f2-ts201",
-      "type": "private_office",
-      "x": 680, "y": 100, "width": 240, "height": 520, "rotation": 0,
-      "label": "TS-201", "sublabel": "Team Studio TS-201", "seatCount": 8,
-      "fillColor": "rgba(67,56,202,0.15)", "strokeColor": "#4338CA", "opacity": 1, "cornerRadius": 10,
-      "workspaceId": "c2020003-0000-0000-0000-000000000003", "locked": false, "visible": true
-    }
-  ]
-}'::jsonb
-WHERE id = 'f2020000-0000-0000-0000-000000000002'::uuid;
-
-
--- Floor 3: Enterprise Suites (Layout F)
-UPDATE floors
-SET layout_json = '{
-  "version": 1,
-  "canvas": { "width": 1200, "height": 800, "gridSize": 20, "backgroundColor": "#fffbeb" },
-  "elements": [
-    {
-      "id": "el-b2f3-es301",
-      "type": "private_office",
-      "x": 80, "y": 100, "width": 400, "height": 540, "rotation": 0,
-      "label": "ES-301", "sublabel": "Enterprise Suite A", "seatCount": 15,
-      "fillColor": "rgba(217,119,6,0.15)", "strokeColor": "#D97706", "opacity": 1, "cornerRadius": 12,
-      "workspaceId": "c2030001-0000-0000-0000-000000000001", "locked": false, "visible": true
-    },
-    {
-      "id": "el-b2f3-es302",
-      "type": "private_office",
-      "x": 520, "y": 100, "width": 400, "height": 540, "rotation": 0,
-      "label": "ES-302", "sublabel": "Enterprise Suite B", "seatCount": 15,
-      "fillColor": "rgba(217,119,6,0.15)", "strokeColor": "#D97706", "opacity": 1, "cornerRadius": 12,
-      "workspaceId": "c2030002-0000-0000-0000-000000000002", "locked": false, "visible": true
-    }
-  ]
-}'::jsonb
-WHERE id = 'f2030000-0000-0000-0000-000000000003'::uuid;
-
-
--- =============================================================================
--- BRANCH 3: CoSpace Cầu Giấy (Quận Cầu Giấy, Hà Nội)
--- =============================================================================
-
--- Floor 1: Tech Community & Event Space (Layout G)
-UPDATE floors
-SET layout_json = '{
-  "version": 1,
-  "canvas": { "width": 1200, "height": 800, "gridSize": 20, "backgroundColor": "#ecfeff" },
-  "elements": [
-    {
-      "id": "el-b3f1-ta101",
-      "type": "desk",
-      "x": 80, "y": 120, "width": 360, "height": 140, "rotation": 0,
-      "label": "TA-101", "sublabel": "Dãy bàn Tech-A", "seatCount": 6,
-      "fillColor": "rgba(8,145,178,0.12)", "strokeColor": "#0891B2", "opacity": 1, "cornerRadius": 6,
-      "workspaceId": "c3010001-0000-0000-0000-000000000001", "locked": false, "visible": true
-    },
-    {
-      "id": "el-b3f1-tb102",
-      "type": "desk",
-      "x": 80, "y": 320, "width": 360, "height": 140, "rotation": 0,
-      "label": "TB-102", "sublabel": "Dãy bàn Tech-B", "seatCount": 6,
-      "fillColor": "rgba(8,145,178,0.12)", "strokeColor": "#0891B2", "opacity": 1, "cornerRadius": 6,
-      "workspaceId": "c3010002-0000-0000-0000-000000000002", "locked": false, "visible": true
-    },
-    {
-      "id": "el-b3f1-ev101",
-      "type": "meeting_room",
-      "x": 480, "y": 120, "width": 420, "height": 500, "rotation": 0,
-      "label": "EV-101", "sublabel": "Hội trường Event Room", "seatCount": 30,
-      "fillColor": "rgba(6,182,212,0.15)", "strokeColor": "#06B6D4", "opacity": 1, "cornerRadius": 12,
-      "workspaceId": "c3010003-0000-0000-0000-000000000003", "locked": false, "visible": true
-    }
-  ]
-}'::jsonb
-WHERE id = 'f3010000-0000-0000-0000-000000000001'::uuid;
-
-
--- Floor 2: Scale-up Workstations & Boardrooms (Layout H)
-UPDATE floors
-SET layout_json = '{
-  "version": 1,
-  "canvas": { "width": 1200, "height": 800, "gridSize": 20, "backgroundColor": "#fef2f2" },
-  "elements": [
-    {
-      "id": "el-b3f2-br201",
-      "type": "meeting_room",
-      "x": 80, "y": 100, "width": 360, "height": 220, "rotation": 0,
-      "label": "BR-201", "sublabel": "Boardroom VIP", "seatCount": 10,
-      "fillColor": "rgba(239,68,68,0.12)", "strokeColor": "#EF4444", "opacity": 1, "cornerRadius": 8,
-      "workspaceId": "c3020001-0000-0000-0000-000000000001", "locked": false, "visible": true
-    },
-    {
-      "id": "el-b3f2-mr202",
-      "type": "meeting_room",
-      "x": 480, "y": 100, "width": 360, "height": 220, "rotation": 0,
-      "label": "MR-202", "sublabel": "Phòng họp Team", "seatCount": 8,
-      "fillColor": "rgba(239,68,68,0.12)", "strokeColor": "#EF4444", "opacity": 1, "cornerRadius": 8,
-      "workspaceId": "c3020002-0000-0000-0000-000000000002", "locked": false, "visible": true
-    },
-    {
-      "id": "el-b3f2-su201",
-      "type": "private_office",
-      "x": 80, "y": 380, "width": 760, "height": 260, "rotation": 0,
-      "label": "SU-201", "sublabel": "Scale-up Office Suite", "seatCount": 16,
-      "fillColor": "rgba(234,88,12,0.15)", "strokeColor": "#EA580C", "opacity": 1, "cornerRadius": 10,
-      "workspaceId": "c3020003-0000-0000-0000-000000000002", "locked": false, "visible": true
-    }
-  ]
-}'::jsonb
-WHERE id = 'f3020000-0000-0000-0000-000000000002'::uuid;
-
-
--- Floor 3: Directors Penthouse Suites (Layout I)
+-- Tầng 2 - Meeting Suites & Dedicated Workstations
 UPDATE floors
 SET layout_json = '{
   "version": 1,
   "canvas": { "width": 1200, "height": 800, "gridSize": 20, "backgroundColor": "#f8fafc" },
   "elements": [
-    {
-      "id": "el-b3f3-pe301",
-      "type": "private_office",
-      "x": 80, "y": 100, "width": 400, "height": 520, "rotation": 0,
-      "label": "PE-301", "sublabel": "Penthouse Suite East", "seatCount": 10,
-      "fillColor": "rgba(71,85,105,0.15)", "strokeColor": "#475569", "opacity": 1, "cornerRadius": 12,
-      "workspaceId": "c3030001-0000-0000-0000-000000000001", "locked": false, "visible": true
-    },
-    {
-      "id": "el-b3f3-pw302",
-      "type": "private_office",
-      "x": 520, "y": 100, "width": 400, "height": 520, "rotation": 0,
-      "label": "PW-302", "sublabel": "Penthouse Suite West", "seatCount": 10,
-      "fillColor": "rgba(71,85,105,0.15)", "strokeColor": "#475569", "opacity": 1, "cornerRadius": 12,
-      "workspaceId": "c3030002-0000-0000-0000-000000000003", "locked": false, "visible": true
-    }
+    { "id": "el-b1f2-corridor", "type": "label", "x": 52, "y": 338, "width": 1096, "height": 84, "rotation": 0, "label": "", "fillColor": "rgba(148,163,184,0.10)", "strokeColor": "transparent", "opacity": 1, "cornerRadius": 0, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f2-label-3", "type": "label", "x": 60, "y": 438, "width": 572, "height": 314, "rotation": 0, "label": "Khu bàn cố định", "fillColor": "rgba(34,197,94,0.06)", "strokeColor": "rgba(34,197,94,0.30)", "opacity": 1, "cornerRadius": 12, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f2-wall-n", "type": "wall", "x": 40, "y": 40, "width": 1120, "height": 12, "rotation": 0, "label": "Tường Bắc", "fillColor": "#64748B", "strokeColor": "#475569", "opacity": 1, "cornerRadius": 2, "workspaceId": null, "locked": true, "visible": true },
+    { "id": "el-b1f2-wall-s", "type": "wall", "x": 40, "y": 760, "width": 1120, "height": 12, "rotation": 0, "label": "Tường Nam", "fillColor": "#64748B", "strokeColor": "#475569", "opacity": 1, "cornerRadius": 2, "workspaceId": null, "locked": true, "visible": true },
+    { "id": "el-b1f2-wall-w", "type": "wall", "x": 40, "y": 40, "width": 12, "height": 732, "rotation": 0, "label": "Tường Tây", "fillColor": "#64748B", "strokeColor": "#475569", "opacity": 1, "cornerRadius": 2, "workspaceId": null, "locked": true, "visible": true },
+    { "id": "el-b1f2-wall-e", "type": "wall", "x": 1148, "y": 40, "width": 12, "height": 732, "rotation": 0, "label": "Tường Đông", "fillColor": "#64748B", "strokeColor": "#475569", "opacity": 1, "cornerRadius": 2, "workspaceId": null, "locked": true, "visible": true },
+    { "id": "el-b1f2-window-1", "type": "window", "x": 80, "y": 40, "width": 270, "height": 12, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f2-window-2", "type": "window", "x": 420, "y": 40, "width": 310, "height": 12, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f2-window-3", "type": "window", "x": 790, "y": 40, "width": 140, "height": 12, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f2-window-4", "type": "window", "x": 80, "y": 760, "width": 530, "height": 12, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f2-window-5", "type": "window", "x": 680, "y": 760, "width": 250, "height": 12, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f2-window-6", "type": "window", "x": 40, "y": 90, "width": 12, "height": 210, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f2-window-7", "type": "window", "x": 40, "y": 470, "width": 12, "height": 260, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f2-wall-1", "type": "wall", "x": 960, "y": 52, "width": 8, "height": 286, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f2-wall-2", "type": "wall", "x": 960, "y": 422, "width": 8, "height": 338, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f2-wall-3", "type": "wall", "x": 968, "y": 422, "width": 32, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f2-wall-4", "type": "wall", "x": 1056, "y": 422, "width": 92, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f2-window-8", "type": "window", "x": 380, "y": 52, "width": 8, "height": 278, "rotation": 0, "label": "Vách kính", "fillColor": "#E0F2FE", "strokeColor": "#7DD3FC", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f2-window-9", "type": "window", "x": 760, "y": 52, "width": 8, "height": 278, "rotation": 0, "label": "Vách kính", "fillColor": "#E0F2FE", "strokeColor": "#7DD3FC", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f2-window-10", "type": "window", "x": 52, "y": 330, "width": 248, "height": 8, "rotation": 0, "label": "Vách kính", "fillColor": "#E0F2FE", "strokeColor": "#7DD3FC", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f2-window-11", "type": "window", "x": 356, "y": 330, "width": 324, "height": 8, "rotation": 0, "label": "Vách kính", "fillColor": "#E0F2FE", "strokeColor": "#7DD3FC", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f2-window-12", "type": "window", "x": 736, "y": 330, "width": 64, "height": 8, "rotation": 0, "label": "Vách kính", "fillColor": "#E0F2FE", "strokeColor": "#7DD3FC", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f2-window-13", "type": "window", "x": 900, "y": 330, "width": 60, "height": 8, "rotation": 0, "label": "Vách kính", "fillColor": "#E0F2FE", "strokeColor": "#7DD3FC", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f2-wall-5", "type": "wall", "x": 640, "y": 422, "width": 60, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f2-wall-6", "type": "wall", "x": 756, "y": 422, "width": 204, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f2-wall-7", "type": "wall", "x": 640, "y": 430, "width": 8, "height": 330, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f2-door-1", "type": "door", "x": 1000, "y": 422, "width": 56, "height": 8, "rotation": 0, "label": "Cửa khu vệ sinh", "fillColor": "#FEF3C7", "strokeColor": "#D97706", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f2-door-2", "type": "door", "x": 300, "y": 330, "width": 56, "height": 8, "rotation": 0, "label": "Cửa MR-201", "fillColor": "#FEF3C7", "strokeColor": "#D97706", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f2-door-3", "type": "door", "x": 680, "y": 330, "width": 56, "height": 8, "rotation": 0, "label": "Cửa MR-202", "fillColor": "#FEF3C7", "strokeColor": "#D97706", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f2-door-4", "type": "door", "x": 700, "y": 422, "width": 56, "height": 8, "rotation": 0, "label": "Cửa pantry", "fillColor": "#FEF3C7", "strokeColor": "#D97706", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f2-stair", "type": "staircase", "x": 984, "y": 68, "width": 148, "height": 150, "rotation": 0, "label": "Cầu thang bộ", "fillColor": "rgba(148,163,184,0.10)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f2-elev-a", "type": "elevator", "x": 984, "y": 236, "width": 68, "height": 84, "rotation": 0, "label": "Thang máy A", "fillColor": "rgba(100,116,139,0.12)", "strokeColor": "#64748B", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f2-elev-b", "type": "elevator", "x": 1064, "y": 236, "width": 68, "height": 84, "rotation": 0, "label": "Thang máy B", "fillColor": "rgba(100,116,139,0.12)", "strokeColor": "#64748B", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f2-wc-f", "type": "restroom", "x": 984, "y": 450, "width": 148, "height": 92, "rotation": 0, "label": "WC Nữ", "fillColor": "rgba(148,163,184,0.12)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f2-wc-m", "type": "restroom", "x": 984, "y": 560, "width": 148, "height": 92, "rotation": 0, "label": "WC Nam", "fillColor": "rgba(148,163,184,0.12)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f2-tech", "type": "label", "x": 984, "y": 670, "width": 148, "height": 74, "rotation": 0, "label": "Phòng kỹ thuật", "fillColor": "rgba(148,163,184,0.10)", "strokeColor": "#CBD5E1", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f2-kitchen-1", "type": "kitchen", "x": 784, "y": 76, "width": 160, "height": 90, "rotation": 0, "label": "Coffee corner", "fillColor": "rgba(245,158,11,0.10)", "strokeColor": "#F59E0B", "opacity": 1, "cornerRadius": 8, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f2-label-1", "type": "label", "x": 784, "y": 196, "width": 160, "height": 44, "rotation": 0, "label": "Quầy bàn đứng", "fillColor": "rgba(148,163,184,0.14)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 8, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f2-label-4", "type": "label", "x": 96, "y": 636, "width": 480, "height": 44, "rotation": 0, "label": "Tủ locker cá nhân", "fillColor": "rgba(148,163,184,0.14)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 8, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f2-kitchen-2", "type": "kitchen", "x": 664, "y": 452, "width": 200, "height": 90, "rotation": 0, "label": "Pantry", "fillColor": "rgba(245,158,11,0.10)", "strokeColor": "#F59E0B", "opacity": 1, "cornerRadius": 8, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f2-label-5", "type": "label", "x": 672, "y": 584, "width": 184, "height": 64, "rotation": 0, "label": "Bàn ăn chung", "fillColor": "rgba(148,163,184,0.14)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 8, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f2-plant-1", "type": "plant", "x": 790, "y": 280, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f2-plant-2", "type": "plant", "x": 912, "y": 280, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f2-plant-3", "type": "plant", "x": 72, "y": 706, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f2-plant-4", "type": "plant", "x": 592, "y": 706, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f2-plant-5", "type": "plant", "x": 900, "y": 470, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f2-plant-6", "type": "plant", "x": 668, "y": 706, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f2-plant-7", "type": "plant", "x": 912, "y": 706, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f2-lift-lobby", "type": "label", "x": 980, "y": 362, "width": 156, "height": 30, "rotation": 0, "label": "Sảnh thang máy", "fillColor": "transparent", "strokeColor": "transparent", "opacity": 1, "cornerRadius": 4, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f2-label-2", "type": "label", "x": 380, "y": 364, "width": 200, "height": 30, "rotation": 0, "label": "Hành lang", "fillColor": "transparent", "strokeColor": "transparent", "opacity": 1, "cornerRadius": 4, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f2-ws-mr-201", "type": "meeting_room", "x": 68, "y": 68, "width": 296, "height": 246, "rotation": 0, "label": "MR-201", "fillColor": "rgba(59,130,246,0.08)", "strokeColor": "#3B82F6", "opacity": 1, "cornerRadius": 10, "workspaceId": "c1020001-0000-0000-0000-000000000001", "locked": false, "visible": true, "sublabel": "Phòng họp Meeting-A", "seatCount": 6 },
+    { "id": "el-b1f2-ws-mr-202", "type": "meeting_room", "x": 396, "y": 68, "width": 348, "height": 246, "rotation": 0, "label": "MR-202", "fillColor": "rgba(59,130,246,0.08)", "strokeColor": "#3B82F6", "opacity": 1, "cornerRadius": 10, "workspaceId": "c1020002-0000-0000-0000-000000000002", "locked": false, "visible": true, "sublabel": "Phòng họp Meeting-B", "seatCount": 10 },
+    { "id": "el-b1f2-ws-dd-201", "type": "desk", "x": 96, "y": 466, "width": 220, "height": 140, "rotation": 0, "label": "DD-201", "fillColor": "rgba(34,197,94,0.10)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 6, "workspaceId": "c1020003-0000-0000-0000-000000000003", "locked": false, "visible": true, "sublabel": "Cụm bàn Dedicated", "seatCount": 2 },
+    { "id": "el-b1f2-ws-dd-202", "type": "desk", "x": 356, "y": 466, "width": 220, "height": 140, "rotation": 0, "label": "DD-202", "fillColor": "rgba(34,197,94,0.10)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 6, "workspaceId": "c1020004-0000-0000-0000-000000000004", "locked": false, "visible": true, "sublabel": "Cụm bàn Dedicated", "seatCount": 2 }
   ]
-}'::jsonb
+}'::jsonb,
+    updated_at = now()
+WHERE id = 'f1020000-0000-0000-0000-000000000002'::uuid;
+
+-- Tầng 3 - Executive Private Offices
+UPDATE floors
+SET layout_json = '{
+  "version": 1,
+  "canvas": { "width": 1200, "height": 800, "gridSize": 20, "backgroundColor": "#f8fafc" },
+  "elements": [
+    { "id": "el-b1f3-corridor", "type": "label", "x": 52, "y": 338, "width": 1096, "height": 84, "rotation": 0, "label": "", "fillColor": "rgba(148,163,184,0.10)", "strokeColor": "transparent", "opacity": 1, "cornerRadius": 0, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-wall-n", "type": "wall", "x": 40, "y": 40, "width": 1120, "height": 12, "rotation": 0, "label": "Tường Bắc", "fillColor": "#64748B", "strokeColor": "#475569", "opacity": 1, "cornerRadius": 2, "workspaceId": null, "locked": true, "visible": true },
+    { "id": "el-b1f3-wall-s", "type": "wall", "x": 40, "y": 760, "width": 1120, "height": 12, "rotation": 0, "label": "Tường Nam", "fillColor": "#64748B", "strokeColor": "#475569", "opacity": 1, "cornerRadius": 2, "workspaceId": null, "locked": true, "visible": true },
+    { "id": "el-b1f3-wall-w", "type": "wall", "x": 40, "y": 40, "width": 12, "height": 732, "rotation": 0, "label": "Tường Tây", "fillColor": "#64748B", "strokeColor": "#475569", "opacity": 1, "cornerRadius": 2, "workspaceId": null, "locked": true, "visible": true },
+    { "id": "el-b1f3-wall-e", "type": "wall", "x": 1148, "y": 40, "width": 12, "height": 732, "rotation": 0, "label": "Tường Đông", "fillColor": "#64748B", "strokeColor": "#475569", "opacity": 1, "cornerRadius": 2, "workspaceId": null, "locked": true, "visible": true },
+    { "id": "el-b1f3-window-1", "type": "window", "x": 80, "y": 40, "width": 240, "height": 12, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-window-2", "type": "window", "x": 400, "y": 40, "width": 300, "height": 12, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-window-3", "type": "window", "x": 770, "y": 40, "width": 160, "height": 12, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-window-4", "type": "window", "x": 80, "y": 760, "width": 190, "height": 12, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-window-5", "type": "window", "x": 340, "y": 760, "width": 390, "height": 12, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-window-6", "type": "window", "x": 800, "y": 760, "width": 130, "height": 12, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-window-7", "type": "window", "x": 40, "y": 90, "width": 12, "height": 200, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-window-8", "type": "window", "x": 40, "y": 470, "width": 12, "height": 250, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-wall-1", "type": "wall", "x": 960, "y": 52, "width": 8, "height": 286, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-wall-2", "type": "wall", "x": 960, "y": 422, "width": 8, "height": 338, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-wall-3", "type": "wall", "x": 968, "y": 422, "width": 32, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-wall-4", "type": "wall", "x": 1056, "y": 422, "width": 92, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-wall-5", "type": "wall", "x": 352, "y": 52, "width": 8, "height": 278, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-wall-6", "type": "wall", "x": 732, "y": 52, "width": 8, "height": 278, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-wall-7", "type": "wall", "x": 52, "y": 330, "width": 218, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-wall-8", "type": "wall", "x": 326, "y": 330, "width": 324, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-wall-9", "type": "wall", "x": 706, "y": 330, "width": 94, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-wall-10", "type": "wall", "x": 900, "y": 330, "width": 60, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-wall-11", "type": "wall", "x": 52, "y": 422, "width": 58, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-wall-12", "type": "wall", "x": 250, "y": 422, "width": 150, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-wall-13", "type": "wall", "x": 464, "y": 422, "width": 336, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-wall-14", "type": "wall", "x": 940, "y": 422, "width": 20, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-wall-15", "type": "wall", "x": 300, "y": 430, "width": 8, "height": 330, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-wall-16", "type": "wall", "x": 760, "y": 430, "width": 8, "height": 330, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-door-1", "type": "door", "x": 1000, "y": 422, "width": 56, "height": 8, "rotation": 0, "label": "Cửa khu vệ sinh", "fillColor": "#FEF3C7", "strokeColor": "#D97706", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-door-2", "type": "door", "x": 270, "y": 330, "width": 56, "height": 8, "rotation": 0, "label": "Cửa PO-301", "fillColor": "#FEF3C7", "strokeColor": "#D97706", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-door-3", "type": "door", "x": 650, "y": 330, "width": 56, "height": 8, "rotation": 0, "label": "Cửa PO-302", "fillColor": "#FEF3C7", "strokeColor": "#D97706", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-door-4", "type": "door", "x": 400, "y": 422, "width": 64, "height": 8, "rotation": 0, "label": "Cửa Director Suite", "fillColor": "#FEF3C7", "strokeColor": "#D97706", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-stair", "type": "staircase", "x": 984, "y": 68, "width": 148, "height": 150, "rotation": 0, "label": "Cầu thang bộ", "fillColor": "rgba(148,163,184,0.10)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-elev-a", "type": "elevator", "x": 984, "y": 236, "width": 68, "height": 84, "rotation": 0, "label": "Thang máy A", "fillColor": "rgba(100,116,139,0.12)", "strokeColor": "#64748B", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-elev-b", "type": "elevator", "x": 1064, "y": 236, "width": 68, "height": 84, "rotation": 0, "label": "Thang máy B", "fillColor": "rgba(100,116,139,0.12)", "strokeColor": "#64748B", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-wc-f", "type": "restroom", "x": 984, "y": 450, "width": 148, "height": 92, "rotation": 0, "label": "WC Nữ", "fillColor": "rgba(148,163,184,0.12)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-wc-m", "type": "restroom", "x": 984, "y": 560, "width": 148, "height": 92, "rotation": 0, "label": "WC Nam", "fillColor": "rgba(148,163,184,0.12)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-tech", "type": "label", "x": 984, "y": 670, "width": 148, "height": 74, "rotation": 0, "label": "Phòng kỹ thuật", "fillColor": "rgba(148,163,184,0.10)", "strokeColor": "#CBD5E1", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-lounge-1", "type": "lounge", "x": 760, "y": 72, "width": 180, "height": 110, "rotation": 0, "label": "Executive Lounge", "fillColor": "rgba(139,92,246,0.08)", "strokeColor": "#8B5CF6", "opacity": 1, "cornerRadius": 10, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-label-1", "type": "label", "x": 790, "y": 206, "width": 120, "height": 50, "rotation": 0, "label": "Bàn trà", "fillColor": "rgba(148,163,184,0.14)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 8, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-kitchen-1", "type": "kitchen", "x": 68, "y": 448, "width": 216, "height": 92, "rotation": 0, "label": "Pantry & Coffee Bar", "fillColor": "rgba(245,158,11,0.10)", "strokeColor": "#F59E0B", "opacity": 1, "cornerRadius": 8, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-label-3", "type": "label", "x": 96, "y": 580, "width": 160, "height": 64, "rotation": 0, "label": "Bàn ăn chung", "fillColor": "rgba(148,163,184,0.14)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 8, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-reception-1", "type": "reception", "x": 784, "y": 452, "width": 160, "height": 88, "rotation": 0, "label": "Lễ tân tầng 3", "fillColor": "rgba(20,184,166,0.10)", "strokeColor": "#14B8A6", "opacity": 1, "cornerRadius": 8, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-lounge-2", "type": "lounge", "x": 784, "y": 580, "width": 160, "height": 88, "rotation": 0, "label": "Sofa chờ", "fillColor": "rgba(139,92,246,0.08)", "strokeColor": "#8B5CF6", "opacity": 1, "cornerRadius": 10, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-plant-1", "type": "plant", "x": 764, "y": 280, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-plant-2", "type": "plant", "x": 912, "y": 280, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-plant-3", "type": "plant", "x": 64, "y": 366, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-plant-4", "type": "plant", "x": 70, "y": 690, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-plant-5", "type": "plant", "x": 254, "y": 690, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-plant-6", "type": "plant", "x": 786, "y": 700, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-plant-7", "type": "plant", "x": 914, "y": 700, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-lift-lobby", "type": "label", "x": 980, "y": 362, "width": 156, "height": 30, "rotation": 0, "label": "Sảnh thang máy", "fillColor": "transparent", "strokeColor": "transparent", "opacity": 1, "cornerRadius": 4, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-label-2", "type": "label", "x": 380, "y": 364, "width": 200, "height": 30, "rotation": 0, "label": "Hành lang", "fillColor": "transparent", "strokeColor": "transparent", "opacity": 1, "cornerRadius": 4, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b1f3-ws-po-301", "type": "private_office", "x": 68, "y": 68, "width": 268, "height": 246, "rotation": 0, "label": "PO-301", "fillColor": "rgba(59,130,246,0.08)", "strokeColor": "#3B82F6", "opacity": 1, "cornerRadius": 8, "workspaceId": "c1030001-0000-0000-0000-000000000001", "locked": false, "visible": true, "sublabel": "Văn phòng riêng · 4 chỗ", "seatCount": 4 },
+    { "id": "el-b1f3-ws-po-302", "type": "private_office", "x": 376, "y": 68, "width": 340, "height": 246, "rotation": 0, "label": "PO-302", "fillColor": "rgba(59,130,246,0.08)", "strokeColor": "#3B82F6", "opacity": 1, "cornerRadius": 8, "workspaceId": "c1030002-0000-0000-0000-000000000002", "locked": false, "visible": true, "sublabel": "Văn phòng riêng · 6 chỗ", "seatCount": 6 },
+    { "id": "el-b1f3-ws-po-303", "type": "private_office", "x": 324, "y": 446, "width": 420, "height": 298, "rotation": 0, "label": "PO-303", "fillColor": "rgba(99,102,241,0.10)", "strokeColor": "#6366F1", "opacity": 1, "cornerRadius": 10, "workspaceId": "c1030003-0000-0000-0000-000000000003", "locked": false, "visible": true, "sublabel": "Director Suite · 12 chỗ", "seatCount": 12 }
+  ]
+}'::jsonb,
+    updated_at = now()
+WHERE id = 'f1030000-0000-0000-0000-000000000003'::uuid;
+
+-- =============================================================================
+-- BRANCH 2: CoSpace Nam Kỳ Khởi Nghĩa (Quận 3) — b2000000-0000-0000-0000-000000000002 — lõi thang phía Tây
+-- =============================================================================
+
+-- Tầng 1 - Creative Pods & Flex Area
+UPDATE floors
+SET layout_json = '{
+  "version": 1,
+  "canvas": { "width": 1200, "height": 800, "gridSize": 20, "backgroundColor": "#f8fafc" },
+  "elements": [
+    { "id": "el-b2f1-corridor", "type": "label", "x": 52, "y": 338, "width": 1096, "height": 84, "rotation": 0, "label": "", "fillColor": "rgba(148,163,184,0.10)", "strokeColor": "transparent", "opacity": 1, "cornerRadius": 0, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f1-label-1", "type": "label", "x": 716, "y": 60, "width": 424, "height": 262, "rotation": 0, "label": "Flex area", "fillColor": "rgba(139,92,246,0.06)", "strokeColor": "rgba(139,92,246,0.30)", "opacity": 1, "cornerRadius": 12, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f1-label-2", "type": "label", "x": 248, "y": 438, "width": 172, "height": 314, "rotation": 0, "label": "Góc trưng bày", "fillColor": "rgba(20,184,166,0.06)", "strokeColor": "rgba(20,184,166,0.30)", "opacity": 1, "cornerRadius": 12, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f1-label-7", "type": "label", "x": 768, "y": 438, "width": 372, "height": 314, "rotation": 0, "label": "Café bar", "fillColor": "rgba(245,158,11,0.06)", "strokeColor": "rgba(245,158,11,0.30)", "opacity": 1, "cornerRadius": 12, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f1-wall-n", "type": "wall", "x": 40, "y": 40, "width": 1120, "height": 12, "rotation": 0, "label": "Tường Bắc", "fillColor": "#64748B", "strokeColor": "#475569", "opacity": 1, "cornerRadius": 2, "workspaceId": null, "locked": true, "visible": true },
+    { "id": "el-b2f1-wall-s", "type": "wall", "x": 40, "y": 760, "width": 1120, "height": 12, "rotation": 0, "label": "Tường Nam", "fillColor": "#64748B", "strokeColor": "#475569", "opacity": 1, "cornerRadius": 2, "workspaceId": null, "locked": true, "visible": true },
+    { "id": "el-b2f1-wall-w", "type": "wall", "x": 40, "y": 40, "width": 12, "height": 732, "rotation": 0, "label": "Tường Tây", "fillColor": "#64748B", "strokeColor": "#475569", "opacity": 1, "cornerRadius": 2, "workspaceId": null, "locked": true, "visible": true },
+    { "id": "el-b2f1-wall-e", "type": "wall", "x": 1148, "y": 40, "width": 12, "height": 732, "rotation": 0, "label": "Tường Đông", "fillColor": "#64748B", "strokeColor": "#475569", "opacity": 1, "cornerRadius": 2, "workspaceId": null, "locked": true, "visible": true },
+    { "id": "el-b2f1-window-1", "type": "window", "x": 290, "y": 40, "width": 380, "height": 12, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f1-window-2", "type": "window", "x": 760, "y": 40, "width": 350, "height": 12, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f1-window-3", "type": "window", "x": 290, "y": 760, "width": 230, "height": 12, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f1-window-4", "type": "window", "x": 680, "y": 760, "width": 430, "height": 12, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f1-window-5", "type": "window", "x": 1148, "y": 90, "width": 12, "height": 220, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f1-window-6", "type": "window", "x": 1148, "y": 470, "width": 12, "height": 260, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f1-entrance", "type": "door", "x": 540, "y": 760, "width": 120, "height": 12, "rotation": 0, "label": "Cửa chính", "fillColor": "#FEF3C7", "strokeColor": "#D97706", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f1-wall-1", "type": "wall", "x": 232, "y": 52, "width": 8, "height": 286, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f1-wall-2", "type": "wall", "x": 232, "y": 422, "width": 8, "height": 338, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f1-wall-3", "type": "wall", "x": 52, "y": 422, "width": 92, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f1-wall-4", "type": "wall", "x": 200, "y": 422, "width": 32, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f1-window-7", "type": "window", "x": 700, "y": 52, "width": 8, "height": 278, "rotation": 0, "label": "Vách kính", "fillColor": "#E0F2FE", "strokeColor": "#7DD3FC", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f1-window-8", "type": "window", "x": 240, "y": 330, "width": 360, "height": 8, "rotation": 0, "label": "Vách kính", "fillColor": "#E0F2FE", "strokeColor": "#7DD3FC", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f1-window-9", "type": "window", "x": 656, "y": 330, "width": 44, "height": 8, "rotation": 0, "label": "Vách kính", "fillColor": "#E0F2FE", "strokeColor": "#7DD3FC", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f1-door-1", "type": "door", "x": 144, "y": 422, "width": 56, "height": 8, "rotation": 0, "label": "Cửa khu vệ sinh", "fillColor": "#FEF3C7", "strokeColor": "#D97706", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f1-door-2", "type": "door", "x": 600, "y": 330, "width": 56, "height": 8, "rotation": 0, "label": "Cửa MR-102", "fillColor": "#FEF3C7", "strokeColor": "#D97706", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f1-stair", "type": "staircase", "x": 68, "y": 68, "width": 148, "height": 150, "rotation": 0, "label": "Cầu thang bộ", "fillColor": "rgba(148,163,184,0.10)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f1-elev-a", "type": "elevator", "x": 68, "y": 236, "width": 68, "height": 84, "rotation": 0, "label": "Thang máy A", "fillColor": "rgba(100,116,139,0.12)", "strokeColor": "#64748B", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f1-elev-b", "type": "elevator", "x": 148, "y": 236, "width": 68, "height": 84, "rotation": 0, "label": "Thang máy B", "fillColor": "rgba(100,116,139,0.12)", "strokeColor": "#64748B", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f1-wc-f", "type": "restroom", "x": 68, "y": 450, "width": 148, "height": 92, "rotation": 0, "label": "WC Nữ", "fillColor": "rgba(148,163,184,0.12)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f1-wc-m", "type": "restroom", "x": 68, "y": 560, "width": 148, "height": 92, "rotation": 0, "label": "WC Nam", "fillColor": "rgba(148,163,184,0.12)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f1-tech", "type": "label", "x": 68, "y": 670, "width": 148, "height": 74, "rotation": 0, "label": "Phòng kỹ thuật", "fillColor": "rgba(148,163,184,0.10)", "strokeColor": "#CBD5E1", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f1-lounge-1", "type": "lounge", "x": 744, "y": 226, "width": 120, "height": 80, "rotation": 0, "label": "Bean bag", "fillColor": "rgba(139,92,246,0.08)", "strokeColor": "#8B5CF6", "opacity": 1, "cornerRadius": 10, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f1-label-3", "type": "label", "x": 264, "y": 462, "width": 140, "height": 36, "rotation": 0, "label": "", "fillColor": "rgba(148,163,184,0.14)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 8, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f1-label-4", "type": "label", "x": 264, "y": 526, "width": 140, "height": 36, "rotation": 0, "label": "", "fillColor": "rgba(148,163,184,0.14)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 8, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f1-label-5", "type": "label", "x": 264, "y": 590, "width": 140, "height": 36, "rotation": 0, "label": "", "fillColor": "rgba(148,163,184,0.14)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 8, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f1-reception-1", "type": "reception", "x": 500, "y": 466, "width": 200, "height": 84, "rotation": 0, "label": "Lễ tân CoSpace", "fillColor": "rgba(20,184,166,0.10)", "strokeColor": "#14B8A6", "opacity": 1, "cornerRadius": 8, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f1-lounge-2", "type": "lounge", "x": 436, "y": 640, "width": 88, "height": 84, "rotation": 0, "label": "Sofa chờ", "fillColor": "rgba(139,92,246,0.08)", "strokeColor": "#8B5CF6", "opacity": 1, "cornerRadius": 10, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f1-kitchen-1", "type": "kitchen", "x": 788, "y": 456, "width": 200, "height": 84, "rotation": 0, "label": "Quầy café", "fillColor": "rgba(245,158,11,0.10)", "strokeColor": "#F59E0B", "opacity": 1, "cornerRadius": 8, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f1-label-8", "type": "label", "x": 796, "y": 576, "width": 44, "height": 44, "rotation": 0, "label": "", "fillColor": "rgba(148,163,184,0.14)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 22, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f1-label-9", "type": "label", "x": 876, "y": 576, "width": 44, "height": 44, "rotation": 0, "label": "", "fillColor": "rgba(148,163,184,0.14)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 22, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f1-label-10", "type": "label", "x": 796, "y": 652, "width": 44, "height": 44, "rotation": 0, "label": "", "fillColor": "rgba(148,163,184,0.14)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 22, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f1-label-11", "type": "label", "x": 876, "y": 652, "width": 44, "height": 44, "rotation": 0, "label": "", "fillColor": "rgba(148,163,184,0.14)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 22, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f1-lounge-3", "type": "lounge", "x": 972, "y": 576, "width": 140, "height": 88, "rotation": 0, "label": "Sofa", "fillColor": "rgba(139,92,246,0.08)", "strokeColor": "#8B5CF6", "opacity": 1, "cornerRadius": 10, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f1-plant-1", "type": "plant", "x": 1100, "y": 240, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f1-plant-2", "type": "plant", "x": 262, "y": 652, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f1-plant-3", "type": "plant", "x": 378, "y": 652, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f1-plant-4", "type": "plant", "x": 506, "y": 718, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f1-plant-5", "type": "plant", "x": 674, "y": 718, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f1-plant-6", "type": "plant", "x": 1100, "y": 456, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f1-lift-lobby", "type": "label", "x": 64, "y": 362, "width": 156, "height": 30, "rotation": 0, "label": "Sảnh thang máy", "fillColor": "transparent", "strokeColor": "transparent", "opacity": 1, "cornerRadius": 4, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f1-label-6", "type": "label", "x": 530, "y": 582, "width": 140, "height": 30, "rotation": 0, "label": "Sảnh chính", "fillColor": "transparent", "strokeColor": "transparent", "opacity": 1, "cornerRadius": 4, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f1-ws-mr-102", "type": "meeting_room", "x": 256, "y": 68, "width": 428, "height": 246, "rotation": 0, "label": "MR-102", "fillColor": "rgba(59,130,246,0.08)", "strokeColor": "#3B82F6", "opacity": 1, "cornerRadius": 10, "workspaceId": "c2010003-0000-0000-0000-000000000003", "locked": false, "visible": true, "sublabel": "Phòng họp Sáng Tạo", "seatCount": 12 },
+    { "id": "el-b2f1-ws-fl-101", "type": "desk", "x": 744, "y": 84, "width": 180, "height": 120, "rotation": 0, "label": "FL-101", "fillColor": "rgba(34,197,94,0.10)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 6, "workspaceId": "c2010001-0000-0000-0000-000000000001", "locked": false, "visible": true, "sublabel": "Creative Pod", "seatCount": 2 },
+    { "id": "el-b2f1-ws-fl-102", "type": "desk", "x": 948, "y": 84, "width": 180, "height": 120, "rotation": 0, "label": "FL-102", "fillColor": "rgba(34,197,94,0.10)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 6, "workspaceId": "c2010002-0000-0000-0000-000000000002", "locked": false, "visible": true, "sublabel": "Creative Pod", "seatCount": 2 }
+  ]
+}'::jsonb,
+    updated_at = now()
+WHERE id = 'f2010000-0000-0000-0000-000000000001'::uuid;
+
+-- Tầng 2 - Team Studios & Brainstorm Hub
+UPDATE floors
+SET layout_json = '{
+  "version": 1,
+  "canvas": { "width": 1200, "height": 800, "gridSize": 20, "backgroundColor": "#f8fafc" },
+  "elements": [
+    { "id": "el-b2f2-corridor", "type": "label", "x": 52, "y": 338, "width": 1096, "height": 84, "rotation": 0, "label": "", "fillColor": "rgba(148,163,184,0.10)", "strokeColor": "transparent", "opacity": 1, "cornerRadius": 0, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f2-wall-n", "type": "wall", "x": 40, "y": 40, "width": 1120, "height": 12, "rotation": 0, "label": "Tường Bắc", "fillColor": "#64748B", "strokeColor": "#475569", "opacity": 1, "cornerRadius": 2, "workspaceId": null, "locked": true, "visible": true },
+    { "id": "el-b2f2-wall-s", "type": "wall", "x": 40, "y": 760, "width": 1120, "height": 12, "rotation": 0, "label": "Tường Nam", "fillColor": "#64748B", "strokeColor": "#475569", "opacity": 1, "cornerRadius": 2, "workspaceId": null, "locked": true, "visible": true },
+    { "id": "el-b2f2-wall-w", "type": "wall", "x": 40, "y": 40, "width": 12, "height": 732, "rotation": 0, "label": "Tường Tây", "fillColor": "#64748B", "strokeColor": "#475569", "opacity": 1, "cornerRadius": 2, "workspaceId": null, "locked": true, "visible": true },
+    { "id": "el-b2f2-wall-e", "type": "wall", "x": 1148, "y": 40, "width": 12, "height": 732, "rotation": 0, "label": "Tường Đông", "fillColor": "#64748B", "strokeColor": "#475569", "opacity": 1, "cornerRadius": 2, "workspaceId": null, "locked": true, "visible": true },
+    { "id": "el-b2f2-window-1", "type": "window", "x": 270, "y": 40, "width": 270, "height": 12, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f2-window-2", "type": "window", "x": 590, "y": 40, "width": 280, "height": 12, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f2-window-3", "type": "window", "x": 920, "y": 40, "width": 200, "height": 12, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f2-window-4", "type": "window", "x": 270, "y": 760, "width": 410, "height": 12, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f2-window-5", "type": "window", "x": 740, "y": 760, "width": 380, "height": 12, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f2-window-6", "type": "window", "x": 1148, "y": 90, "width": 12, "height": 210, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f2-window-7", "type": "window", "x": 1148, "y": 470, "width": 12, "height": 260, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f2-wall-1", "type": "wall", "x": 232, "y": 52, "width": 8, "height": 286, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f2-wall-2", "type": "wall", "x": 232, "y": 422, "width": 8, "height": 338, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f2-wall-3", "type": "wall", "x": 52, "y": 422, "width": 92, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f2-wall-4", "type": "wall", "x": 200, "y": 422, "width": 32, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f2-window-8", "type": "window", "x": 560, "y": 52, "width": 8, "height": 278, "rotation": 0, "label": "Vách kính", "fillColor": "#E0F2FE", "strokeColor": "#7DD3FC", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f2-window-9", "type": "window", "x": 888, "y": 52, "width": 8, "height": 278, "rotation": 0, "label": "Vách kính", "fillColor": "#E0F2FE", "strokeColor": "#7DD3FC", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f2-window-10", "type": "window", "x": 240, "y": 330, "width": 240, "height": 8, "rotation": 0, "label": "Vách kính", "fillColor": "#E0F2FE", "strokeColor": "#7DD3FC", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f2-window-11", "type": "window", "x": 536, "y": 330, "width": 272, "height": 8, "rotation": 0, "label": "Vách kính", "fillColor": "#E0F2FE", "strokeColor": "#7DD3FC", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f2-window-12", "type": "window", "x": 864, "y": 330, "width": 96, "height": 8, "rotation": 0, "label": "Vách kính", "fillColor": "#E0F2FE", "strokeColor": "#7DD3FC", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f2-window-13", "type": "window", "x": 1060, "y": 330, "width": 88, "height": 8, "rotation": 0, "label": "Vách kính", "fillColor": "#E0F2FE", "strokeColor": "#7DD3FC", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f2-wall-5", "type": "wall", "x": 240, "y": 422, "width": 360, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f2-wall-6", "type": "wall", "x": 656, "y": 422, "width": 104, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f2-wall-7", "type": "wall", "x": 900, "y": 422, "width": 248, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f2-wall-8", "type": "wall", "x": 700, "y": 430, "width": 8, "height": 330, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f2-door-1", "type": "door", "x": 144, "y": 422, "width": 56, "height": 8, "rotation": 0, "label": "Cửa khu vệ sinh", "fillColor": "#FEF3C7", "strokeColor": "#D97706", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f2-door-2", "type": "door", "x": 480, "y": 330, "width": 56, "height": 8, "rotation": 0, "label": "Cửa BS-201", "fillColor": "#FEF3C7", "strokeColor": "#D97706", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f2-door-3", "type": "door", "x": 808, "y": 330, "width": 56, "height": 8, "rotation": 0, "label": "Cửa BS-202", "fillColor": "#FEF3C7", "strokeColor": "#D97706", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f2-door-4", "type": "door", "x": 600, "y": 422, "width": 56, "height": 8, "rotation": 0, "label": "Cửa Team Studio", "fillColor": "#FEF3C7", "strokeColor": "#D97706", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f2-stair", "type": "staircase", "x": 68, "y": 68, "width": 148, "height": 150, "rotation": 0, "label": "Cầu thang bộ", "fillColor": "rgba(148,163,184,0.10)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f2-elev-a", "type": "elevator", "x": 68, "y": 236, "width": 68, "height": 84, "rotation": 0, "label": "Thang máy A", "fillColor": "rgba(100,116,139,0.12)", "strokeColor": "#64748B", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f2-elev-b", "type": "elevator", "x": 148, "y": 236, "width": 68, "height": 84, "rotation": 0, "label": "Thang máy B", "fillColor": "rgba(100,116,139,0.12)", "strokeColor": "#64748B", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f2-wc-f", "type": "restroom", "x": 68, "y": 450, "width": 148, "height": 92, "rotation": 0, "label": "WC Nữ", "fillColor": "rgba(148,163,184,0.12)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f2-wc-m", "type": "restroom", "x": 68, "y": 560, "width": 148, "height": 92, "rotation": 0, "label": "WC Nam", "fillColor": "rgba(148,163,184,0.12)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f2-tech", "type": "label", "x": 68, "y": 670, "width": 148, "height": 74, "rotation": 0, "label": "Phòng kỹ thuật", "fillColor": "rgba(148,163,184,0.10)", "strokeColor": "#CBD5E1", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f2-lounge-1", "type": "lounge", "x": 916, "y": 76, "width": 212, "height": 96, "rotation": 0, "label": "Góc ý tưởng", "fillColor": "rgba(139,92,246,0.08)", "strokeColor": "#8B5CF6", "opacity": 1, "cornerRadius": 10, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f2-label-1", "type": "label", "x": 916, "y": 200, "width": 212, "height": 36, "rotation": 0, "label": "Tường bảng trắng", "fillColor": "rgba(148,163,184,0.14)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 8, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f2-kitchen-1", "type": "kitchen", "x": 728, "y": 456, "width": 200, "height": 90, "rotation": 0, "label": "Pantry", "fillColor": "rgba(245,158,11,0.10)", "strokeColor": "#F59E0B", "opacity": 1, "cornerRadius": 8, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f2-lounge-2", "type": "lounge", "x": 960, "y": 456, "width": 168, "height": 90, "rotation": 0, "label": "Khu nghỉ", "fillColor": "rgba(139,92,246,0.08)", "strokeColor": "#8B5CF6", "opacity": 1, "cornerRadius": 10, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f2-label-3", "type": "label", "x": 736, "y": 590, "width": 192, "height": 64, "rotation": 0, "label": "Bàn ăn chung", "fillColor": "rgba(148,163,184,0.14)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 8, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f2-label-4", "type": "label", "x": 960, "y": 590, "width": 168, "height": 120, "rotation": 0, "label": "Phòng nghỉ trưa", "fillColor": "rgba(148,163,184,0.10)", "strokeColor": "#CBD5E1", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f2-plant-1", "type": "plant", "x": 920, "y": 280, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f2-plant-2", "type": "plant", "x": 1096, "y": 280, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f2-plant-3", "type": "plant", "x": 730, "y": 706, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f2-plant-4", "type": "plant", "x": 900, "y": 706, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f2-lift-lobby", "type": "label", "x": 64, "y": 362, "width": 156, "height": 30, "rotation": 0, "label": "Sảnh thang máy", "fillColor": "transparent", "strokeColor": "transparent", "opacity": 1, "cornerRadius": 4, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f2-label-2", "type": "label", "x": 580, "y": 364, "width": 200, "height": 30, "rotation": 0, "label": "Hành lang", "fillColor": "transparent", "strokeColor": "transparent", "opacity": 1, "cornerRadius": 4, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f2-ws-bs-201", "type": "meeting_room", "x": 256, "y": 68, "width": 288, "height": 246, "rotation": 0, "label": "BS-201", "fillColor": "rgba(59,130,246,0.08)", "strokeColor": "#3B82F6", "opacity": 1, "cornerRadius": 10, "workspaceId": "c2020001-0000-0000-0000-000000000001", "locked": false, "visible": true, "sublabel": "Brainstorm Room 1", "seatCount": 6 },
+    { "id": "el-b2f2-ws-bs-202", "type": "meeting_room", "x": 584, "y": 68, "width": 288, "height": 246, "rotation": 0, "label": "BS-202", "fillColor": "rgba(59,130,246,0.08)", "strokeColor": "#3B82F6", "opacity": 1, "cornerRadius": 10, "workspaceId": "c2020002-0000-0000-0000-000000000002", "locked": false, "visible": true, "sublabel": "Brainstorm Room 2", "seatCount": 6 },
+    { "id": "el-b2f2-ws-ts-201", "type": "private_office", "x": 256, "y": 446, "width": 428, "height": 298, "rotation": 0, "label": "TS-201", "fillColor": "rgba(59,130,246,0.08)", "strokeColor": "#3B82F6", "opacity": 1, "cornerRadius": 8, "workspaceId": "c2020003-0000-0000-0000-000000000003", "locked": false, "visible": true, "sublabel": "Team Studio · 8 chỗ", "seatCount": 8 }
+  ]
+}'::jsonb,
+    updated_at = now()
+WHERE id = 'f2020000-0000-0000-0000-000000000002'::uuid;
+
+-- Tầng 3 - Corporate Enterprise Suites
+UPDATE floors
+SET layout_json = '{
+  "version": 1,
+  "canvas": { "width": 1200, "height": 800, "gridSize": 20, "backgroundColor": "#f8fafc" },
+  "elements": [
+    { "id": "el-b2f3-corridor", "type": "label", "x": 52, "y": 338, "width": 1096, "height": 84, "rotation": 0, "label": "", "fillColor": "rgba(148,163,184,0.10)", "strokeColor": "transparent", "opacity": 1, "cornerRadius": 0, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f3-wall-n", "type": "wall", "x": 40, "y": 40, "width": 1120, "height": 12, "rotation": 0, "label": "Tường Bắc", "fillColor": "#64748B", "strokeColor": "#475569", "opacity": 1, "cornerRadius": 2, "workspaceId": null, "locked": true, "visible": true },
+    { "id": "el-b2f3-wall-s", "type": "wall", "x": 40, "y": 760, "width": 1120, "height": 12, "rotation": 0, "label": "Tường Nam", "fillColor": "#64748B", "strokeColor": "#475569", "opacity": 1, "cornerRadius": 2, "workspaceId": null, "locked": true, "visible": true },
+    { "id": "el-b2f3-wall-w", "type": "wall", "x": 40, "y": 40, "width": 12, "height": 732, "rotation": 0, "label": "Tường Tây", "fillColor": "#64748B", "strokeColor": "#475569", "opacity": 1, "cornerRadius": 2, "workspaceId": null, "locked": true, "visible": true },
+    { "id": "el-b2f3-wall-e", "type": "wall", "x": 1148, "y": 40, "width": 12, "height": 732, "rotation": 0, "label": "Tường Đông", "fillColor": "#64748B", "strokeColor": "#475569", "opacity": 1, "cornerRadius": 2, "workspaceId": null, "locked": true, "visible": true },
+    { "id": "el-b2f3-window-1", "type": "window", "x": 270, "y": 40, "width": 460, "height": 12, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f3-window-2", "type": "window", "x": 790, "y": 40, "width": 330, "height": 12, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f3-window-3", "type": "window", "x": 270, "y": 760, "width": 460, "height": 12, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f3-window-4", "type": "window", "x": 790, "y": 760, "width": 330, "height": 12, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f3-window-5", "type": "window", "x": 1148, "y": 90, "width": 12, "height": 210, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f3-window-6", "type": "window", "x": 1148, "y": 470, "width": 12, "height": 260, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f3-wall-1", "type": "wall", "x": 232, "y": 52, "width": 8, "height": 286, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f3-wall-2", "type": "wall", "x": 232, "y": 422, "width": 8, "height": 338, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f3-wall-3", "type": "wall", "x": 52, "y": 422, "width": 92, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f3-wall-4", "type": "wall", "x": 200, "y": 422, "width": 32, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f3-wall-5", "type": "wall", "x": 760, "y": 52, "width": 8, "height": 278, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f3-wall-6", "type": "wall", "x": 240, "y": 330, "width": 400, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f3-wall-7", "type": "wall", "x": 704, "y": 330, "width": 176, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f3-wall-8", "type": "wall", "x": 1000, "y": 330, "width": 148, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f3-wall-9", "type": "wall", "x": 240, "y": 422, "width": 400, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f3-wall-10", "type": "wall", "x": 704, "y": 422, "width": 136, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f3-wall-11", "type": "wall", "x": 1000, "y": 422, "width": 148, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f3-wall-12", "type": "wall", "x": 760, "y": 430, "width": 8, "height": 330, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f3-door-1", "type": "door", "x": 144, "y": 422, "width": 56, "height": 8, "rotation": 0, "label": "Cửa khu vệ sinh", "fillColor": "#FEF3C7", "strokeColor": "#D97706", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f3-door-2", "type": "door", "x": 640, "y": 330, "width": 64, "height": 8, "rotation": 0, "label": "Cửa Enterprise Suite A", "fillColor": "#FEF3C7", "strokeColor": "#D97706", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f3-door-3", "type": "door", "x": 640, "y": 422, "width": 64, "height": 8, "rotation": 0, "label": "Cửa Enterprise Suite B", "fillColor": "#FEF3C7", "strokeColor": "#D97706", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f3-stair", "type": "staircase", "x": 68, "y": 68, "width": 148, "height": 150, "rotation": 0, "label": "Cầu thang bộ", "fillColor": "rgba(148,163,184,0.10)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f3-elev-a", "type": "elevator", "x": 68, "y": 236, "width": 68, "height": 84, "rotation": 0, "label": "Thang máy A", "fillColor": "rgba(100,116,139,0.12)", "strokeColor": "#64748B", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f3-elev-b", "type": "elevator", "x": 148, "y": 236, "width": 68, "height": 84, "rotation": 0, "label": "Thang máy B", "fillColor": "rgba(100,116,139,0.12)", "strokeColor": "#64748B", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f3-wc-f", "type": "restroom", "x": 68, "y": 450, "width": 148, "height": 92, "rotation": 0, "label": "WC Nữ", "fillColor": "rgba(148,163,184,0.12)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f3-wc-m", "type": "restroom", "x": 68, "y": 560, "width": 148, "height": 92, "rotation": 0, "label": "WC Nam", "fillColor": "rgba(148,163,184,0.12)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f3-tech", "type": "label", "x": 68, "y": 670, "width": 148, "height": 74, "rotation": 0, "label": "Phòng kỹ thuật", "fillColor": "rgba(148,163,184,0.10)", "strokeColor": "#CBD5E1", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f3-lounge-1", "type": "lounge", "x": 788, "y": 76, "width": 200, "height": 100, "rotation": 0, "label": "Executive Lounge", "fillColor": "rgba(139,92,246,0.08)", "strokeColor": "#8B5CF6", "opacity": 1, "cornerRadius": 10, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f3-kitchen-1", "type": "kitchen", "x": 1008, "y": 76, "width": 124, "height": 90, "rotation": 0, "label": "Mini bar", "fillColor": "rgba(245,158,11,0.10)", "strokeColor": "#F59E0B", "opacity": 1, "cornerRadius": 8, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f3-label-1", "type": "label", "x": 820, "y": 204, "width": 140, "height": 50, "rotation": 0, "label": "Bàn trà", "fillColor": "rgba(148,163,184,0.14)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 8, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f3-reception-1", "type": "reception", "x": 796, "y": 456, "width": 200, "height": 84, "rotation": 0, "label": "Lễ tân doanh nghiệp", "fillColor": "rgba(20,184,166,0.10)", "strokeColor": "#14B8A6", "opacity": 1, "cornerRadius": 8, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f3-lounge-2", "type": "lounge", "x": 796, "y": 588, "width": 140, "height": 88, "rotation": 0, "label": "Sofa chờ", "fillColor": "rgba(139,92,246,0.08)", "strokeColor": "#8B5CF6", "opacity": 1, "cornerRadius": 10, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f3-kitchen-2", "type": "kitchen", "x": 968, "y": 588, "width": 160, "height": 88, "rotation": 0, "label": "Pantry", "fillColor": "rgba(245,158,11,0.10)", "strokeColor": "#F59E0B", "opacity": 1, "cornerRadius": 8, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f3-plant-1", "type": "plant", "x": 790, "y": 280, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f3-plant-2", "type": "plant", "x": 1096, "y": 280, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f3-plant-3", "type": "plant", "x": 790, "y": 706, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f3-plant-4", "type": "plant", "x": 1096, "y": 706, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f3-plant-5", "type": "plant", "x": 1096, "y": 470, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f3-lift-lobby", "type": "label", "x": 64, "y": 362, "width": 156, "height": 30, "rotation": 0, "label": "Sảnh thang máy", "fillColor": "transparent", "strokeColor": "transparent", "opacity": 1, "cornerRadius": 4, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f3-label-2", "type": "label", "x": 560, "y": 364, "width": 200, "height": 30, "rotation": 0, "label": "Hành lang", "fillColor": "transparent", "strokeColor": "transparent", "opacity": 1, "cornerRadius": 4, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b2f3-ws-es-301", "type": "private_office", "x": 256, "y": 68, "width": 488, "height": 246, "rotation": 0, "label": "ES-301", "fillColor": "rgba(99,102,241,0.10)", "strokeColor": "#6366F1", "opacity": 1, "cornerRadius": 10, "workspaceId": "c2030001-0000-0000-0000-000000000001", "locked": false, "visible": true, "sublabel": "Enterprise Suite A · 15 chỗ", "seatCount": 15 },
+    { "id": "el-b2f3-ws-es-302", "type": "private_office", "x": 256, "y": 446, "width": 488, "height": 298, "rotation": 0, "label": "ES-302", "fillColor": "rgba(99,102,241,0.10)", "strokeColor": "#6366F1", "opacity": 1, "cornerRadius": 10, "workspaceId": "c2030002-0000-0000-0000-000000000002", "locked": false, "visible": true, "sublabel": "Enterprise Suite B · 15 chỗ", "seatCount": 15 }
+  ]
+}'::jsonb,
+    updated_at = now()
+WHERE id = 'f2030000-0000-0000-0000-000000000003'::uuid;
+
+-- =============================================================================
+-- BRANCH 3: CoSpace Cầu Giấy — b3000000-0000-0000-0000-000000000003 — lõi thang giữa phía Bắc
+-- =============================================================================
+
+-- Tầng 1 - Tech Community & Event Space
+UPDATE floors
+SET layout_json = '{
+  "version": 1,
+  "canvas": { "width": 1200, "height": 800, "gridSize": 20, "backgroundColor": "#f8fafc" },
+  "elements": [
+    { "id": "el-b3f1-corridor", "type": "label", "x": 52, "y": 400, "width": 1096, "height": 70, "rotation": 0, "label": "", "fillColor": "rgba(148,163,184,0.10)", "strokeColor": "transparent", "opacity": 1, "cornerRadius": 0, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f1-label-1", "type": "label", "x": 60, "y": 60, "width": 404, "height": 324, "rotation": 0, "label": "Khu bàn Tech", "fillColor": "rgba(34,197,94,0.06)", "strokeColor": "rgba(34,197,94,0.30)", "opacity": 1, "cornerRadius": 12, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f1-label-2", "type": "label", "x": 736, "y": 60, "width": 404, "height": 324, "rotation": 0, "label": "Community lounge", "fillColor": "rgba(139,92,246,0.06)", "strokeColor": "rgba(139,92,246,0.30)", "opacity": 1, "cornerRadius": 12, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f1-wall-n", "type": "wall", "x": 40, "y": 40, "width": 1120, "height": 12, "rotation": 0, "label": "Tường Bắc", "fillColor": "#64748B", "strokeColor": "#475569", "opacity": 1, "cornerRadius": 2, "workspaceId": null, "locked": true, "visible": true },
+    { "id": "el-b3f1-wall-s", "type": "wall", "x": 40, "y": 760, "width": 1120, "height": 12, "rotation": 0, "label": "Tường Nam", "fillColor": "#64748B", "strokeColor": "#475569", "opacity": 1, "cornerRadius": 2, "workspaceId": null, "locked": true, "visible": true },
+    { "id": "el-b3f1-wall-w", "type": "wall", "x": 40, "y": 40, "width": 12, "height": 732, "rotation": 0, "label": "Tường Tây", "fillColor": "#64748B", "strokeColor": "#475569", "opacity": 1, "cornerRadius": 2, "workspaceId": null, "locked": true, "visible": true },
+    { "id": "el-b3f1-wall-e", "type": "wall", "x": 1148, "y": 40, "width": 12, "height": 732, "rotation": 0, "label": "Tường Đông", "fillColor": "#64748B", "strokeColor": "#475569", "opacity": 1, "cornerRadius": 2, "workspaceId": null, "locked": true, "visible": true },
+    { "id": "el-b3f1-window-1", "type": "window", "x": 80, "y": 40, "width": 360, "height": 12, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f1-window-2", "type": "window", "x": 760, "y": 40, "width": 360, "height": 12, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f1-window-3", "type": "window", "x": 40, "y": 90, "width": 12, "height": 280, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f1-window-4", "type": "window", "x": 40, "y": 500, "width": 12, "height": 230, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f1-window-5", "type": "window", "x": 1148, "y": 90, "width": 12, "height": 280, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f1-window-6", "type": "window", "x": 1148, "y": 500, "width": 12, "height": 230, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f1-window-7", "type": "window", "x": 330, "y": 760, "width": 550, "height": 12, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f1-window-8", "type": "window", "x": 940, "y": 760, "width": 180, "height": 12, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f1-entrance", "type": "door", "x": 110, "y": 760, "width": 120, "height": 12, "rotation": 0, "label": "Cửa chính", "fillColor": "#FEF3C7", "strokeColor": "#D97706", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f1-wall-1", "type": "wall", "x": 472, "y": 52, "width": 8, "height": 340, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f1-wall-2", "type": "wall", "x": 720, "y": 52, "width": 8, "height": 340, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f1-wall-3", "type": "wall", "x": 480, "y": 300, "width": 60, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f1-wall-4", "type": "wall", "x": 660, "y": 300, "width": 60, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f1-wall-5", "type": "wall", "x": 52, "y": 470, "width": 58, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f1-wall-6", "type": "wall", "x": 250, "y": 470, "width": 310, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f1-wall-7", "type": "wall", "x": 640, "y": 470, "width": 320, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f1-wall-8", "type": "wall", "x": 1016, "y": 470, "width": 132, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f1-wall-9", "type": "wall", "x": 292, "y": 478, "width": 8, "height": 282, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f1-wall-10", "type": "wall", "x": 908, "y": 478, "width": 8, "height": 282, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f1-door-1", "type": "door", "x": 560, "y": 470, "width": 80, "height": 8, "rotation": 0, "label": "Cửa hội trường", "fillColor": "#FEF3C7", "strokeColor": "#D97706", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f1-door-2", "type": "door", "x": 960, "y": 470, "width": 56, "height": 8, "rotation": 0, "label": "Cửa kho", "fillColor": "#FEF3C7", "strokeColor": "#D97706", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f1-stair", "type": "staircase", "x": 488, "y": 64, "width": 100, "height": 150, "rotation": 0, "label": "Cầu thang bộ", "fillColor": "rgba(148,163,184,0.10)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f1-wc-f", "type": "restroom", "x": 612, "y": 64, "width": 100, "height": 72, "rotation": 0, "label": "WC Nữ", "fillColor": "rgba(148,163,184,0.12)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f1-wc-m", "type": "restroom", "x": 612, "y": 144, "width": 100, "height": 72, "rotation": 0, "label": "WC Nam", "fillColor": "rgba(148,163,184,0.12)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f1-elev-a", "type": "elevator", "x": 496, "y": 222, "width": 92, "height": 70, "rotation": 0, "label": "Thang máy A", "fillColor": "rgba(100,116,139,0.12)", "strokeColor": "#64748B", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f1-elev-b", "type": "elevator", "x": 612, "y": 222, "width": 92, "height": 70, "rotation": 0, "label": "Thang máy B", "fillColor": "rgba(100,116,139,0.12)", "strokeColor": "#64748B", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f1-lounge-1", "type": "lounge", "x": 760, "y": 84, "width": 200, "height": 100, "rotation": 0, "label": "Sofa cộng đồng", "fillColor": "rgba(139,92,246,0.08)", "strokeColor": "#8B5CF6", "opacity": 1, "cornerRadius": 10, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f1-kitchen-1", "type": "kitchen", "x": 984, "y": 84, "width": 140, "height": 90, "rotation": 0, "label": "Coffee bar", "fillColor": "rgba(245,158,11,0.10)", "strokeColor": "#F59E0B", "opacity": 1, "cornerRadius": 8, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f1-label-3", "type": "label", "x": 760, "y": 214, "width": 200, "height": 40, "rotation": 0, "label": "Bảng tin cộng đồng", "fillColor": "rgba(148,163,184,0.14)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 8, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f1-label-4", "type": "label", "x": 996, "y": 208, "width": 44, "height": 44, "rotation": 0, "label": "", "fillColor": "rgba(148,163,184,0.14)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 22, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f1-label-5", "type": "label", "x": 1068, "y": 208, "width": 44, "height": 44, "rotation": 0, "label": "", "fillColor": "rgba(148,163,184,0.14)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 22, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f1-label-6", "type": "label", "x": 996, "y": 280, "width": 44, "height": 44, "rotation": 0, "label": "", "fillColor": "rgba(148,163,184,0.14)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 22, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f1-label-7", "type": "label", "x": 1068, "y": 280, "width": 44, "height": 44, "rotation": 0, "label": "", "fillColor": "rgba(148,163,184,0.14)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 22, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f1-reception-1", "type": "reception", "x": 72, "y": 498, "width": 200, "height": 84, "rotation": 0, "label": "Lễ tân CoSpace", "fillColor": "rgba(20,184,166,0.10)", "strokeColor": "#14B8A6", "opacity": 1, "cornerRadius": 8, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f1-label-10", "type": "label", "x": 932, "y": 494, "width": 200, "height": 110, "rotation": 0, "label": "Kho thiết bị sự kiện", "fillColor": "rgba(148,163,184,0.10)", "strokeColor": "#CBD5E1", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f1-lounge-2", "type": "lounge", "x": 932, "y": 632, "width": 200, "height": 92, "rotation": 0, "label": "Phòng chờ diễn giả", "fillColor": "rgba(139,92,246,0.08)", "strokeColor": "#8B5CF6", "opacity": 1, "cornerRadius": 10, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f1-plant-1", "type": "plant", "x": 764, "y": 300, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f1-plant-2", "type": "plant", "x": 930, "y": 300, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f1-plant-3", "type": "plant", "x": 64, "y": 716, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f1-plant-4", "type": "plant", "x": 252, "y": 716, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f1-lift-lobby", "type": "label", "x": 520, "y": 330, "width": 160, "height": 30, "rotation": 0, "label": "Sảnh thang máy", "fillColor": "transparent", "strokeColor": "transparent", "opacity": 1, "cornerRadius": 4, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f1-label-8", "type": "label", "x": 220, "y": 420, "width": 160, "height": 30, "rotation": 0, "label": "Hành lang", "fillColor": "transparent", "strokeColor": "transparent", "opacity": 1, "cornerRadius": 4, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f1-label-9", "type": "label", "x": 100, "y": 610, "width": 140, "height": 30, "rotation": 0, "label": "Sảnh chính", "fillColor": "transparent", "strokeColor": "transparent", "opacity": 1, "cornerRadius": 4, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f1-ws-ta-101", "type": "desk", "x": 88, "y": 84, "width": 348, "height": 120, "rotation": 0, "label": "TA-101", "fillColor": "rgba(34,197,94,0.10)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 6, "workspaceId": "c3010001-0000-0000-0000-000000000001", "locked": false, "visible": true, "sublabel": "Dãy bàn Tech-A", "seatCount": 6 },
+    { "id": "el-b3f1-ws-tb-102", "type": "desk", "x": 88, "y": 236, "width": 348, "height": 120, "rotation": 0, "label": "TB-102", "fillColor": "rgba(34,197,94,0.10)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 6, "workspaceId": "c3010002-0000-0000-0000-000000000002", "locked": false, "visible": true, "sublabel": "Dãy bàn Tech-B", "seatCount": 6 },
+    { "id": "el-b3f1-ws-ev-101", "type": "meeting_room", "x": 316, "y": 494, "width": 576, "height": 250, "rotation": 0, "label": "EV-101", "fillColor": "rgba(244,63,94,0.06)", "strokeColor": "#F43F5E", "opacity": 1, "cornerRadius": 12, "workspaceId": "c3010003-0000-0000-0000-000000000003", "locked": false, "visible": true, "sublabel": "Hội trường Event Room", "seatCount": 30 }
+  ]
+}'::jsonb,
+    updated_at = now()
+WHERE id = 'f3010000-0000-0000-0000-000000000001'::uuid;
+
+-- Tầng 2 - Scale-up Workstations & Boardrooms
+UPDATE floors
+SET layout_json = '{
+  "version": 1,
+  "canvas": { "width": 1200, "height": 800, "gridSize": 20, "backgroundColor": "#f8fafc" },
+  "elements": [
+    { "id": "el-b3f2-corridor", "type": "label", "x": 52, "y": 400, "width": 1096, "height": 70, "rotation": 0, "label": "", "fillColor": "rgba(148,163,184,0.10)", "strokeColor": "transparent", "opacity": 1, "cornerRadius": 0, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f2-wall-n", "type": "wall", "x": 40, "y": 40, "width": 1120, "height": 12, "rotation": 0, "label": "Tường Bắc", "fillColor": "#64748B", "strokeColor": "#475569", "opacity": 1, "cornerRadius": 2, "workspaceId": null, "locked": true, "visible": true },
+    { "id": "el-b3f2-wall-s", "type": "wall", "x": 40, "y": 760, "width": 1120, "height": 12, "rotation": 0, "label": "Tường Nam", "fillColor": "#64748B", "strokeColor": "#475569", "opacity": 1, "cornerRadius": 2, "workspaceId": null, "locked": true, "visible": true },
+    { "id": "el-b3f2-wall-w", "type": "wall", "x": 40, "y": 40, "width": 12, "height": 732, "rotation": 0, "label": "Tường Tây", "fillColor": "#64748B", "strokeColor": "#475569", "opacity": 1, "cornerRadius": 2, "workspaceId": null, "locked": true, "visible": true },
+    { "id": "el-b3f2-wall-e", "type": "wall", "x": 1148, "y": 40, "width": 12, "height": 732, "rotation": 0, "label": "Tường Đông", "fillColor": "#64748B", "strokeColor": "#475569", "opacity": 1, "cornerRadius": 2, "workspaceId": null, "locked": true, "visible": true },
+    { "id": "el-b3f2-window-1", "type": "window", "x": 80, "y": 40, "width": 360, "height": 12, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f2-window-2", "type": "window", "x": 760, "y": 40, "width": 360, "height": 12, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f2-window-3", "type": "window", "x": 80, "y": 760, "width": 600, "height": 12, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f2-window-4", "type": "window", "x": 740, "y": 760, "width": 380, "height": 12, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f2-window-5", "type": "window", "x": 40, "y": 90, "width": 12, "height": 280, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f2-window-6", "type": "window", "x": 40, "y": 500, "width": 12, "height": 230, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f2-window-7", "type": "window", "x": 1148, "y": 90, "width": 12, "height": 280, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f2-window-8", "type": "window", "x": 1148, "y": 500, "width": 12, "height": 230, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f2-wall-1", "type": "wall", "x": 472, "y": 52, "width": 8, "height": 340, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f2-wall-2", "type": "wall", "x": 720, "y": 52, "width": 8, "height": 340, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f2-wall-3", "type": "wall", "x": 480, "y": 300, "width": 60, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f2-wall-4", "type": "wall", "x": 660, "y": 300, "width": 60, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f2-window-9", "type": "window", "x": 52, "y": 392, "width": 328, "height": 8, "rotation": 0, "label": "Vách kính", "fillColor": "#E0F2FE", "strokeColor": "#7DD3FC", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f2-window-10", "type": "window", "x": 436, "y": 392, "width": 36, "height": 8, "rotation": 0, "label": "Vách kính", "fillColor": "#E0F2FE", "strokeColor": "#7DD3FC", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f2-window-11", "type": "window", "x": 728, "y": 392, "width": 36, "height": 8, "rotation": 0, "label": "Vách kính", "fillColor": "#E0F2FE", "strokeColor": "#7DD3FC", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f2-window-12", "type": "window", "x": 820, "y": 392, "width": 328, "height": 8, "rotation": 0, "label": "Vách kính", "fillColor": "#E0F2FE", "strokeColor": "#7DD3FC", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f2-wall-5", "type": "wall", "x": 52, "y": 470, "width": 508, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f2-wall-6", "type": "wall", "x": 616, "y": 470, "width": 164, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f2-wall-7", "type": "wall", "x": 920, "y": 470, "width": 228, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f2-wall-8", "type": "wall", "x": 700, "y": 478, "width": 8, "height": 282, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f2-door-1", "type": "door", "x": 380, "y": 392, "width": 56, "height": 8, "rotation": 0, "label": "Cửa Boardroom", "fillColor": "#FEF3C7", "strokeColor": "#D97706", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f2-door-2", "type": "door", "x": 764, "y": 392, "width": 56, "height": 8, "rotation": 0, "label": "Cửa phòng họp", "fillColor": "#FEF3C7", "strokeColor": "#D97706", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f2-door-3", "type": "door", "x": 560, "y": 470, "width": 56, "height": 8, "rotation": 0, "label": "Cửa Scale-up Suite", "fillColor": "#FEF3C7", "strokeColor": "#D97706", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f2-stair", "type": "staircase", "x": 488, "y": 64, "width": 100, "height": 150, "rotation": 0, "label": "Cầu thang bộ", "fillColor": "rgba(148,163,184,0.10)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f2-wc-f", "type": "restroom", "x": 612, "y": 64, "width": 100, "height": 72, "rotation": 0, "label": "WC Nữ", "fillColor": "rgba(148,163,184,0.12)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f2-wc-m", "type": "restroom", "x": 612, "y": 144, "width": 100, "height": 72, "rotation": 0, "label": "WC Nam", "fillColor": "rgba(148,163,184,0.12)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f2-elev-a", "type": "elevator", "x": 496, "y": 222, "width": 92, "height": 70, "rotation": 0, "label": "Thang máy A", "fillColor": "rgba(100,116,139,0.12)", "strokeColor": "#64748B", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f2-elev-b", "type": "elevator", "x": 612, "y": 222, "width": 92, "height": 70, "rotation": 0, "label": "Thang máy B", "fillColor": "rgba(100,116,139,0.12)", "strokeColor": "#64748B", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f2-kitchen-1", "type": "kitchen", "x": 728, "y": 496, "width": 200, "height": 90, "rotation": 0, "label": "Pantry", "fillColor": "rgba(245,158,11,0.10)", "strokeColor": "#F59E0B", "opacity": 1, "cornerRadius": 8, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f2-lounge-1", "type": "lounge", "x": 960, "y": 496, "width": 168, "height": 90, "rotation": 0, "label": "Khu nghỉ", "fillColor": "rgba(139,92,246,0.08)", "strokeColor": "#8B5CF6", "opacity": 1, "cornerRadius": 10, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f2-label-2", "type": "label", "x": 736, "y": 620, "width": 192, "height": 60, "rotation": 0, "label": "Bàn ăn chung", "fillColor": "rgba(148,163,184,0.14)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 8, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f2-label-3", "type": "label", "x": 960, "y": 620, "width": 168, "height": 60, "rotation": 0, "label": "Tủ locker", "fillColor": "rgba(148,163,184,0.14)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 8, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f2-plant-1", "type": "plant", "x": 730, "y": 712, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f2-plant-2", "type": "plant", "x": 1100, "y": 712, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f2-lift-lobby", "type": "label", "x": 520, "y": 330, "width": 160, "height": 30, "rotation": 0, "label": "Sảnh thang máy", "fillColor": "transparent", "strokeColor": "transparent", "opacity": 1, "cornerRadius": 4, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f2-label-1", "type": "label", "x": 860, "y": 420, "width": 200, "height": 30, "rotation": 0, "label": "Hành lang", "fillColor": "transparent", "strokeColor": "transparent", "opacity": 1, "cornerRadius": 4, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f2-ws-br-201", "type": "meeting_room", "x": 68, "y": 68, "width": 388, "height": 308, "rotation": 0, "label": "BR-201", "fillColor": "rgba(99,102,241,0.10)", "strokeColor": "#6366F1", "opacity": 1, "cornerRadius": 10, "workspaceId": "c3020001-0000-0000-0000-000000000001", "locked": false, "visible": true, "sublabel": "Boardroom VIP", "seatCount": 10 },
+    { "id": "el-b3f2-ws-mr-202", "type": "meeting_room", "x": 744, "y": 68, "width": 388, "height": 308, "rotation": 0, "label": "MR-202", "fillColor": "rgba(59,130,246,0.08)", "strokeColor": "#3B82F6", "opacity": 1, "cornerRadius": 10, "workspaceId": "c3020002-0000-0000-0000-000000000002", "locked": false, "visible": true, "sublabel": "Phòng họp Team", "seatCount": 8 },
+    { "id": "el-b3f2-ws-su-201", "type": "private_office", "x": 68, "y": 494, "width": 616, "height": 250, "rotation": 0, "label": "SU-201", "fillColor": "rgba(59,130,246,0.08)", "strokeColor": "#3B82F6", "opacity": 1, "cornerRadius": 8, "workspaceId": "c3020003-0000-0000-0000-000000000002", "locked": false, "visible": true, "sublabel": "Scale-up Office Suite · 16 chỗ", "seatCount": 16 }
+  ]
+}'::jsonb,
+    updated_at = now()
+WHERE id = 'f3020000-0000-0000-0000-000000000002'::uuid;
+
+-- Tầng 3 - Directors Penthouse Suites
+UPDATE floors
+SET layout_json = '{
+  "version": 1,
+  "canvas": { "width": 1200, "height": 800, "gridSize": 20, "backgroundColor": "#f8fafc" },
+  "elements": [
+    { "id": "el-b3f3-corridor", "type": "label", "x": 52, "y": 400, "width": 1096, "height": 70, "rotation": 0, "label": "", "fillColor": "rgba(148,163,184,0.10)", "strokeColor": "transparent", "opacity": 1, "cornerRadius": 0, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-label-3", "type": "label", "x": 52, "y": 478, "width": 1096, "height": 282, "rotation": 0, "label": "Sân thượng", "fillColor": "rgba(34,197,94,0.07)", "strokeColor": "transparent", "opacity": 1, "cornerRadius": 0, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-wall-n", "type": "wall", "x": 40, "y": 40, "width": 1120, "height": 12, "rotation": 0, "label": "Tường Bắc", "fillColor": "#64748B", "strokeColor": "#475569", "opacity": 1, "cornerRadius": 2, "workspaceId": null, "locked": true, "visible": true },
+    { "id": "el-b3f3-wall-s", "type": "wall", "x": 40, "y": 760, "width": 1120, "height": 12, "rotation": 0, "label": "Tường Nam", "fillColor": "#64748B", "strokeColor": "#475569", "opacity": 1, "cornerRadius": 2, "workspaceId": null, "locked": true, "visible": true },
+    { "id": "el-b3f3-wall-w", "type": "wall", "x": 40, "y": 40, "width": 12, "height": 732, "rotation": 0, "label": "Tường Tây", "fillColor": "#64748B", "strokeColor": "#475569", "opacity": 1, "cornerRadius": 2, "workspaceId": null, "locked": true, "visible": true },
+    { "id": "el-b3f3-wall-e", "type": "wall", "x": 1148, "y": 40, "width": 12, "height": 732, "rotation": 0, "label": "Tường Đông", "fillColor": "#64748B", "strokeColor": "#475569", "opacity": 1, "cornerRadius": 2, "workspaceId": null, "locked": true, "visible": true },
+    { "id": "el-b3f3-window-1", "type": "window", "x": 80, "y": 40, "width": 360, "height": 12, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-window-2", "type": "window", "x": 760, "y": 40, "width": 360, "height": 12, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-window-3", "type": "window", "x": 60, "y": 760, "width": 1080, "height": 12, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-window-4", "type": "window", "x": 40, "y": 90, "width": 12, "height": 280, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-window-5", "type": "window", "x": 40, "y": 500, "width": 12, "height": 240, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-window-6", "type": "window", "x": 1148, "y": 90, "width": 12, "height": 280, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-window-7", "type": "window", "x": 1148, "y": 500, "width": 12, "height": 240, "rotation": 0, "label": "Cửa kính", "fillColor": "#E0F2FE", "strokeColor": "#38BDF8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-wall-1", "type": "wall", "x": 472, "y": 52, "width": 8, "height": 340, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-wall-2", "type": "wall", "x": 720, "y": 52, "width": 8, "height": 340, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-wall-3", "type": "wall", "x": 480, "y": 300, "width": 60, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-wall-4", "type": "wall", "x": 660, "y": 300, "width": 60, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-wall-5", "type": "wall", "x": 52, "y": 392, "width": 328, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-wall-6", "type": "wall", "x": 436, "y": 392, "width": 36, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-wall-7", "type": "wall", "x": 728, "y": 392, "width": 36, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-wall-8", "type": "wall", "x": 820, "y": 392, "width": 328, "height": 8, "rotation": 0, "label": "Vách ngăn", "fillColor": "#CBD5E1", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-window-8", "type": "window", "x": 52, "y": 470, "width": 148, "height": 8, "rotation": 0, "label": "Vách kính", "fillColor": "#E0F2FE", "strokeColor": "#7DD3FC", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-window-9", "type": "window", "x": 280, "y": 470, "width": 640, "height": 8, "rotation": 0, "label": "Vách kính", "fillColor": "#E0F2FE", "strokeColor": "#7DD3FC", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-window-10", "type": "window", "x": 1000, "y": 470, "width": 148, "height": 8, "rotation": 0, "label": "Vách kính", "fillColor": "#E0F2FE", "strokeColor": "#7DD3FC", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-door-1", "type": "door", "x": 380, "y": 392, "width": 56, "height": 8, "rotation": 0, "label": "Cửa Penthouse West", "fillColor": "#FEF3C7", "strokeColor": "#D97706", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-door-2", "type": "door", "x": 764, "y": 392, "width": 56, "height": 8, "rotation": 0, "label": "Cửa Penthouse East", "fillColor": "#FEF3C7", "strokeColor": "#D97706", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-door-3", "type": "door", "x": 200, "y": 470, "width": 80, "height": 8, "rotation": 0, "label": "Cửa ra sân thượng", "fillColor": "#FEF3C7", "strokeColor": "#D97706", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-door-4", "type": "door", "x": 920, "y": 470, "width": 80, "height": 8, "rotation": 0, "label": "Cửa ra sân thượng", "fillColor": "#FEF3C7", "strokeColor": "#D97706", "opacity": 1, "cornerRadius": 1, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-stair", "type": "staircase", "x": 488, "y": 64, "width": 100, "height": 150, "rotation": 0, "label": "Cầu thang bộ", "fillColor": "rgba(148,163,184,0.10)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-wc-f", "type": "restroom", "x": 612, "y": 64, "width": 100, "height": 72, "rotation": 0, "label": "WC Nữ", "fillColor": "rgba(148,163,184,0.12)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-wc-m", "type": "restroom", "x": 612, "y": 144, "width": 100, "height": 72, "rotation": 0, "label": "WC Nam", "fillColor": "rgba(148,163,184,0.12)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-elev-a", "type": "elevator", "x": 496, "y": 222, "width": 92, "height": 70, "rotation": 0, "label": "Thang máy A", "fillColor": "rgba(100,116,139,0.12)", "strokeColor": "#64748B", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-elev-b", "type": "elevator", "x": 612, "y": 222, "width": 92, "height": 70, "rotation": 0, "label": "Thang máy B", "fillColor": "rgba(100,116,139,0.12)", "strokeColor": "#64748B", "opacity": 1, "cornerRadius": 6, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-lounge-1", "type": "lounge", "x": 96, "y": 520, "width": 200, "height": 96, "rotation": 0, "label": "Lounge ngoài trời", "fillColor": "rgba(139,92,246,0.08)", "strokeColor": "#8B5CF6", "opacity": 1, "cornerRadius": 10, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-kitchen-1", "type": "kitchen", "x": 904, "y": 520, "width": 200, "height": 90, "rotation": 0, "label": "Quầy bar", "fillColor": "rgba(245,158,11,0.10)", "strokeColor": "#F59E0B", "opacity": 1, "cornerRadius": 8, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-label-4", "type": "label", "x": 440, "y": 540, "width": 44, "height": 44, "rotation": 0, "label": "", "fillColor": "rgba(148,163,184,0.14)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 22, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-label-5", "type": "label", "x": 520, "y": 540, "width": 44, "height": 44, "rotation": 0, "label": "", "fillColor": "rgba(148,163,184,0.14)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 22, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-label-6", "type": "label", "x": 600, "y": 540, "width": 44, "height": 44, "rotation": 0, "label": "", "fillColor": "rgba(148,163,184,0.14)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 22, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-label-7", "type": "label", "x": 680, "y": 540, "width": 44, "height": 44, "rotation": 0, "label": "", "fillColor": "rgba(148,163,184,0.14)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 22, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-label-8", "type": "label", "x": 480, "y": 620, "width": 44, "height": 44, "rotation": 0, "label": "", "fillColor": "rgba(148,163,184,0.14)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 22, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-label-9", "type": "label", "x": 560, "y": 620, "width": 44, "height": 44, "rotation": 0, "label": "", "fillColor": "rgba(148,163,184,0.14)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 22, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-label-10", "type": "label", "x": 640, "y": 620, "width": 44, "height": 44, "rotation": 0, "label": "", "fillColor": "rgba(148,163,184,0.14)", "strokeColor": "#94A3B8", "opacity": 1, "cornerRadius": 22, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-plant-1", "type": "plant", "x": 80, "y": 712, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-plant-2", "type": "plant", "x": 150, "y": 712, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-plant-3", "type": "plant", "x": 220, "y": 712, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-plant-4", "type": "plant", "x": 290, "y": 712, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-plant-5", "type": "plant", "x": 360, "y": 712, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-plant-6", "type": "plant", "x": 430, "y": 712, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-plant-7", "type": "plant", "x": 742, "y": 712, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-plant-8", "type": "plant", "x": 812, "y": 712, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-plant-9", "type": "plant", "x": 882, "y": 712, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-plant-10", "type": "plant", "x": 952, "y": 712, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-plant-11", "type": "plant", "x": 1022, "y": 712, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-plant-12", "type": "plant", "x": 1092, "y": 712, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-plant-13", "type": "plant", "x": 330, "y": 520, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-plant-14", "type": "plant", "x": 842, "y": 520, "width": 28, "height": 28, "rotation": 0, "label": "", "fillColor": "rgba(34,197,94,0.18)", "strokeColor": "#22C55E", "opacity": 1, "cornerRadius": 14, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-lift-lobby", "type": "label", "x": 520, "y": 330, "width": 160, "height": 30, "rotation": 0, "label": "Sảnh thang máy", "fillColor": "transparent", "strokeColor": "transparent", "opacity": 1, "cornerRadius": 4, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-label-1", "type": "label", "x": 240, "y": 420, "width": 160, "height": 30, "rotation": 0, "label": "Hành lang", "fillColor": "transparent", "strokeColor": "transparent", "opacity": 1, "cornerRadius": 4, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-label-2", "type": "label", "x": 800, "y": 420, "width": 160, "height": 30, "rotation": 0, "label": "Hành lang", "fillColor": "transparent", "strokeColor": "transparent", "opacity": 1, "cornerRadius": 4, "workspaceId": null, "locked": false, "visible": true },
+    { "id": "el-b3f3-ws-pw-302", "type": "private_office", "x": 68, "y": 68, "width": 388, "height": 308, "rotation": 0, "label": "PW-302", "fillColor": "rgba(99,102,241,0.10)", "strokeColor": "#6366F1", "opacity": 1, "cornerRadius": 10, "workspaceId": "c3030002-0000-0000-0000-000000000003", "locked": false, "visible": true, "sublabel": "Penthouse Suite West", "seatCount": 10 },
+    { "id": "el-b3f3-ws-pe-301", "type": "private_office", "x": 744, "y": 68, "width": 388, "height": 308, "rotation": 0, "label": "PE-301", "fillColor": "rgba(99,102,241,0.10)", "strokeColor": "#6366F1", "opacity": 1, "cornerRadius": 10, "workspaceId": "c3030001-0000-0000-0000-000000000001", "locked": false, "visible": true, "sublabel": "Penthouse Suite East", "seatCount": 10 }
+  ]
+}'::jsonb,
+    updated_at = now()
 WHERE id = 'f3030000-0000-0000-0000-000000000003'::uuid;
 
 COMMIT;
+
+-- Kiểm tra 1: số phần tử và số chỗ đặt trên từng sơ đồ.
+SELECT f.name,
+       jsonb_array_length(f.layout_json->'elements') AS so_phan_tu,
+       (SELECT count(*) FROM jsonb_array_elements(f.layout_json->'elements') e
+         WHERE e->>'workspaceId' IS NOT NULL) AS so_cho_dat_tren_so_do
+FROM floors f
+WHERE f.id IN ('f1010000-0000-0000-0000-000000000001'::uuid, 'f1020000-0000-0000-0000-000000000002'::uuid, 'f1030000-0000-0000-0000-000000000003'::uuid, 'f2010000-0000-0000-0000-000000000001'::uuid, 'f2020000-0000-0000-0000-000000000002'::uuid, 'f2030000-0000-0000-0000-000000000003'::uuid, 'f3010000-0000-0000-0000-000000000001'::uuid, 'f3020000-0000-0000-0000-000000000002'::uuid, 'f3030000-0000-0000-0000-000000000003'::uuid)
+ORDER BY f.branch_id, f.floor_no;
+
+-- Kiểm tra 2: chỗ đặt của các tầng này nhưng không có trên sơ đồ (ví dụ chỗ tạo thêm
+-- sau dữ liệu demo). Kết quả rỗng là đủ; nếu có dòng, mở trình chỉnh sửa sơ đồ của
+-- tầng đó và gán chỗ cho một phần tử.
+SELECT f.name AS tang, w.code, w.name
+FROM workspaces w
+JOIN floors f ON f.id = w.floor_id
+WHERE f.id IN ('f1010000-0000-0000-0000-000000000001'::uuid, 'f1020000-0000-0000-0000-000000000002'::uuid, 'f1030000-0000-0000-0000-000000000003'::uuid, 'f2010000-0000-0000-0000-000000000001'::uuid, 'f2020000-0000-0000-0000-000000000002'::uuid, 'f2030000-0000-0000-0000-000000000003'::uuid, 'f3010000-0000-0000-0000-000000000001'::uuid, 'f3020000-0000-0000-0000-000000000002'::uuid, 'f3030000-0000-0000-0000-000000000003'::uuid)
+  AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements(f.layout_json->'elements') e
+                  WHERE e->>'workspaceId' = w.id::text);

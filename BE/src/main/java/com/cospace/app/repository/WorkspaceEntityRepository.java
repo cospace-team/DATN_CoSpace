@@ -19,6 +19,9 @@ public interface WorkspaceEntityRepository extends JpaRepository<WorkspaceEntity
 
     int countByFloorId(UUID floorId);
 
+    @org.springframework.data.jpa.repository.Query("SELECT w.floorId, COUNT(w) FROM WorkspaceEntity w WHERE w.floorId IN :floorIds GROUP BY w.floorId")
+    List<Object[]> countWorkspacesGroupedByFloorId(@org.springframework.data.repository.query.Param("floorIds") java.util.Collection<UUID> floorIds);
+
     List<WorkspaceEntity> findByFloorId(UUID floorId);
 
     long countByWorkspaceTypeId(UUID workspaceTypeId);

@@ -1,6 +1,5 @@
 package com.cospace.app.dto.api;
 
-import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 

@@ -73,7 +73,7 @@ export const AvatarModal: React.FC<AvatarModalProps> = ({
                   className="h-full w-full object-cover"
                 />
               ) : (
-                <div className="h-full w-full bg-gradient-to-tr from-primary to-secondary flex items-center justify-center text-white text-2xl font-bold">
+                <div className="h-full w-full bg-primary/10 flex items-center justify-center text-primary text-2xl font-bold">
                   {userFullName ? userFullName.charAt(0).toUpperCase() : 'U'}
                 </div>
               )}
@@ -111,14 +111,14 @@ export const AvatarModal: React.FC<AvatarModalProps> = ({
             />
             <div
               onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-border hover:border-primary/60 bg-muted/20 hover:bg-muted/40 rounded-2xl p-5 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 group"
+              className="border-2 border-dashed border-border hover:border-primary/60 bg-muted/20 hover:bg-muted/40 rounded-2xl p-5 text-center cursor-pointer transition flex flex-col items-center justify-center gap-2 group"
             >
               <div className="h-11 w-11 rounded-2xl bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 transition-transform">
                 {isUploading ? <Spinner size="sm" /> : <FiUploadCloud className="h-6 w-6" />}
               </div>
               <div>
                 <p className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">
-                  {isUploading ? 'Đang xử lý tối ưu ảnh...' : 'Nhấn để chọn ảnh từ máy tính'}
+                  {isUploading ? 'Đang xử lý tối ưu ảnh…' : 'Nhấn để chọn ảnh từ máy tính'}
                 </p>
                 <p className="text-[11px] text-muted-foreground mt-0.5">
                   Hỗ trợ định dạng PNG, JPG, WebP (Tối đa 5MB)
@@ -138,10 +138,10 @@ export const AvatarModal: React.FC<AvatarModalProps> = ({
                   key={idx}
                   type="button"
                   onClick={() => setCustomAvatarUrl(url)}
-                  className={`h-16 rounded-2xl overflow-hidden border-2 transition-all cursor-pointer relative group ${
+                  className={`h-16 rounded-2xl overflow-hidden border-2 transition cursor-pointer relative group ${
                     customAvatarUrl === url
                       ? 'border-primary scale-105 shadow-md ring-2 ring-primary/20'
-                      : 'border-transparent opacity-80 hover:opacity-100 hover:scale-102'
+                      : 'border-transparent opacity-80 hover:opacity-100 '
                   }`}
                 >
                   <img src={url} alt={`Avatar Preset ${idx + 1}`} className="h-full w-full object-cover" />
@@ -160,7 +160,7 @@ export const AvatarModal: React.FC<AvatarModalProps> = ({
             <label className="block text-xs font-bold text-foreground mb-1.5">
               3. Hoặc dán đường dẫn ảnh trực tiếp (URL)
             </label>
-            <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border rounded-xl">
+            <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border rounded-xl focus-within:ring-2 focus-within:ring-ring">
               <FiImage className="h-4 w-4 text-muted-foreground shrink-0" />
               <input
                 type="url"
@@ -187,7 +187,7 @@ export const AvatarModal: React.FC<AvatarModalProps> = ({
                 await onSave();
                 onClose();
               }}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-md transition-all cursor-pointer"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-md transition cursor-pointer"
             >
               <FiCheck className="h-4 w-4" /> Lưu ảnh đại diện
             </button>

@@ -46,6 +46,55 @@ import java.util.stream.Collectors;
 public class CommunityPostService {
 
     private static final int MAX_AI_TAGS = 5;
+    private static final long TAGS_CACHE_TTL = 10 * 60 * 1000L; // 10 minutes
+    private static final long BASE_FEED_CACHE_TTL = 60 * 1000L; // 60 seconds
+    private static final long VIEWER_FEED_CACHE_TTL = 30 * 1000L; // 30 seconds
+
+    private static volatile CacheEntry<List<Tag>> TAGS_CACHE;
+    private static volatile CacheEntry<BaseFeedSnapshot> BASE_FEED_CACHE;
+    private static final java.util.concurrent.ConcurrentHashMap<String, CacheEntry<List<PostDto>>> VIEWER_FEED_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+
+    private static class CacheEntry<T> {
+        final T data;
+        final long expiresAt;
+
+        CacheEntry(T data, long ttlMs) {
+            this.data = data;
+            this.expiresAt = System.currentTimeMillis() + ttlMs;
+        }
+
+        boolean isExpired() {
+            return System.currentTimeMillis() > expiresAt;
+        }
+    }
+
+    private static class BaseFeedSnapshot {
+        final List<Post> posts;
+        final Map<UUID, Tag> tagMap;
+        final Map<UUID, List<UUID>> tagsByPost;
+        final Map<UUID, User> userMap;
+        final Map<UUID, Profile> profileMap;
+        final Map<UUID, BranchEntity> branchMap;
+
+        BaseFeedSnapshot(List<Post> posts,
+                         Map<UUID, Tag> tagMap,
+                         Map<UUID, List<UUID>> tagsByPost,
+                         Map<UUID, User> userMap,
+                         Map<UUID, Profile> profileMap,
+                         Map<UUID, BranchEntity> branchMap) {
+            this.posts = posts;
+            this.tagMap = tagMap;
+            this.tagsByPost = tagsByPost;
+            this.userMap = userMap;
+            this.profileMap = profileMap;
+            this.branchMap = branchMap;
+        }
+    }
+
+    public static void clearFeedCache() {
+        BASE_FEED_CACHE = null;
+        VIEWER_FEED_CACHE.clear();
+    }
 
     private final PostRepository postRepository;
     private final PostTagRepository postTagRepository;
@@ -109,6 +158,7 @@ public class CommunityPostService {
             }
         }
         postTagRepository.saveAll(toSave);
+        clearFeedCache();
 
         return listFeed(authorId, null, null, "recent").stream()
                 .filter(p -> p.getId().equals(saved.getId()))
@@ -116,14 +166,21 @@ public class CommunityPostService {
                 .orElseThrow(() -> new IllegalStateException("Không đọc lại được bài viết vừa tạo."));
     }
 
-    @Transactional(readOnly = true)
-    public List<PostDto> listFeed(UUID viewerId, UUID tagFilter, String typeFilter, String sort) {
-        List<Post> posts = postRepository.findByStatusOrderByCreatedAtDesc("published");
-        if (posts.isEmpty()) {
-            return List.of();
+    private BaseFeedSnapshot getOrLoadBaseFeed() {
+        CacheEntry<BaseFeedSnapshot> cached = BASE_FEED_CACHE;
+        if (cached != null && !cached.isExpired()) {
+            return cached.data;
         }
 
-        Map<UUID, Tag> tagMap = tagRepository.findAll().stream()
+        List<Post> posts = postRepository.findByStatusOrderByCreatedAtDesc("published");
+        if (posts.isEmpty()) {
+            BaseFeedSnapshot empty = new BaseFeedSnapshot(List.of(), Map.of(), Map.of(), Map.of(), Map.of(), Map.of());
+            BASE_FEED_CACHE = new CacheEntry<>(empty, BASE_FEED_CACHE_TTL);
+            return empty;
+        }
+
+        List<Tag> allTags = listTags();
+        Map<UUID, Tag> tagMap = allTags.stream()
                 .collect(Collectors.toMap(Tag::getId, Function.identity(), (a, b) -> a));
 
         Map<UUID, List<UUID>> tagsByPost = postTagRepository.findAll().stream()
@@ -142,13 +199,43 @@ public class CommunityPostService {
                 : branchRepository.findAllById(branchIds).stream()
                         .collect(Collectors.toMap(BranchEntity::getId, Function.identity(), (a, b) -> a));
 
-        Set<UUID> viewerTagIds = viewerTagIds(viewerId);
-        Profile viewerProfile = profileRepository.findById(viewerId).orElse(null);
-        UUID viewerBranchId = viewerProfile != null ? viewerProfile.getPrimaryBranchId() : null;
+        BaseFeedSnapshot snapshot = new BaseFeedSnapshot(posts, tagMap, tagsByPost, userMap, profileMap, branchMap);
+        BASE_FEED_CACHE = new CacheEntry<>(snapshot, BASE_FEED_CACHE_TTL);
+        return snapshot;
+    }
+
+    @Transactional(readOnly = true)
+    public List<PostDto> listFeed(UUID viewerId, UUID tagFilter, String typeFilter, String sort) {
+        String cacheKey = (viewerId != null ? viewerId.toString() : "anon")
+                + ":" + (tagFilter != null ? tagFilter.toString() : "")
+                + ":" + (typeFilter != null ? typeFilter : "")
+                + ":" + (sort != null ? sort : "relevant");
+
+        CacheEntry<List<PostDto>> cached = VIEWER_FEED_CACHE.get(cacheKey);
+        if (cached != null && !cached.isExpired()) {
+            return cached.data;
+        }
+
+        BaseFeedSnapshot snapshot = getOrLoadBaseFeed();
+        if (snapshot.posts.isEmpty()) {
+            return List.of();
+        }
+
+        Set<UUID> viewerTagIds = viewerId != null ? viewerTagIds(viewerId, snapshot) : Set.of();
+        UUID viewerBranchId = null;
+        if (viewerId != null) {
+            Profile viewerProfile = snapshot.profileMap.get(viewerId);
+            if (viewerProfile == null) {
+                viewerProfile = profileRepository.findById(viewerId).orElse(null);
+            }
+            if (viewerProfile != null) {
+                viewerBranchId = viewerProfile.getPrimaryBranchId();
+            }
+        }
 
         List<PostDto> feed = new ArrayList<>();
-        for (Post post : posts) {
-            List<UUID> postTagIds = tagsByPost.getOrDefault(post.getId(), List.of());
+        for (Post post : snapshot.posts) {
+            List<UUID> postTagIds = snapshot.tagsByPost.getOrDefault(post.getId(), List.of());
 
             if (tagFilter != null && !postTagIds.contains(tagFilter)) continue;
             if (typeFilter != null && !typeFilter.isBlank() && !typeFilter.equals(post.getPostType())) continue;
@@ -163,9 +250,9 @@ public class CommunityPostService {
             }
             int relevance = (int) Math.round(Math.min(1.0, ratio) * 100);
 
-            User author = userMap.get(post.getAuthorUserId());
-            Profile authorProfile = profileMap.get(post.getAuthorUserId());
-            BranchEntity branch = post.getBranchId() == null ? null : branchMap.get(post.getBranchId());
+            User author = snapshot.userMap.get(post.getAuthorUserId());
+            Profile authorProfile = snapshot.profileMap.get(post.getAuthorUserId());
+            BranchEntity branch = post.getBranchId() == null ? null : snapshot.branchMap.get(post.getBranchId());
 
             feed.add(PostDto.builder()
                     .id(post.getId())
@@ -180,10 +267,10 @@ public class CommunityPostService {
                     .authorAvatar(author != null ? author.getAvatarUrl() : null)
                     .authorProfession(authorProfile != null ? authorProfile.getProfession() : null)
                     .authorCompany(authorProfile != null ? authorProfile.getCompany() : null)
-                    .tags(postTagIds.stream().map(tagMap::get).filter(java.util.Objects::nonNull).map(Tag::getName).toList())
+                    .tags(postTagIds.stream().map(snapshot.tagMap::get).filter(java.util.Objects::nonNull).map(Tag::getName).toList())
                     .relevanceScore(relevance)
-                    .matchedTags(matched.stream().map(tagMap::get).filter(java.util.Objects::nonNull).map(Tag::getName).toList())
-                    .mine(post.getAuthorUserId().equals(viewerId))
+                    .matchedTags(matched.stream().map(snapshot.tagMap::get).filter(java.util.Objects::nonNull).map(Tag::getName).toList())
+                    .mine(viewerId != null && post.getAuthorUserId().equals(viewerId))
                     .build());
         }
 
@@ -192,6 +279,8 @@ public class CommunityPostService {
             feed.sort(Comparator.comparingInt(PostDto::getRelevanceScore).reversed()
                     .thenComparing(PostDto::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())));
         }
+
+        VIEWER_FEED_CACHE.put(cacheKey, new CacheEntry<>(feed, VIEWER_FEED_CACHE_TTL));
         return feed;
     }
 
@@ -204,22 +293,35 @@ public class CommunityPostService {
         }
         postTagRepository.deleteByPostId(postId);
         postRepository.delete(post);
+        clearFeedCache();
     }
 
     @Transactional(readOnly = true)
     public List<Tag> listTags() {
-        return tagRepository.findByIsActiveTrue();
+        CacheEntry<List<Tag>> cached = TAGS_CACHE;
+        if (cached != null && !cached.isExpired()) {
+            return cached.data;
+        }
+        List<Tag> tags = tagRepository.findByIsActiveTrue();
+        TAGS_CACHE = new CacheEntry<>(tags, TAGS_CACHE_TTL);
+        return tags;
     }
 
     /** The viewer's own skills, interests and the tags on posts they've written. */
-    private Set<UUID> viewerTagIds(UUID viewerId) {
+    private Set<UUID> viewerTagIds(UUID viewerId, BaseFeedSnapshot snapshot) {
         Set<UUID> ids = new HashSet<>();
         profileSkillRepository.findByProfileUserId(viewerId)
                 .forEach(s -> ids.add(s.getTagId()));
         profileInterestRepository.findByProfileUserId(viewerId)
                 .forEach(i -> ids.add(i.getTagId()));
-        for (Post own : postRepository.findByAuthorUserIdOrderByCreatedAtDesc(viewerId)) {
-            postTagRepository.findByPostId(own.getId()).forEach(pt -> ids.add(pt.getTagId()));
+
+        if (snapshot != null) {
+            for (Post own : snapshot.posts) {
+                if (own.getAuthorUserId().equals(viewerId)) {
+                    List<UUID> tags = snapshot.tagsByPost.get(own.getId());
+                    if (tags != null) ids.addAll(tags);
+                }
+            }
         }
         return ids;
     }
@@ -231,6 +333,10 @@ public class CommunityPostService {
     private List<Tag> extractTags(String title, String content, List<Tag> vocabulary) {
         if (vocabulary.isEmpty()) {
             return List.of();
+        }
+        List<Tag> keywordMatches = matchVocabulary(title + " " + content, vocabulary);
+        if (!keywordMatches.isEmpty()) {
+            return keywordMatches;
         }
         if (geminiClient.isConfigured()) {
             try {

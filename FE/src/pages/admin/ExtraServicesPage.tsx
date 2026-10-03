@@ -1,27 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { FiCoffee, FiEdit2, FiPlus, FiPrinter, FiTrash2, FiX, FiCheck, FiAlertTriangle, FiPackage, FiInfo, FiAlertCircle } from 'react-icons/fi';
+import { FiCoffee, FiEdit2, FiPlus, FiPrinter, FiTrash2, FiCheck, FiAlertTriangle, FiPackage, FiInfo, FiAlertCircle, FiShoppingBag } from 'react-icons/fi';
 import { staffApi, type ExtraServiceDto } from '../../api/staffApi';
 import { formatVND } from '../../utils/formatters';
-
-const Modal: React.FC<{ open: boolean; onClose: () => void; title: string; children: React.ReactNode }> = ({ open, onClose, title, children }) => {
-  if (!open) return null;
-  return (
-    <>
-      <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg bg-card rounded-3xl border border-border shadow-xl">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-          <h3 className="text-lg font-bold font-heading">{title}</h3>
-          <button onClick={onClose} className="btn btn-ghost btn-sm !min-h-[32px] !p-2"><FiX className="h-5 w-5" /></button>
-        </div>
-        <div className="p-6">{children}</div>
-      </div>
-    </>
-  );
-};
+import { ServiceLimitsPanel } from '../../components/branch-admin/ServiceLimitsPanel';
+import { customerSpaceApi, type BranchResponse } from '../../lib/spaceApi';
+import { Modal } from '../../components/ui/Modal';
 
 const TYPE_ICON: Record<string, React.ReactNode> = {
   drink: <FiCoffee className="h-5 w-5" />,
-  meal: <span className="text-base">🍽️</span>,
+  meal: <FiShoppingBag className="h-5 w-5" />,
   printing: <FiPrinter className="h-5 w-5" />,
   other: <FiPackage className="h-5 w-5" />,
 };
@@ -34,6 +21,17 @@ const emptyForm = { code: '', name: '', service_type: 'other' as string, descrip
 
 const ExtraServicesPage: React.FC = () => {
   const [services, setServices] = useState<ExtraServiceDto[]>([]);
+  // Quantities are per branch (each site owns its own projectors): pick which one to set.
+  const [branches, setBranches] = useState<BranchResponse[]>([]);
+  const [limitBranchId, setLimitBranchId] = useState('');
+  useEffect(() => {
+    customerSpaceApi.listBranches()
+      .then((list) => {
+        setBranches(list);
+        setLimitBranchId((prev) => prev || list[0]?.id || '');
+      })
+      .catch(() => setBranches([]));
+  }, []);
   const [isLoading, setIsLoading] = useState(true);
   const [apiError, setApiError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -133,7 +131,7 @@ const ExtraServicesPage: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in relative">
       {successMsg && (
-        <div className="fixed top-4 right-4 z-50 animate-slide-up flex items-center gap-2 bg-success text-success-foreground px-4 py-3 rounded-xl shadow-xl">
+        <div className="fixed top-4 right-4 z-50 animate-slide-in-up flex items-center gap-2 bg-success text-success-foreground px-4 py-3 rounded-xl shadow-xl">
           <FiCheck className="h-5 w-5" />
           <p className="font-medium text-sm">{successMsg}</p>
         </div>
@@ -211,11 +209,11 @@ const ExtraServicesPage: React.FC = () => {
                   </td>
                   <td>
                     <div className="flex gap-1">
-                      <button onClick={() => openEdit(s)} className="btn btn-ghost btn-sm !min-h-[28px] !p-1.5" title="Chỉnh sửa">
-                        <FiEdit2 className="h-3.5 w-3.5" />
+                      <button onClick={() => openEdit(s)} className="btn btn-ghost btn-sm !min-h-[28px] !p-1.5" title="Chỉnh sửa" aria-label="Chỉnh sửa">
+                        <FiEdit2 className="h-3.5 w-3.5" aria-hidden="true" />
                       </button>
-                      <button onClick={() => setDeleteConfirm(s)} className="btn btn-ghost btn-sm !min-h-[28px] !p-1.5 text-destructive hover:!text-destructive" title="Xóa">
-                        <FiTrash2 className="h-3.5 w-3.5" />
+                      <button onClick={() => setDeleteConfirm(s)} className="btn btn-ghost btn-sm !min-h-[28px] !p-1.5 text-destructive hover:!text-destructive" title="Xóa" aria-label="Xóa">
+                        <FiTrash2 className="h-3.5 w-3.5" aria-hidden="true" />
                       </button>
                     </div>
                   </td>
@@ -227,60 +225,79 @@ const ExtraServicesPage: React.FC = () => {
       </div>
 
       {/* Add/Edit Modal */}
-      <Modal open={!!modal} onClose={() => setModal(null)} title={modal?.type === 'edit' ? 'Chỉnh sửa dịch vụ' : 'Thêm dịch vụ mới'}>
-        <div className="space-y-5">
-          {errors.general && (
-            <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-3 text-sm text-destructive">
-              <FiAlertCircle className="h-4 w-4 shrink-0" />{errors.general}
-            </div>
-          )}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-sm font-medium block mb-1.5">Mã dịch vụ *</label>
-              <input className={`input-field font-mono uppercase ${errors.code ? 'border-destructive' : ''}`} placeholder="VD: PARKING"
-                value={form.code} onChange={e => setForm(p => ({ ...p, code: e.target.value.toUpperCase() }))} />
-              {errors.code && <p className="text-xs text-destructive mt-1">{errors.code}</p>}
-            </div>
-            <div>
-              <label className="text-sm font-medium block mb-1.5">Loại dịch vụ</label>
-              <select className="input-field" value={form.service_type} onChange={e => setForm(p => ({ ...p, service_type: e.target.value }))}>
-                <option value="drink">Đồ uống</option>
-                <option value="meal">Ăn uống</option>
-                <option value="printing">In ấn</option>
-                <option value="other">Khác</option>
-              </select>
-            </div>
+      {branches.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <label htmlFor="limit-branch" className="text-sm font-medium text-foreground">Số lượng thiết bị tại chi nhánh</label>
+            <select
+              id="limit-branch"
+              value={limitBranchId}
+              onChange={(e) => setLimitBranchId(e.target.value)}
+              className="input-field text-sm w-auto"
+            >
+              {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </select>
           </div>
-          <div>
-            <label className="text-sm font-medium block mb-1.5">Tên dịch vụ *</label>
-            <input className={`input-field ${errors.name ? 'border-destructive' : ''}`} placeholder="VD: Gửi xe, Cà phê, In tài liệu..."
-              value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} />
-            {errors.name && <p className="text-xs text-destructive mt-1">{errors.name}</p>}
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-sm font-medium block mb-1.5">Đơn vị</label>
-              <input className="input-field" placeholder="lượt, ly, trang..." value={form.unit} onChange={e => setForm(p => ({ ...p, unit: e.target.value }))} />
-            </div>
-            <div>
-              <label className="text-sm font-medium block mb-1.5">Giá (VND) *</label>
-              <input type="number" min={0} step={1000} className={`input-field ${errors.price ? 'border-destructive' : ''}`}
-                value={form.price} onChange={e => setForm(p => ({ ...p, price: e.target.value }))} />
-              {errors.price && <p className="text-xs text-destructive mt-1">{errors.price}</p>}
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <input type="checkbox" id="svc-active" checked={form.is_active} onChange={e => setForm(p => ({ ...p, is_active: e.target.checked }))} className="h-4 w-4 rounded" />
-            <label htmlFor="svc-active" className="text-sm font-medium">Kích hoạt dịch vụ</label>
-          </div>
-          <div className="flex gap-3 pt-4 border-t border-border">
-            <button onClick={save} className="btn btn-primary btn-sm flex-1">
-              <FiCheck className="h-4 w-4" /> {modal?.type === 'edit' ? 'Cập nhật' : 'Tạo mới'}
-            </button>
-            <button onClick={() => setModal(null)} className="btn btn-secondary btn-sm">Hủy</button>
-          </div>
+          {limitBranchId && <ServiceLimitsPanel branchId={limitBranchId} />}
         </div>
-      </Modal>
+      )}
+
+      {modal && (
+        <Modal className="max-w-lg" onClose={() => setModal(null)} title={modal?.type === 'edit' ? 'Chỉnh sửa dịch vụ' : 'Thêm dịch vụ mới'}>
+          <div className="space-y-5">
+            {errors.general && (
+              <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-3 text-sm text-destructive">
+                <FiAlertCircle className="h-4 w-4 shrink-0" />{errors.general}
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm font-medium block mb-1.5">Mã dịch vụ *</label>
+                <input className={`input-field font-mono uppercase ${errors.code ? 'border-destructive' : ''}`} placeholder="VD: PARKING"
+                  value={form.code} onChange={e => setForm(p => ({ ...p, code: e.target.value.toUpperCase() }))} />
+                {errors.code && <p className="text-xs text-destructive mt-1">{errors.code}</p>}
+              </div>
+              <div>
+                <label className="text-sm font-medium block mb-1.5">Loại dịch vụ</label>
+                <select className="input-field" value={form.service_type} onChange={e => setForm(p => ({ ...p, service_type: e.target.value }))}>
+                  <option value="drink">Đồ uống</option>
+                  <option value="meal">Ăn uống</option>
+                  <option value="printing">In ấn</option>
+                  <option value="other">Khác</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium block mb-1.5">Tên dịch vụ *</label>
+              <input className={`input-field ${errors.name ? 'border-destructive' : ''}`} placeholder="VD: Gửi xe, Cà phê, In tài liệu…"
+                value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} />
+              {errors.name && <p className="text-xs text-destructive mt-1">{errors.name}</p>}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm font-medium block mb-1.5">Đơn vị</label>
+                <input className="input-field" placeholder="lượt, ly, trang…" value={form.unit} onChange={e => setForm(p => ({ ...p, unit: e.target.value }))} />
+              </div>
+              <div>
+                <label className="text-sm font-medium block mb-1.5">Giá (VND) *</label>
+                <input type="number" min={0} step={1000} className={`input-field ${errors.price ? 'border-destructive' : ''}`}
+                  value={form.price} onChange={e => setForm(p => ({ ...p, price: e.target.value }))} />
+                {errors.price && <p className="text-xs text-destructive mt-1">{errors.price}</p>}
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <input type="checkbox" id="svc-active" checked={form.is_active} onChange={e => setForm(p => ({ ...p, is_active: e.target.checked }))} className="h-4 w-4 rounded" />
+              <label htmlFor="svc-active" className="text-sm font-medium">Kích hoạt dịch vụ</label>
+            </div>
+            <div className="flex gap-3 pt-4 border-t border-border">
+              <button onClick={save} className="btn btn-primary btn-sm flex-1">
+                <FiCheck className="h-4 w-4" /> {modal?.type === 'edit' ? 'Cập nhật' : 'Tạo mới'}
+              </button>
+              <button onClick={() => setModal(null)} className="btn btn-secondary btn-sm">Hủy</button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {/* Delete Confirm */}
       {deleteConfirm && (

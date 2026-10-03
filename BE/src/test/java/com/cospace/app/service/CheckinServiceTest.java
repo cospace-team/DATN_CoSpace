@@ -45,6 +45,9 @@ class CheckinServiceTest {
     @Mock
     private BookingExtensionService bookingExtensionService;
 
+    @Mock
+    private ReputationService reputationService;
+
     @InjectMocks
     private CheckinService checkinService;
 
@@ -138,6 +141,32 @@ class CheckinServiceTest {
 
             assertThatThrownBy(() -> checkinService.checkin(staffId, booking.getId(), null))
                     .isInstanceOf(IllegalArgumentException.class);
+            verify(checkinLogRepository, never()).save(any());
+        }
+
+        @Test
+        void doubleCheckinOfCheckedInBookingSaysSoInsteadOfNotPaid() {
+            Booking booking = booking(BookingStatus.CHECKED_IN, DurationUnit.hour, 2, now(), now().plusHours(2));
+            when(bookingRepository.findByIdWithLock(booking.getId())).thenReturn(Optional.of(booking));
+            givenStaffOfBranch(branchId);
+            when(checkinLogRepository.existsByBookingIdAndCheckoutAtIsNull(booking.getId())).thenReturn(true);
+
+            assertThatThrownBy(() -> checkinService.checkin(staffId, booking.getId(), null))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("đã được Check-in");
+            verify(checkinLogRepository, never()).save(any());
+        }
+
+        @Test
+        void rejectsMultiDayPassAfterItEnded() {
+            // Still CONFIRMED because the lifecycle job has not closed it yet.
+            Booking booking = booking(BookingStatus.CONFIRMED, DurationUnit.week, 1, now().minusDays(8), now().minusHours(1));
+            when(bookingRepository.findByIdWithLock(booking.getId())).thenReturn(Optional.of(booking));
+            givenStaffOfBranch(branchId);
+
+            assertThatThrownBy(() -> checkinService.checkin(staffId, booking.getId(), null))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("quá hạn");
             verify(checkinLogRepository, never()).save(any());
         }
 

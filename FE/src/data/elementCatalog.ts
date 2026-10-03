@@ -10,7 +10,6 @@ export const ELEMENT_CATALOG: ElementCatalogItem[] = [
   {
     type: 'desk',
     label: 'Bàn làm việc',
-    icon: '💻',
     category: 'workspace',
     defaultWidth: 80,
     defaultHeight: 60,
@@ -22,7 +21,6 @@ export const ELEMENT_CATALOG: ElementCatalogItem[] = [
   {
     type: 'chair',
     label: 'Ghế làm việc',
-    icon: '🪑',
     category: 'workspace',
     defaultWidth: 32,
     defaultHeight: 32,
@@ -34,7 +32,6 @@ export const ELEMENT_CATALOG: ElementCatalogItem[] = [
   {
     type: 'standing_desk',
     label: 'Bàn đứng',
-    icon: '🧍',
     category: 'workspace',
     defaultWidth: 80,
     defaultHeight: 50,
@@ -46,7 +43,6 @@ export const ELEMENT_CATALOG: ElementCatalogItem[] = [
   {
     type: 'meeting_room',
     label: 'Phòng họp',
-    icon: '🚪',
     category: 'workspace',
     defaultWidth: 180,
     defaultHeight: 130,
@@ -57,8 +53,7 @@ export const ELEMENT_CATALOG: ElementCatalogItem[] = [
   },
   {
     type: 'private_office',
-    label: 'VP riêng',
-    icon: '🏢',
+    label: 'Văn phòng riêng',
     category: 'workspace',
     defaultWidth: 160,
     defaultHeight: 120,
@@ -69,8 +64,7 @@ export const ELEMENT_CATALOG: ElementCatalogItem[] = [
   },
   {
     type: 'phone_booth',
-    label: 'Phone Booth',
-    icon: '📞',
+    label: 'Cabin cách âm',
     category: 'workspace',
     defaultWidth: 60,
     defaultHeight: 60,
@@ -82,7 +76,6 @@ export const ELEMENT_CATALOG: ElementCatalogItem[] = [
   {
     type: 'event_space',
     label: 'Khu sự kiện',
-    icon: '🎤',
     category: 'workspace',
     defaultWidth: 260,
     defaultHeight: 180,
@@ -93,8 +86,7 @@ export const ELEMENT_CATALOG: ElementCatalogItem[] = [
   },
   {
     type: 'custom_workspace',
-    label: 'Không gian mở rộng',
-    icon: '✨',
+    label: 'Không gian khác',
     category: 'workspace',
     defaultWidth: 100,
     defaultHeight: 80,
@@ -108,7 +100,6 @@ export const ELEMENT_CATALOG: ElementCatalogItem[] = [
   {
     type: 'wall',
     label: 'Tường',
-    icon: '🧱',
     category: 'structure',
     defaultWidth: 200,
     defaultHeight: 8,
@@ -120,7 +111,6 @@ export const ELEMENT_CATALOG: ElementCatalogItem[] = [
   {
     type: 'door',
     label: 'Cửa',
-    icon: '🚪',
     category: 'structure',
     defaultWidth: 50,
     defaultHeight: 8,
@@ -132,7 +122,6 @@ export const ELEMENT_CATALOG: ElementCatalogItem[] = [
   {
     type: 'window',
     label: 'Cửa sổ',
-    icon: '🪟',
     category: 'structure',
     defaultWidth: 60,
     defaultHeight: 6,
@@ -144,7 +133,6 @@ export const ELEMENT_CATALOG: ElementCatalogItem[] = [
   {
     type: 'pillar',
     label: 'Cột',
-    icon: '🏛️',
     category: 'structure',
     defaultWidth: 20,
     defaultHeight: 20,
@@ -158,7 +146,6 @@ export const ELEMENT_CATALOG: ElementCatalogItem[] = [
   {
     type: 'lounge',
     label: 'Lounge',
-    icon: '☕',
     category: 'furniture',
     defaultWidth: 120,
     defaultHeight: 80,
@@ -170,7 +157,6 @@ export const ELEMENT_CATALOG: ElementCatalogItem[] = [
   {
     type: 'reception',
     label: 'Lễ tân',
-    icon: '📋',
     category: 'furniture',
     defaultWidth: 140,
     defaultHeight: 40,
@@ -182,7 +168,6 @@ export const ELEMENT_CATALOG: ElementCatalogItem[] = [
   {
     type: 'plant',
     label: 'Cây cảnh',
-    icon: '🌿',
     category: 'furniture',
     defaultWidth: 24,
     defaultHeight: 24,
@@ -196,7 +181,6 @@ export const ELEMENT_CATALOG: ElementCatalogItem[] = [
   {
     type: 'restroom',
     label: 'WC',
-    icon: '🚻',
     category: 'utility',
     defaultWidth: 60,
     defaultHeight: 50,
@@ -208,7 +192,6 @@ export const ELEMENT_CATALOG: ElementCatalogItem[] = [
   {
     type: 'kitchen',
     label: 'Pantry',
-    icon: '🍳',
     category: 'utility',
     defaultWidth: 80,
     defaultHeight: 60,
@@ -220,7 +203,6 @@ export const ELEMENT_CATALOG: ElementCatalogItem[] = [
   {
     type: 'staircase',
     label: 'Cầu thang',
-    icon: '⬆️',
     category: 'utility',
     defaultWidth: 50,
     defaultHeight: 80,
@@ -232,7 +214,6 @@ export const ELEMENT_CATALOG: ElementCatalogItem[] = [
   {
     type: 'elevator',
     label: 'Thang máy',
-    icon: '🛗',
     category: 'utility',
     defaultWidth: 50,
     defaultHeight: 50,
@@ -244,7 +225,6 @@ export const ELEMENT_CATALOG: ElementCatalogItem[] = [
   {
     type: 'label',
     label: 'Nhãn',
-    icon: '🏷️',
     category: 'utility',
     defaultWidth: 100,
     defaultHeight: 30,

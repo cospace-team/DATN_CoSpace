@@ -10,16 +10,11 @@ import {
   FiInfo,
 } from 'react-icons/fi';
 import { useToast } from '../../components/Toast';
+import VietQrImage from '../../components/VietQrImage';
+import { HoldCountdown } from '../../components/HoldCountdown';
 import { API_BASE_URL } from '../../config/api';
+import { formatVND } from '../../utils/formatters';
 
-const formatVND = (amount: number) => {
-  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
-};
-
-const POPULAR_BANKS = [
-  'Vietcombank', 'MB Bank', 'Techcombank', 'BIDV', 
-  'VietinBank', 'TPBank', 'VPBank', 'ACB', 'MoMo', 'ZaloPay'
-];
 
 const VietQrCheckoutPage: React.FC = () => {
   const navigate = useNavigate();
@@ -39,8 +34,8 @@ const VietQrCheckoutPage: React.FC = () => {
   // VietQR standard dynamic image URL
   const qrImageUrl = `https://img.vietqr.io/image/${bankBin}-${accountNumber}-compact2.png?amount=${amount}&addInfo=${encodeURIComponent(description)}&accountName=${encodeURIComponent(accountName)}`;
 
-  // 15-Minute Countdown Timer
-  const [timeLeft, setTimeLeft] = useState(15 * 60);
+  // 15-minute hold, counted from when this page opened (ticks inside <HoldCountdown>).
+  const [holdDeadlineMs] = useState(() => Date.now() + 15 * 60_000);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [isPaidSuccess, setIsPaidSuccess] = useState(false);
   const [paymentStep, setPaymentStep] = useState<'WAITING' | 'DETECTING' | 'CONFIRMED'>('WAITING');
@@ -134,15 +129,6 @@ const VietQrCheckoutPage: React.FC = () => {
     return () => clearInterval(pollInterval);
   }, [orderCode, isPaidSuccess, handlePaymentConfirmed]);
 
-  // Countdown timer effect
-  useEffect(() => {
-    if (timeLeft <= 0) return;
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => prev - 1);
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [timeLeft]);
-
   // Secret Demo Hotkey: F2 or Ctrl+Shift+P for keyboard convenience
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -154,12 +140,6 @@ const VietQrCheckoutPage: React.FC = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleTriggerPayment]);
-
-  const formatCountdown = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-  };
 
   const handleCopy = (text: string, fieldName: string) => {
     navigator.clipboard.writeText(text);
@@ -179,7 +159,7 @@ const VietQrCheckoutPage: React.FC = () => {
       {isPaidSuccess && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-card border border-border p-8 rounded-3xl max-w-md w-full shadow-2xl text-center space-y-5">
-            <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-950/60 rounded-full flex items-center justify-center mx-auto text-emerald-600 dark:text-emerald-400 animate-bounce">
+            <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-950/60 rounded-full flex items-center justify-center mx-auto text-emerald-600 dark:text-emerald-400 ">
               <FiCheckCircle className="w-12 h-12" />
             </div>
             <div className="space-y-2">
@@ -190,7 +170,7 @@ const VietQrCheckoutPage: React.FC = () => {
             </div>
             <div className="p-4 bg-muted/50 rounded-2xl border border-border text-xs text-muted-foreground flex items-center justify-center gap-2">
               <span className="w-3 h-3 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin"></span>
-              <span>Đang tự động chuyển đến trang Lịch sử đặt chỗ...</span>
+              <span>Đang tự động chuyển đến trang Lịch sử đặt chỗ…</span>
             </div>
           </div>
         </div>
@@ -200,22 +180,28 @@ const VietQrCheckoutPage: React.FC = () => {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 px-4 py-2 font-medium text-sm rounded-2xl border border-border bg-card text-foreground shadow-sm hover:bg-muted transition-all"
+          className="flex items-center gap-2 px-4 py-2 font-medium text-sm rounded-2xl border border-border bg-card text-foreground shadow-sm hover:bg-muted transition"
         >
           <FiArrowLeft className="h-4 w-4" /> Quay lại
         </button>
 
         <div className="flex items-center gap-3">
-          <div className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-sm font-semibold font-mono border border-border shadow-sm transition-all ${
-            timeLeft < 180 ? 'bg-rose-500 text-white animate-pulse' : 'bg-card text-foreground'
-          }`}>
-            <FiClock className="h-4 w-4 text-emerald-500" />
-            <span>Thời gian giữ mã: {formatCountdown(timeLeft)}</span>
-          </div>
+          <HoldCountdown
+            deadlineMs={holdDeadlineMs}
+            className="flex items-center gap-2 px-4 py-2 rounded-2xl text-sm font-semibold font-mono tabular-nums border border-border shadow-sm transition-colors bg-card text-foreground"
+            urgentClassName="flex items-center gap-2 px-4 py-2 rounded-2xl text-sm font-semibold font-mono tabular-nums border border-border shadow-sm transition-colors bg-rose-500 text-white motion-safe:animate-pulse"
+          >
+            {(time) => (
+              <>
+                <FiClock className="h-4 w-4 text-emerald-500" aria-hidden="true" />
+                <span>Thời gian giữ mã: {time}</span>
+              </>
+            )}
+          </HoldCountdown>
 
           <button
             onClick={handleCancel}
-            className="px-3.5 py-2 text-xs font-semibold text-muted-foreground hover:text-rose-500 border border-transparent hover:border-border rounded-2xl transition-all"
+            className="px-3.5 py-2 text-xs font-semibold text-muted-foreground hover:text-rose-500 border border-transparent hover:border-border rounded-2xl transition"
           >
             Hủy đơn
           </button>
@@ -231,7 +217,7 @@ const VietQrCheckoutPage: React.FC = () => {
           {/* Official VietQR Header Badge */}
           <div 
             onClick={handleTriggerPayment}
-            className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-border select-none cursor-pointer hover:border-blue-400/60 hover:bg-blue-50/20 dark:hover:bg-blue-950/20 transition-all active:scale-[0.99]"
+            className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-border select-none cursor-pointer hover:border-blue-400/60 hover:bg-blue-50/20 dark:hover:bg-blue-950/20 transition active:scale-[0.99]"
           >
             <div className="flex items-center gap-2">
               <span className="font-extrabold tracking-tight text-blue-600 dark:text-blue-400 text-sm">
@@ -242,24 +228,24 @@ const VietQrCheckoutPage: React.FC = () => {
                 NAPAS 247
               </span>
             </div>
-            <span className="text-[11px] font-mono font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-              Trực tiếp
-            </span>
           </div>
 
           {/* QR Code Canvas Frame */}
-          <div className="p-3.5 bg-white rounded-2xl shadow-sm border border-slate-200 inline-block transition-transform hover:scale-[1.01]">
-            <img 
-              src={qrImageUrl} 
-              alt="Mã QR Chuyển khoản VietQR" 
+          <div className="p-3.5 bg-white rounded-2xl shadow-sm border border-slate-200 inline-block transition-transform ">
+            <VietQrImage
+              remoteUrl={qrImageUrl}
+              bankBin={bankBin}
+              accountNumber={accountNumber}
+              amount={amount}
+              addInfo={description}
+              alt="Mã QR Chuyển khoản VietQR"
               className="w-64 h-64 md:w-72 md:h-72 object-contain rounded-lg"
             />
           </div>
 
-          {/* Live Scanning Telemetry */}
+          {/* Payment status */}
           <div className="space-y-2 w-full pt-1">
-            <div className={`flex items-center justify-center gap-2 text-xs font-medium py-2.5 px-3 rounded-xl border transition-all ${
+            <div className={`flex items-center justify-center gap-2 text-xs font-medium py-2.5 px-3 rounded-xl border transition ${
               paymentStep === 'DETECTING'
                 ? 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60 animate-pulse'
                 : paymentStep === 'CONFIRMED'
@@ -269,7 +255,7 @@ const VietQrCheckoutPage: React.FC = () => {
               {paymentStep === 'DETECTING' ? (
                 <>
                   <span className="w-3 h-3 rounded-full border-2 border-amber-500 border-t-transparent animate-spin"></span>
-                  <span className="font-semibold">Đã nhận diện giao dịch! Đang gạch nợ tự động...</span>
+                  <span className="font-semibold">Đã nhận diện giao dịch! Đang gạch nợ tự động…</span>
                 </>
               ) : paymentStep === 'CONFIRMED' ? (
                 <>
@@ -282,43 +268,24 @@ const VietQrCheckoutPage: React.FC = () => {
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-600"></span>
                   </span>
-                  <span>Đang chờ bạn quét mã & chuyển khoản...</span>
+                  <span>Đang chờ bạn quét mã & chuyển khoản…</span>
                 </>
               )}
             </div>
             <p className="text-[11px] text-muted-foreground">
               {paymentStep === 'DETECTING'
-                ? 'Vui lòng giữ nguyên màn hình, đang liên kết trạng thái ngân hàng...'
-                : 'Mã QR đã nhúng chính xác số tài khoản, số tiền và mã đơn.'}
+                ? 'Đang kiểm tra trạng thái thanh toán…'
+                : 'Mã QR đã có sẵn số tài khoản, số tiền và nội dung chuyển khoản.'}
             </p>
           </div>
 
-          {/* Supported Banks Chips */}
-          <div className="w-full pt-3 border-t border-border/80">
-            <p className="text-[11px] text-muted-foreground mb-2 text-left">
-              Hỗ trợ quét qua ứng dụng của mọi ngân hàng:
-            </p>
-            <div className="flex flex-wrap gap-1.5 justify-start">
-              {POPULAR_BANKS.map((b) => (
-                <span 
-                  key={b} 
-                  className="text-[10px] font-medium bg-muted/60 text-muted-foreground px-2 py-0.5 rounded-md border border-border/50"
-                >
-                  {b}
-                </span>
-              ))}
-              <span className="text-[10px] text-muted-foreground font-medium px-1 py-0.5">
-                +40 ngân hàng khác
-              </span>
-            </div>
-          </div>
         </div>
 
         {/* Right Column: Transfer Info & Payment Instructions */}
         <div className="lg:col-span-7 space-y-6">
           
           {/* Amount Overview Card */}
-          <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 text-white shadow-sm relative overflow-hidden">
+          <div className="bg-slate-900 rounded-xl p-6 text-white relative overflow-hidden">
             <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <span className="text-xs text-blue-200/80 uppercase tracking-wider block font-medium">
@@ -368,7 +335,7 @@ const VietQrCheckoutPage: React.FC = () => {
                 </div>
                 <button
                   onClick={() => handleCopy(accountNumber, 'Số tài khoản')}
-                  className="px-3 py-1.5 rounded-xl border border-border bg-card hover:bg-muted text-xs font-medium flex items-center gap-1.5 transition-all shadow-sm"
+                  className="px-3 py-1.5 rounded-xl border border-border bg-card hover:bg-muted text-xs font-medium flex items-center gap-1.5 transition shadow-sm"
                 >
                   {copiedField === 'Số tài khoản' ? <FiCheck className="text-emerald-500" /> : <FiCopy />}
                   <span>{copiedField === 'Số tài khoản' ? 'Đã sao chép' : 'Sao chép'}</span>
@@ -382,7 +349,7 @@ const VietQrCheckoutPage: React.FC = () => {
                 </div>
                 <button
                   onClick={() => handleCopy(String(amount), 'Số tiền')}
-                  className="px-3 py-1.5 rounded-xl border border-border bg-card hover:bg-muted text-xs font-medium flex items-center gap-1.5 transition-all shadow-sm"
+                  className="px-3 py-1.5 rounded-xl border border-border bg-card hover:bg-muted text-xs font-medium flex items-center gap-1.5 transition shadow-sm"
                 >
                   {copiedField === 'Số tiền' ? <FiCheck className="text-emerald-500" /> : <FiCopy />}
                   <span>{copiedField === 'Số tiền' ? 'Đã sao chép' : 'Sao chép'}</span>
@@ -401,7 +368,7 @@ const VietQrCheckoutPage: React.FC = () => {
                 </div>
                 <button
                   onClick={() => handleCopy(description, 'Nội dung chuyển khoản')}
-                  className="px-3 py-1.5 rounded-xl border border-blue-300 bg-white dark:bg-card hover:bg-blue-50 text-blue-700 dark:text-blue-300 text-xs font-medium flex items-center gap-1.5 transition-all shadow-sm"
+                  className="px-3 py-1.5 rounded-xl border border-blue-300 bg-white dark:bg-card hover:bg-blue-50 text-blue-700 dark:text-blue-300 text-xs font-medium flex items-center gap-1.5 transition shadow-sm"
                 >
                   {copiedField === 'Nội dung chuyển khoản' ? <FiCheck className="text-emerald-500" /> : <FiCopy />}
                   <span>{copiedField === 'Nội dung chuyển khoản' ? 'Đã sao chép' : 'Sao chép'}</span>
@@ -425,7 +392,7 @@ const VietQrCheckoutPage: React.FC = () => {
                 <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300 font-bold flex items-center justify-center text-[11px]">
                   1
                 </span>
-                <span className="font-semibold text-foreground">Mở App Ngân Hàng</span>
+                <span className="font-semibold text-foreground">Mở app ngân hàng</span>
                 <span className="text-muted-foreground text-[11px] leading-relaxed">
                   Đăng nhập vào app ngân hàng hoặc ví điện tử bất kỳ trên điện thoại của bạn.
                 </span>

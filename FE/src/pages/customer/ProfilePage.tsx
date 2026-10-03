@@ -42,41 +42,25 @@ import { useToast } from '../../components/Toast';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { Spinner } from '../../components/ui/Spinner';
 import { bookingApi } from '../../lib/bookingApi';
-import { membershipApi, type MyMembershipDto } from '../../api/loyaltyApi';
+import { membershipApi, reputationApi, type MyMembershipDto, type MyReputationDto } from '../../api/loyaltyApi';
 import { formatVND } from '../../utils/formatters';
 import { API_BASE_URL } from '../../config/api';
 import type { PartnerSuggestion } from './profile/partnerTypes';
+import { communityApi, invalidateSuggestedPartners } from '../../lib/communityApi';
 import MemberProfileModal, { type MemberPreview } from '../../components/network/MemberProfileModal';
 import { AvatarModal } from './profile/AvatarModal';
 import { ProfileSecurityTab } from './profile/ProfileSecurityTab';
 import { ProfileNetworkTab } from './profile/ProfileNetworkTab';
 
 // ── BANNER THEMES ──
+// Flat cover colours; each swatch in the picker shows its cover colour as-is. Fixed shades, not
+// bg-primary: the member's name overlaps the cover's lower edge, and dark mode's light primary
+// would leave the white name text unreadable there.
 const BANNER_THEMES = [
-  {
-    id: 'indigo',
-    name: 'Cyber Indigo',
-    gradient: 'from-indigo-600 via-blue-600 to-sky-500',
-    accent: 'bg-indigo-500',
-  },
-  {
-    id: 'teal',
-    name: 'Aurora Teal',
-    gradient: 'from-teal-600 via-emerald-600 to-cyan-500',
-    accent: 'bg-teal-500',
-  },
-  {
-    id: 'sunset',
-    name: 'Sunset Amber',
-    gradient: 'from-amber-600 via-rose-600 to-orange-500',
-    accent: 'bg-amber-500',
-  },
-  {
-    id: 'violet',
-    name: 'Cosmic Violet',
-    gradient: 'from-purple-600 via-fuchsia-600 to-indigo-600',
-    accent: 'bg-purple-500',
-  },
+  { id: 'brand', name: 'Xanh CoSpace', cover: 'bg-blue-600' },
+  { id: 'teal', name: 'Xanh ngọc', cover: 'bg-teal-700' },
+  { id: 'amber', name: 'Hổ phách', cover: 'bg-amber-600' },
+  { id: 'violet', name: 'Tím', cover: 'bg-violet-600' },
 ];
 
 // ── POPULAR SUGGESTED SKILLS ──
@@ -100,10 +84,13 @@ const ProfilePage: React.FC = () => {
   const { showToast } = useToast();
 
   const [activeTab, setActiveTab] = useState<'profile' | 'network' | 'security'>('profile');
-  const [selectedTheme, setSelectedTheme] = useState('indigo');
+  const [selectedTheme, setSelectedTheme] = useState('brand');
 
   // ── Tab 1: Personal & Professional Profile States ──
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditingPersonalInfo, setIsEditingPersonalInfo] = useState(false);
+  const [isEditingProfessionalInfo, setIsEditingProfessionalInfo] = useState(false);
+  const [isSavingPersonal, setIsSavingPersonal] = useState(false);
+  const [isSavingProfessional, setIsSavingProfessional] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   const [profileForm, setProfileForm] = useState({
@@ -115,6 +102,7 @@ const ProfilePage: React.FC = () => {
     bio: '',
     contactPublic: true,
   });
+  const initialProfileRef = useRef(profileForm);
 
   // Skills & Social Links (Real Database Networking Profile)
   const [skills, setSkills] = useState<{ tagId?: string; tagName: string; level?: number }[]>([]);
@@ -128,7 +116,6 @@ const ProfilePage: React.FC = () => {
     email: '',
     website: '',
   });
-  const [isEditingSocial, setIsEditingSocial] = useState(false);
   const [isSavingSocial, setIsSavingSocial] = useState(false);
 
   // Networking list display filters
@@ -217,22 +204,27 @@ const ProfilePage: React.FC = () => {
   const [realStats, setRealStats] = useState({
     totalBookings: 0,
     totalHours: 0,
-    tier: 'Bronze Member',
+    tier: 'Hạng Bronze',
     memberSince: 'Năm 2026',
   });
   // Server-side membership tier; realStats.tier stays as the offline fallback.
   const [membership, setMembership] = useState<MyMembershipDto | null>(null);
-  const tierLabel = membership?.currentTier ? `${membership.currentTier.name} Member` : realStats.tier;
+  const [reputation, setReputation] = useState<MyReputationDto | null>(null);
+  const tierLabel = membership?.currentTier ? `Hạng ${membership.currentTier.name}` : realStats.tier;
 
   // Sync user data when loaded
   useEffect(() => {
     if (user) {
-      setProfileForm(prev => ({
-        ...prev,
-        fullName: user.fullName || '',
-        email: user.email || '',
-        phone: user.phone || '',
-      }));
+      setProfileForm(prev => {
+        const next = {
+          ...prev,
+          fullName: user.fullName || '',
+          email: user.email || '',
+          phone: user.phone || '',
+        };
+        initialProfileRef.current = next;
+        return next;
+      });
     }
   }, [user]);
 
@@ -244,7 +236,11 @@ const ProfilePage: React.FC = () => {
     // 1. Fetch Master Tags from Database
     const fetchMasterTags = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/api/tags`);
+        // /api/tags requires a signed-in user; without the header it answered 401 and the skill
+        // picker silently fell back to no master tags.
+        const res = await fetch(`${API_BASE_URL}/api/tags`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data)) {
@@ -326,16 +322,20 @@ const ProfilePage: React.FC = () => {
         });
         if (response.ok) {
           const data = await response.json();
-          setProfileForm(prev => ({
-            ...prev,
-            profession: data.profession || prev.profession || 'Frontend Developer & Co-worker',
-            company: data.company || prev.company || 'CoSpace Community',
-            bio:
-              data.bio ||
-              prev.bio ||
-              'Thành viên năng động tại CoSpace. Đam mê công nghệ, chia sẻ kinh nghiệm và tìm kiếm cơ hội hợp tác kết nối.',
-            contactPublic: data.contactPublic !== undefined ? data.contactPublic : true,
-          }));
+          setProfileForm(prev => {
+            const next = {
+              ...prev,
+              profession: data.profession || prev.profession || 'Frontend Developer & Co-worker',
+              company: data.company || prev.company || 'CoSpace Community',
+              bio:
+                data.bio ||
+                prev.bio ||
+                'Thành viên năng động tại CoSpace. Đam mê công nghệ, chia sẻ kinh nghiệm và tìm kiếm cơ hội hợp tác kết nối.',
+              contactPublic: data.contactPublic !== undefined ? data.contactPublic : true,
+            };
+            initialProfileRef.current = next;
+            return next;
+          });
           if (data.avatarUrl) {
             setCustomAvatarUrl(data.avatarUrl);
           }
@@ -349,28 +349,33 @@ const ProfilePage: React.FC = () => {
     // 4. Calculate real stats from user bookings
     const loadRealStats = async () => {
       try {
-        const bookings = await bookingApi.getMyBookings();
+        const bookings = await bookingApi.getMyBookings(true);
         if (bookings && Array.isArray(bookings)) {
-          const valid = bookings.filter(
-            b => b.status === 'confirmed' || b.status === 'checked_in' || b.status === 'completed'
-          );
+          const valid = bookings.filter(b => {
+            const s = (b.status || '').toLowerCase();
+            return ['confirmed', 'checked_in', 'checked_out', 'completed'].includes(s);
+          });
           const totalBookings = valid.length;
           let totalHours = 0;
           valid.forEach(b => {
-            if (b.unit === 'hour') totalHours += b.unitCount || 1;
-            else if (b.unit === 'day') totalHours += (b.unitCount || 1) * 8;
-            else if (b.unit === 'week') totalHours += (b.unitCount || 1) * 40;
-            else if (b.unit === 'month') totalHours += (b.unitCount || 1) * 160;
+            const u = (b.unit || '').toLowerCase();
+            const count = Number(b.unitCount) || 0;
+            if (u === 'hour' && count > 0) totalHours += count;
+            else if (u === 'day' && count > 0) totalHours += count * 8;
+            else if (u === 'week' && count > 0) totalHours += count * 40;
+            else if (u === 'month' && count > 0) totalHours += count * 160;
             else if (b.startAt && b.endAt) {
               const diff = new Date(b.endAt).getTime() - new Date(b.startAt).getTime();
               totalHours += Math.max(1, Math.round(diff / 3600000));
+            } else {
+              totalHours += Math.max(1, count || 1);
             }
           });
 
-          let tier = 'Bronze Member';
-          if (totalBookings >= 20 || totalHours >= 80) tier = 'Platinum Member';
-          else if (totalBookings >= 10 || totalHours >= 40) tier = 'Gold Member';
-          else if (totalBookings >= 3 || totalHours >= 10) tier = 'Silver Member';
+          let tier = 'Hạng Bronze';
+          if (totalBookings >= 20 || totalHours >= 80) tier = 'Hạng Platinum';
+          else if (totalBookings >= 10 || totalHours >= 40) tier = 'Hạng Gold';
+          else if (totalBookings >= 3 || totalHours >= 10) tier = 'Hạng Silver';
 
           let memberSince = 'Năm 2026';
           if (user?.createdAt) {
@@ -389,21 +394,14 @@ const ProfilePage: React.FC = () => {
     };
     loadRealStats();
     membershipApi.me().then(setMembership).catch(() => setMembership(null));
+    reputationApi.me().then(setReputation).catch(() => setReputation(null));
 
-    // 5. Fetch partner matching suggestions
+    // 5. Fetch partner matching suggestions (uses cached suggestions when available for 0ms transition)
     const fetchPartners = async () => {
       setIsLoadingPartners(true);
       try {
-        const res = await fetch(`${API_BASE_URL}/api/matching/suggestions`, {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        if (res.ok) {
-          const json = await res.json();
-          setPartnersList(Array.isArray(json.data) ? json.data : []);
-        }
+        const list = await communityApi.suggestedPartners();
+        setPartnersList(list);
       } catch (err) {
         console.warn('Cannot fetch partner suggestions:', err);
       } finally {
@@ -414,22 +412,13 @@ const ProfilePage: React.FC = () => {
   }, [user]);
 
   // Re-fetch partners helper
-  const reloadPartnerSuggestions = async () => {
+  const reloadPartnerSuggestions = async (forceRefresh = false) => {
     try {
-      const token = localStorage.getItem('workhub_access_token');
-      if (!token) return;
-      const res = await fetch(`${API_BASE_URL}/api/matching/suggestions`, {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (res.ok) {
-        const json = await res.json();
-        if (json.data && Array.isArray(json.data)) {
-          setPartnersList(json.data);
-        }
+      if (forceRefresh) {
+        invalidateSuggestedPartners();
       }
+      const list = await communityApi.suggestedPartners(forceRefresh);
+      setPartnersList(list);
     } catch {
       // quiet
     }
@@ -487,10 +476,12 @@ const ProfilePage: React.FC = () => {
         });
 
         // 3. Refresh partner suggestions in background
-        void reloadPartnerSuggestions().catch(e => console.warn('Partner suggestions background refresh:', e));
+        void reloadPartnerSuggestions(true).catch(e => console.warn('Partner suggestions background refresh:', e));
       }
 
-      setIsEditing(false);
+      setIsEditingPersonalInfo(false);
+      setIsEditingProfessionalInfo(false);
+      initialProfileRef.current = { ...profileForm };
       showToast('Cập nhật toàn bộ thông tin hồ sơ và kỹ năng thành công!', 'success');
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Có lỗi xảy ra khi lưu thông tin', 'error');
@@ -498,6 +489,191 @@ const ProfilePage: React.FC = () => {
       setIsSavingProfile(false);
     }
   };
+
+  // ── Personal Info Handlers ──
+  const handleStartEditPersonal = () => {
+    initialProfileRef.current = { ...profileForm };
+    setIsEditingPersonalInfo(true);
+  };
+
+  const handleCancelEditPersonal = () => {
+    setProfileForm(prev => ({
+      ...prev,
+      fullName: initialProfileRef.current.fullName,
+      phone: initialProfileRef.current.phone,
+    }));
+    setIsEditingPersonalInfo(false);
+  };
+
+  const handleSavePersonalInfo = async () => {
+    if (!profileForm.fullName.trim()) {
+      showToast('Họ và tên không được để trống', 'error');
+      return;
+    }
+    setIsSavingPersonal(true);
+    try {
+      const contactLinkJson = JSON.stringify({
+        linkedin: (socialLinks.linkedin || '').trim(),
+        github: (socialLinks.github || '').trim(),
+        facebook: (socialLinks.facebook || '').trim(),
+        email: (socialLinks.email || '').trim(),
+        website: (socialLinks.website || '').trim(),
+      });
+
+      // 1. Update basic user profile
+      await updateProfile({
+        fullName: profileForm.fullName.trim(),
+        email: profileForm.email,
+        phone: profileForm.phone.trim(),
+        avatarUrl: customAvatarUrl || user?.avatarUrl,
+        bio: profileForm.bio,
+        profession: profileForm.profession,
+        company: profileForm.company,
+        contactPublic: profileForm.contactPublic,
+        contactLink: contactLinkJson,
+      });
+
+      // 2. Persist networking profile into database
+      const token = localStorage.getItem('workhub_access_token');
+      if (token) {
+        await fetch(`${API_BASE_URL}/api/profiles/me/networking`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            bio: profileForm.bio,
+            profession: profileForm.profession,
+            company: profileForm.company,
+            contactEmail: profileForm.email,
+            contactPhone: profileForm.phone.trim(),
+            contactLink: contactLinkJson,
+            contactPublic: profileForm.contactPublic,
+            skills: skills.map(s => ({
+              tagId: s.tagId || null,
+              tagName: s.tagName,
+              level: s.level || 3,
+            })),
+            interests: [],
+          }),
+        });
+        void reloadPartnerSuggestions(true).catch(e => console.warn('Partner suggestions background refresh:', e));
+      }
+
+      setIsEditingPersonalInfo(false);
+      initialProfileRef.current = { ...profileForm };
+      showToast('Cập nhật thông tin cá nhân thành công!', 'success');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Có lỗi xảy ra khi lưu thông tin', 'error');
+    } finally {
+      setIsSavingPersonal(false);
+    }
+  };
+
+  // ── Professional & Bio Handlers ──
+  const handleStartEditProfessional = () => {
+    initialProfileRef.current = { ...profileForm };
+    setIsEditingProfessionalInfo(true);
+  };
+
+  const handleCancelEditProfessional = () => {
+    setProfileForm(prev => ({
+      ...prev,
+      profession: initialProfileRef.current.profession,
+      company: initialProfileRef.current.company,
+      bio: initialProfileRef.current.bio,
+    }));
+    setIsEditingProfessionalInfo(false);
+  };
+
+  const handleSaveProfessionalInfo = async () => {
+    setIsSavingProfessional(true);
+    try {
+      const contactLinkJson = JSON.stringify({
+        linkedin: (socialLinks.linkedin || '').trim(),
+        github: (socialLinks.github || '').trim(),
+        facebook: (socialLinks.facebook || '').trim(),
+        email: (socialLinks.email || '').trim(),
+        website: (socialLinks.website || '').trim(),
+      });
+
+      // 1. Update basic user profile
+      await updateProfile({
+        fullName: profileForm.fullName,
+        email: profileForm.email,
+        phone: profileForm.phone,
+        avatarUrl: customAvatarUrl || user?.avatarUrl,
+        bio: profileForm.bio.trim(),
+        profession: profileForm.profession.trim(),
+        company: profileForm.company.trim(),
+        contactPublic: profileForm.contactPublic,
+        contactLink: contactLinkJson,
+      });
+
+      // 2. Persist networking profile into database
+      const token = localStorage.getItem('workhub_access_token');
+      if (token) {
+        await fetch(`${API_BASE_URL}/api/profiles/me/networking`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            bio: profileForm.bio.trim(),
+            profession: profileForm.profession.trim(),
+            company: profileForm.company.trim(),
+            contactEmail: profileForm.email,
+            contactPhone: profileForm.phone,
+            contactLink: contactLinkJson,
+            contactPublic: profileForm.contactPublic,
+            skills: skills.map(s => ({
+              tagId: s.tagId || null,
+              tagName: s.tagName,
+              level: s.level || 3,
+            })),
+            interests: [],
+          }),
+        });
+        void reloadPartnerSuggestions(true).catch(e => console.warn('Partner suggestions background refresh:', e));
+      }
+
+      setIsEditingProfessionalInfo(false);
+      initialProfileRef.current = { ...profileForm };
+      showToast('Cập nhật nghề nghiệp & giới thiệu thành công!', 'success');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Có lỗi xảy ra khi lưu thông tin', 'error');
+    } finally {
+      setIsSavingProfessional(false);
+    }
+  };
+
+  // Keyboard shortcuts for profile editing (Escape = Cancel, Ctrl/Cmd + Enter = Save)
+  useEffect(() => {
+    if (!isEditingPersonalInfo && !isEditingProfessionalInfo) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (isEditingPersonalInfo) handleCancelEditPersonal();
+        if (isEditingProfessionalInfo) handleCancelEditProfessional();
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        if (isEditingPersonalInfo) void handleSavePersonalInfo();
+        if (isEditingProfessionalInfo) void handleSaveProfessionalInfo();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [
+    isEditingPersonalInfo,
+    isEditingProfessionalInfo,
+    profileForm,
+    socialLinks,
+    skills,
+    customAvatarUrl,
+  ]);
 
   // ── Save Password Handler ──
   const handlePasswordChange = async (e: React.FormEvent) => {
@@ -562,7 +738,7 @@ const ProfilePage: React.FC = () => {
 
   const handleConnectionChanged = () => {
     setConnectionsReloadKey(k => k + 1);
-    void reloadPartnerSuggestions();
+    void reloadPartnerSuggestions(true);
   };
 
   // ── Auto-save or Manual-save Skills into Database (Optimized & Non-blocking) ──
@@ -608,7 +784,7 @@ const ProfilePage: React.FC = () => {
 
       if (res.ok) {
         // Run partner suggestions in the background so tag editing feels instantaneous
-        void reloadPartnerSuggestions().catch(e => console.warn('Partner suggestions background refresh:', e));
+        void reloadPartnerSuggestions(true).catch(e => console.warn('Partner suggestions background refresh:', e));
       } else {
         showToast('Không thể lưu kỹ năng lên máy chủ', 'error');
       }
@@ -700,7 +876,6 @@ const ProfilePage: React.FC = () => {
         });
       }
 
-      setIsEditingSocial(false);
       showToast('Cập nhật liên kết mạng xã hội thành công!', 'success');
     } catch {
       showToast('Lỗi khi lưu liên kết mạng xã hội', 'error');
@@ -770,7 +945,7 @@ const ProfilePage: React.FC = () => {
             onError={e => {
               const parent = e.currentTarget.parentElement;
               if (parent) {
-                parent.innerHTML = `<div class="h-full w-full bg-gradient-to-tr from-indigo-500 to-purple-600 text-white flex items-center justify-center font-bold ${textClass}">${
+                parent.innerHTML = `<div class="h-full w-full bg-primary/10 text-primary flex items-center justify-center font-bold ${textClass}">${
                   name ? name.charAt(0).toUpperCase() : 'U'
                 }</div>`;
               }
@@ -789,7 +964,7 @@ const ProfilePage: React.FC = () => {
 
     return (
       <div
-        className={`${sizeClass} rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-600 text-white flex items-center justify-center font-bold shadow-md shrink-0 ${textClass}`}
+        className={`${sizeClass} rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-bold shrink-0 ${textClass}`}
       >
         {letter}
       </div>
@@ -804,15 +979,10 @@ const ProfilePage: React.FC = () => {
           1. HERO COVER BANNER & PROFILE HEADER
           ══════════════════════════════════════════════════════════════ */}
       <div className="relative rounded-3xl overflow-hidden bg-card border border-border shadow-md mb-8">
-        {/* Cover Gradient Mesh Banner */}
+        {/* Cover banner */}
         <div
-          className={`h-44 sm:h-56 w-full bg-gradient-to-r ${currentTheme.gradient} relative overflow-hidden transition-all duration-700`}
+          className={`h-44 sm:h-56 w-full ${currentTheme.cover} relative overflow-hidden transition-colors duration-300`}
         >
-          {/* Glass / Mesh Overlay Glows */}
-          <div className="absolute inset-0 bg-black/10 backdrop-blur-[2px]" />
-          <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl transform translate-x-1/3 -translate-y-1/3 pointer-events-none" />
-          <div className="absolute bottom-0 left-1/4 w-64 h-64 bg-white/10 rounded-full blur-2xl transform translate-y-1/2 pointer-events-none" />
-
           {/* Banner Preset Switcher */}
           <div className="absolute top-4 right-4 z-20 flex items-center gap-1.5 bg-black/30 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/20">
             <span className="text-[11px] font-medium text-white/80 hidden sm:inline mr-1">
@@ -823,7 +993,9 @@ const ProfilePage: React.FC = () => {
                 key={theme.id}
                 onClick={() => setSelectedTheme(theme.id)}
                 title={theme.name}
-                className={`w-5 h-5 rounded-full ${theme.accent} border-2 transition-transform hover:scale-110 ${
+                aria-label={theme.name}
+                aria-pressed={selectedTheme === theme.id}
+                className={`w-5 h-5 rounded-full ${theme.cover} border-2 transition-transform  ${
                   selectedTheme === theme.id
                     ? 'border-white scale-110 shadow-sm'
                     : 'border-transparent opacity-75'
@@ -847,7 +1019,7 @@ const ProfilePage: React.FC = () => {
                       className="h-full w-full object-cover rounded-2xl"
                     />
                   ) : (
-                    <div className="h-full w-full bg-gradient-to-tr from-primary to-secondary rounded-2xl flex items-center justify-center text-white text-3xl sm:text-4xl font-bold">
+                    <div className="h-full w-full bg-primary/10 rounded-2xl flex items-center justify-center text-primary text-3xl sm:text-4xl font-bold">
                       {user?.fullName ? user.fullName.charAt(0).toUpperCase() : 'U'}
                     </div>
                   )}
@@ -863,11 +1035,6 @@ const ProfilePage: React.FC = () => {
                   </button>
                 </div>
 
-                {/* Online / Active badge */}
-                <div
-                  className="absolute bottom-1 right-1 w-5 h-5 rounded-full bg-emerald-500 border-2 border-card shadow-sm"
-                  title="Đang hoạt động"
-                />
               </div>
 
               <div className="space-y-1.5">
@@ -908,42 +1075,16 @@ const ProfilePage: React.FC = () => {
 
             {/* Top Action Buttons */}
             <div className="flex items-center justify-center lg:justify-end gap-3 shrink-0">
-              {activeTab === 'profile' && !isEditing && (
-                <button
-                  onClick={() => setIsEditing(true)}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm bg-primary text-primary-foreground shadow-md hover:bg-primary/90 hover:shadow-lg transition-all active:scale-95 cursor-pointer"
-                >
-                  <FiEdit2 className="h-4 w-4" />
-                  Chỉnh sửa hồ sơ
-                </button>
-              )}
-              {activeTab === 'profile' && isEditing && (
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setIsEditing(false)}
-                    className="px-4 py-2.5 rounded-xl font-medium text-sm border border-border bg-card hover:bg-muted text-foreground transition-all cursor-pointer"
-                  >
-                    Hủy
-                  </button>
-                  <button
-                    onClick={handleSaveProfile}
-                    disabled={isSavingProfile}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm bg-emerald-600 text-white shadow-md hover:bg-emerald-700 transition-all disabled:opacity-50 cursor-pointer"
-                  >
-                    {isSavingProfile ? <Spinner size="sm" /> : <FiCheck className="h-4 w-4" />}
-                    {isSavingProfile ? 'Đang lưu...' : 'Lưu thay đổi'}
-                  </button>
-                </div>
-              )}
               <button
                 onClick={() => {
                   navigator.clipboard.writeText(window.location.href);
                   showToast('Đã sao chép liên kết hồ sơ vào clipboard!', 'success');
                 }}
-                className="p-2.5 rounded-xl border border-border bg-card hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-card hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer text-sm font-medium"
                 title="Chia sẻ hồ sơ"
               >
                 <FiShare2 className="h-4 w-4" />
+                <span>Chia sẻ hồ sơ</span>
               </button>
             </div>
           </div>
@@ -951,9 +1092,9 @@ const ProfilePage: React.FC = () => {
           {/* ══════════════════════════════════════════════════════════════
               2. MINI STATS DASHBOARD (REAL METRICS)
               ══════════════════════════════════════════════════════════════ */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 pt-4 border-t border-border/80">
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3.5 pt-4 border-t border-border/80">
             {/* Metric 1: Bookings */}
-            <div className="bg-muted/40 hover:bg-muted/70 p-3.5 rounded-2xl border border-border/60 transition-all flex items-center gap-3.5 group">
+            <div className="bg-muted/40 hover:bg-muted/70 p-3.5 rounded-2xl border border-border/60 transition flex items-center gap-3.5 group">
               <div className="h-11 w-11 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xl shrink-0 group-hover:scale-105 transition-transform">
                 <FiCalendar />
               </div>
@@ -964,7 +1105,7 @@ const ProfilePage: React.FC = () => {
             </div>
 
             {/* Metric 2: Hours */}
-            <div className="bg-muted/40 hover:bg-muted/70 p-3.5 rounded-2xl border border-border/60 transition-all flex items-center gap-3.5 group">
+            <div className="bg-muted/40 hover:bg-muted/70 p-3.5 rounded-2xl border border-border/60 transition flex items-center gap-3.5 group">
               <div className="h-11 w-11 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xl shrink-0 group-hover:scale-105 transition-transform">
                 <FiClock />
               </div>
@@ -975,7 +1116,7 @@ const ProfilePage: React.FC = () => {
             </div>
 
             {/* Metric 3: Network Matches */}
-            <div className="bg-muted/40 hover:bg-muted/70 p-3.5 rounded-2xl border border-border/60 transition-all flex items-center gap-3.5 group">
+            <div className="bg-muted/40 hover:bg-muted/70 p-3.5 rounded-2xl border border-border/60 transition flex items-center gap-3.5 group">
               <div className="h-11 w-11 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-xl shrink-0 group-hover:scale-105 transition-transform">
                 <FiUsers />
               </div>
@@ -986,7 +1127,7 @@ const ProfilePage: React.FC = () => {
             </div>
 
             {/* Metric 4: Tier */}
-            <div className="bg-muted/40 hover:bg-muted/70 p-3.5 rounded-2xl border border-border/60 transition-all flex items-center gap-3.5 group">
+            <div className="bg-muted/40 hover:bg-muted/70 p-3.5 rounded-2xl border border-border/60 transition flex items-center gap-3.5 group">
               <div className="h-11 w-11 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xl shrink-0 group-hover:scale-105 transition-transform">
                 <FiAward />
               </div>
@@ -1014,6 +1155,35 @@ const ProfilePage: React.FC = () => {
                 )}
               </div>
             </div>
+
+            {/* Metric 5: Reputation */}
+            {reputation && (
+              <div className="bg-muted/40 hover:bg-muted/70 p-3.5 rounded-2xl border border-border/60 transition flex items-center gap-3.5 group">
+                <div className={`h-11 w-11 rounded-xl flex items-center justify-center text-xl shrink-0 group-hover:scale-105 transition-transform ${
+                  reputation.score >= 80
+                    ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400'
+                    : reputation.score >= 50
+                      ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                      : 'bg-red-500/10 text-red-600 dark:text-red-400'
+                }`}>
+                  <FiShield />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] font-medium text-muted-foreground">Điểm uy tín</p>
+                  <p className="text-lg font-bold text-foreground">
+                    {reputation.score}<span className="text-xs font-semibold text-muted-foreground">/{reputation.maxScore}</span>
+                  </p>
+                  <p
+                    className="text-[11px] text-muted-foreground truncate"
+                    title={reputation.recentEvents[0]?.note ?? undefined}
+                  >
+                    {reputation.recentEvents[0]
+                      ? `Gần nhất: ${reputation.recentEvents[0].delta} điểm (${new Date(reputation.recentEvents[0].createdAt).toLocaleDateString('vi-VN')})`
+                      : `Check-in trễ quá ${reputation.checkinDeadlineMinutes} phút: -${reputation.missedCheckinPenalty} điểm`}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -1024,7 +1194,7 @@ const ProfilePage: React.FC = () => {
       <div className="flex items-center gap-2 mb-8 bg-muted/50 p-1.5 rounded-2xl border border-border/80 w-fit max-w-full overflow-x-auto">
         <button
           onClick={() => setActiveTab('profile')}
-          className={`flex items-center gap-2 px-5 py-2.5 font-semibold text-sm rounded-xl transition-all cursor-pointer ${
+          className={`flex items-center gap-2 px-5 py-2.5 font-semibold text-sm rounded-xl transition cursor-pointer ${
             activeTab === 'profile'
               ? 'bg-card text-foreground shadow-sm'
               : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
@@ -1036,22 +1206,22 @@ const ProfilePage: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('network')}
-          className={`flex items-center gap-2 px-5 py-2.5 font-semibold text-sm rounded-xl transition-all cursor-pointer ${
+          className={`flex items-center gap-2 px-5 py-2.5 font-semibold text-sm rounded-xl transition cursor-pointer ${
             activeTab === 'network'
               ? 'bg-card text-foreground shadow-sm'
               : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
           }`}
         >
-          <FiUsers className="h-4 w-4 text-indigo-500" />
+          <FiUsers className="h-4 w-4 text-primary" />
           <span>Mạng lưới kết nối</span>
-          <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+          <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-primary/10 text-primary">
             {partnersList.length}
           </span>
         </button>
 
         <button
           onClick={() => setActiveTab('security')}
-          className={`flex items-center gap-2 px-5 py-2.5 font-semibold text-sm rounded-xl transition-all cursor-pointer ${
+          className={`flex items-center gap-2 px-5 py-2.5 font-semibold text-sm rounded-xl transition cursor-pointer ${
             activeTab === 'security'
               ? 'bg-card text-foreground shadow-sm'
               : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
@@ -1081,9 +1251,9 @@ const ProfilePage: React.FC = () => {
                     <p className="text-xs text-muted-foreground">Thông tin tài khoản và liên hệ trực tiếp của bạn</p>
                   </div>
                 </div>
-                {!isEditing && (
+                {!isEditingPersonalInfo && (
                   <button
-                    onClick={() => setIsEditing(true)}
+                    onClick={handleStartEditPersonal}
                     className="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1 cursor-pointer"
                   >
                     <FiEdit2 className="h-3.5 w-3.5" /> Sửa
@@ -1091,7 +1261,7 @@ const ProfilePage: React.FC = () => {
                 )}
               </div>
 
-              {isEditing ? (
+              {isEditingPersonalInfo ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="sm:col-span-2">
                     <label className="block text-xs font-semibold text-foreground mb-1.5">
@@ -1130,6 +1300,25 @@ const ProfilePage: React.FC = () => {
                       className="w-full px-4 py-2.5 bg-muted/40 border border-border rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/30"
                     />
                   </div>
+
+                  <div className="sm:col-span-2 flex items-center justify-end gap-2 pt-2 border-t border-border/60">
+                    <button
+                      type="button"
+                      onClick={handleCancelEditPersonal}
+                      className="px-3.5 py-1.5 rounded-xl text-xs font-medium border border-border bg-card hover:bg-muted text-foreground transition cursor-pointer"
+                    >
+                      Hủy
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSavePersonalInfo}
+                      disabled={isSavingPersonal}
+                      className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition active:scale-95 disabled:opacity-50 cursor-pointer"
+                    >
+                      {isSavingPersonal ? <Spinner size="sm" /> : <FiCheck className="h-3.5 w-3.5" />}
+                      <span>{isSavingPersonal ? 'Đang lưu…' : 'Lưu thay đổi'}</span>
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
@@ -1167,7 +1356,7 @@ const ProfilePage: React.FC = () => {
             <section className="bg-card rounded-3xl border border-border p-6 shadow-sm relative">
               <div className="flex items-center justify-between mb-5">
                 <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-xl bg-secondary/10 text-secondary">
+                  <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
                     <FiBriefcase className="h-5 w-5" />
                   </div>
                   <div>
@@ -1175,9 +1364,17 @@ const ProfilePage: React.FC = () => {
                     <p className="text-xs text-muted-foreground">Chia sẻ về công việc và chuyên môn để kết nối với đối tác</p>
                   </div>
                 </div>
+                {!isEditingProfessionalInfo && (
+                  <button
+                    onClick={handleStartEditProfessional}
+                    className="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <FiEdit2 className="h-3.5 w-3.5" /> Sửa
+                  </button>
+                )}
               </div>
 
-              {isEditing ? (
+              {isEditingProfessionalInfo ? (
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
@@ -1188,7 +1385,7 @@ const ProfilePage: React.FC = () => {
                         type="text"
                         value={profileForm.profession}
                         onChange={e => setProfileForm({ ...profileForm, profession: e.target.value })}
-                        placeholder="VD: Senior Product Designer, Freelancer..."
+                        placeholder="VD: Senior Product Designer, Freelancer…"
                         className="w-full px-4 py-2.5 bg-muted/40 border border-border rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/30"
                       />
                     </div>
@@ -1200,7 +1397,7 @@ const ProfilePage: React.FC = () => {
                         type="text"
                         value={profileForm.company}
                         onChange={e => setProfileForm({ ...profileForm, company: e.target.value })}
-                        placeholder="VD: FPT Software, Tự do..."
+                        placeholder="VD: FPT Software, Tự do…"
                         className="w-full px-4 py-2.5 bg-muted/40 border border-border rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/30"
                       />
                     </div>
@@ -1214,9 +1411,29 @@ const ProfilePage: React.FC = () => {
                       rows={3}
                       value={profileForm.bio}
                       onChange={e => setProfileForm({ ...profileForm, bio: e.target.value })}
-                      placeholder="Một vài dòng chia sẻ kinh nghiệm, sở thích làm việc hoặc dự án bạn đang tìm kiếm cộng sự..."
+                      placeholder="Một vài dòng chia sẻ kinh nghiệm, sở thích làm việc hoặc dự án bạn đang tìm kiếm cộng sự…"
                       className="w-full px-4 py-2.5 bg-muted/40 border border-border rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
                     />
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/60">
+                    <button
+                      type="button"
+                      onClick={handleCancelEditProfessional}
+                      className="px-3.5 py-1.5 rounded-xl text-xs font-medium border border-border bg-card hover:bg-muted text-foreground transition cursor-pointer"
+                    >
+                      Hủy
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSaveProfessionalInfo}
+                      disabled={isSavingProfessional}
+                      className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition active:scale-95 disabled:opacity-50 cursor-pointer"
+                    >
+                      {isSavingProfessional ? <Spinner size="sm" /> : <FiCheck className="h-3.5 w-3.5" />}
+                      <span>{isSavingProfessional ? 'Đang lưu…' : 'Lưu thay đổi'}</span>
+                    </button>
                   </div>
                 </div>
               ) : (
@@ -1266,7 +1483,7 @@ const ProfilePage: React.FC = () => {
                 {isSavingSkills && (
                   <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground animate-pulse">
                     <Spinner className="h-3 w-3" />
-                    <span>Đang cập nhật...</span>
+                    <span>Đang cập nhật…</span>
                   </span>
                 )}
               </div>
@@ -1283,7 +1500,7 @@ const ProfilePage: React.FC = () => {
                       handleAddSkill(newSkillInput);
                     }
                   }}
-                  placeholder="Thêm chuyên môn (VD: React, Spring Boot, AI...)"
+                  placeholder="Thêm chuyên môn (VD: React, Spring Boot, AI…)"
                   className="flex-1 px-3.5 py-2 text-xs bg-muted/50 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 font-medium text-foreground"
                 />
                 <button
@@ -1313,8 +1530,9 @@ const ProfilePage: React.FC = () => {
                         onClick={() => handleRemoveSkill(s.tagName)}
                         className="hover:text-red-500 transition-colors cursor-pointer p-0.5 rounded-full"
                         title={`Xóa ${s.tagName}`}
+                        aria-label={`Xóa ${s.tagName}`}
                       >
-                        <FiX className="h-3 w-3" />
+                        <FiX className="h-3 w-3" aria-hidden="true" />
                       </button>
                     </span>
                   ))
@@ -1338,7 +1556,7 @@ const ProfilePage: React.FC = () => {
                         key={name}
                         type="button"
                         onClick={() => handleAddSkill(name)}
-                        className="text-[11px] font-medium px-2.5 py-1 rounded-lg border border-border/80 bg-card hover:bg-primary/10 hover:border-primary/40 text-muted-foreground hover:text-primary transition-all cursor-pointer flex items-center gap-1"
+                        className="text-[11px] font-medium px-2.5 py-1 rounded-lg border border-border/80 bg-card hover:bg-primary/10 hover:border-primary/40 text-muted-foreground hover:text-primary transition cursor-pointer flex items-center gap-1"
                       >
                         + {name}
                       </button>
@@ -1347,293 +1565,193 @@ const ProfilePage: React.FC = () => {
               </div>
             </section>
 
-            {/* Bento Card 4: Social Links & Portfolio */}
+            {/* Bento Card 4: Social Links & Portfolio (Direct Inline Editing) */}
             <section className="bg-card rounded-3xl border border-border p-6 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
+              <div className="flex items-center justify-between gap-3 mb-4">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 shrink-0">
                     <FiGlobe className="h-5 w-5" />
                   </div>
-                  <div>
-                    <h2 className="text-lg font-bold text-foreground">Liên kết mạng xã hội</h2>
-                    <p className="text-xs text-muted-foreground">Portfolio và kênh kết nối chuyên nghiệp</p>
+                  <div className="min-w-0">
+                    <h2 className="text-base sm:text-lg font-bold text-foreground truncate">Liên kết mạng xã hội & Portfolio</h2>
+                    <p className="text-xs text-muted-foreground truncate">Chỉnh sửa trực tiếp kênh kết nối và portfolio</p>
                   </div>
                 </div>
-                {!isEditing && !isEditingSocial && (
-                  <button
-                    type="button"
-                    onClick={() => setIsEditingSocial(true)}
-                    className="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1 cursor-pointer"
-                  >
-                    <FiEdit2 className="h-3.5 w-3.5" /> Chỉnh sửa
-                  </button>
-                )}
+                <button
+                  type="button"
+                  disabled={isSavingSocial}
+                  onClick={handleSaveSocialLinks}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-primary bg-primary/10 hover:bg-primary hover:text-primary-foreground border border-primary/20 active:scale-95 transition cursor-pointer disabled:opacity-50 shrink-0 shadow-xs"
+                  title="Lưu các liên kết mạng xã hội"
+                >
+                  {isSavingSocial ? (
+                    <Spinner size="sm" />
+                  ) : (
+                    <FiCheck className="h-3.5 w-3.5" />
+                  )}
+                  <span>{isSavingSocial ? 'Đang lưu…' : 'Lưu'}</span>
+                </button>
               </div>
 
-              {isEditing || isEditingSocial ? (
-                <div className="space-y-3.5">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
-                      LinkedIn Profile URL
-                    </label>
-                    <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border rounded-xl focus-within:ring-2 focus-within:ring-blue-500/30">
-                      <FiLinkedin className="h-4 w-4 text-blue-600 shrink-0" />
-                      <input
-                        type="url"
-                        value={socialLinks.linkedin}
-                        onChange={e => setSocialLinks({ ...socialLinks, linkedin: e.target.value })}
-                        placeholder="https://linkedin.com/in/username"
-                        className="bg-transparent text-xs w-full focus:outline-none font-medium text-foreground"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
-                      GitHub Profile URL
-                    </label>
-                    <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border rounded-xl focus-within:ring-2 focus-within:ring-gray-500/30">
-                      <FiGithub className="h-4 w-4 text-foreground shrink-0" />
-                      <input
-                        type="url"
-                        value={socialLinks.github}
-                        onChange={e => setSocialLinks({ ...socialLinks, github: e.target.value })}
-                        placeholder="https://github.com/username"
-                        className="bg-transparent text-xs w-full focus:outline-none font-medium text-foreground"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
-                      Facebook Profile URL
-                    </label>
-                    <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border rounded-xl focus-within:ring-2 focus-within:ring-blue-600/30">
-                      <FiFacebook className="h-4 w-4 text-blue-600 shrink-0" />
-                      <input
-                        type="url"
-                        value={socialLinks.facebook}
-                        onChange={e => setSocialLinks({ ...socialLinks, facebook: e.target.value })}
-                        placeholder="https://facebook.com/username"
-                        className="bg-transparent text-xs w-full focus:outline-none font-medium text-foreground"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
-                      Email / Gmail liên hệ công việc
-                    </label>
-                    <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border rounded-xl focus-within:ring-2 focus-within:ring-rose-500/30">
-                      <FiMail className="h-4 w-4 text-rose-500 shrink-0" />
-                      <input
-                        type="email"
-                        value={socialLinks.email}
-                        onChange={e => setSocialLinks({ ...socialLinks, email: e.target.value })}
-                        placeholder="name@example.com"
-                        className="bg-transparent text-xs w-full focus:outline-none font-medium text-foreground"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
-                      Website / Portfolio cá nhân
-                    </label>
-                    <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border rounded-xl focus-within:ring-2 focus-within:ring-emerald-500/30">
-                      <FiGlobe className="h-4 w-4 text-emerald-600 shrink-0" />
-                      <input
-                        type="url"
-                        value={socialLinks.website}
-                        onChange={e => setSocialLinks({ ...socialLinks, website: e.target.value })}
-                        placeholder="https://yourportfolio.dev"
-                        className="bg-transparent text-xs w-full focus:outline-none font-medium text-foreground"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Direct Action buttons for Social Links editing */}
-                  {isEditingSocial && !isEditing && (
-                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/60">
-                      <button
-                        type="button"
-                        onClick={() => setIsEditingSocial(false)}
-                        className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-muted hover:bg-muted/80 text-foreground transition-colors cursor-pointer"
+              <div className="space-y-3">
+                {/* LinkedIn */}
+                <div>
+                  <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
+                    LinkedIn Profile URL
+                  </label>
+                  <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border rounded-xl focus-within:ring-2 focus-within:ring-blue-500/30 transition">
+                    <FiLinkedin className="h-4 w-4 text-blue-600 shrink-0" />
+                    <input
+                      type="url"
+                      value={socialLinks.linkedin}
+                      onChange={e => setSocialLinks({ ...socialLinks, linkedin: e.target.value })}
+                      placeholder="https://linkedin.com/in/username"
+                      className="bg-transparent text-xs w-full focus:outline-none font-medium text-foreground"
+                    />
+                    {socialLinks.linkedin.trim() && (
+                      <a
+                        href={
+                          socialLinks.linkedin.startsWith('http')
+                            ? socialLinks.linkedin
+                            : `https://${socialLinks.linkedin}`
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Mở liên kết"
+                        className="p-1 text-muted-foreground hover:text-blue-600 rounded-lg hover:bg-blue-500/10 transition-colors shrink-0"
                       >
-                        Hủy
-                      </button>
-                      <button
-                        type="button"
-                        disabled={isSavingSocial}
-                        onClick={handleSaveSocialLinks}
-                        className="px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                      >
-                        {isSavingSocial ? (
-                          <Spinner className="h-3 w-3 text-white" />
-                        ) : (
-                          <FiCheck className="h-3.5 w-3.5" />
-                        )}
-                        <span>Lưu liên kết</span>
-                      </button>
-                    </div>
-                  )}
+                        <FiExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    )}
+                  </div>
                 </div>
-              ) : (
-                <div className="space-y-2.5">
-                  {socialLinks.linkedin || socialLinks.github || socialLinks.facebook || socialLinks.email || socialLinks.website ? (
-                    <>
-                      {socialLinks.linkedin && (
-                        <a
-                          href={
-                            socialLinks.linkedin.startsWith('http')
-                              ? socialLinks.linkedin
-                              : `https://${socialLinks.linkedin}`
-                          }
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center justify-between p-3 rounded-2xl bg-muted/30 border border-border/60 hover:bg-blue-500/5 hover:border-blue-500/30 transition-all text-xs font-semibold text-foreground group"
-                        >
-                          <div className="flex items-center gap-2.5">
-                            <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-600">
-                              <FiLinkedin className="h-4 w-4" />
-                            </div>
-                            <div>
-                              <p className="font-semibold text-foreground">LinkedIn</p>
-                              <p className="text-[11px] text-muted-foreground truncate max-w-[180px]">
-                                {socialLinks.linkedin
-                                  .replace(/^https?:\/\/(www\.)?linkedin\.com\/in\/?/, '@')
-                                  .replace(/\/$/, '')}
-                              </p>
-                            </div>
-                          </div>
-                          <FiExternalLink className="h-3.5 w-3.5 text-muted-foreground group-hover:text-blue-600 transition-colors" />
-                        </a>
-                      )}
 
-                      {socialLinks.github && (
-                        <a
-                          href={
-                            socialLinks.github.startsWith('http')
-                              ? socialLinks.github
-                              : `https://${socialLinks.github}`
-                          }
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center justify-between p-3 rounded-2xl bg-muted/30 border border-border/60 hover:bg-foreground/5 hover:border-foreground/20 transition-all text-xs font-semibold text-foreground group"
-                        >
-                          <div className="flex items-center gap-2.5">
-                            <div className="p-1.5 rounded-lg bg-foreground/10 text-foreground">
-                              <FiGithub className="h-4 w-4" />
-                            </div>
-                            <div>
-                              <p className="font-semibold text-foreground">GitHub</p>
-                              <p className="text-[11px] text-muted-foreground truncate max-w-[180px]">
-                                {socialLinks.github
-                                  .replace(/^https?:\/\/(www\.)?github\.com\/?/, '@')
-                                  .replace(/\/$/, '')}
-                              </p>
-                            </div>
-                          </div>
-                          <FiExternalLink className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
-                        </a>
-                      )}
-
-                      {socialLinks.facebook && (
-                        <a
-                          href={
-                            socialLinks.facebook.startsWith('http')
-                              ? socialLinks.facebook
-                              : `https://${socialLinks.facebook}`
-                          }
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center justify-between p-3 rounded-2xl bg-muted/30 border border-border/60 hover:bg-blue-600/5 hover:border-blue-600/30 transition-all text-xs font-semibold text-foreground group"
-                        >
-                          <div className="flex items-center gap-2.5">
-                            <div className="p-1.5 rounded-lg bg-blue-600/10 text-blue-600">
-                              <FiFacebook className="h-4 w-4" />
-                            </div>
-                            <div>
-                              <p className="font-semibold text-foreground">Facebook</p>
-                              <p className="text-[11px] text-muted-foreground truncate max-w-[180px]">
-                                {socialLinks.facebook
-                                  .replace(/^https?:\/\/(www\.)?facebook\.com\/?/, '@')
-                                  .replace(/\/$/, '')}
-                              </p>
-                            </div>
-                          </div>
-                          <FiExternalLink className="h-3.5 w-3.5 text-muted-foreground group-hover:text-blue-600 transition-colors" />
-                        </a>
-                      )}
-
-                      {socialLinks.email && (
-                        <a
-                          href={`mailto:${socialLinks.email}`}
-                          className="flex items-center justify-between p-3 rounded-2xl bg-muted/30 border border-border/60 hover:bg-rose-500/5 hover:border-rose-500/30 transition-all text-xs font-semibold text-foreground group"
-                        >
-                          <div className="flex items-center gap-2.5">
-                            <div className="p-1.5 rounded-lg bg-rose-500/10 text-rose-500">
-                              <FiMail className="h-4 w-4" />
-                            </div>
-                            <div>
-                              <p className="font-semibold text-foreground">Email / Gmail</p>
-                              <p className="text-[11px] text-muted-foreground truncate max-w-[180px]">
-                                {socialLinks.email}
-                              </p>
-                            </div>
-                          </div>
-                          <FiExternalLink className="h-3.5 w-3.5 text-muted-foreground group-hover:text-rose-500 transition-colors" />
-                        </a>
-                      )}
-
-                      {socialLinks.website && (
-                        <a
-                          href={
-                            socialLinks.website.startsWith('http')
-                              ? socialLinks.website
-                              : `https://${socialLinks.website}`
-                          }
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center justify-between p-3 rounded-2xl bg-muted/30 border border-border/60 hover:bg-emerald-500/5 hover:border-emerald-500/30 transition-all text-xs font-semibold text-foreground group"
-                        >
-                          <div className="flex items-center gap-2.5">
-                            <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600">
-                              <FiGlobe className="h-4 w-4" />
-                            </div>
-                            <div>
-                              <p className="font-semibold text-foreground">Portfolio / Website</p>
-                              <p className="text-[11px] text-muted-foreground truncate max-w-[180px]">
-                                {socialLinks.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}
-                              </p>
-                            </div>
-                          </div>
-                          <FiExternalLink className="h-3.5 w-3.5 text-muted-foreground group-hover:text-emerald-600 transition-colors" />
-                        </a>
-                      )}
-                    </>
-                  ) : (
-                    <div className="p-4 rounded-2xl bg-muted/20 border border-dashed border-border/80 text-center flex flex-col items-center justify-center">
-                      <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground mb-2">
-                        <FiGlobe className="h-5 w-5 opacity-60" />
-                      </div>
-                      <p className="text-xs font-semibold text-foreground mb-1">
-                        Chưa có liên kết mạng xã hội
-                      </p>
-                      <p className="text-[11px] text-muted-foreground max-w-xs mb-3">
-                        Thêm LinkedIn, GitHub, Facebook, Gmail hoặc Portfolio cá nhân để đối tác và đồng nghiệp dễ dàng kết nối với bạn.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => setIsEditingSocial(true)}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-primary/10 text-primary hover:bg-primary/20 transition-colors cursor-pointer"
+                {/* GitHub */}
+                <div>
+                  <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
+                    GitHub Profile URL
+                  </label>
+                  <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border rounded-xl focus-within:ring-2 focus-within:ring-gray-500/30 transition">
+                    <FiGithub className="h-4 w-4 text-foreground shrink-0" />
+                    <input
+                      type="url"
+                      value={socialLinks.github}
+                      onChange={e => setSocialLinks({ ...socialLinks, github: e.target.value })}
+                      placeholder="https://github.com/username"
+                      className="bg-transparent text-xs w-full focus:outline-none font-medium text-foreground"
+                    />
+                    {socialLinks.github.trim() && (
+                      <a
+                        href={
+                          socialLinks.github.startsWith('http')
+                            ? socialLinks.github
+                            : `https://${socialLinks.github}`
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Mở liên kết"
+                        className="p-1 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted transition-colors shrink-0"
                       >
-                        <FiPlus className="h-3.5 w-3.5" /> Thêm liên kết ngay
-                      </button>
-                    </div>
-                  )}
+                        <FiExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    )}
+                  </div>
                 </div>
-              )}
+
+                {/* Facebook */}
+                <div>
+                  <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
+                    Facebook Profile URL
+                  </label>
+                  <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border rounded-xl focus-within:ring-2 focus-within:ring-blue-600/30 transition">
+                    <FiFacebook className="h-4 w-4 text-blue-600 shrink-0" />
+                    <input
+                      type="url"
+                      value={socialLinks.facebook}
+                      onChange={e => setSocialLinks({ ...socialLinks, facebook: e.target.value })}
+                      placeholder="https://facebook.com/username"
+                      className="bg-transparent text-xs w-full focus:outline-none font-medium text-foreground"
+                    />
+                    {socialLinks.facebook.trim() && (
+                      <a
+                        href={
+                          socialLinks.facebook.startsWith('http')
+                            ? socialLinks.facebook
+                            : `https://${socialLinks.facebook}`
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Mở liên kết"
+                        className="p-1 text-muted-foreground hover:text-blue-600 rounded-lg hover:bg-blue-500/10 transition-colors shrink-0"
+                      >
+                        <FiExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+                {/* Email */}
+                <div>
+                  <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
+                    Email / Gmail liên hệ công việc
+                  </label>
+                  <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border rounded-xl focus-within:ring-2 focus-within:ring-rose-500/30 transition">
+                    <FiMail className="h-4 w-4 text-rose-500 shrink-0" />
+                    <input
+                      type="email"
+                      value={socialLinks.email}
+                      onChange={e => setSocialLinks({ ...socialLinks, email: e.target.value })}
+                      placeholder="name@example.com"
+                      className="bg-transparent text-xs w-full focus:outline-none font-medium text-foreground"
+                    />
+                    {socialLinks.email.trim() && (
+                      <a
+                        href={`mailto:${socialLinks.email}`}
+                        title="Gửi email"
+                        className="p-1 text-muted-foreground hover:text-rose-500 rounded-lg hover:bg-rose-500/10 transition-colors shrink-0"
+                      >
+                        <FiExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+                {/* Website / Portfolio */}
+                <div>
+                  <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
+                    Website / Portfolio cá nhân
+                  </label>
+                  <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border border-border rounded-xl focus-within:ring-2 focus-within:ring-emerald-500/30 transition">
+                    <FiGlobe className="h-4 w-4 text-emerald-600 shrink-0" />
+                    <input
+                      type="url"
+                      value={socialLinks.website}
+                      onChange={e => setSocialLinks({ ...socialLinks, website: e.target.value })}
+                      placeholder="https://yourportfolio.dev"
+                      className="bg-transparent text-xs w-full focus:outline-none font-medium text-foreground"
+                    />
+                    {socialLinks.website.trim() && (
+                      <a
+                        href={
+                          socialLinks.website.startsWith('http')
+                            ? socialLinks.website
+                            : `https://${socialLinks.website}`
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Mở liên kết"
+                        className="p-1 text-muted-foreground hover:text-emerald-600 rounded-lg hover:bg-emerald-500/10 transition-colors shrink-0"
+                      >
+                        <FiExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-3.5 pt-3 border-t border-border/60 flex items-center justify-between text-[11px] text-muted-foreground">
+                <span>Nhập hoặc dán liên kết trực tiếp và bấm <strong>Lưu</strong>.</span>
+              </div>
             </section>
           </div>
         </div>

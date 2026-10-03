@@ -200,7 +200,7 @@ const AuditLogPage: React.FC = () => {
             <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <input
               type="text"
-              placeholder="Tìm kiếm theo người thực hiện, đối tượng, IP..."
+              placeholder="Tìm kiếm theo người thực hiện, đối tượng, IP…"
               value={search}
               onChange={e => setSearch(e.target.value)}
               className="input pl-9 w-full"
@@ -320,7 +320,7 @@ const AuditLogPage: React.FC = () => {
                       <td className="text-sm font-mono whitespace-nowrap">{formatDateTime(l.createdAt)}</td>
                       <td>
                         <div className="flex items-center gap-2">
-                          <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
+                          <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary text-xs font-bold shrink-0">
                             {initials}
                           </div>
                           <span className="font-medium text-sm">{l.actorName || (l as any).actor_name || 'Hệ thống'}</span>
@@ -345,7 +345,16 @@ const AuditLogPage: React.FC = () => {
                         )}
                       </td>
                       <td className="text-right">
-                        <FiCode className={`h-4 w-4 text-muted-foreground transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                        {/* The row is clickable for the mouse; this button is the keyboard/screen-reader way in. */}
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); setExpandedId(isExpanded ? null : l.id); }}
+                          aria-expanded={isExpanded}
+                          aria-label={isExpanded ? 'Ẩn chi tiết thay đổi' : 'Xem chi tiết thay đổi'}
+                          className="p-1 rounded-md hover:bg-muted"
+                        >
+                          <FiCode className={`h-4 w-4 text-muted-foreground transition-transform ${isExpanded ? 'rotate-90' : ''}`} aria-hidden="true" />
+                        </button>
                       </td>
                     </tr>
                     {isExpanded && (

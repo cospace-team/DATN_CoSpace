@@ -75,7 +75,7 @@ public class PaymentService {
         Payment payment = Payment.builder()
                 .id(UUID.randomUUID())
                 .bookingId(booking.getId())
-                .userId(userId)
+                .userId(booking.getUserId())
                 .provider("momo")
                 .method("ewallet")
                 .orderId(generateGatewayOrderId()) // Improvement #3: Decoupled Order ID
@@ -124,7 +124,7 @@ public class PaymentService {
         Payment payment = Payment.builder()
                 .id(UUID.randomUUID())
                 .bookingId(booking.getId())
-                .userId(userId)
+                .userId(booking.getUserId())
                 .provider("payos")
                 .method("vietqr")
                 .orderId(orderId)
@@ -146,6 +146,107 @@ public class PaymentService {
         paymentRepository.save(payment);
 
         return toPayosCreateResponse(payment, orderCode, qrCode, "Tạo liên kết thanh toán PayOS VietQR thành công.");
+    }
+
+    /**
+     * One VietQR payment for every seat of a booking group still awaiting payment. The gateway sees a
+     * single order for the combined amount; internally each seat gets its own payment row for its own
+     * amount, so cancelling or refunding one seat later works exactly as for a single booking. The
+     * rows share {@code groupOrderId}, which is the order id of the first row (the one sent to PayOS).
+     */
+    @Transactional
+    public PayosCreatePaymentResponse createPayosGroupPayment(UUID userId, UUID groupId) {
+        com.cospace.app.dto.api.BookingGroupDto.GroupResponse group = bookingService.getMyGroup(userId, groupId);
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        List<BookingDto> due = group.getBookings().stream()
+                .filter(b -> b.getStatus() == BookingStatus.PENDING_PAYMENT && b.getTotalAmount() > 0)
+                .filter(b -> b.getPaymentDeadlineAt() == null || now.isBefore(OffsetDateTime.parse(b.getPaymentDeadlineAt())))
+                .toList();
+        if (due.isEmpty()) {
+            throw new IllegalStateException("Đơn nhóm " + group.getGroupCode() + " không còn chỗ nào chờ thanh toán.");
+        }
+
+        // A link already open for exactly these seats is reused instead of charging twice.
+        List<Payment> open = paymentRepository.findByBookingGroupIdAndStatusInOrderByCreatedAtAsc(
+                groupId, List.of(PaymentStatus.INITIATED, PaymentStatus.PENDING));
+        if (!open.isEmpty()) {
+            Payment lead = open.get(0);
+            List<Payment> rows = paymentRepository.findByGroupOrderId(lead.getGroupOrderId());
+            java.util.Set<UUID> covered = rows.stream().map(Payment::getBookingId).collect(Collectors.toSet());
+            java.util.Set<UUID> wanted = due.stream().map(BookingDto::getId).collect(Collectors.toSet());
+            if (covered.equals(wanted) && rows.stream().allMatch(r -> r.getStatus() == PaymentStatus.PENDING)) {
+                return toGroupPayosResponse(lead, rows, null, null, "Giao dịch đang được xử lý.");
+            }
+            // The seats changed (one expired or was cancelled): retire the old link.
+            rows.forEach(r -> r.setStatus(PaymentStatus.CANCELLED));
+            paymentRepository.saveAll(rows);
+        }
+
+        long orderCode = (System.currentTimeMillis() % 1000000000L) * 1000 + (RANDOM.nextInt(900) + 100);
+        String groupOrderId = "PAYOS-" + orderCode;
+        List<Payment> rows = new java.util.ArrayList<>();
+        for (int i = 0; i < due.size(); i++) {
+            BookingDto b = due.get(i);
+            rows.add(Payment.builder()
+                    .id(UUID.randomUUID())
+                    .bookingId(b.getId())
+                    .userId(b.getUserId())
+                    .provider("payos")
+                    .method("vietqr")
+                    .orderId(i == 0 ? groupOrderId : groupOrderId + "-" + (i + 1))
+                    .groupOrderId(groupOrderId)
+                    .bookingGroupId(groupId)
+                    .requestId(UUID.randomUUID().toString())
+                    .amount(b.getTotalAmount())
+                    .status(PaymentStatus.INITIATED)
+                    .build());
+        }
+        paymentRepository.saveAll(rows);
+
+        long total = rows.stream().mapToLong(Payment::getAmount).sum();
+        String deadline = due.stream().map(BookingDto::getPaymentDeadlineAt).filter(Objects::nonNull)
+                .min(java.util.Comparator.naturalOrder()).orElse(null);
+        Map<String, Object> payosRes = payosService.createPaymentLink(orderCode, total, group.getGroupCode(), deadline);
+        String checkoutUrl = Objects.toString(payosRes.get("checkoutUrl"), "");
+        String qrCode = Objects.toString(payosRes.get("qrCode"), "");
+
+        rows.forEach(r -> {
+            r.setStatus(PaymentStatus.PENDING);
+            r.setPayUrl(checkoutUrl);
+        });
+        paymentRepository.saveAll(rows);
+        return toGroupPayosResponse(rows.get(0), rows, orderCode, qrCode,
+                "Tạo liên kết thanh toán VietQR cho " + rows.size() + " chỗ thành công.");
+    }
+
+    private PayosCreatePaymentResponse toGroupPayosResponse(Payment lead, List<Payment> rows, Long orderCode,
+                                                            String qrCode, String message) {
+        PayosCreatePaymentResponse res = toPayosCreateResponse(lead, orderCode, qrCode, message);
+        res.setAmount(rows.stream().mapToLong(Payment::getAmount).sum());
+        return res;
+    }
+
+    /** Every payment row behind one gateway order: the row itself, or all rows of a group payment. */
+    private List<Payment> rowsOfOrder(Payment payment) {
+        if (payment.getGroupOrderId() == null) {
+            return List.of(payment);
+        }
+        return paymentRepository.findByGroupOrderId(payment.getGroupOrderId());
+    }
+
+    /** Marks the rows of a gateway order paid and applies each one to its booking. */
+    private void markOrderPaid(List<Payment> rows, String gatewayTransactionId, String rawCallback) {
+        OffsetDateTime paidAt = OffsetDateTime.now(ZoneOffset.UTC);
+        for (Payment row : rows) {
+            if (row.getStatus() == PaymentStatus.PAID) continue;
+            row.setStatus(PaymentStatus.PAID);
+            row.setPaidAt(paidAt);
+            if (gatewayTransactionId != null) row.setGatewayTransactionId(gatewayTransactionId);
+            if (rawCallback != null) row.setRawCallback(rawCallback);
+            paymentRepository.save(row);
+            // A seat that expired or was cancelled meanwhile gets its share queued as a refund here.
+            applyPaidPayment(row);
+        }
     }
 
     /** A tab payment recorded and tied to its lines, waiting for its PayOS link. */
@@ -219,6 +320,11 @@ public class PaymentService {
 
     @Transactional
     public CashCreatePaymentResponse createCashPayment(UUID staffId, UUID bookingId) {
+        return createCounterPayment(staffId, bookingId, "cash");
+    }
+
+    @Transactional
+    public CashCreatePaymentResponse createCounterPayment(UUID staffId, UUID bookingId, String method) {
         Booking booking = bookingRepository.findByIdWithLock(bookingId)
                 .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
         requirePayable(booking.getStatus(), booking.getPaymentDeadlineAt(), booking.getTotalAmount());
@@ -226,12 +332,15 @@ public class PaymentService {
             throw new IllegalStateException("Đơn đặt chỗ này đã được thanh toán.");
         }
 
+        String normalizedMethod = (method == null || method.isBlank()) ? "cash" : method.trim().toLowerCase();
+        String provider = "cash".equals(normalizedMethod) ? "cash" : "bank_transfer";
+
         Payment payment = Payment.builder()
                 .id(UUID.randomUUID())
                 .bookingId(booking.getId())
                 .userId(booking.getUserId()) // Assign payment to the customer
-                .provider("cash")
-                .method("cash")
+                .provider(provider)
+                .method(normalizedMethod)
                 .orderId(generateGatewayOrderId())
                 .requestId(UUID.randomUUID().toString())
                 .amount(booking.getTotalAmount())
@@ -310,24 +419,28 @@ public class PaymentService {
             return;
         }
 
-        if (payment.getStatus() == PaymentStatus.PAID) {
+        List<Payment> rows = rowsOfOrder(payment);
+        if (rows.stream().allMatch(r -> r.getStatus() == PaymentStatus.PAID)) {
             log.info("Payment {} is already paid. Ignoring PayOS webhook.", payment.getId());
             return;
         }
 
         String code = Objects.toString(webhookDto.getData().get("code"), webhookDto.getCode());
-        payment.setGatewayTransactionId(Objects.toString(webhookDto.getData().get("reference"), ""));
-        payment.setRawCallback(safeJson(webhookDto));
+        String reference = Objects.toString(webhookDto.getData().get("reference"), "");
+        String raw = safeJson(webhookDto);
 
         if ("00".equals(code) || "0".equals(code)) {
-            payment.setStatus(PaymentStatus.PAID);
-            payment.setPaidAt(OffsetDateTime.now(ZoneOffset.UTC));
-            applyPaidPayment(payment);
-            log.info("PayOS payment {} marked as PAID for booking {}", payment.getId(), payment.getBookingId());
+            markOrderPaid(rows, reference, raw);
+            log.info("PayOS order {} marked as PAID ({} booking(s))", payment.getOrderId(), rows.size());
         } else {
-            payment.setStatus(PaymentStatus.FAILED);
+            for (Payment row : rows) {
+                if (row.getStatus() == PaymentStatus.PAID) continue;
+                row.setStatus(PaymentStatus.FAILED);
+                row.setGatewayTransactionId(reference);
+                row.setRawCallback(raw);
+            }
+            paymentRepository.saveAll(rows);
         }
-        paymentRepository.save(payment);
     }
 
     /**
@@ -357,7 +470,8 @@ public class PaymentService {
         if (payment == null) {
             return false;
         }
-        if (payment.getStatus() == PaymentStatus.PAID) {
+        List<Payment> rows = rowsOfOrder(payment);
+        if (rows.stream().allMatch(r -> r.getStatus() == PaymentStatus.PAID)) {
             return true;
         }
 
@@ -366,19 +480,20 @@ public class PaymentService {
             return false;
         }
 
-        if (verified.isPaid() && verified.amountPaid() >= payment.getAmount()) {
-            payment.setStatus(PaymentStatus.PAID);
-            payment.setPaidAt(OffsetDateTime.now(ZoneOffset.UTC));
-            payment.setRawCallback(safeJson(Map.of("source", "payos_status_lookup", "status", verified)));
-            paymentRepository.save(payment);
-            applyPaidPayment(payment);
+        long orderAmount = rows.stream().mapToLong(Payment::getAmount).sum();
+        String raw = safeJson(Map.of("source", "payos_status_lookup", "status", verified));
+        if (verified.isPaid() && verified.amountPaid() >= orderAmount) {
+            markOrderPaid(rows, null, raw);
             return true;
         }
 
         if ("CANCELLED".equalsIgnoreCase(verified.status()) || "EXPIRED".equalsIgnoreCase(verified.status())) {
-            payment.setStatus(PaymentStatus.FAILED);
-            payment.setRawCallback(safeJson(Map.of("source", "payos_status_lookup", "status", verified)));
-            paymentRepository.save(payment);
+            for (Payment row : rows) {
+                if (row.getStatus() == PaymentStatus.PAID) continue;
+                row.setStatus(PaymentStatus.FAILED);
+                row.setRawCallback(raw);
+            }
+            paymentRepository.saveAll(rows);
         }
         return false;
     }
@@ -397,26 +512,42 @@ public class PaymentService {
         Payment payment = paymentRepository.findByOrderId(orderId)
                 .or(() -> paymentRepository.findByOrderId(orderCode))
                 .orElseThrow(() -> new IllegalArgumentException("Payment not found for orderCode: " + orderCode));
-        if (!payment.getUserId().equals(callerId)) {
+        boolean isOwner = payment.getUserId().equals(callerId);
+        boolean isStaffOrAdmin = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication() != null &&
+                org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
+                        .anyMatch(a -> a.getAuthority().toLowerCase().contains("staff")
+                                || a.getAuthority().toLowerCase().contains("admin"));
+        if (!isOwner && !isStaffOrAdmin) {
             throw new org.springframework.security.access.AccessDeniedException("Bạn không có quyền xác nhận giao dịch này.");
         }
-        if (payment.getStatus() == PaymentStatus.PAID) {
+        List<Payment> rows = rowsOfOrder(payment);
+        if (rows.stream().allMatch(r -> r.getStatus() == PaymentStatus.PAID)) {
             return;
         }
         if (payment.getStatus() != PaymentStatus.INITIATED && payment.getStatus() != PaymentStatus.PENDING) {
             throw new IllegalStateException("Giao dịch không còn ở trạng thái chờ thanh toán.");
         }
         if (!Payment.PURPOSE_ADDON.equals(payment.getPurpose())) {
-            Booking booking = bookingRepository.findById(payment.getBookingId())
-                    .orElseThrow(() -> new IllegalStateException("Booking not found for payment"));
-            requirePayable(booking.getStatus(), booking.getPaymentDeadlineAt(), booking.getTotalAmount());
+            // A group payment goes through as long as one of its seats can still take it; the
+            // others are refunded by markOrderPaid, as a late real payment would be.
+            IllegalStateException refusal = null;
+            boolean anyPayable = false;
+            for (Payment row : rows) {
+                Booking booking = bookingRepository.findById(row.getBookingId())
+                        .orElseThrow(() -> new IllegalStateException("Booking not found for payment"));
+                try {
+                    requirePayable(booking.getStatus(), booking.getPaymentDeadlineAt(), booking.getTotalAmount());
+                    anyPayable = true;
+                } catch (IllegalStateException e) {
+                    refusal = e;
+                }
+            }
+            if (!anyPayable && refusal != null) {
+                throw refusal;
+            }
         }
 
-        payment.setStatus(PaymentStatus.PAID);
-        payment.setPaidAt(OffsetDateTime.now(ZoneOffset.UTC));
-        paymentRepository.save(payment);
-
-        applyPaidPayment(payment);
+        markOrderPaid(rows, null, null);
     }
 
     @Transactional(readOnly = true)

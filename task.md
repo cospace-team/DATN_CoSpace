@@ -129,3 +129,65 @@ Sử dụng ký hiệu: `[ ]` Chưa làm | `[/]` Đang làm | `[x]` Đã xong.
 - [x] **Hình ảnh không gian**: Branch admin tải tối đa 10 ảnh/không gian (JPG/PNG/WebP/GIF ≤ 5MB, kiểm tra theo chữ ký tệp) lên Supabase Storage qua backend (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`); khách xem gallery khi chọn chỗ.
 - [x] **Kết nối đối tác thật**: Gửi lời mời (kèm lời nhắn) → chấp nhận / từ chối / thu hồi / hủy kết nối (`/api/connections`), thông báo in-app; xem hồ sơ thành viên (`GET /api/profiles/{userId}`) — thông tin liên hệ riêng tư chỉ hiện khi đã kết nối.
 - [x] **Migration V3** (`V3__tab_charges_vouchers_images_connections.sql`) + kiểm thử: unit test backend pass toàn bộ; kịch bản E2E (đặt chỗ → dịch vụ → QR → gia hạn → phí trễ → voucher → kết nối) chạy pass trên Postgres 16 thật.
+
+## 🎯 13. Rà soát Edge Case trước Demo
+- [x] **Migration V4** (`V4__floor_layout_columns.sql`): bổ sung `floors.layout_json` / `svg_content` mà V1 baseline thiếu — DB mới (máy demo, CI) trước đây lỗi mọi truy vấn tầng. Idempotent, không ảnh hưởng Supabase.
+- [x] **Xử lý lỗi API thống nhất**: gộp 2 `@RestControllerAdvice` chồng nhau còn 1 (`GlobalExceptionHandler`). Tham số sai kiểu / thiếu / ngày sai định dạng trả 400 thay vì 500; lỗi 500 không còn lộ tên exception & câu SQL; vi phạm CHECK / NOT NULL trả 400 có thông báo rõ.
+- [x] **Trang Khuyến mãi (Super Admin) lỗi 500**: query đếm lượt dùng theo lô thiếu tham số `:promotionId`.
+- [x] **Walk-in tại quầy**: đặt chỗ thất bại không còn để lại tài khoản khách rác (chung transaction); khách cũ cùng SĐT + tên dùng lại tài khoản (trừ SĐT mặc định 0900000000 của chế độ khách vãng lai — mỗi khách vẫn có tài khoản riêng, tránh dồn chi tiêu lên hạng thành viên và chạm giới hạn 3 đơn chờ thanh toán); giá hiển thị lấy từ bảng giá thật của chi nhánh (staff bị 403 ở API giá branch-admin → trước đây đoán giá cứng); QR / hóa đơn dùng tổng tiền server tính (có giảm giá hạng thành viên); báo lỗi khi không tạo được giao dịch VietQR.
+- [x] **Đặt chỗ**: server từ chối không gian ở trạng thái `maintenance` / `inactive` (trước chỉ FE chặn).
+- [x] **Check-in**: báo đúng "đã check-in" thay vì "chưa thanh toán"; chặn check-in gói nhiều ngày đã hết hạn.
+- [x] **Validate dữ liệu quản trị**: dịch vụ thêm không nhận giá âm; chính sách hủy kiểm tra loại quy tắc, khoảng min < max, % hoàn 0–100.
+- [x] **Checkout**: đếm ngược 15 phút chỉ chạy khi đã tạo đơn giữ chỗ (trước đó để trang mở quá 15 phút là nút "Thanh toán ngay" bị khóa vĩnh viễn).
+- [x] **VietQR offline**: nếu không tải được ảnh `img.vietqr.io`, tự sinh mã VietQR chuẩn EMVCo (có CRC) ngay trên trình duyệt.
+- [x] **Lịch sử đặt chỗ**: gói nhiều ngày hiện khoảng ngày; ẩn nút "Hủy" khi đơn đã bắt đầu (server không cho hủy online).
+- [x] **FE env**: `VITE_SUPABASE_URL` / `VITE_API_BASE_URL` để trống không còn làm trắng trang; `/api/tags` ở Hồ sơ gửi kèm token.
+- [x] **Kiểm thử**: 310/310 unit test BE pass; build FE pass; Playwright duyệt 34 trang × 4 vai trò không lỗi console/API; E2E đặt chỗ → VietQR → lịch sử, check-in → dịch vụ → thu tiền → check-out, hủy → hoàn voucher chạy pass trên Postgres 16.
+
+## 🧹 14. Dọn "AI slop" trên giao diện
+- [x] **Nội dung bịa / sai sự thật**: bỏ "10,000+ thành viên", "25+ chi nhánh", "24/7", avatar ảnh stock ở trang đăng nhập; bỏ nhãn "Phổ biến" không có số liệu; thay tiện ích tự nghĩ ra ở bảng giá (Smart TV 4K, khóa từ 24/7, địa chỉ ĐKKD…) bằng tính năng hệ thống thật sự có; sửa claim "hoàn tiền tự động, không chờ duyệt" và "sơ đồ realtime" cho đúng nghiệp vụ.
+- [x] **Chỉ báo giả**: bỏ badge "Live Database", "Online", "Trực tiếp", chấm "đang hoạt động" trên avatar, mũi tên tăng trưởng không có dữ liệu xu hướng; trạng thái máy chủ chỉ hiện khi mất kết nối.
+- [x] **Thẻ KPI**: component `StatCard` dùng chung cho các dashboard (admin, chi nhánh, trực ban, báo cáo) thay cho icon gradient cầu vồng + đốm glow; số doanh thu không còn bị cắt.
+- [x] **Trang trí thừa**: bỏ avatar gradient tím–chàm, đốm blur, watermark chữ viền, sọc chéo, nhãn xiên, hiệu ứng nhấc/phóng khi rê chuột, chấm nhấp nháy/nảy không mang thông tin.
+- [x] **Chữ & emoji**: tiêu đề tiếng Việt viết sentence case thay vì Title Case, bỏ chữ IN HOA tràn lan ở trang chủ; thay emoji trong nhãn trạng thái/menu bằng chữ hoặc icon `react-icons` (`ServiceIcon`).
+- [x] **Sửa kèm**: navbar trang chủ luôn nền đặc (logo/menu trước đây chìm trên hero tối); tab lọc "Khách đến hôm nay" không còn tràn; thanh tiến độ báo cáo theo loại không gian trước đây không hiện màu.
+
+## 🎨 15. Thiết kế lại trình chỉnh sửa sơ đồ tầng
+- [x] **Một thanh công cụ duy nhất** (thay hai header chồng nhau): tên tầng + trạng thái lưu bên trái; chọn/di chuyển, hoàn tác, thu phóng, lưới ở giữa; "Xem trước" và "Lưu sơ đồ" bên phải. Nút lưu bị khóa khi chưa có thay đổi.
+- [x] **Thư viện phần tử dạng danh sách** với icon nét mảnh tô theo màu phần tử, ô tìm kiếm, nhóm thu gọn được; bấm vào phần tử để thêm vào giữa khung nhìn (ngoài kéo-thả như trước).
+- [x] **Bảng thuộc tính chia mục**: "Chỗ đặt" lên đầu (cho biết đã gán, mồ côi, hay sẽ tự tạo khi lưu), rồi Thông tin, Vị trí & kích thước, Màu sắc. Khi chưa chọn gì thì hiện tóm tắt sơ đồ (số chỗ chưa gán) và danh sách phím tắt thu gọn.
+- [x] **Ẩn/hiện hai bảng bên** để khung vẽ chiếm toàn bộ chiều ngang; thanh trạng thái mỏng ở đáy (số phần tử, đã gán, kích thước khung, lưới).
+- [x] **Đóng có xác nhận** khi còn thay đổi chưa lưu; trình chỉnh sửa mở toàn màn hình qua portal (trước đây lệch 24px do kế thừa `space-y-6`).
+- [x] Nhãn mặc định trong danh mục chuyển sang tiếng Việt đầy đủ: "Văn phòng riêng", "Cabin cách âm", "Không gian khác".
+- [x] **Sơ đồ demo cho cả 9 tầng / 3 chi nhánh**: mặt bằng kiểu bản vẽ kiến trúc — mặt kính, vách ngăn, cửa, hành lang, lõi thang (cầu thang bộ + 2 thang máy + WC) cùng vị trí ở mọi tầng của một tòa (Nguyễn Huệ phía Đông, Nam Kỳ Khởi Nghĩa phía Tây, Cầu Giấy giữa phía Bắc), sảnh lễ tân, pantry, lounge, sân thượng penthouse. 29/29 chỗ đặt đều nằm trên sơ đồ; các phần tử khác là kết cấu/tiện ích nên lưu trong trình chỉnh sửa không tự tạo chỗ thừa. Sinh bằng `database/tools/floor_layouts.py` → `database/seed_floor_layouts_json.sql` (có sẵn câu kiểm tra ở cuối). Bàn nhiều chỗ (cụm bàn, dãy bàn) giờ vẽ đủ số ghế và chỉnh được "Số ghế" trong trình chỉnh sửa; biểu tượng khóa chỉ hiện trong trình chỉnh sửa.
+
+## 🛡️ 16. Điểm uy tín & nhắc lịch check-in
+- [x] **Trừ điểm khi không check-in**: mỗi khách bắt đầu 100 điểm; đơn đã xác nhận quá 30 phút sau giờ bắt đầu chưa check-in bị trừ 10 điểm (mỗi đơn một lần), gói nhiều ngày chỉ bị trừ khi hết hạn mà chưa dùng lần nào (Migration V5: `users.reputation_score`, `reputation_events`).
+- [x] **Hồi điểm**: check-in đúng hạn được cộng 2 điểm (tối đa 100).
+- [x] **Hệ quả**: dưới 50 điểm chỉ được giữ 1 đơn chưa sử dụng khi đặt online; dưới 30 điểm không đặt online được (quầy vẫn đặt hộ).
+- [x] **Gỡ phạt sai**: nhân viên/admin hoàn điểm phạt kèm lý do (`POST /api/staff/reputation/bookings/{id}/revert`), mỗi đơn một lần, ghi audit log và báo khách.
+- [x] **Nhắc lịch**: thông báo trước giờ bắt đầu 60 phút và lúc bắt đầu (còn bao nhiêu phút để check-in), mỗi đơn mỗi loại một lần.
+- [x] **Giao diện**: quy tắc check-in và cảnh báo hạn chế ở bước thanh toán; đếm ngược check-in trong Lịch sử đặt chỗ; huy hiệu điểm uy tín + lịch sử + nút hoàn điểm ở màn Check-in và Quản lý người dùng; ô điểm uy tín ở Hồ sơ.
+- [x] **Kiểm thử**: 334/334 unit test BE pass; chạy thật trên Postgres 16 (migration V5, job nhắc lịch, job trừ điểm, cộng điểm, hoàn điểm, chặn đặt online, phân quyền 403); build FE pass, chụp màn hình 4 vai trò.
+
+## 🪑 17. Đặt nhiều chỗ cùng lúc (đơn nhóm)
+- [x] **Migration V6**: bảng `booking_groups`, `bookings.group_id`, `payments.booking_group_id` / `group_order_id`.
+- [x] **Tạo đơn nhóm** (`POST /api/bookings/groups`): 1–10 chỗ cùng chi nhánh, cùng khung giờ; mỗi chỗ là một đơn riêng; tất cả hoặc không (báo đúng chỗ lỗi); khóa theo thứ tự cố định chống deadlock; nhóm tính là 1 đơn trong giới hạn 3 đơn chờ thanh toán; uy tín dưới 50 chỉ đặt 1 chỗ; mã khuyến mãi chỉ cho đơn 1 chỗ.
+- [x] **Thanh toán gộp**: một mã VietQR cho cả nhóm, mỗi chỗ một dòng `payments`; webhook / trang trả về / mô phỏng xác nhận mọi dòng, chỗ đã hết hạn thì tự hoàn tiền phần của chỗ đó.
+- [x] **Hủy cả nhóm** (`POST /api/bookings/groups/{id}/cancel`), mỗi chỗ hoàn tiền theo chính sách như đơn lẻ.
+- [x] **Giao diện**: chọn thêm chỗ trong panel đặt chỗ hoặc bấm trực tiếp trên sơ đồ (tô sáng các chỗ đã chọn); trang thanh toán liệt kê từng chỗ và giá; Lịch sử hiện nhãn nhóm, nút "Thanh toán cả nhóm", tìm theo mã nhóm.
+- [x] **Kiểm thử**: 344/344 unit test BE pass (thêm 10 test đơn nhóm); chạy thật trên Postgres 16 (tạo nhóm 3 chỗ, đặt trùng bị chặn và không để lại nhóm rác, thanh toán gộp, xác nhận đủ 3 chỗ, hủy nhóm hoàn tiền từng chỗ); luồng trình duyệt chọn 3 chỗ → thanh toán → VietQR → lịch sử. Tài liệu: `docs/api-contracts/booking-groups.md`.
+
+## 📦 18. Giới hạn dịch vụ theo cơ sở & thiết kế lại Khám phá không gian
+- [x] **Migration V7** `branch_service_limits` (chi nhánh, mã dịch vụ, số lượng tối đa dùng cùng lúc); áp được cho cả dịch vụ chung lẫn dịch vụ riêng của chi nhánh; không có dòng = không giới hạn.
+- [x] **Kiểm tra số lượng** khi đặt chỗ (có khóa chống tranh chấp), khi báo giá, khi gọi thêm trong lúc dùng chỗ và khi tăng số lượng: tính tổng thiết bị trên các đơn còn hiệu lực có thời gian chồng lấn. API: `GET/PUT /api/extra-services/limits`, `GET /api/extra-services/availability`.
+- [x] **Quản trị**: bảng "Số lượng tại cơ sở" cho Branch Admin (trang Dịch vụ) và Super Admin (chọn chi nhánh), thiết bị lên đầu.
+- [x] **Khách hàng**: panel đặt chỗ hiện "Còn x/y" / "Hết", giới hạn số lượng chọn được.
+- [x] **Khám phá không gian 2 bước**: (1) bộ lọc chi nhánh, ngày, khung giờ, số người, loại không gian, thiết bị cần dùng; (2) kết quả chỉ gồm chỗ phù hợp, gom theo tầng, chỗ trống trước, báo thiết bị đã hết trong khung giờ; vẫn xem được Sơ đồ tầng và Lịch theo giờ. Nạp chỗ của mọi tầng nên đặt nhiều chỗ được khác tầng. Thiết bị đã lọc được chọn sẵn khi mở chỗ.
+- [x] **Kiểm thử**: 351/351 unit test BE pass (thêm 7 test giới hạn); chạy thật trên Postgres 16 (đặt giới hạn 1 máy chiếu, đơn thứ hai trùng giờ bị chặn, báo giá vượt bị chặn, khách không sửa được giới hạn); chụp màn hình bộ lọc, kết quả, panel, trang quản trị, bản điện thoại.
+
+## 🛑 19. Nhân viên/Admin hủy hoặc kết thúc sớm đơn và hoàn tiền
+- [x] **Kết thúc sớm đơn đang sử dụng** (`POST /api/staff/bookings/{id}/end-early`): check-out khách ngay, hoàn phần thời gian chưa dùng (làm tròn 1.000đ), hoàn toàn bộ, hoặc số tiền tự nhập (0 → tối đa số đã trả); bắt buộc lý do, ghi nhật ký, báo khách. Migration V8 thêm loại hoàn tiền `STAFF_ENDED`.
+- [x] **Hủy đơn chưa sử dụng thay khách** (API có sẵn) nay có giao diện: "Lỗi do cơ sở – hoàn 100%" hoặc "Theo chính sách hủy". Xem trước số tiền hoàn qua `GET /api/staff/bookings/{id}/refund-preview`.
+- [x] **Trang "Đơn đặt chỗ"** cho Super Admin (chọn chi nhánh) và Branch Admin: xem đơn theo ngày, lọc trạng thái, tìm theo mã/khách/SĐT; nút hủy/kết thúc sớm ngay trên từng đơn (`GET /api/staff/bookings?branchId&from&to`). Màn Check-in của nhân viên cũng có nút này.
+- [x] **Kiểm thử**: 356/356 unit test BE pass (thêm 5 test kết thúc sớm); chạy thật trên Postgres 16: kết thúc sớm qua giao diện admin (đơn → Hoàn thành, khách được check-out, khoản hoàn vào hàng đợi, có nhật ký và thông báo), hủy hoàn 100%, hoàn số tiền tự nhập, chặn kết thúc sớm đơn đã hủy.
