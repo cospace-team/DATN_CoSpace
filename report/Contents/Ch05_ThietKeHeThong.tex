@@ -176,14 +176,14 @@ Các sơ đồ tuần tự dưới đây mô tả những luồng xử lý chín
 \label{sec:activity_state}
 
 \subsection{Sơ đồ hoạt động}
-Ba quy trình có nhiều bên tham gia được mô hình hóa bằng sơ đồ hoạt động có phân làn: đặt chỗ và thanh toán trực tuyến (Hình~\ref{fig:act_booking}), đặt chỗ tại quầy và thanh toán tiền mặt (Hình~\ref{fig:act_counter}), bảo trì không gian và xử lý đơn bị ảnh hưởng (Hình~\ref{fig:act_maintenance}). Luồng check-in, check-out và luồng hủy đơn đã được thể hiện bằng sơ đồ tuần tự ở Mục~\ref{sec:sequence}.
+Ba quy trình có nhiều bên tham gia được mô hình hóa bằng sơ đồ hoạt động có phân làn: đặt chỗ và thanh toán trực tuyến (Hình~\ref{fig:act_booking}), đặt chỗ và thu tiền tại quầy (Hình~\ref{fig:act_counter}), bảo trì không gian và xử lý đơn bị ảnh hưởng (Hình~\ref{fig:act_maintenance}). Điều kiện rẽ nhánh được ghi trong ngoặc vuông; hình thoi rỗng là nút gộp các luồng; thanh đen ở Hình~\ref{fig:act_maintenance} tách luồng gửi thông báo cho khách khỏi vòng lặp xử lý các đơn. Luồng check-in, check-out và luồng hủy đơn đã được thể hiện bằng sơ đồ tuần tự ở Mục~\ref{sec:sequence}.
 
 \hinhdo{Chuong5/act-1-datcho-online}{Sơ đồ hoạt động: đặt chỗ và thanh toán trực tuyến}{fig:act_booking}
-\hinhdo{Chuong5/act-2-datcho-quay}{Sơ đồ hoạt động: đặt chỗ tại quầy và thanh toán tiền mặt}{fig:act_counter}
+\hinhdo{Chuong5/act-2-datcho-quay}{Sơ đồ hoạt động: đặt chỗ và thu tiền tại quầy}{fig:act_counter}
 \hinhdo{Chuong5/act-5-baotri}{Sơ đồ hoạt động: bảo trì không gian và xử lý đơn bị ảnh hưởng}{fig:act_maintenance}
 
 \subsection{Máy trạng thái của đơn đặt chỗ}
-Trạng thái đơn được khai báo trong kiểu liệt kê \mt{BookingStatus} gồm tám giá trị: \mt{PENDING\_PAYMENT}, \mt{CONFIRMED}, \mt{CHECKED\_IN}, \mt{COMPLETED}, \mt{CANCELLED}, \mt{EXPIRED}, \mt{NO\_SHOW} và \mt{CHECKED\_OUT} (trạng thái cũ, chỉ còn để đóng dữ liệu lịch sử). Mọi thay đổi trạng thái đi qua \mt{BookingStateMachine.transition}; chuyển đổi không hợp lệ làm phát sinh ngoại lệ và trạng thái giữ nguyên. Hình~\ref{fig:state_booking} và Bảng~\ref{tab:state_booking_matrix} mô tả các chuyển đổi hợp lệ; \mt{COMPLETED}, \mt{CANCELLED}, \mt{EXPIRED} và \mt{NO\_SHOW} là trạng thái cuối.
+Trạng thái đơn được khai báo trong kiểu liệt kê \mt{BookingStatus} gồm tám giá trị: \mt{PENDING\_PAYMENT}, \mt{CONFIRMED}, \mt{CHECKED\_IN}, \mt{COMPLETED}, \mt{CANCELLED}, \mt{EXPIRED}, \mt{NO\_SHOW} và \mt{CHECKED\_OUT} (trạng thái cũ, chỉ còn để đóng dữ liệu lịch sử nên không vẽ trong hình). Mọi thay đổi trạng thái đi qua \mt{BookingStateMachine.transition}; chuyển đổi không hợp lệ làm phát sinh ngoại lệ và trạng thái giữ nguyên. Hình~\ref{fig:state_booking} và Bảng~\ref{tab:state_booking_matrix} mô tả các chuyển đổi hợp lệ; \mt{COMPLETED}, \mt{CANCELLED}, \mt{EXPIRED} và \mt{NO\_SHOW} là trạng thái cuối.
 
 \hinhdo{Chuong5/st-1-dondatcho}{Sơ đồ trạng thái của đơn đặt chỗ}{fig:state_booking}
 
@@ -197,7 +197,7 @@ Trạng thái đơn được khai báo trong kiểu liệt kê \mt{BookingStatus
 \hline
 \textbf{Trạng thái nguồn} & \textbf{Sự kiện và điều kiện} & \textbf{Trạng thái đích} \\
 \hline
-(tạo mới) & Tạo đơn hợp lệ, không chồng lấn & \mt{PENDING\_PAYMENT} \\
+(tạo mới) & Tạo đơn hợp lệ, tổng tiền lớn hơn 0 & \mt{PENDING\_PAYMENT} \\
 \hline
 (tạo mới) & Tạo đơn có tổng tiền bằng 0 & \mt{CONFIRMED} \\
 \hline
@@ -205,7 +205,7 @@ Trạng thái đơn được khai báo trong kiểu liệt kê \mt{BookingStatus
 \hline
 \mt{PENDING\_PAYMENT} & Quá hạn thanh toán 15 phút & \mt{EXPIRED} \\
 \hline
-\mt{PENDING\_PAYMENT} & Khách hủy; bảo trì phủ đơn & \mt{CANCELLED} \\
+\mt{PENDING\_PAYMENT} & Khách hoặc nhân viên hủy; bảo trì phủ hết đơn & \mt{CANCELLED} \\
 \hline
 \mt{CONFIRMED} & Check-in trong khung cho phép & \mt{CHECKED\_IN} \\
 \hline
@@ -213,9 +213,9 @@ Trạng thái đơn được khai báo trong kiểu liệt kê \mt{BookingStatus
 \hline
 \mt{CONFIRMED} & Hết giờ, chưa từng check-in & \mt{NO\_SHOW} \\
 \hline
-\mt{CONFIRMED} & Gói nhiều ngày đã từng check-in, hết hạn & \mt{COMPLETED} \\
+\mt{CONFIRMED} & Gói nhiều ngày đã từng check-in, hết hạn; nhân viên kết thúc sớm khi đơn đang trong thời gian sử dụng & \mt{COMPLETED} \\
 \hline
-\mt{CHECKED\_IN} & Check-out (hoặc tự check-out khi quá giờ); bảo trì cắt ngang & \mt{COMPLETED} \\
+\mt{CHECKED\_IN} & Check-out (hoặc tự check-out khi quá giờ); bảo trì cắt ngang; nhân viên kết thúc sớm & \mt{COMPLETED} \\
 \hline
 \mt{CHECKED\_IN} & Check-out giữa kỳ của gói nhiều ngày & \mt{CONFIRMED} \\
 \hline
@@ -223,7 +223,7 @@ Trạng thái đơn được khai báo trong kiểu liệt kê \mt{BookingStatus
 \end{table}
 
 \subsection{Máy trạng thái của giao dịch thanh toán}
-Giao dịch thanh toán (\mt{PaymentStatus}) bắt đầu ở \mt{INITIATED}, chuyển sang \mt{PENDING} khi đã có liên kết thanh toán, sang \mt{PAID} khi thanh toán thành công, hoặc \mt{FAILED}, \mt{EXPIRED}, \mt{CANCELLED}. Giao dịch tiền mặt được tạo thẳng ở \mt{PAID}; giao dịch đã hoàn đủ tiền chuyển sang \mt{REFUNDED} (Hình~\ref{fig:state_payment}). Khác với đơn đặt chỗ, trạng thái thanh toán hiện được gán trực tiếp trong \mt{PaymentService}, chưa có lớp máy trạng thái riêng.
+Giao dịch thanh toán trực tuyến (\mt{PaymentStatus}) bắt đầu ở \mt{INITIATED}, chuyển sang \mt{PENDING} khi đã có liên kết thanh toán và sang \mt{PAID} khi cổng xác nhận thành công; khi chưa thu được tiền, giao dịch chuyển sang \mt{FAILED}, \mt{EXPIRED} hoặc \mt{CANCELLED}. Ba trạng thái này chưa phải trạng thái cuối: nếu cổng vẫn báo thành công sau đó, giao dịch chuyển sang \mt{PAID} và hệ thống tạo yêu cầu hoàn tiền khi đơn không còn chờ thanh toán. Giao dịch thu tại quầy (tiền mặt hoặc chuyển khoản) được tạo thẳng ở \mt{PAID}; giao dịch đã hoàn đủ tiền chuyển sang \mt{REFUNDED} (Hình~\ref{fig:state_payment}). Giá trị \mt{AUTHORIZED} có trong kiểu liệt kê nhưng chưa được dùng. Khác với đơn đặt chỗ, trạng thái thanh toán được gán trực tiếp trong \mt{PaymentService}, \mt{RefundService} và \mt{BookingExpiryService}, chưa có lớp máy trạng thái riêng.
 
 \hinhdo{Chuong5/st-2-thanhtoan}{Sơ đồ trạng thái của giao dịch thanh toán}{fig:state_payment}
 
@@ -235,7 +235,7 @@ Cơ sở dữ liệu được thiết kế theo hai bước: mô hình thực th
 \subsection{Mô hình thực thể -- kết hợp (ký pháp Chen)}
 \label{ssec:erd_quan_niem}
 
-Trong ký pháp Chen, thực thể là hình chữ nhật, mối kết hợp là hình thoi, thuộc tính là hình elip; thuộc tính khóa được gạch chân. Thực thể yếu và mối kết hợp xác định của nó được vẽ viền đôi. Trên mỗi cạnh nối thực thể với mối kết hợp ghi bản số $1$, $N$ hoặc $M$, ứng với các mối kết hợp $1:1$, $1:N$ và $M:N$. Mô hình được chia thành bảy phần theo nhóm chức năng; thực thể có viền nét đứt đã được mô tả thuộc tính ở hình khác, và mỗi hình chỉ nêu các thuộc tính chính. Các cột chỉ dùng để ghi vết người thao tác (người tạo, người thu tiền, người hủy) và các cột lặp lại thông tin suy ra được từ đơn hoặc không gian (khách hàng, chi nhánh trên các bảng đặt chỗ, thanh toán, hoàn tiền) không được vẽ thành mối kết hợp.
+Trong ký pháp Chen, thực thể là hình chữ nhật, mối kết hợp là hình thoi, thuộc tính là hình elip; thuộc tính khóa được gạch chân. Thực thể yếu và mối kết hợp xác định của nó được vẽ viền đôi. Trên mỗi cạnh nối thực thể với mối kết hợp ghi bản số $1$, $N$ hoặc $M$, ứng với các mối kết hợp $1:1$, $1:N$ và $M:N$. Mô hình được chia thành tám phần theo nhóm chức năng; thực thể có viền nét đứt đã được mô tả thuộc tính ở hình khác, và mỗi hình chỉ nêu các thuộc tính chính. Các cột chỉ dùng để ghi vết người thao tác (người tạo, người thu tiền, người hủy) và các cột lặp lại thông tin suy ra được từ đơn hoặc không gian (khách hàng, chi nhánh trên các bảng đặt chỗ, thanh toán, hoàn tiền) không được vẽ thành mối kết hợp.
 
 \subsubsection{Định danh, hồ sơ năng lực và kết nối đối tác}
 \emph{Người dùng} có nhiều \emph{Tài khoản liên kết} (nhà cung cấp đăng nhập) và một \emph{Hồ sơ năng lực}; hồ sơ là thực thể yếu, được xác định bởi người dùng sở hữu nó. Hồ sơ có quan hệ nhiều -- nhiều với \emph{Thẻ} qua hai mối kết hợp \emph{Có kỹ năng} (thuộc tính mức độ) và \emph{Quan tâm} (thuộc tính độ ưu tiên), và ghi nhận chi nhánh mà thành viên thường đến. Hai mối kết hợp đệ quy nhiều -- nhiều là \emph{Gợi ý} giữa hai hồ sơ (điểm tương đồng, lý do gợi ý) và \emph{Kết nối} giữa hai người dùng (trạng thái lời mời, lời nhắn) (Hình~\ref{fig:erd_chen_dinhdanh}).
@@ -248,7 +248,7 @@ Trong ký pháp Chen, thực thể là hình chữ nhật, mối kết hợp là
 \hinherd{erd-chen-02-khonggian.png}{ERD ký pháp Chen: không gian làm việc}{fig:erd_chen_khonggian}
 
 \subsubsection{Bảng giá, dịch vụ thêm và hạng thành viên}
-\emph{Bảng giá} tính cho một loại không gian và có thể áp dụng riêng cho một chi nhánh; bảng giá không gắn chi nhánh là giá chung. \emph{Dịch vụ thêm} do một chi nhánh cung cấp hoặc dùng chung. Mỗi đơn có nhiều \emph{Dòng phát sinh} (dịch vụ gọi thêm, phí gia hạn, phí trả muộn) lưu số lượng, đơn giá lúc ghi nhận và trạng thái thanh toán; dòng dịch vụ thuộc một dịch vụ thêm. Mỗi người dùng đạt một \emph{Hạng thành viên} (Hình~\ref{fig:erd_chen_gia}).
+\emph{Bảng giá} tính cho một loại không gian và có thể áp dụng riêng cho một chi nhánh; bảng giá không gắn chi nhánh là giá chung. \emph{Dịch vụ thêm} do một chi nhánh cung cấp hoặc dùng chung. Với các dịch vụ là đồ vật (máy chiếu, màn hình di động), mỗi chi nhánh đặt số lượng tối đa được dùng cùng lúc qua mối kết hợp nhiều -- nhiều \emph{Giới hạn}. Mỗi đơn có nhiều \emph{Dòng phát sinh} (dịch vụ gọi thêm, phí gia hạn, phí trả muộn) lưu số lượng, đơn giá lúc ghi nhận và trạng thái thanh toán; dòng dịch vụ thuộc một dịch vụ thêm. Mỗi người dùng đạt một \emph{Hạng thành viên} (Hình~\ref{fig:erd_chen_gia}).
 
 \hinherd{erd-chen-03-gia.png}{ERD ký pháp Chen: bảng giá, dịch vụ thêm và hạng thành viên}{fig:erd_chen_gia}
 
@@ -272,6 +272,11 @@ Mỗi đơn có nhiều \emph{Thanh toán}; mỗi thanh toán có nhiều \emph{
 
 \hinherd{erd-chen-07-congdong.png}{ERD ký pháp Chen: cộng đồng, thông báo và nhật ký kiểm toán}{fig:erd_chen_congdong}
 
+\subsubsection{Nhóm đặt chỗ và điểm uy tín}
+Khách hàng có thể đặt nhiều chỗ trong một lần: \emph{Nhóm đặt chỗ} do một người dùng tạo, thuộc một chi nhánh, gồm nhiều đơn \emph{Đặt chỗ} cùng khoảng thời gian và được trả chung bằng một lần thanh toán. Mỗi người dùng có thuộc tính điểm uy tín; mỗi \emph{Sự kiện uy tín} phát sinh từ một đơn và ghi lý do, số điểm thay đổi và điểm sau khi thay đổi (Hình~\ref{fig:erd_chen_nhom}).
+
+\hinherd{erd-chen-08-nhom-uytin.png}{ERD ký pháp Chen: nhóm đặt chỗ và điểm uy tín}{fig:erd_chen_nhom}
+
 \subsection{Mô hình quan hệ}
 \label{ssec:erd_vat_ly}
 
@@ -279,11 +284,11 @@ Mô hình quan niệm được ánh xạ sang mô hình quan hệ theo các nguy
 \begin{itemize}
     \item mỗi thực thể thành một bảng, khóa chính kiểu \mt{UUID} (\mt{gen\_random\_uuid()}); riêng thực thể yếu \emph{Hồ sơ năng lực} dùng mã người dùng làm khóa chính (\mt{profiles.user\_id});
     \item mối kết hợp $1:N$ thành khóa ngoại ở bảng phía nhiều; hai mối kết hợp $1:1$ thành khóa ngoại ở một phía: \emph{Hủy} thành \mt{booking\_cancellations.booking\_id} có ràng buộc duy nhất, \emph{Cấp voucher} thành \mt{refunds.voucher\_promotion\_id};
-    \item mối kết hợp $M:N$ thành bảng trung gian: \mt{workspace\_type\_amenities}, \mt{profile\_skills}, \mt{profile\_interests}, \mt{profile\_match\_scores}, \mt{partner\_connections}, \mt{post\_tags}.
+    \item mối kết hợp $M:N$ thành bảng trung gian: \mt{workspace\_type\_amenities}, \mt{profile\_skills}, \mt{profile\_interests}, \mt{profile\_match\_scores}, \mt{partner\_connections}, \mt{post\_tags}, \mt{branch\_service\_limits} (dịch vụ được tham chiếu bằng mã \mt{service\_code}, không qua khóa ngoại).
 \end{itemize}
 Hai mối kết hợp \emph{Làm việc tại} (người dùng -- chi nhánh) và \emph{Đạt hạng} (người dùng -- hạng thành viên) được lưu bằng cột \mt{users.branch\_id} và \mt{users.membership\_tier} nhưng chưa khai báo ràng buộc khóa ngoại.
 
-Lược đồ được quản lý bằng Flyway với ba tệp migration: \mt{V1\_\_baseline.sql} tạo lược đồ gốc gồm 30 bảng, \mt{V2\_\_constraints.sql} bổ sung ràng buộc toàn vẹn, \mt{V3} thêm hai bảng \mt{workspace\_images}, \mt{partner\_connections} và các cột cho phí phát sinh, voucher hoàn tiền. Tổng cộng có 32 bảng, chia thành bảy nhóm (Hình~\ref{fig:erd} và Bảng~\ref{tab:bang_theo_module}). Mỗi đường nối trong hình cho biết giữa hai nhóm có ít nhất một khóa ngoại. Bảng \mt{users} và \mt{branches} được bảng của hầu hết các nhóm khác tham chiếu, nên hai nhóm chứa chúng được vẽ thành hai trục hai bên.
+Lược đồ được quản lý bằng Flyway với tám tệp migration: \mt{V1\_\_baseline.sql} tạo lược đồ gốc gồm 30 bảng; \mt{V2} bổ sung ràng buộc toàn vẹn; \mt{V3} thêm \mt{workspace\_images}, \mt{partner\_connections} và các cột cho phí phát sinh, voucher hoàn tiền; \mt{V4} thêm cột lưu sơ đồ tầng; \mt{V5} thêm điểm uy tín và bảng \mt{reputation\_events}; \mt{V6} thêm \mt{booking\_groups}; \mt{V7} thêm \mt{branch\_service\_limits}; \mt{V8} thêm lý do hoàn tiền \mt{STAFF\_ENDED}. Tổng cộng có 35 bảng, chia thành bảy nhóm (Hình~\ref{fig:erd} và Bảng~\ref{tab:bang_theo_module}). Mỗi đường nối trong hình cho biết giữa hai nhóm có ít nhất một khóa ngoại. Bảng \mt{users} và \mt{branches} được bảng của hầu hết các nhóm khác tham chiếu, nên hai nhóm chứa chúng được vẽ thành hai trục hai bên.
 
 \hinhdo{Chuong6/erd-00-tongquan}{Bản đồ các nhóm bảng của cơ sở dữ liệu}{fig:erd}
 
@@ -297,21 +302,21 @@ Lược đồ được quản lý bằng Flyway với ba tệp migration: \mt{V1
 \hline
 \textbf{Nhóm} & \textbf{Số bảng} & \textbf{Bảng} \\
 \hline
-Định danh và hồ sơ & 3 & \mt{users}, \mt{auth\_accounts}, \mt{profiles} \\
+Định danh, hồ sơ và uy tín & 4 & \mt{users}, \mt{auth\_accounts}, \mt{profiles}, \mt{reputation\_events} \\
 \hline
 Gợi ý đối tác và kết nối & 5 & \mt{tags}, \mt{profile\_skills}, \mt{profile\_interests}, \mt{profile\_match\_scores}, \mt{partner\_connections} \\
 \hline
 Không gian làm việc & 8 & \mt{branches}, \mt{floors}, \mt{workspaces}, \mt{workspace\_types}, \mt{amenities}, \mt{workspace\_type\_amenities}, \mt{workspace\_maintenance}, \mt{workspace\_images} \\
 \hline
-Giá, khuyến mãi, hạng & 5 & \mt{price\_policies}, \mt{extra\_services}, \mt{cancellation\_policies}, \mt{promotions}, \mt{membership\_tiers} \\
+Giá, dịch vụ, khuyến mãi, hạng & 6 & \mt{price\_policies}, \mt{extra\_services}, \mt{branch\_service\_limits}, \mt{cancellation\_policies}, \mt{promotions}, \mt{membership\_tiers} \\
 \hline
-Đặt chỗ & 4 & \mt{bookings}, \mt{booking\_services}, \mt{checkin\_logs}, \mt{booking\_cancellations} \\
+Đặt chỗ & 5 & \mt{bookings}, \mt{booking\_groups}, \mt{booking\_services}, \mt{checkin\_logs}, \mt{booking\_cancellations} \\
 \hline
 Thanh toán và hoàn tiền & 3 & \mt{payments}, \mt{payment\_events}, \mt{refunds} \\
 \hline
 Cộng đồng, thông báo, kiểm toán & 4 & \mt{posts}, \mt{post\_tags}, \mt{notifications}, \mt{audit\_logs} \\
 \hline
-\textbf{Tổng cộng} & \textbf{32} & \\
+\textbf{Tổng cộng} & \textbf{35} & \\
 \hline
 \end{tabularx}
 \end{table}
