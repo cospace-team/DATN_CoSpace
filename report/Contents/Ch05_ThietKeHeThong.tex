@@ -19,10 +19,10 @@ Hệ thống theo mô hình khách -- chủ ba tầng như đã trình bày ở 
 \label{ssec:phantang_be}
 Mã nguồn máy chủ nằm trong gói \mt{com.cospace.app}:
 \begin{itemize}
-    \item \mt{controller}: 28 lớp REST controller với 153 điểm cuối, cùng lớp \mt{ApiExceptionHandler} chuyển ngoại lệ thành phản hồi JSON.
-    \item \mt{service}: 37 lớp, gồm các dịch vụ nghiệp vụ, hai tác vụ định kỳ, lớp \mt{BookingStateMachine} và lớp \mt{GeminiClient} gọi Gemini API. 26 lớp dùng \mt{@Transactional}.
-    \item \mt{repository}: 31 giao diện Spring Data JPA, gồm các truy vấn khóa dòng \mt{findByIdWithLock} và truy vấn tìm khoảng thời gian chồng lấn.
-    \item \mt{entity}: 31 lớp thực thể và 5 kiểu liệt kê (trạng thái đơn, trạng thái thanh toán, đơn vị thời gian, nguồn đơn, trạng thái bảo trì).
+    \item \mt{controller}: 30 lớp REST controller với 167 điểm cuối; lớp \mt{GlobalExceptionHandler} (gói \mt{exception}) chuyển ngoại lệ thành phản hồi JSON.
+    \item \mt{service}: 41 lớp, gồm các dịch vụ nghiệp vụ, ba tác vụ định kỳ, lớp \mt{BookingStateMachine} và lớp \mt{GeminiClient} gọi Gemini API. 29 lớp dùng \mt{@Transactional}.
+    \item \mt{repository}: 34 giao diện Spring Data JPA, gồm các truy vấn khóa dòng \mt{findByIdWithLock} và truy vấn tìm khoảng thời gian chồng lấn.
+    \item \mt{entity}: 34 lớp thực thể và 5 kiểu liệt kê (trạng thái đơn, trạng thái thanh toán, đơn vị thời gian, nguồn đơn, trạng thái bảo trì).
     \item \mt{dto}: 48 lớp dữ liệu vào/ra của API.
     \item \mt{config}: \mt{SecurityConfig}, \mt{SupabaseJwtAuthenticationConverter}, \mt{CacheConfig}, \mt{PayosConfig}, \mt{PayosProductionGuard}.
     \item \mt{security}: \mt{BranchAccessGuard}; \mt{util}: \mt{JwtUtil}.
@@ -50,33 +50,33 @@ Hình~\ref{fig:trienkhai} thể hiện cách hệ thống được triển khai:
 \section{Thiết kế lớp}
 \label{sec:thietke_lop}
 
-Các lớp thực thể không khai báo quan hệ đối tượng của Hibernate. Mỗi quan hệ được thể hiện bằng một thuộc tính kiểu \mt{UUID} giữ khóa ngoại (ký hiệu \guillemotleft FK\guillemotright{} trên sơ đồ).
+Các lớp thực thể không khai báo quan hệ đối tượng của Hibernate. Mỗi quan hệ được thể hiện bằng một thuộc tính kiểu \mt{UUID} giữ khóa ngoại (ký hiệu \guillemotleft FK\guillemotright{} trên sơ đồ). Mỗi sơ đồ chỉ nêu các thuộc tính và phương thức chính; lớp viền nét đứt đã được mô tả ở sơ đồ khác.
 
 \subsection{Các lớp thực thể}
 \label{ssec:lop_mien}
 
 \subsubsection{Không gian làm việc}
-Cấu trúc vật lý gồm \mt{BranchEntity} $\rightarrow$ \mt{Floor} $\rightarrow$ \mt{WorkspaceEntity}. Mỗi không gian thuộc một \mt{WorkspaceType}; tiện ích (\mt{Amenity}) được gắn theo loại không gian qua lớp \mt{WorkspaceTypeAmenity}. Lịch bảo trì là \mt{WorkspaceMaintenanceEntity} (Hình~\ref{fig:cd_khonggian}).
+Cấu trúc vật lý gồm \mt{BranchEntity} $\rightarrow$ \mt{Floor} $\rightarrow$ \mt{WorkspaceEntity}. Mỗi không gian thuộc một \mt{WorkspaceType}; tiện ích (\mt{Amenity}) được gắn theo loại không gian qua lớp \mt{WorkspaceTypeAmenity}. Ảnh của không gian là \mt{WorkspaceImage}; lịch bảo trì là \mt{WorkspaceMaintenanceEntity} (Hình~\ref{fig:cd_khonggian}).
 
 \hinhuml{cd-01-khonggian}{Sơ đồ lớp thực thể: không gian làm việc}{fig:cd_khonggian}
 
 \subsubsection{Bảng giá, dịch vụ thêm và chính sách hủy}
-\mt{PricePolicy}, \mt{ExtraServiceEntity} và \mt{CancellationPolicy} đều có trường \mt{branchId} có thể rỗng: rỗng là cấu hình chung, có giá trị là cấu hình riêng của chi nhánh và được ưu tiên áp dụng (Hình~\ref{fig:cd_gia}).
+\mt{PricePolicy}, \mt{ExtraServiceEntity} và \mt{CancellationPolicy} đều có trường \mt{branchId} có thể rỗng: rỗng là cấu hình chung, có giá trị là cấu hình riêng của chi nhánh và được ưu tiên áp dụng. \mt{BranchServiceLimit} lưu số lượng tối đa của một dịch vụ được dùng cùng lúc ở một chi nhánh, tham chiếu dịch vụ bằng mã (Hình~\ref{fig:cd_gia}).
 
 \hinhuml{cd-02-gia-chinhsach}{Sơ đồ lớp thực thể: bảng giá, dịch vụ thêm và chính sách hủy}{fig:cd_gia}
 
-\subsubsection{Đặt chỗ, check-in và hủy}
-\mt{Booking} lưu các khoản tiền \mt{subtotalAmount}, \mt{discountAmount}, \mt{addonAmount}, \mt{totalAmount} và phần giảm theo hạng thành viên, theo mã khuyến mãi. \mt{BookingServiceItem} là một dòng trên hóa đơn của đơn (dịch vụ thêm, phí gia hạn, phí trả muộn), lưu đơn giá tại thời điểm gọi và trạng thái đã trả hay chưa. \mt{CheckinLog} lưu các lượt check-in, check-out; \mt{BookingCancellation} lưu thông tin hủy (Hình~\ref{fig:cd_datcho}).
+\subsubsection{Đặt chỗ, check-in, hủy và điểm uy tín}
+\mt{Booking} lưu các khoản tiền \mt{subtotalAmount}, \mt{discountAmount}, \mt{addonAmount}, \mt{totalAmount} và phần giảm theo hạng thành viên, theo mã khuyến mãi. \mt{BookingServiceItem} là một dòng trên hóa đơn của đơn (dịch vụ thêm, phí gia hạn, phí trả muộn), lưu đơn giá tại thời điểm gọi và trạng thái đã trả hay chưa. \mt{CheckinLog} lưu các lượt check-in, check-out; \mt{BookingCancellation} lưu thông tin hủy. \mt{BookingGroup} gom các đơn của một lần đặt nhiều chỗ; \mt{ReputationEvent} ghi từng lần cộng, trừ điểm uy tín (\mt{User.reputationScore}) gắn với một đơn (Hình~\ref{fig:cd_datcho}).
 
-\hinhuml{cd-03-datcho}{Sơ đồ lớp thực thể: đặt chỗ, check-in và hủy}{fig:cd_datcho}
+\hinhuml{cd-03-datcho}{Sơ đồ lớp thực thể: đặt chỗ, check-in, hủy và điểm uy tín}{fig:cd_datcho}
 
 \subsubsection{Thanh toán, hoàn tiền, khuyến mãi và hạng thành viên}
-Một đơn có thể có nhiều \mt{Payment} (ví dụ lần thanh toán đơn và lần thanh toán dịch vụ phát sinh). \mt{Refund} là một yêu cầu hoàn tiền trong hàng chờ. \mt{Promotion} lưu cả mã giảm giá công khai và voucher cá nhân. Hạng của khách được lưu bằng mã hạng trong \mt{User}, tham chiếu tới \mt{MembershipTier} (Hình~\ref{fig:cd_thanhtoan}).
+Một đơn có thể có nhiều \mt{Payment} (ví dụ lần thanh toán đơn và lần thanh toán dịch vụ phát sinh); các dòng \mt{Payment} của một lần trả chung cho đơn nhóm có cùng \mt{groupOrderId}. \mt{Refund} là một yêu cầu hoàn tiền trong hàng chờ. \mt{Promotion} lưu cả mã giảm giá công khai và voucher cá nhân (\mt{ownerUserId}); voucher cấp khi hoàn tiền được ghi ở \mt{Refund.voucherPromotionId}. Hạng của khách được lưu bằng mã hạng trong \mt{User}, tham chiếu tới \mt{MembershipTier} (Hình~\ref{fig:cd_thanhtoan}).
 
 \hinhuml{cd-04-thanhtoan}{Sơ đồ lớp thực thể: thanh toán, hoàn tiền, khuyến mãi và hạng thành viên}{fig:cd_thanhtoan}
 
 \subsubsection{Hồ sơ năng lực và gợi ý đối tác}
-Mỗi \mt{User} có một \mt{Profile}. Kỹ năng (\mt{ProfileSkill}, có mức độ 1--5) và sở thích (\mt{ProfileInterest}, có độ ưu tiên) đều tham chiếu tới danh mục thẻ \mt{Tag}. \mt{ProfileMatchScore} lưu điểm tương đồng đã tính (Hình~\ref{fig:cd_goiy}).
+Mỗi \mt{User} có một \mt{Profile}. Kỹ năng (\mt{ProfileSkill}, có mức độ 1--5) và sở thích (\mt{ProfileInterest}, có độ ưu tiên) đều tham chiếu tới danh mục thẻ \mt{Tag}. \mt{ProfileMatchScore} lưu điểm tương đồng đã tính; \mt{PartnerConnection} lưu lời mời kết nối giữa hai người dùng (Hình~\ref{fig:cd_goiy}).
 
 \hinhuml{cd-05-goiydoitac}{Sơ đồ lớp thực thể: hồ sơ năng lực và gợi ý đối tác}{fig:cd_goiy}
 
@@ -89,17 +89,17 @@ Gồm bài viết (\mt{Post}), thẻ của bài viết (\mt{PostTag}), thông b�
 \label{ssec:lop_dichvu}
 
 \subsubsection{Đặt chỗ và tính giá}
-\mt{BookingService} kiểm tra hạn mức đơn chờ, lấy khóa tư vấn, lấy đơn giá từ \mt{PricingService}, áp dụng giảm giá qua \mt{MembershipService} và \mt{PromotionService}, tính giá dịch vụ thêm qua \mt{BookingAddonService}; mọi chuyển trạng thái đi qua \mt{BookingStateMachine} (Hình~\ref{fig:cd_svc_datcho}).
+\mt{BookingService} kiểm tra hạn mức đơn chờ và điểm uy tín (\mt{ReputationService}), lấy khóa tư vấn, lấy đơn giá từ \mt{PricingService}, áp dụng giảm giá qua \mt{MembershipService} và \mt{PromotionService}, tính giá dịch vụ thêm qua \mt{BookingAddonService}, lớp này kiểm tra giới hạn dịch vụ qua \mt{ServiceLimitService}; mọi chuyển trạng thái đi qua \mt{BookingStateMachine} (Hình~\ref{fig:cd_svc_datcho}).
 
 \hinhumlngang{cd-07-svc-datcho}{Sơ đồ lớp dịch vụ: đặt chỗ, tính giá và ưu đãi}{fig:cd_svc_datcho}
 
 \subsubsection{Vòng đời đơn, check-in và bảo trì}
-\mt{BookingExpiryScheduler} (30 giây) giao từng đơn quá hạn cho \mt{BookingExpiryService}; \mt{BookingLifecycleScheduler} (5 phút) giao cho \mt{BookingLifecycleService}. \mt{CheckinService} xử lý check-in, check-out; \mt{StaffMaintenanceService} tạo lịch bảo trì và xử lý các đơn bị ảnh hưởng (Hình~\ref{fig:cd_svc_vongdoi}).
+\mt{BookingExpiryScheduler} (30 giây) giao từng đơn quá hạn cho \mt{BookingExpiryService}; \mt{BookingLifecycleScheduler} (5 phút) giao cho \mt{BookingLifecycleService} việc tự check-out, trừ điểm uy tín khi khách không check-in và đóng đơn hết giờ; \mt{BookingReminderScheduler} (1 phút) gửi nhắc lịch qua \mt{BookingReminderService}. \mt{CheckinService} xử lý check-in, check-out và cộng điểm khi check-in đúng giờ; \mt{StaffMaintenanceService} tạo lịch bảo trì và xử lý các đơn bị ảnh hưởng (Hình~\ref{fig:cd_svc_vongdoi}).
 
-\hinhuml{cd-08-svc-vongdoi}{Sơ đồ lớp dịch vụ: vòng đời đơn, check-in và bảo trì}{fig:cd_svc_vongdoi}
+\hinhuml{cd-08-svc-vongdoi}{Sơ đồ lớp dịch vụ: vòng đời đơn, nhắc lịch, điểm uy tín, check-in và bảo trì}{fig:cd_svc_vongdoi}
 
 \subsubsection{Thanh toán, hủy và hoàn tiền}
-\mt{PaymentService} điều phối việc tạo giao dịch và xử lý webhook, gọi \mt{PayosService} và \mt{MomoService} để làm việc với cổng thanh toán. \mt{CancellationService} tính tiền hoàn khi hủy; \mt{RefundService} quản lý hàng chờ hoàn tiền; \mt{NotificationService} gửi thông báo cho khách (Hình~\ref{fig:cd_svc_thanhtoan}).
+\mt{PaymentService} điều phối việc tạo giao dịch và xử lý webhook, gọi \mt{PayosService} và \mt{MomoService} để làm việc với cổng thanh toán. \mt{CancellationService} tính tiền hoàn khi hủy đơn, hủy đơn nhóm, hủy hoặc kết thúc sớm thay khách; \mt{RefundService} quản lý hàng chờ hoàn tiền và cấp voucher qua \mt{PromotionService}; \mt{NotificationService} gửi thông báo cho khách (Hình~\ref{fig:cd_svc_thanhtoan}).
 
 \hinhumlngang{cd-09-svc-thanhtoan}{Sơ đồ lớp dịch vụ: thanh toán, hủy và hoàn tiền}{fig:cd_svc_thanhtoan}
 
@@ -109,7 +109,7 @@ Gồm bài viết (\mt{Post}), thẻ của bài viết (\mt{PostTag}), thông b�
 \hinhuml{cd-10-svc-xacthuc}{Sơ đồ lớp dịch vụ: xác thực và phân quyền}{fig:cd_svc_xacthuc}
 
 \subsubsection{Trợ lý ảo, gợi ý đối tác và kiểm toán}
-\mt{ChatbotService} điều phối hội thoại và các lần gọi hàm qua \mt{GeminiClient}; \mt{PartnerMatchingService} tính điểm gợi ý; \mt{AuditLogService} ghi nhật ký kiểm toán trong một giao dịch riêng (\mt{REQUIRES\_NEW}), nên nhật ký vẫn được ghi ngay cả khi thao tác chính bị hoàn tác (Hình~\ref{fig:cd_svc_trolyao}).
+\mt{ChatbotService} điều phối hội thoại và các lần gọi hàm qua \mt{GeminiClient} (mô hình \mt{gemini-3.5-flash}, dự phòng \mt{gemini-3.7-flash}); \mt{PartnerMatchingService} tính điểm gợi ý; \mt{AuditLogService} ghi nhật ký kiểm toán trong một giao dịch riêng (\mt{REQUIRES\_NEW}), nên nhật ký vẫn được ghi ngay cả khi thao tác chính bị hoàn tác (Hình~\ref{fig:cd_svc_trolyao}).
 
 \hinhuml{cd-11-svc-trolyao}{Sơ đồ lớp dịch vụ: trợ lý ảo, gợi ý đối tác và nhật ký kiểm toán}{fig:cd_svc_trolyao}
 

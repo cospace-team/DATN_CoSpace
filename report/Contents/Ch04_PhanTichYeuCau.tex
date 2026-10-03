@@ -7,8 +7,8 @@
 Hệ thống có bốn tác nhân:
 \begin{enumerate}
     \item \textbf{Khách hàng (customer):} cá nhân hoặc đại diện doanh nghiệp thuê chỗ làm việc, phòng họp và tham gia cộng đồng.
-    \item \textbf{Nhân viên quầy (staff):} làm việc tại quầy lễ tân của một chi nhánh; check-in, check-out, tạo đơn cho khách vãng lai, thu tiền mặt, ghi nhận dịch vụ phát sinh và khóa chỗ khi cần bảo trì.
-    \item \textbf{Quản lý chi nhánh (branch admin):} phụ trách một chi nhánh; cấu hình mặt bằng, bảng giá, chính sách hủy, dịch vụ; quản lý nhân viên, xử lý hoàn tiền và xem báo cáo của chi nhánh.
+    \item \textbf{Nhân viên quầy (staff):} làm việc tại quầy lễ tân của một chi nhánh; check-in, check-out, tạo đơn cho khách vãng lai, thu tiền tại quầy, ghi nhận dịch vụ phát sinh, hủy hoặc kết thúc sớm đơn thay khách và khóa chỗ khi cần bảo trì.
+    \item \textbf{Quản lý chi nhánh (branch admin):} phụ trách một chi nhánh; cấu hình mặt bằng, bảng giá, chính sách hủy, dịch vụ và giới hạn dịch vụ; quản lý nhân viên, đơn đặt chỗ, xử lý hoàn tiền và xem báo cáo của chi nhánh.
     \item \textbf{Quản trị viên hệ thống (super admin):} quản lý toàn chuỗi; tạo chi nhánh, quản lý danh mục dùng chung, phân quyền, khuyến mãi, hạng thành viên và xem nhật ký kiểm toán.
 \end{enumerate}
 
@@ -46,48 +46,54 @@ Các yêu cầu chức năng được đánh mã \mt{FR-xx}.
     \item \textbf{FR-02 (Hồ sơ năng lực):} cập nhật thông tin cá nhân, ảnh đại diện, nghề nghiệp, công ty, kỹ năng (kèm mức độ 1--5), sở thích và thông tin liên hệ; chọn công khai hoặc ẩn thông tin liên hệ.
     \item \textbf{FR-03 (Xem chi nhánh và sơ đồ):} xem danh sách chi nhánh, bảng giá, ảnh không gian và sơ đồ mặt bằng từng tầng.
     \item \textbf{FR-04 (Tìm chỗ):} lọc theo chi nhánh, tầng, loại không gian và khung giờ; xem tình trạng từng chỗ trên sơ đồ.
-    \item \textbf{FR-05 (Đặt chỗ):} đặt theo giờ, ngày, tuần hoặc tháng; đơn mới ở trạng thái \mt{PENDING\_PAYMENT} và được giữ 15 phút; mỗi khách có tối đa 3 đơn chờ thanh toán cùng lúc.
-    \item \textbf{FR-06 (Thanh toán trực tuyến):} thanh toán bằng mã VietQR qua PayOS hoặc ví MoMo; đơn chuyển sang \mt{CONFIRMED} khi hệ thống nhận được xác nhận thanh toán.
+    \item \textbf{FR-05 (Đặt chỗ):} đặt theo giờ, ngày, tuần hoặc tháng; có thể đặt nhiều chỗ cùng chi nhánh, cùng khung giờ trong một đơn nhóm; đơn mới ở trạng thái \mt{PENDING\_PAYMENT} và được giữ 15 phút; mỗi khách có tối đa 3 đơn chờ thanh toán cùng lúc.
+    \item \textbf{FR-06 (Thanh toán trực tuyến):} thanh toán bằng mã VietQR qua PayOS hoặc ví MoMo, đơn nhóm trả chung bằng một mã VietQR; đơn chuyển sang \mt{CONFIRMED} khi hệ thống nhận được xác nhận thanh toán.
     \item \textbf{FR-07 (Dịch vụ thêm và ưu đãi):} chọn dịch vụ đi kèm khi đặt chỗ; áp dụng mã khuyến mãi hoặc voucher cá nhân; tự động được giảm giá theo hạng thành viên.
     \item \textbf{FR-08 (Lịch sử và mã đặt chỗ):} xem đơn sắp tới, đã hoàn thành và đã hủy; xem mã đặt chỗ và mã QR để check-in; gia hạn hoặc gọi thêm dịch vụ cho đơn đang hiệu lực.
     \item \textbf{FR-09 (Hủy đơn):} hủy đơn trước giờ bắt đầu; hệ thống tính số tiền hoàn và phí phạt theo chính sách hủy.
     \item \textbf{FR-10 (Gợi ý và kết nối đối tác):} xem danh sách thành viên phù hợp kèm điểm tương đồng và lý do gợi ý; gửi, chấp nhận hoặc từ chối lời mời kết nối.
     \item \textbf{FR-11 (Bảng tin cộng đồng):} đăng bài, gắn thẻ chủ đề và lọc bài theo thẻ.
     \item \textbf{FR-12 (Trợ lý ảo):} hỏi đáp bằng ngôn ngữ tự nhiên về chi nhánh, chỗ trống, giá, chính sách và đơn của mình; nhận đề xuất đặt chỗ, hủy chỗ hoặc gọi thêm dịch vụ và xác nhận trước khi thực hiện.
+    \item \textbf{FR-13 (Điểm uy tín):} xem điểm uy tín và lịch sử cộng, trừ điểm; nhận nhắc lịch trước giờ bắt đầu và khi sắp hết hạn check-in.
 \end{itemize}
 
 \subsection{Nhân viên quầy}
 \begin{itemize}
-    \item \textbf{FR-13 (Bảng điều khiển ca trực):} xem các chỉ số trong ngày của chi nhánh: số đơn, số khách đang có mặt, số chỗ trống, danh sách đơn sắp đến.
-    \item \textbf{FR-14 (Đặt chỗ tại quầy):} tạo đơn cho khách vãng lai, gắn với tài khoản có sẵn hoặc tạo nhanh tài khoản khách.
-    \item \textbf{FR-15 (Thu tiền mặt):} xác nhận đã thu tiền mặt; đơn chuyển sang \mt{CONFIRMED}.
-    \item \textbf{FR-16 (Check-in):} nhập mã đặt chỗ hoặc quét QR; chỉ cho phép từ 30 phút trước giờ bắt đầu đến giờ kết thúc của đơn.
-    \item \textbf{FR-17 (Check-out):} trả chỗ cho khách; hệ thống chặn check-out khi còn dịch vụ phát sinh chưa thanh toán hoặc phí trả chỗ muộn chưa được xử lý.
-    \item \textbf{FR-18 (Dịch vụ phát sinh, gia hạn):} ghi thêm đồ uống, in ấn, thiết bị vào đơn đang dùng; gia hạn thêm giờ nếu chỗ còn trống; thu tiền các khoản này bằng tiền mặt hoặc VietQR.
-    \item \textbf{FR-19 (Bảo trì):} tạo lịch bảo trì cho một không gian; hệ thống xử lý các đơn bị ảnh hưởng (hủy và hoàn tiền hoặc hoàn phần thời gian bị mất).
-    \item \textbf{FR-20 (Hủy đơn thay khách):} hủy đơn cho khách trong trường hợp ngoại lệ, bắt buộc nhập lý do, có thể miễn phí phạt; thao tác được ghi vào nhật ký kiểm toán.
+    \item \textbf{FR-14 (Bảng điều khiển ca trực):} xem các chỉ số trong ngày của chi nhánh: số đơn, số khách đang có mặt, số chỗ trống, danh sách đơn sắp đến.
+    \item \textbf{FR-15 (Đặt chỗ tại quầy):} tạo đơn cho khách vãng lai, gắn với tài khoản có sẵn hoặc tạo nhanh tài khoản khách.
+    \item \textbf{FR-16 (Thu tiền tại quầy):} xác nhận đã thu tiền mặt hoặc chuyển khoản; đơn chuyển sang \mt{CONFIRMED}.
+    \item \textbf{FR-17 (Check-in):} nhập mã đặt chỗ hoặc quét QR; chỉ cho phép từ 30 phút trước giờ bắt đầu đến giờ kết thúc của đơn.
+    \item \textbf{FR-18 (Check-out):} trả chỗ cho khách; hệ thống chặn check-out khi còn dịch vụ phát sinh chưa thanh toán hoặc phí trả chỗ muộn chưa được xử lý.
+    \item \textbf{FR-19 (Dịch vụ phát sinh, gia hạn):} ghi thêm đồ uống, in ấn, thiết bị vào đơn đang dùng; gia hạn thêm giờ nếu chỗ còn trống; thu tiền các khoản này bằng tiền mặt hoặc VietQR.
+    \item \textbf{FR-20 (Bảo trì):} tạo lịch bảo trì cho một không gian; hệ thống xử lý các đơn bị ảnh hưởng (hủy và hoàn tiền hoặc hoàn phần thời gian bị mất).
+    \item \textbf{FR-21 (Hủy đơn thay khách):} hủy đơn cho khách trong trường hợp ngoại lệ, bắt buộc nhập lý do, có thể miễn phí phạt; thao tác được ghi vào nhật ký kiểm toán.
+    \item \textbf{FR-22 (Kết thúc sớm):} kết thúc đơn đang sử dụng khi có sự cố hoặc khách vi phạm nội quy; khách được check-out và hệ thống tạo yêu cầu hoàn phần thời gian chưa dùng, toàn bộ số đã thu hoặc số tiền nhân viên nhập; thao tác được ghi nhật ký kiểm toán.
+    \item \textbf{FR-23 (Điểm uy tín của khách):} xem điểm và lịch sử điểm của khách khi check-in; hoàn lại điểm bị trừ nhầm (khách có đến nhưng chưa được check-in), có ghi nhật ký kiểm toán.
 \end{itemize}
 
 \subsection{Quản lý chi nhánh}
 \begin{itemize}
-    \item \textbf{FR-21 (Tầng và không gian):} thêm, sửa, xóa tầng và không gian của chi nhánh; tải ảnh cho từng không gian.
-    \item \textbf{FR-22 (Sơ đồ mặt bằng):} vẽ sơ đồ bằng công cụ kéo thả hoặc tải lên tệp SVG; gắn phần tử trên sơ đồ với không gian tương ứng.
-    \item \textbf{FR-23 (Bảng giá chi nhánh):} đặt giá theo giờ, ngày, tuần, tháng cho từng loại không gian; giá chi nhánh được ưu tiên hơn giá chung.
-    \item \textbf{FR-24 (Chính sách hủy chi nhánh):} cấu hình các bậc hoàn tiền riêng của chi nhánh.
-    \item \textbf{FR-25 (Nhân viên):} xem, tạo tài khoản, khóa hoặc mở khóa nhân viên của chi nhánh.
-    \item \textbf{FR-26 (Hoàn tiền):} xem các yêu cầu hoàn tiền của chi nhánh; sau khi trả tiền cho khách thì đánh dấu đã xử lý (tiền mặt, chuyển khoản hoặc voucher), hoặc từ chối kèm lý do.
-    \item \textbf{FR-27 (Báo cáo chi nhánh):} xem doanh thu, số đơn, tỷ lệ hủy, cơ cấu doanh thu theo loại không gian và xuất CSV.
+    \item \textbf{FR-24 (Tầng và không gian):} thêm, sửa, xóa tầng và không gian của chi nhánh; tải ảnh cho từng không gian.
+    \item \textbf{FR-25 (Sơ đồ mặt bằng):} vẽ sơ đồ bằng công cụ kéo thả hoặc tải lên tệp SVG; gắn phần tử trên sơ đồ với không gian tương ứng.
+    \item \textbf{FR-26 (Bảng giá chi nhánh):} đặt giá theo giờ, ngày, tuần, tháng cho từng loại không gian; giá chi nhánh được ưu tiên hơn giá chung.
+    \item \textbf{FR-27 (Dịch vụ và giới hạn dịch vụ):} quản lý dịch vụ bổ sung riêng của chi nhánh; đặt số lượng tối đa được dùng cùng lúc cho dịch vụ là đồ vật như máy chiếu, màn hình.
+    \item \textbf{FR-28 (Chính sách hủy chi nhánh):} cấu hình các bậc hoàn tiền riêng của chi nhánh.
+    \item \textbf{FR-29 (Nhân viên):} xem, tạo tài khoản, khóa hoặc mở khóa nhân viên của chi nhánh.
+    \item \textbf{FR-30 (Đơn đặt chỗ):} xem các đơn của chi nhánh theo khoảng thời gian; hủy hoặc kết thúc sớm đơn thay khách.
+    \item \textbf{FR-31 (Hoàn tiền):} xem các yêu cầu hoàn tiền của chi nhánh; sau khi trả tiền cho khách thì đánh dấu đã xử lý (tiền mặt, chuyển khoản hoặc voucher), hoặc từ chối kèm lý do.
+    \item \textbf{FR-32 (Báo cáo chi nhánh):} xem doanh thu, số đơn, tỷ lệ hủy, cơ cấu doanh thu theo loại không gian và xuất CSV.
 \end{itemize}
 
 \subsection{Quản trị viên hệ thống}
 \begin{itemize}
-    \item \textbf{FR-28 (Chi nhánh):} tạo, sửa, tạm dừng chi nhánh; cấu hình địa chỉ và giờ mở cửa.
-    \item \textbf{FR-29 (Danh mục dùng chung):} quản lý loại không gian, tiện ích và gắn tiện ích cho từng loại không gian.
-    \item \textbf{FR-30 (Người dùng):} tra cứu tài khoản, đổi vai trò, gán chi nhánh, khóa tài khoản.
-    \item \textbf{FR-31 (Giá và chính sách chung):} đặt bảng giá chung và chính sách hủy chung cho các chi nhánh chưa có cấu hình riêng.
-    \item \textbf{FR-32 (Khuyến mãi và hạng thành viên):} tạo mã giảm giá; cấu hình bốn hạng thành viên (Bronze, Silver, Gold, Platinum) với ngưỡng chi tiêu, số đơn và mức giảm.
-    \item \textbf{FR-33 (Báo cáo toàn hệ thống):} xem doanh thu toàn chuỗi và so sánh giữa các chi nhánh.
-    \item \textbf{FR-34 (Nhật ký kiểm toán):} tìm kiếm nhật ký theo thời gian, người thực hiện, đối tượng và loại hành động.
+    \item \textbf{FR-33 (Chi nhánh):} tạo, sửa, tạm dừng chi nhánh; cấu hình địa chỉ và giờ mở cửa.
+    \item \textbf{FR-34 (Danh mục dùng chung):} quản lý loại không gian, tiện ích và gắn tiện ích cho từng loại không gian.
+    \item \textbf{FR-35 (Người dùng):} tra cứu tài khoản, đổi vai trò, gán chi nhánh, khóa tài khoản; xem và hoàn lại điểm phạt uy tín.
+    \item \textbf{FR-36 (Giá, dịch vụ và chính sách chung):} đặt bảng giá chung, dịch vụ dùng chung và chính sách hủy chung cho các chi nhánh chưa có cấu hình riêng; đặt giới hạn dịch vụ cho từng chi nhánh.
+    \item \textbf{FR-37 (Khuyến mãi và hạng thành viên):} tạo mã giảm giá; cấu hình bốn hạng thành viên (Bronze, Silver, Gold, Platinum) với ngưỡng chi tiêu, số đơn và mức giảm.
+    \item \textbf{FR-38 (Đơn đặt chỗ toàn hệ thống):} xem đơn của mọi chi nhánh; hủy hoặc kết thúc sớm đơn thay khách.
+    \item \textbf{FR-39 (Báo cáo toàn hệ thống):} xem doanh thu toàn chuỗi và so sánh giữa các chi nhánh.
+    \item \textbf{FR-40 (Nhật ký kiểm toán):} tìm kiếm nhật ký theo thời gian, người thực hiện, đối tượng và loại hành động.
 \end{itemize}
 
 \section{Yêu cầu phi chức năng}
@@ -105,7 +111,7 @@ Các yêu cầu chức năng được đánh mã \mt{FR-xx}.
 \section{Quy tắc nghiệp vụ}
 \label{sec:quytac_nghiepvu}
 
-Các quy tắc nghiệp vụ được đánh mã \mt{BR-xx} và được tham chiếu ở các chương sau (Bảng~\ref{tab:rule_concurrency} và Bảng~\ref{tab:rule_payment}).
+Các quy tắc nghiệp vụ được đánh mã \mt{BR-xx} và được tham chiếu ở các chương sau (Bảng~\ref{tab:rule_concurrency}, Bảng~\ref{tab:rule_payment} và Bảng~\ref{tab:rule_extra}).
 
 \begin{table}[!htbp]
 \centering
@@ -121,7 +127,7 @@ BR-01 & Hai đơn ở trạng thái \mt{PENDING\_PAYMENT}, \mt{CONFIRMED} hoặc
 \hline
 BR-02 & Đơn mới có hạn thanh toán 15 phút; quá hạn thì chuyển sang \mt{EXPIRED} và giải phóng chỗ & Tránh giữ chỗ ảo \\
 \hline
-BR-03 & Mỗi người dùng có tối đa 3 đơn \mt{PENDING\_PAYMENT} cùng lúc & Ngăn chiếm chỗ hàng loạt \\
+BR-03 & Mỗi người dùng có tối đa 3 đơn \mt{PENDING\_PAYMENT} cùng lúc; một đơn nhóm tính là một đơn & Ngăn chiếm chỗ hàng loạt \\
 \hline
 BR-04 & Đơn theo giờ phải nằm trong giờ mở cửa của một ngày; đơn theo ngày, tuần, tháng phải bắt đầu trong giờ mở cửa; giờ tính theo múi giờ Việt Nam & Khách chỉ đến khi chi nhánh có người phục vụ \\
 \hline
@@ -160,13 +166,32 @@ BR-14 & Hoàn tiền được đưa vào hàng chờ; quản lý chi nhánh ho�
 \hline
 BR-15 & Tiền về khi đơn đã \mt{EXPIRED} hoặc \mt{CANCELLED}, hoặc khách thanh toán trùng, thì tạo yêu cầu hoàn tiền thay vì xác nhận đơn & Bảo vệ quyền lợi khách khi thanh toán muộn \\
 \hline
-BR-16 & Khách đặt trên web chỉ thanh toán qua PayOS hoặc MoMo; tiền mặt chỉ do nhân viên xác nhận tại quầy & Tránh giữ chỗ trực tuyến rồi không đến trả tiền \\
+BR-16 & Khách đặt trên web chỉ thanh toán qua PayOS hoặc MoMo; tiền mặt và chuyển khoản tại quầy chỉ do nhân viên xác nhận & Tránh giữ chỗ trực tuyến rồi không đến trả tiền \\
 \hline
 BR-17 & Đơn \mt{CONFIRMED} hết giờ mà chưa từng check-in chuyển sang \mt{NO\_SHOW} và không được hoàn tiền & Chỗ đã được giữ trọn thời gian \\
 \hline
 BR-18 & Không check-out khi còn dịch vụ phát sinh chưa thanh toán; trả chỗ muộn quá 15 phút phải xử lý phí muộn trước & Không thất thu \\
 \hline
 BR-19 & Doanh thu chỉ tính trên đơn \mt{COMPLETED} và \mt{NO\_SHOW} theo thời điểm kết thúc, trừ dịch vụ chưa thu và các khoản đã hoàn & Không tính đơn chưa sử dụng \\
+\hline
+\end{tabularx}
+\end{table}
+
+\begin{table}[!htbp]
+\centering
+\caption{Quy tắc nghiệp vụ về đơn nhóm, điểm uy tín và giới hạn dịch vụ}
+\label{tab:rule_extra}
+\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{|P{1.3cm}|L|P{4.6cm}|}
+\hline
+\textbf{Mã} & \textbf{Quy tắc} & \textbf{Mục đích} \\
+\hline
+BR-20 & Đơn nhóm có tối đa 10 chỗ, cùng chi nhánh và cùng khung giờ; mọi chỗ được tạo cùng lúc hoặc không chỗ nào được tạo; mã khuyến mãi chỉ dùng cho đơn một chỗ & Đặt cho nhóm làm việc chung mà không giữ chỗ dở dang \\
+\hline
+BR-21 & Mỗi tài khoản bắt đầu với 100 điểm uy tín; không check-in trong 30 phút sau giờ bắt đầu bị trừ 10 điểm, check-in đúng giờ được cộng 2 điểm (mỗi đơn một lần); dưới 50 điểm chỉ được giữ một đơn chưa dùng, dưới 30 điểm không được đặt trực tuyến & Giảm tình trạng giữ chỗ rồi không đến \\
+\hline
+BR-22 & Dịch vụ là đồ vật có số lượng tối đa dùng cùng lúc ở mỗi chi nhánh; số đang dùng tính trên các đơn chờ thanh toán, đã xác nhận hoặc đang sử dụng có thời gian giao nhau & Không nhận đặt quá số thiết bị hiện có \\
 \hline
 \end{tabularx}
 \end{table}
@@ -185,7 +210,7 @@ Hình~\ref{fig:uc_tongquat} thể hiện ranh giới hệ thống và các nhóm
 \end{figure}
 
 \subsection{Khách hàng}
-Khách hàng tự thực hiện các thao tác: tìm chỗ trên sơ đồ, đặt chỗ, thanh toán, quản lý lịch sử đơn và kết nối đối tác (Hình~\ref{fig:uc_customer}).
+Khách hàng tự thực hiện các thao tác: tìm chỗ trên sơ đồ, đặt một hoặc nhiều chỗ, thanh toán, quản lý lịch sử đơn, theo dõi điểm uy tín và kết nối đối tác (Hình~\ref{fig:uc_customer}).
 
 \begin{figure}[!htbp]
   \centering
@@ -195,7 +220,7 @@ Khách hàng tự thực hiện các thao tác: tìm chỗ trên sơ đồ, đ�
 \end{figure}
 
 \subsection{Nhân viên quầy}
-Nhân viên tạo đơn cho khách vãng lai, thu tiền mặt, check-in, check-out và ghi nhận dịch vụ phát sinh (Hình~\ref{fig:uc_staff}).
+Nhân viên tạo đơn cho khách vãng lai, thu tiền tại quầy, check-in, check-out, ghi nhận dịch vụ phát sinh, hủy hoặc kết thúc sớm đơn thay khách và hoàn lại điểm phạt uy tín bị trừ nhầm (Hình~\ref{fig:uc_staff}).
 
 \begin{figure}[!htbp]
   \centering
@@ -205,7 +230,7 @@ Nhân viên tạo đơn cho khách vãng lai, thu tiền mặt, check-in, check-
 \end{figure}
 
 \subsection{Quản lý chi nhánh}
-Quản lý chi nhánh cấu hình mặt bằng, sơ đồ, bảng giá, chính sách hủy, quản lý nhân viên và xử lý hoàn tiền (Hình~\ref{fig:uc_branch}).
+Quản lý chi nhánh cấu hình mặt bằng, sơ đồ, bảng giá, dịch vụ và giới hạn dịch vụ, chính sách hủy, quản lý nhân viên, đơn đặt chỗ của chi nhánh và xử lý hoàn tiền (Hình~\ref{fig:uc_branch}).
 
 \begin{figure}[!htbp]
   \centering
@@ -215,7 +240,7 @@ Quản lý chi nhánh cấu hình mặt bằng, sơ đồ, bảng giá, chính s
 \end{figure}
 
 \subsection{Quản trị viên hệ thống}
-Quản trị viên quản lý chi nhánh, người dùng, chính sách chung, xem báo cáo toàn hệ thống và nhật ký kiểm toán (Hình~\ref{fig:uc_admin}).
+Quản trị viên quản lý chi nhánh, người dùng, chính sách chung, đơn đặt chỗ của mọi chi nhánh, xem báo cáo toàn hệ thống và nhật ký kiểm toán (Hình~\ref{fig:uc_admin}).
 
 \begin{figure}[!htbp]
   \centering
@@ -247,7 +272,7 @@ Tầng, không gian, sơ đồ & -- & -- & CRUD (CN) & CRUD \\
 \hline
 Đơn tại quầy & -- & CR (CN) & CR (CN) & CR \\
 \hline
-Xác nhận tiền mặt & -- & U (CN) & U (CN) & U \\
+Xác nhận thu tiền tại quầy & -- & U (CN) & U (CN) & U \\
 \hline
 Check-in, check-out & -- & U (CN) & U (CN) & U \\
 \hline
@@ -255,7 +280,13 @@ Dịch vụ phát sinh trên đơn & C (đơn của mình) & CRU (CN) & CRU (CN)
 \hline
 Lịch bảo trì & -- & CRU (CN) & CRU (CN) & CRU \\
 \hline
-Bảng giá, chính sách hủy & R & -- & CRUD (CN) & CRUD (chung) \\
+Hủy, kết thúc sớm đơn thay khách & -- & U (CN) & U (CN) & U \\
+\hline
+Điểm uy tín & R (của mình) & RU (CN) & RU (CN) & RU \\
+\hline
+Bảng giá, dịch vụ, chính sách hủy & R & -- & CRUD (CN) & CRUD (chung) \\
+\hline
+Giới hạn dịch vụ & -- & -- & CRUD (CN) & CRUD \\
 \hline
 Hàng chờ hoàn tiền & -- & -- & RU (CN) & RU \\
 \hline
