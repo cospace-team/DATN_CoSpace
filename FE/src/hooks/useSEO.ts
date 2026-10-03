@@ -6,8 +6,9 @@ interface SEOProps {
 }
 
 const DEFAULT_TITLE = "CoSpace - Quản Lý Co-Working Space & Mạng Lưới Đối Tác";
+// Keep in sync with the description meta tags in index.html (what link previews read).
 const DEFAULT_DESCRIPTION =
-  "CoSpace - Hệ thống quản lý co-working space & mạng lưới kết nối đối tác thông minh. Đặt chỗ linh hoạt theo giờ, ngày, tháng, check-in QR, thanh toán tiện lợi.";
+  "CoSpace - đặt bàn làm việc, phòng họp và văn phòng riêng theo giờ, ngày, tuần hoặc tháng. Chọn chỗ trên sơ đồ, thanh toán online, check-in bằng mã QR.";
 
 export function useSEO({ title, description }: SEOProps = {}) {
   useEffect(() => {

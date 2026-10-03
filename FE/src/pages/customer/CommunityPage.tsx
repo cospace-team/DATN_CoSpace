@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   FiEdit3,
   FiUsers,
@@ -67,7 +67,10 @@ const CommunityPage: React.FC = () => {
   const [posting, setPosting] = useState(false);
   const [composerOpen, setComposerOpen] = useState(false);
 
+  // Switching sort or tag quickly can return answers out of order: only the latest one may land.
+  const latestFeedRequest = useRef(0);
   const loadFeed = async (nextSort = sort, nextTag = tagFilter, forceRefresh = false) => {
+    const requestId = ++latestFeedRequest.current;
     if (posts.length === 0 || forceRefresh) {
       setLoading(true);
     }
@@ -79,12 +82,14 @@ const CommunityPage: React.FC = () => {
         },
         forceRefresh
       );
+      if (requestId !== latestFeedRequest.current) return;
       setPosts(data);
     } catch (err) {
+      if (requestId !== latestFeedRequest.current) return;
       showToast(err instanceof Error ? err.message : "Không tải được bảng tin cộng đồng", "error");
       if (posts.length === 0) setPosts([]);
     } finally {
-      setLoading(false);
+      if (requestId === latestFeedRequest.current) setLoading(false);
     }
   };
 
@@ -135,6 +140,8 @@ const CommunityPage: React.FC = () => {
   };
 
   const handleDelete = async (postId: string) => {
+    // Deleting a post can't be undone: ask first.
+    if (!window.confirm("Xóa bài viết này? Bài viết đã xóa không thể khôi phục.")) return;
     try {
       await communityApi.deletePost(postId);
       setPosts((prev) => prev.filter((p) => p.id !== postId));
@@ -162,13 +169,12 @@ const CommunityPage: React.FC = () => {
     <div className="max-w-6xl mx-auto py-6 px-4 font-sans animate-fade-in pb-20">
       {/* Header */}
       <div className="bg-slate-900 rounded-3xl p-8 mb-8 border border-slate-800 shadow-sm relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500 rounded-full mix-blend-screen filter blur-3xl opacity-20 translate-x-1/3 -translate-y-1/3" />
         <div className="relative z-10">
           <h1 className="text-3xl md:text-4xl font-semibold text-white tracking-tight">
             Cộng đồng CoSpace
           </h1>
           <p className="text-sm font-medium bg-white/10 text-slate-200 px-3 py-1.5 rounded-lg border border-white/10 inline-block mt-3">
-            Viết về điều bạn đang làm — hệ thống sẽ gợi ý bạn tới đúng người cùng lĩnh vực.
+            Viết về điều bạn đang làm. Hệ thống sẽ gợi ý bạn tới đúng người cùng lĩnh vực.
           </p>
         </div>
       </div>
@@ -183,7 +189,7 @@ const CommunityPage: React.FC = () => {
                 onClick={() => setComposerOpen(true)}
                 className="w-full flex items-center gap-3 text-left cursor-pointer group"
               >
-                <div className="h-11 w-11 rounded-2xl bg-gradient-to-tr from-primary to-secondary text-white flex items-center justify-center font-bold shrink-0 overflow-hidden">
+                <div className="h-11 w-11 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-bold shrink-0 overflow-hidden">
                   {user?.avatarUrl ? (
                     <img src={user.avatarUrl} alt="" className="h-full w-full object-cover" />
                   ) : (
@@ -218,7 +224,7 @@ const CommunityPage: React.FC = () => {
                       key={t.id}
                       onClick={() => setPostType(t.id)}
                       title={t.hint}
-                      className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold border transition cursor-pointer ${
                         postType === t.id
                           ? "bg-primary text-primary-foreground border-primary"
                           : "bg-muted/40 text-foreground border-border hover:bg-muted"
@@ -234,7 +240,7 @@ const CommunityPage: React.FC = () => {
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   maxLength={200}
-                  placeholder="Tiêu đề — VD: Tìm co-founder kỹ thuật cho nền tảng EdTech"
+                  placeholder="Tiêu đề, ví dụ: Tìm co-founder kỹ thuật cho nền tảng EdTech"
                   className="w-full px-4 py-2.5 bg-muted/40 border border-border rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary/30"
                 />
 
@@ -242,7 +248,7 @@ const CommunityPage: React.FC = () => {
                   rows={5}
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
-                  placeholder="Mô tả chi tiết: bạn đang xây gì, cần người có kỹ năng nào, kinh nghiệm của bạn..."
+                  placeholder="Mô tả chi tiết: bạn đang xây gì, cần người có kỹ năng nào, kinh nghiệm của bạn…"
                   className="w-full px-4 py-2.5 bg-muted/40 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none leading-relaxed"
                 />
 
@@ -254,10 +260,10 @@ const CommunityPage: React.FC = () => {
                   <button
                     onClick={handlePost}
                     disabled={posting}
-                    className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-all disabled:opacity-50 cursor-pointer shrink-0"
+                    className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition disabled:opacity-50 cursor-pointer shrink-0"
                   >
                     <FiSend className="h-4 w-4" />
-                    {posting ? "Đang đăng..." : "Đăng bài"}
+                    {posting ? "Đang đăng…" : "Đăng bài"}
                   </button>
                 </div>
               </div>
@@ -269,7 +275,7 @@ const CommunityPage: React.FC = () => {
             <div className="flex items-center gap-1.5 bg-muted/50 p-1 rounded-xl border border-border w-fit">
               <button
                 onClick={() => setSort("relevant")}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
                   sort === "relevant" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
@@ -277,7 +283,7 @@ const CommunityPage: React.FC = () => {
               </button>
               <button
                 onClick={() => setSort("recent")}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
                   sort === "recent" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
@@ -291,7 +297,7 @@ const CommunityPage: React.FC = () => {
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Tìm bài viết, người, nhãn..."
+                placeholder="Tìm bài viết, người, nhãn…"
                 className="w-full pl-10 pr-4 py-2 text-xs bg-muted/50 border border-border rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-primary/30"
               />
             </div>
@@ -313,7 +319,7 @@ const CommunityPage: React.FC = () => {
                 <button
                   key={tag.id}
                   onClick={() => setTagFilter(tagFilter === tag.id ? null : tag.id)}
-                  className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                  className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg border transition cursor-pointer ${
                     tagFilter === tag.id
                       ? "bg-primary text-primary-foreground border-primary"
                       : "bg-card text-muted-foreground border-border hover:text-foreground hover:border-primary/40"
@@ -351,13 +357,13 @@ const CommunityPage: React.FC = () => {
                 return (
                   <article
                     key={post.id}
-                    className="bg-card border border-border rounded-3xl p-6 shadow-sm hover:shadow-md hover:border-primary/30 transition-all"
+                    className="bg-card border border-border rounded-3xl p-6 shadow-sm hover:shadow-md hover:border-primary/30 transition"
                   >
                     <div className="flex items-start justify-between gap-3 mb-4">
                       <div className="flex items-center gap-3">
-                        <div className="h-11 w-11 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-600 text-white flex items-center justify-center font-bold shrink-0 overflow-hidden">
+                        <div className="h-11 w-11 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-bold shrink-0 overflow-hidden">
                           {post.authorAvatar ? (
-                            <img src={post.authorAvatar} alt="" className="h-full w-full object-cover" />
+                            <img src={post.authorAvatar} alt="" loading="lazy" className="h-full w-full object-cover" />
                           ) : (
                             post.authorName.charAt(0).toUpperCase()
                           )}
@@ -384,8 +390,9 @@ const CommunityPage: React.FC = () => {
                             onClick={() => handleDelete(post.id)}
                             className="text-muted-foreground hover:text-red-500 transition-colors cursor-pointer"
                             title="Xóa bài viết"
+                            aria-label="Xóa bài viết"
                           >
-                            <FiTrash2 className="h-3.5 w-3.5" />
+                            <FiTrash2 className="h-3.5 w-3.5" aria-hidden="true" />
                           </button>
                         )}
                       </div>
@@ -437,7 +444,7 @@ const CommunityPage: React.FC = () => {
         <aside className="space-y-4 lg:sticky lg:top-24">
           <section className="bg-card rounded-3xl border border-border p-5 shadow-sm">
             <div className="flex items-center gap-2.5 mb-4">
-              <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+              <div className="p-2 rounded-xl bg-primary/10 text-primary">
                 <FiUsers className="h-4 w-4" />
               </div>
               <div>
@@ -464,9 +471,9 @@ const CommunityPage: React.FC = () => {
                     className="p-3.5 rounded-2xl bg-muted/30 border border-border/60 hover:bg-muted/60 transition-colors"
                   >
                     <div className="flex items-start gap-3">
-                      <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 text-white flex items-center justify-center text-sm font-bold shrink-0 overflow-hidden">
+                      <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-sm font-bold shrink-0 overflow-hidden">
                         {p.avatar && p.avatar.startsWith("http") ? (
-                          <img src={p.avatar} alt="" className="h-full w-full object-cover" />
+                          <img src={p.avatar} alt="" loading="lazy" className="h-full w-full object-cover" />
                         ) : (
                           p.avatar
                         )}
@@ -474,7 +481,7 @@ const CommunityPage: React.FC = () => {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2">
                           <p className="text-xs font-bold text-foreground truncate">{p.name}</p>
-                          <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 shrink-0">
+                          <span className="text-[10px] font-bold text-primary shrink-0">
                             {p.matchScore}%
                           </span>
                         </div>

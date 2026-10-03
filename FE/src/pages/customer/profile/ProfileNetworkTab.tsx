@@ -63,7 +63,7 @@ export const ProfileNetworkTab: React.FC<ProfileNetworkTabProps> = ({
       <div className="bg-card rounded-3xl border border-border p-6 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
-            <FiUsers className="text-indigo-500" /> Mạng lưới Đối tác & Đồng nghiệp
+            <FiUsers className="text-primary" /> Mạng lưới Đối tác & Đồng nghiệp
           </h2>
           <p className="text-xs text-muted-foreground mt-0.5">
             Gợi ý đối tác tiềm năng dựa trên kỹ năng, lĩnh vực quan tâm và không gian làm việc chung
@@ -80,13 +80,13 @@ export const ProfileNetworkTab: React.FC<ProfileNetworkTabProps> = ({
                 setNetworkFilterMode('best');
                 setVisiblePartnersCount(6);
               }}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
                 networkFilterMode === 'best'
                   ? 'bg-primary text-primary-foreground shadow-xs'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              ⭐ Phù hợp nhất
+              Phù hợp nhất
             </button>
             <button
               type="button"
@@ -94,13 +94,13 @@ export const ProfileNetworkTab: React.FC<ProfileNetworkTabProps> = ({
                 setNetworkFilterMode('all');
                 setVisiblePartnersCount(6);
               }}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
                 networkFilterMode === 'all'
                   ? 'bg-primary text-primary-foreground shadow-xs'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              🌐 Tất cả ({partnersList.length})
+              Tất cả ({partnersList.length})
             </button>
           </div>
 
@@ -111,7 +111,7 @@ export const ProfileNetworkTab: React.FC<ProfileNetworkTabProps> = ({
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Tìm tên, chuyên môn, skill..."
+              placeholder="Tìm tên, chuyên môn, skill…"
               className="w-full pl-10 pr-4 py-2 text-xs bg-muted/50 border border-border rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-primary/30 text-foreground"
             />
           </div>
@@ -171,7 +171,7 @@ export const ProfileNetworkTab: React.FC<ProfileNetworkTabProps> = ({
             return (
               <div
                 key={partner.id}
-                className="bg-card border border-border rounded-3xl p-6 shadow-sm hover:shadow-md hover:border-primary/40 transition-all flex flex-col justify-between relative group"
+                className="bg-card border border-border rounded-3xl p-6 shadow-sm hover:shadow-md hover:border-primary/40 transition flex flex-col justify-between relative group"
               >
                 {/* Top Header: Avatar & Match Score */}
                 <div className="flex items-start justify-between gap-3 mb-4">
@@ -258,7 +258,7 @@ export const ProfileNetworkTab: React.FC<ProfileNetworkTabProps> = ({
           <button
             type="button"
             onClick={() => setVisiblePartnersCount(prev => prev + 6)}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-card border border-border hover:border-primary/50 text-foreground font-semibold text-xs transition-all shadow-xs hover:shadow cursor-pointer"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-card border border-border hover:border-primary/50 text-foreground font-semibold text-xs transition shadow-xs hover:shadow cursor-pointer"
           >
             <span>
               Xem thêm đối tác khác (còn{' '}

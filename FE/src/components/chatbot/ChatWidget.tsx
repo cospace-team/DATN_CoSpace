@@ -124,7 +124,7 @@ export const ChatWidget = React.memo(function ChatWidget() {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-20 right-5 lg:bottom-6 z-50 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-xl shadow-primary/30 flex items-center justify-center hover:scale-105 transition-transform"
+        className="fixed bottom-20 right-5 lg:bottom-6 z-50 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-xl shadow-primary/30 flex items-center justify-center  transition-transform"
         aria-label="Mở trợ lý AI CoSpace"
       >
         <FiMessageCircle className="h-6 w-6" />
@@ -193,7 +193,7 @@ export const ChatWidget = React.memo(function ChatWidget() {
         {payFor && (
           <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 space-y-2.5">
             <p className="text-[13px] text-foreground">
-              Đơn <span className="font-semibold">{payFor.bookingCode}</span> đang chờ thanh toán —{" "}
+              Đơn <span className="font-semibold">{payFor.bookingCode}</span> đang chờ thanh toán:{" "}
               <span className="font-semibold">{formatVND(payFor.totalAmount)}</span>
             </p>
             <div className="flex gap-2">
@@ -224,7 +224,7 @@ export const ChatWidget = React.memo(function ChatWidget() {
 
         {busy && (
           <div className="rounded-xl border border-border bg-muted/40 p-2.5 space-y-1.5">
-            {(steps.length ? steps : ["Trợ lý đang xử lý..."]).map((label, i, all) => {
+            {(steps.length ? steps : ["Trợ lý đang xử lý…"]).map((label, i, all) => {
               const isCurrent = i === all.length - 1;
               return (
                 <div key={`${i}-${label}`} className="flex items-center gap-2 text-xs">
@@ -267,7 +267,7 @@ export const ChatWidget = React.memo(function ChatWidget() {
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Nhập câu hỏi của bạn..."
+          placeholder="Nhập câu hỏi của bạn…"
           className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-primary/30"
           aria-label="Tin nhắn gửi tới trợ lý AI"
         />

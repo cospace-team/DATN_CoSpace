@@ -19,6 +19,7 @@ import type { FloorLayout, LayoutElement } from '../../types/floorPlan';
 import { useStableCallback } from '../../hooks/useStableCallback';
 import { Spinner } from '../../components/ui/Spinner';
 import { Skeleton } from '../../components/ui/Skeleton';
+import VietQrImage from '../../components/VietQrImage';
 
 const QUICK_DURATIONS = [
   { hours: 1, label: '1 Giờ' },
@@ -91,6 +92,8 @@ const WalkinBookingPage: React.FC = () => {
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'vietqr' | 'momo'>('cash');
   const [isSuccess, setIsSuccess] = useState(false);
   const [createdBookingCode, setCreatedBookingCode] = useState('');
+  // What the server actually charged (membership discount included), for the receipt.
+  const [collectedAmount, setCollectedAmount] = useState<number | null>(null);
 
   // QR Modal State
   const [qrModal, setQrModal] = useState<QrModalState | null>(null);
@@ -174,7 +177,18 @@ const WalkinBookingPage: React.FC = () => {
       const [floorsRes, statusRes, policiesRes] = await Promise.all([
         staffApi.getFloors(activeBranchId),
         staffApi.getWorkspaceBookingStatus(activeBranchId),
-        staffApi.getPricePolicies().catch(() => [])
+        // The branch's effective prices (branch overrides on top of the global table). Not the
+        // branch-admin price-policy API: staff are not allowed to read it, and the page then fell
+        // back to guessed prices that did not match what the server charges.
+        customerSpaceApi.listPrices(activeBranchId)
+          .then((prices) => prices.map((p) => ({
+            branchId: activeBranchId,
+            workspaceTypeId: p.workspaceTypeId,
+            durationUnit: p.unit,
+            price: p.price,
+            isActive: true,
+          })))
+          .catch(() => [])
       ]);
       setFloors(floorsRes);
       if (floorsRes.length > 0) {
@@ -470,6 +484,7 @@ const WalkinBookingPage: React.FC = () => {
 
       playSuccessChime();
       setCreatedBookingCode(qrModal.bookingCode);
+      setCollectedAmount(qrModal.amount);
       setIsSuccess(true);
       showToast(`Đã nhận thanh toán thành công đơn hàng: ${qrModal.bookingCode}`, 'success');
       setQrModal(null);
@@ -607,32 +622,36 @@ const WalkinBookingPage: React.FC = () => {
         }
 
         setCreatedBookingCode(booking.bookingCode);
+        setCollectedAmount(booking.totalAmount ?? total);
         setIsSuccess(true);
         showToast(`Đã tạo đơn và thu tiền mặt thành công: ${booking.bookingCode}`, 'success');
         await fetchData();
       } else if (paymentMethod === 'vietqr') {
         // 2. VIETQR / BANK TRANSFER (Inherited from Customer side!)
-        showToast('Đang tạo liên kết thanh toán VietQR (PayOS)...', 'info');
+        showToast('Đang tạo liên kết thanh toán VietQR (PayOS)…', 'info');
         let payosRes = null;
         try {
-          payosRes = await bookingApi.createPayosPayment(booking.id, total);
+          payosRes = await bookingApi.createPayosPayment(booking.id, booking.totalAmount ?? total);
         } catch (e: any) {
-          console.warn('PayOS API call:', e.message);
+          // The booking exists but no payment was opened: the QR can still be shown for a manual
+          // transfer, but nothing will confirm it automatically, so say so instead of failing silently.
+          showToast(`Chưa tạo được giao dịch VietQR (${e.message || 'lỗi cổng thanh toán'}). Có thể thu tiền mặt cho đơn ${booking.bookingCode}.`, 'error');
         }
 
         setQrModal({
           isOpen: true,
           bookingId: booking.id,
           bookingCode: booking.bookingCode,
-          amount: total,
+          // The server's total (membership discount included), not the estimate shown while picking.
+          amount: payosRes?.amount ?? booking.totalAmount ?? total,
           orderCode: payosRes?.orderCode,
           checkoutUrl: payosRes?.checkoutUrl,
           qrCode: payosRes?.qrCode
         });
       } else if (paymentMethod === 'momo') {
         // 3. MOMO E-WALLET
-        showToast('Đang kết nối cổng MoMo...', 'info');
-        const momoRes = await bookingApi.createMomoPayment(booking.id, total);
+        showToast('Đang kết nối cổng MoMo…', 'info');
+        const momoRes = await bookingApi.createMomoPayment(booking.id, booking.totalAmount ?? total);
         if (momoRes.payUrl && momoRes.payUrl.startsWith('http')) {
           window.open(momoRes.payUrl, '_blank');
           showToast('Đã mở cổng thanh toán MoMo trong tab mới.', 'info');
@@ -640,7 +659,7 @@ const WalkinBookingPage: React.FC = () => {
             isOpen: true,
             bookingId: booking.id,
             bookingCode: booking.bookingCode,
-            amount: total,
+            amount: booking.totalAmount ?? total,
             checkoutUrl: momoRes.payUrl
           });
         } else {
@@ -667,6 +686,7 @@ const WalkinBookingPage: React.FC = () => {
     setSelectedWorkspaceId(null);
     setPaymentMethod('cash');
     setIsSuccess(false);
+    setCollectedAmount(null);
     setQrModal(null);
   };
 
@@ -683,19 +703,18 @@ const WalkinBookingPage: React.FC = () => {
 
     return (
       <div className="flex flex-col items-center justify-center min-h-[75vh] p-6 animate-fade-in">
-        <div className="w-full max-w-md bg-card border border-border rounded-3xl p-8 shadow-2xl text-center relative overflow-hidden">
-          <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-emerald-400 via-teal-500 to-primary"></div>
+        <div className="w-full max-w-md bg-card border border-border rounded-xl p-8 text-center">
           
           <div className="w-20 h-20 bg-emerald-500/10 text-emerald-500 rounded-3xl flex items-center justify-center mx-auto mb-5 border border-emerald-500/20 shadow-inner">
-            <FiCheckCircle className="h-10 w-10 animate-bounce" />
+            <FiCheckCircle className="h-10 w-10" />
           </div>
 
           <span className="px-3.5 py-1 rounded-full text-xs font-mono font-bold bg-primary/10 text-primary border border-primary/20 tracking-wider">
-            POS RECEIPT: {createdBookingCode}
+            Mã đơn: {createdBookingCode}
           </span>
 
           <h2 className="text-2xl font-bold font-heading text-foreground mt-3">
-            Đặt Chỗ Thành Công!
+            Đặt chỗ thành công!
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
             Đã thanh toán ({paymentLabel}) và hoàn tất thủ tục xếp chỗ.
@@ -729,7 +748,7 @@ const WalkinBookingPage: React.FC = () => {
             </div>
             <div className="flex justify-between pt-1 text-sm">
               <span className="font-bold text-muted-foreground">Tổng đã thu:</span>
-              <span className="font-extrabold text-emerald-500 font-mono text-base">{formatVND(total)}</span>
+              <span className="font-extrabold text-emerald-500 font-mono text-base">{formatVND(collectedAmount ?? total)}</span>
             </div>
           </div>
 
@@ -745,7 +764,7 @@ const WalkinBookingPage: React.FC = () => {
               onClick={handleReset}
               className="btn btn-primary w-full py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-primary/20"
             >
-              <FiCheck className="h-4 w-4" /> Tạo Đơn Walk-in Mới
+              <FiCheck className="h-4 w-4" /> Tạo đơn walk-in mới
             </button>
           </div>
         </div>
@@ -764,19 +783,13 @@ const WalkinBookingPage: React.FC = () => {
     <div className="space-y-6 max-w-7xl mx-auto pb-24 animate-fade-in relative">
       
       {/* ── 1. COMPACT POS HEADER ── */}
-      <div className="rounded-3xl border border-border/80 bg-gradient-to-r from-card via-card to-primary/5 p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="rounded-xl border border-border bg-card p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-              POS Terminal • Quầy Lễ Tân
-            </span>
-          </div>
-          <h1 className="text-xl md:text-2xl font-black font-heading text-foreground mt-0.5 tracking-tight flex items-center gap-2.5">
-            Đặt Chỗ Nhanh Tại Quầy
+          <h1 className="text-xl md:text-2xl font-bold font-heading text-foreground tracking-tight">
+            Đặt chỗ tại quầy
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Quy trình dọc 3 bước: 1. Khách & Thời gian ➔ 2. Chọn Chỗ (Sơ đồ / Danh sách) ➔ 3. Hóa đơn & Thu ngân POS.
+            Chọn khách và thời lượng, chọn chỗ trên sơ đồ, rồi thu tiền.
           </p>
         </div>
 
@@ -800,7 +813,7 @@ const WalkinBookingPage: React.FC = () => {
                     setSelectedWorkspaceId(null);
                     setSelectedFloorId('');
                   }}
-                  className="bg-transparent text-xs font-bold text-foreground focus:outline-none cursor-pointer pr-3"
+                  className="bg-transparent text-xs font-bold text-foreground cursor-pointer pr-3"
                 >
                   {branches.map((b) => (
                     <option key={b.id} value={b.id}>
@@ -822,8 +835,9 @@ const WalkinBookingPage: React.FC = () => {
             disabled={isLoadingSpaces}
             className="btn btn-ghost btn-sm p-2 rounded-xl text-muted-foreground hover:text-foreground"
             title="Tải lại dữ liệu"
+            aria-label="Tải lại dữ liệu"
           >
-            <FiRefreshCw className={`h-4 w-4 ${isLoadingSpaces ? 'animate-spin' : ''}`} />
+            <FiRefreshCw className={`h-4 w-4 ${isLoadingSpaces ? 'animate-spin' : ''}`} aria-hidden="true" />
           </button>
         </div>
       </div>
@@ -839,7 +853,7 @@ const WalkinBookingPage: React.FC = () => {
                 1
               </div>
               <h2 className="font-bold text-sm text-foreground font-heading flex items-center gap-1.5">
-                <FiUser className="text-primary h-3.5 w-3.5" /> Thông Tin Khách Hàng
+                <FiUser className="text-primary h-3.5 w-3.5" /> Thông tin khách hàng
               </h2>
             </div>
 
@@ -852,7 +866,7 @@ const WalkinBookingPage: React.FC = () => {
                   setSelectedUser(null);
                   setNewUserName('Khách vãng lai');
                 }}
-                className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 text-[11px] ${
+                className={`px-2.5 py-1 rounded-lg transition flex items-center gap-1 text-[11px] ${
                   customerMode === 'quick' ? 'bg-card text-primary shadow-sm font-bold' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
@@ -861,7 +875,7 @@ const WalkinBookingPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => { setCustomerMode('search'); setSelectedUser(null); }}
-                className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 text-[11px] ${
+                className={`px-2.5 py-1 rounded-lg transition flex items-center gap-1 text-[11px] ${
                   customerMode === 'search' ? 'bg-card text-primary shadow-sm font-bold' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
@@ -870,7 +884,7 @@ const WalkinBookingPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => { setCustomerMode('create'); setSelectedUser(null); setNewUserName(''); setNewUserPhone(''); }}
-                className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 text-[11px] ${
+                className={`px-2.5 py-1 rounded-lg transition flex items-center gap-1 text-[11px] ${
                   customerMode === 'create' ? 'bg-card text-primary shadow-sm font-bold' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
@@ -883,18 +897,18 @@ const WalkinBookingPage: React.FC = () => {
           {customerMode === 'quick' && (
             <div className="p-3 bg-primary/5 border border-primary/20 rounded-2xl flex items-center justify-between gap-3 animate-fade-in">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-primary/20 text-primary flex items-center justify-center font-bold text-sm">
-                  ⚡
+                <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                  <FiZap className="h-4 w-4" />
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-foreground">Khách vãng lai tại quầy (Mặc định)</p>
-                  <p className="text-[11px] text-muted-foreground">Không cần nhập hồ sơ, xuất hóa đơn nhanh chóng.</p>
+                  <p className="text-xs font-bold text-foreground">Khách vãng lai</p>
+                  <p className="text-[11px] text-muted-foreground">Không cần tạo hồ sơ; có thể ghi lại số điện thoại.</p>
                 </div>
               </div>
               <div className="flex items-center gap-1.5">
                 <input
                   type="text"
-                  placeholder="Ghi chú SĐT (tùy chọn)..."
+                  placeholder="Ghi chú SĐT (tùy chọn)…"
                   value={newUserPhone}
                   onChange={(e) => setNewUserPhone(e.target.value)}
                   className="input-field text-xs h-8 w-36 rounded-lg font-mono bg-card"
@@ -916,7 +930,7 @@ const WalkinBookingPage: React.FC = () => {
                       setPhoneSearch(e.target.value);
                       if (e.target.value === '') setSearchResults([]);
                     }}
-                    placeholder="Nhập SĐT hoặc họ tên khách quen..."
+                    placeholder="Nhập SĐT hoặc họ tên khách quen…"
                     className="input-field !pl-9 text-xs h-9 rounded-xl"
                     onKeyDown={(e) => e.key === 'Enter' && handleSearchUser()}
                   />
@@ -1011,7 +1025,7 @@ const WalkinBookingPage: React.FC = () => {
                 2
               </div>
               <h2 className="font-bold text-sm text-foreground font-heading flex items-center gap-1.5">
-                <FiClock className="text-primary h-3.5 w-3.5" /> Thời Lượng & Giờ Trả Bàn
+                <FiClock className="text-primary h-3.5 w-3.5" /> Thời lượng
               </h2>
             </div>
 
@@ -1020,20 +1034,20 @@ const WalkinBookingPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setTimeMode('preset')}
-                className={`px-2.5 py-1 rounded-lg transition-all text-[11px] ${
+                className={`px-2.5 py-1 rounded-lg transition text-[11px] ${
                   timeMode === 'preset' ? 'bg-card text-primary shadow-sm font-bold' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
-                Gói Giờ Chẵn
+                Theo giờ
               </button>
               <button
                 type="button"
                 onClick={() => setTimeMode('custom')}
-                className={`px-2.5 py-1 rounded-lg transition-all text-[11px] ${
+                className={`px-2.5 py-1 rounded-lg transition text-[11px] ${
                   timeMode === 'custom' ? 'bg-card text-primary shadow-sm font-bold' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
-                ⏱️ Tùy Chỉnh Giờ Trả
+                ⏱️ Chọn giờ trả
               </button>
             </div>
           </div>
@@ -1051,7 +1065,7 @@ const WalkinBookingPage: React.FC = () => {
                       setPresetHours(d.hours);
                       setSelectedWorkspaceId(null);
                     }}
-                    className={`py-2 px-1 rounded-xl border text-xs font-bold transition-all text-center flex flex-col items-center justify-center ${
+                    className={`py-2 px-1 rounded-xl border text-xs font-bold transition text-center flex flex-col items-center justify-center ${
                       isSelected
                         ? 'border-primary bg-primary text-white shadow-md shadow-primary/20'
                         : 'border-border bg-card text-foreground hover:bg-muted/50'
@@ -1142,7 +1156,7 @@ const WalkinBookingPage: React.FC = () => {
             </div>
             <div>
               <h2 className="font-bold text-sm md:text-base text-foreground font-heading">
-                Sơ Đồ Mặt Bằng & Chọn Vị Trí Chỗ Ngồi
+                Chọn chỗ ngồi
               </h2>
               <p className="text-[11px] text-muted-foreground">
                 Click vào chỗ ngồi trống (màu xanh lá) để chọn và lập hóa đơn thu tiền bên dưới.
@@ -1172,7 +1186,7 @@ const WalkinBookingPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setViewMode('map')}
-                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg transition-all ${
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg transition ${
                   viewMode === 'map' ? 'bg-card text-primary shadow-sm font-bold' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
@@ -1181,7 +1195,7 @@ const WalkinBookingPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setViewMode('list')}
-                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg transition-all ${
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg transition ${
                   viewMode === 'list' ? 'bg-card text-primary shadow-sm font-bold' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
@@ -1207,7 +1221,7 @@ const WalkinBookingPage: React.FC = () => {
                     setSelectedFloorId(f.id);
                     setSelectedWorkspaceId(null);
                   }}
-                  className={`px-4 py-2 text-xs font-bold rounded-xl transition-all whitespace-nowrap flex items-center gap-2 ${
+                  className={`px-4 py-2 text-xs font-bold rounded-xl transition whitespace-nowrap flex items-center gap-2 ${
                     isSelected
                       ? 'bg-foreground text-background shadow-md'
                       : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground'
@@ -1227,7 +1241,7 @@ const WalkinBookingPage: React.FC = () => {
             {isLoadingSpaces ? (
               <div className="h-full flex flex-col items-center justify-center gap-3 text-muted-foreground">
                 <Spinner size="lg" className="text-primary" />
-                <span className="text-xs font-medium">Đang tải sơ đồ mặt bằng...</span>
+                <span className="text-xs font-medium">Đang tải sơ đồ mặt bằng…</span>
               </div>
             ) : currentLayout ? (
               <>
@@ -1241,7 +1255,6 @@ const WalkinBookingPage: React.FC = () => {
                   isAdmin={false}
                 />
                 <div className="absolute bottom-3 left-3 bg-background/85 backdrop-blur-md px-3 py-1.5 rounded-xl border border-border text-xs text-muted-foreground pointer-events-none shadow-sm flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping"></span>
                   <span>Chạm vào vị trí màu xanh lá để chọn chỗ cho khách</span>
                 </div>
               </>
@@ -1272,7 +1285,7 @@ const WalkinBookingPage: React.FC = () => {
                   <select
                     value={listTableFloorFilter}
                     onChange={(e) => setListTableFloorFilter(e.target.value)}
-                    className="bg-transparent font-bold text-foreground focus:outline-none cursor-pointer"
+                    className="bg-transparent font-bold text-foreground cursor-pointer"
                   >
                     <option value="all">Tất cả các tầng</option>
                     {floors.map((f) => (
@@ -1305,7 +1318,7 @@ const WalkinBookingPage: React.FC = () => {
                   type="text"
                   value={listSearchQuery}
                   onChange={(e) => setListSearchQuery(e.target.value)}
-                  placeholder="Tìm mã hoặc tên bàn..."
+                  placeholder="Tìm mã hoặc tên bàn…"
                   className="input-field !pl-9 text-xs h-8 rounded-xl w-full"
                 />
               </div>
@@ -1407,16 +1420,13 @@ const WalkinBookingPage: React.FC = () => {
             </div>
             <div>
               <h2 className="font-extrabold text-base md:text-lg text-foreground font-heading">
-                Hóa Đơn & Chốt Thanh Toán Quầy POS
+                Hóa đơn POS
               </h2>
               <p className="text-xs text-muted-foreground">
                 Kiểm tra thông tin chi tiết và thu tiền tại quầy (Tiền mặt, VietQR hoặc MoMo).
               </p>
             </div>
           </div>
-          <span className="text-[10px] font-mono font-bold px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-            REAL-TIME POS RECEIPT
-          </span>
         </div>
 
         {selectedWsInfo ? (
@@ -1466,7 +1476,7 @@ const WalkinBookingPage: React.FC = () => {
                 <div className="flex justify-between pt-2">
                   <span className="text-muted-foreground">Thời gian sử dụng:</span>
                   <span className="font-bold text-foreground">
-                    {timingInfo.displayDuration} (Từ {currentTimeStr} ➔ ~{timingInfo.displayEnd})
+                    {timingInfo.displayDuration} (từ {currentTimeStr} đến ~{timingInfo.displayEnd})
                   </span>
                 </div>
                 <div className="flex justify-between pt-2">
@@ -1510,7 +1520,7 @@ const WalkinBookingPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setPaymentMethod('cash')}
-                    className={`p-3 rounded-2xl border text-xs font-bold flex flex-col items-center justify-center gap-1.5 transition-all ${
+                    className={`p-3 rounded-2xl border text-xs font-bold flex flex-col items-center justify-center gap-1.5 transition ${
                       paymentMethod === 'cash'
                         ? 'border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shadow-sm'
                         : 'border-border text-muted-foreground hover:bg-muted/40'
@@ -1523,7 +1533,7 @@ const WalkinBookingPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setPaymentMethod('vietqr')}
-                    className={`p-3 rounded-2xl border text-xs font-bold flex flex-col items-center justify-center gap-1.5 transition-all ${
+                    className={`p-3 rounded-2xl border text-xs font-bold flex flex-col items-center justify-center gap-1.5 transition ${
                       paymentMethod === 'vietqr'
                         ? 'border-primary bg-primary/10 text-primary shadow-sm'
                         : 'border-border text-muted-foreground hover:bg-muted/40'
@@ -1536,7 +1546,7 @@ const WalkinBookingPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setPaymentMethod('momo')}
-                    className={`p-3 rounded-2xl border text-xs font-bold flex flex-col items-center justify-center gap-1.5 transition-all ${
+                    className={`p-3 rounded-2xl border text-xs font-bold flex flex-col items-center justify-center gap-1.5 transition ${
                       paymentMethod === 'momo'
                         ? 'border-pink-500 bg-pink-500/10 text-pink-600 dark:text-pink-400 shadow-sm'
                         : 'border-border text-muted-foreground hover:bg-muted/40'
@@ -1575,24 +1585,24 @@ const WalkinBookingPage: React.FC = () => {
                 {isSubmitting ? (
                   <>
                     <Spinner size="sm" />
-                    <span>Đang xử lý xuất đơn...</span>
+                    <span>Đang xử lý xuất đơn…</span>
                   </>
                 ) : (
                   <>
                     {paymentMethod === 'cash' ? (
                       <>
                         <FiCheck className="h-5 w-5" />
-                        <span>Xác Nhận & Thu Tiền Mặt (POS)</span>
+                        <span>Thu tiền mặt (POS)</span>
                       </>
                     ) : paymentMethod === 'vietqr' ? (
                       <>
                         <FiSmartphone className="h-5 w-5" />
-                        <span>Tạo Đơn & Mở Mã VietQR</span>
+                        <span>Tạo đơn & mở mã VietQR</span>
                       </>
                     ) : (
                       <>
                         <FiExternalLink className="h-5 w-5" />
-                        <span>Mở Cổng Thanh Toán MoMo</span>
+                        <span>Mở cổng thanh toán MoMo</span>
                       </>
                     )}
                   </>
@@ -1604,15 +1614,15 @@ const WalkinBookingPage: React.FC = () => {
         ) : (
           /* Empty / Unselected State */
           <div className="py-12 px-4 text-center rounded-2xl border border-dashed border-border bg-muted/20 space-y-3">
-            <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto text-xl font-bold">
-              💡
+            <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto">
+              <FiMapPin className="h-6 w-6" />
             </div>
             <div>
               <h3 className="font-bold text-sm md:text-base text-foreground">
-                Chưa Chọn Vị Trí Chỗ Ngồi
+                Chưa chọn chỗ ngồi
               </h3>
               <p className="text-xs text-muted-foreground max-w-md mx-auto mt-1">
-                Vui lòng chạm vào một chỗ ngồi màu xanh còn trống trên sơ đồ mặt bằng ở trên (hoặc chọn từ bảng danh sách) để hệ thống tự động lập hóa đơn quầy POS.
+                Chọn một chỗ còn trống (màu xanh) trên sơ đồ hoặc trong danh sách để lập hóa đơn.
               </p>
             </div>
           </div>
@@ -1633,7 +1643,7 @@ const WalkinBookingPage: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="font-bold text-base text-foreground font-heading">
-                    Thanh Toán VietQR Tại Quầy
+                    Thanh toán VietQR Tại Quầy
                   </h3>
                   <p className="text-xs text-muted-foreground">
                     Khách dùng ứng dụng ngân hàng quét mã để thanh toán.
@@ -1644,8 +1654,9 @@ const WalkinBookingPage: React.FC = () => {
                 onClick={() => setQrModal(null)}
                 className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted"
                 title="Đóng modal"
+                aria-label="Đóng modal"
               >
-                <FiX className="h-5 w-5" />
+                <FiX className="h-5 w-5" aria-hidden="true" />
               </button>
             </div>
 
@@ -1653,8 +1664,12 @@ const WalkinBookingPage: React.FC = () => {
             <div className="grid sm:grid-cols-[210px_1fr] gap-4 items-center bg-muted/30 p-4 rounded-2xl border border-border">
               {/* Left: Dynamic Official VietQR */}
               <div className="flex flex-col items-center justify-center bg-white p-2.5 rounded-2xl border border-border shadow-sm">
-                <img
-                  src={dynamicQrImageUrl}
+                <VietQrImage
+                  remoteUrl={dynamicQrImageUrl}
+                  bankBin={BANK_INFO.bankBin}
+                  accountNumber={BANK_INFO.accountNumber}
+                  amount={qrModal.amount}
+                  addInfo={`BK ${qrModal.bookingCode}`.replace(/[^A-Za-z0-9 ]/g, ' ')}
                   alt={`VietQR ${qrModal.bookingCode}`}
                   className="w-44 h-44 object-contain rounded-lg"
                 />
@@ -1727,7 +1742,7 @@ const WalkinBookingPage: React.FC = () => {
               <div className="flex items-center gap-2">
                 <Spinner size="sm" className="text-primary" />
                 <span className="text-foreground font-medium">
-                  Hệ thống đang tự động lắng nghe giao dịch chuyển khoản...
+                  Hệ thống đang tự động lắng nghe giao dịch chuyển khoản…
                 </span>
               </div>
               <span className="text-[10px] font-mono text-muted-foreground">3s/lần</span>
@@ -1744,7 +1759,7 @@ const WalkinBookingPage: React.FC = () => {
                 title="Dùng cho Demo/Kiểm thử tức thì"
               >
                 <FiZap className="h-3.5 w-3.5 text-amber-500" />
-                <span>⚡ [Demo] Khách quét QR xong</span>
+                <span>Mô phỏng khách đã chuyển khoản</span>
               </button>
 
               {/* Manual Confirmation button */}
@@ -1755,7 +1770,7 @@ const WalkinBookingPage: React.FC = () => {
                 className="btn btn-primary btn-sm flex-1 text-xs py-2.5 rounded-xl font-bold flex items-center justify-center gap-1.5 shadow-md shadow-primary/20"
               >
                 {isConfirmingQr ? <Spinner size="sm" /> : <FiCheck className="h-4 w-4" />}
-                <span>✓ Tiền đã vào tài khoản</span>
+                <span>Đã nhận tiền chuyển khoản</span>
               </button>
             </div>
 

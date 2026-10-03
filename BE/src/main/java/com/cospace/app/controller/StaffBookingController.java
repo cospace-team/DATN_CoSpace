@@ -75,9 +75,59 @@ public class StaffBookingController {
         return cancellation;
     }
 
+    /** Bookings of a branch overlapping a time range, for the booking management pages. */
+    @GetMapping
+    @PreAuthorize("hasAnyRole('staff', 'branch_admin', 'super_admin', 'admin', 'STAFF', 'BRANCH_ADMIN', 'SUPER_ADMIN', 'ADMIN')")
+    public java.util.List<BookingDto> listBranchBookings(
+            @AuthenticationPrincipal Jwt jwt,
+            @org.springframework.web.bind.annotation.RequestParam(value = "branchId", required = false) UUID branchId,
+            @org.springframework.web.bind.annotation.RequestParam("from") @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) java.time.OffsetDateTime from,
+            @org.springframework.web.bind.annotation.RequestParam("to") @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) java.time.OffsetDateTime to) {
+        return bookingService.listBranchBookings(branchAccessGuard.requireBranchAccess(jwt, branchId), from, to);
+    }
+
+    /** What can be refunded on a booking, for the staff cancel / end-early dialog. */
+    @GetMapping("/{bookingId}/refund-preview")
+    @PreAuthorize("hasAnyRole('staff', 'branch_admin', 'super_admin', 'admin', 'STAFF', 'BRANCH_ADMIN', 'SUPER_ADMIN', 'ADMIN')")
+    public com.cospace.app.service.CancellationService.StaffRefundPreview refundPreview(
+            @AuthenticationPrincipal Jwt jwt, @PathVariable UUID bookingId) {
+        com.cospace.app.entity.Booking booking = bookingAddonService.requireBooking(bookingId);
+        branchAccessGuard.requireAccessToBranch(jwt, booking.getBranchId());
+        return cancellationService.previewStaffRefund(bookingId);
+    }
+
+    /**
+     * Ends a booking in use early (incident, outage, a guest asked to leave), checks the guest out and
+     * queues a refund for the refunds page. Every call is audited.
+     */
+    @PostMapping("/{bookingId}/end-early")
+    @PreAuthorize("hasAnyRole('staff', 'branch_admin', 'super_admin', 'admin', 'STAFF', 'BRANCH_ADMIN', 'SUPER_ADMIN', 'ADMIN')")
+    public java.util.Map<String, Object> endEarly(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID bookingId,
+            @Valid @RequestBody com.cospace.app.dto.api.StaffEndEarlyRequest req) {
+        UUID staffId = requireSubject(jwt);
+        com.cospace.app.entity.Booking booking = bookingAddonService.requireBooking(bookingId);
+        branchAccessGuard.requireAccessToBranch(jwt, booking.getBranchId());
+
+        long refunded = cancellationService.endEarlyByStaff(staffId, bookingId, req.getReason(), req.getRefundMode(), req.getAmount());
+
+        java.util.Map<String, Object> values = new java.util.HashMap<>();
+        values.put("bookingCode", booking.getBookingCode());
+        values.put("reason", req.getReason().trim());
+        values.put("refundMode", String.valueOf(req.getRefundMode()));
+        values.put("refundAmount", refunded);
+        auditLogService.log(httpServletRequest, staffId, "END_EARLY_FOR_CUSTOMER", "bookings", bookingId, null, values);
+
+        return java.util.Map.of("bookingCode", booking.getBookingCode(), "refundAmount", refunded);
+    }
+
     @PostMapping("/walkin")
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('staff', 'branch_admin', 'super_admin', 'admin', 'STAFF', 'BRANCH_ADMIN', 'SUPER_ADMIN', 'ADMIN')")
+    // One transaction for the guest account and the booking: when the booking is refused (seat
+    // taken, outside opening hours…) the guest account created for it is rolled back too.
+    @org.springframework.transaction.annotation.Transactional
     public BookingDto createWalkinBooking(
             @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody StaffBookingCreateRequest req) {

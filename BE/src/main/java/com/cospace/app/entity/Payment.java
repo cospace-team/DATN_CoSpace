@@ -83,6 +83,17 @@ public class Payment {
     @Builder.Default
     private String purpose = PURPOSE_BOOKING;
 
+    /** Set on the rows of a combined payment for a booking group. */
+    @Column(name = "booking_group_id")
+    private UUID bookingGroupId;
+
+    /**
+     * Shared by every row of a combined payment: the order id of its first row, which is the one
+     * sent to the gateway. A single-booking payment leaves it null.
+     */
+    @Column(name = "group_order_id", length = 64)
+    private String groupOrderId;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 

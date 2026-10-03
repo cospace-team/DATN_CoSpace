@@ -5,7 +5,6 @@ import com.cospace.app.entity.User;
 import com.cospace.app.repository.UserRepository;
 import com.cospace.app.util.JwtUtil;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -271,7 +270,6 @@ class SecurityConfigRouteAuthorizationTest {
         }
 
         @Test
-        @Disabled("Cấu hình thừa: /h2-console/** vẫn permitAll dù dự án không dùng H2. Bật lại test sau khi xoá.")
         void h2ConsoleIsNotPublic() throws Exception {
             mockMvc.perform(get("/h2-console/"))
                     .andExpect(status().isUnauthorized());

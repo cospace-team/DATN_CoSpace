@@ -4,14 +4,14 @@ import { cn } from "../../lib/utils";
 import { Spinner } from "./Spinner";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-semibold cursor-pointer ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-semibold cursor-pointer ring-offset-background transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed",
   {
     variants: {
       variant: {
         default:
-          "bg-primary text-primary-foreground shadow-sm hover:brightness-110 hover:-translate-y-px hover:shadow-md",
+          "bg-primary text-primary-foreground shadow-sm hover:brightness-110",
         destructive:
-          "bg-destructive text-destructive-foreground shadow-sm hover:opacity-90 hover:-translate-y-px",
+          "bg-destructive text-destructive-foreground shadow-sm hover:opacity-90",
         outline:
           "border border-input bg-card hover:bg-muted hover:text-foreground hover:border-primary",
         secondary:

@@ -2,28 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FiChevronLeft, FiMapPin, FiCalendar, FiClock,
-  FiCheckCircle, FiAlertTriangle, FiMaximize, FiLock, FiExternalLink, FiX, FiCreditCard, FiGift, FiAward
+  FiCheckCircle, FiAlertTriangle, FiMaximize, FiLock, FiExternalLink, FiX, FiCreditCard, FiGift, FiAward, FiShield
 } from 'react-icons/fi';
 import { formatVND, durationUnitLabel } from '../../utils/formatters';
 import { Button } from '../../components/ui/button';
 import { useAuth } from '../../context/AuthContext';
-import { bookingApi } from '../../lib/bookingApi';
+import { bookingApi, bookingGroupApi, type BookingGroupQuote } from '../../lib/bookingApi';
 import { useToast } from '../../components/Toast';
 import { customerSpaceApi, type ExtraServiceResponse } from '../../lib/spaceApi';
-import { describePromotion, promotionApi, type BookingQuoteDto, type PromotionDto } from '../../api/loyaltyApi';
+import { describePromotion, promotionApi, reputationApi, type BookingQuoteDto, type MyReputationDto, type PromotionDto } from '../../api/loyaltyApi';
 import { resolveBranchId } from '../../data/branchAliases';
 import { QuantityStepper } from '../../components/ui/QuantityStepper';
+import { ServiceIcon } from '../../components/ui/ServiceIcon';
+import { HoldCountdown } from '../../components/HoldCountdown';
 
-const getServiceIcon = (type?: string, name?: string) => {
-  const n = (name || '').toLowerCase();
-  const t = (type || '').toLowerCase();
-  if (t === 'drink' || n.includes('cà phê') || n.includes('trà') || n.includes('nước')) return '☕';
-  if (t === 'printing' || n.includes('in') || n.includes('scan')) return '🖨️';
-  if (t === 'meal' || n.includes('bánh') || n.includes('cơm') || n.includes('ăn')) return '🥪';
-  if (n.includes('màn hình') || n.includes('máy chiếu')) return '🖥️';
-  if (n.includes('bút') || n.includes('bảng')) return '📝';
-  return '✨';
-};
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -36,6 +28,10 @@ const BookingCheckoutPage: React.FC = () => {
   const state = location.state as any;
   const workspace = state?.workspace;
   const workspaceType = state?.workspaceType;
+  // Seats booked together with the main one (đặt nhiều chỗ): same time, one payment.
+  const extraWorkspaces: { workspace: any; price: { price: number } }[] = state?.extraWorkspaces || [];
+  const isGroup = extraWorkspaces.length > 0;
+  const seatIds: string[] = workspace ? [workspace.id, ...extraWorkspaces.map((e) => e.workspace.id)] : [];
   const date = (state?.date ? new Date(state.date) : new Date());
   const startHour = state?.hour || 9;
   const endHour = state?.endHour || 11;
@@ -72,6 +68,18 @@ const BookingCheckoutPage: React.FC = () => {
 
   const [serviceDetails, setServiceDetails] = useState<ExtraServiceResponse[]>(state?.serviceDetails || []);
 
+  // Check-in rule and any booking restriction from the customer's reputation score. Multi-day
+  // passes (several days, a week or longer) are exempt from the check-in deadline.
+  const [reputation, setReputation] = useState<MyReputationDto | null>(null);
+  useEffect(() => {
+    reputationApi.me().then(setReputation).catch(() => setReputation(null));
+  }, []);
+  const checkinDeadlineApplies = bookingDurationUnit === 'hour' || (bookingDurationUnit === 'day' && estimatedUnitCount <= 1);
+  const checkinDeadlineText = reputation
+    ? new Date(startAtDate.getTime() + reputation.checkinDeadlineMinutes * 60_000)
+        .toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+    : null;
+
   useEffect(() => {
     if (serviceDetails.length === 0 && Object.keys(services).length > 0 && workspace) {
       const branchId = resolveBranchId(workspace.branch_id || workspace.branchId);
@@ -89,11 +97,14 @@ const BookingCheckoutPage: React.FC = () => {
   const [paymentMethod, setPaymentMethod] = useState<'payos' | 'momo'>('payos');
   const [holdExpired, setHoldExpired] = useState(false);
 
-  // Before a booking is created there's no real hold yet, so this is only an advisory display —
-  // the moment activeBooking.paymentDeadlineAt comes back from the server, the countdown re-syncs
-  // to that authoritative deadline so it can never drift from what the backend will actually expire.
-  const [softDeadline] = useState(() => Date.now() + 15 * 60 * 1000);
-  const [timeLeft, setTimeLeft] = useState(15 * 60);
+  // Before a booking is created there's no hold yet: the badge shows the full 15 minutes the hold
+  // will last and nothing counts down (a client-only countdown used to reach 00:00 while the guest
+  // was still reading the page and then disabled "Thanh toán ngay" for good). Once the booking
+  // exists the countdown follows activeBooking.paymentDeadlineAt, the deadline the backend enforces.
+  // The ticking itself lives in <HoldCountdown> so this page doesn't re-render every second.
+  const holdDeadlineMs: number | null = activeBooking?.paymentDeadlineAt
+    ? new Date(activeBooking.paymentDeadlineAt).getTime()
+    : null;
 
   // Server-side price quote: applies the membership-tier discount and the promotion code, so the
   // invoice shows exactly what createBooking will charge.
@@ -107,8 +118,38 @@ const BookingCheckoutPage: React.FC = () => {
   const [isApplyingPromo, setIsApplyingPromo] = useState(false);
   const [availablePromos, setAvailablePromos] = useState<PromotionDto[]>([]);
 
+  const [groupQuote, setGroupQuote] = useState<BookingGroupQuote | null>(null);
+
+  // A group is priced seat by seat on the server; folded into the single-booking quote shape so
+  // the invoice below renders it the same way (no promotion codes on groups).
+  const requestGroupQuote = async (): Promise<BookingQuoteDto> => {
+    const g = await bookingGroupApi.quote({
+      workspaceIds: seatIds,
+      unit: bookingDurationUnit,
+      startAt: startAtDate.toISOString(),
+      endAt: endAtDate.toISOString(),
+      addons: addonRequest,
+    });
+    setGroupQuote(g);
+    return {
+      pricePerUnit: g.seats[0]?.pricePerUnit ?? 0,
+      unitCount: g.seats[0]?.unitCount ?? 1,
+      subtotalAmount: g.subtotalAmount,
+      membershipTierCode: null,
+      membershipTierName: g.membershipTierName,
+      membershipDiscountPercent: g.membershipDiscountPercent,
+      membershipDiscountAmount: g.discountAmount,
+      promotionCode: null,
+      promotionName: null,
+      promotionDiscountAmount: 0,
+      discountAmount: g.discountAmount,
+      addonAmount: g.addonAmount,
+      totalAmount: g.totalAmount,
+    };
+  };
+
   const requestQuote = (promotionCode: string | null) =>
-    promotionApi.quote({
+    isGroup ? requestGroupQuote() : promotionApi.quote({
       workspaceId: workspace.id,
       unit: bookingDurationUnit,
       startAt: startAtDate.toISOString(),
@@ -154,10 +195,10 @@ const BookingCheckoutPage: React.FC = () => {
     return () => {
       active = false;
     };
-  }, [workspace?.id, bookingDurationUnit, startAtDate.getTime(), endAtDate.getTime(), addonKey]);
+  }, [workspace?.id, seatIds.join(','), bookingDurationUnit, startAtDate.getTime(), endAtDate.getTime(), addonKey]);
 
   useEffect(() => {
-    if (!workspace || !UUID_RE.test(workspace.id)) return;
+    if (!workspace || !UUID_RE.test(workspace.id) || isGroup) return;
     if (UUID_RE.test(branchId)) {
       promotionApi
         .available(branchId, UUID_RE.test(workspaceTypeId) ? workspaceTypeId : undefined)
@@ -199,30 +240,6 @@ const BookingCheckoutPage: React.FC = () => {
   const addonAmount = quote ? quote.addonAmount : addonTotal;
   const grandTotal = quote ? quote.totalAmount : total;
 
-  useEffect(() => {
-    const deadlineMs = activeBooking?.paymentDeadlineAt
-      ? new Date(activeBooking.paymentDeadlineAt).getTime()
-      : softDeadline;
-
-    const tick = () => {
-      const remaining = Math.max(0, Math.round((deadlineMs - Date.now()) / 1000));
-      setTimeLeft(remaining);
-      if (remaining <= 0 && activeBooking) {
-        setHoldExpired(true);
-      }
-    };
-
-    tick();
-    const timer = setInterval(tick, 1000);
-    return () => clearInterval(timer);
-  }, [activeBooking, softDeadline]);
-
-  const formatCountdown = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-  };
-
   // Once the server-side hold actually expires, the backend's BookingExpiryScheduler releases the
   // workspace within ~60s — send the customer back to Explore instead of leaving them on a stale
   // checkout page for a booking that no longer holds the seat.
@@ -263,6 +280,48 @@ const BookingCheckoutPage: React.FC = () => {
         return;
       }
 
+      if (isGroup) {
+        // All seats are booked in one step (all or nothing), then paid with a single VietQR.
+        let group = activeBooking;
+        if (!group) {
+          const created = await bookingGroupApi.create({
+            workspaceIds: seatIds,
+            startAt: startAtDate.toISOString(),
+            endAt: endAtDate.toISOString(),
+            unit: bookingDurationUnit,
+            addons: addonRequest,
+          });
+          group = {
+            id: created.id,
+            isGroup: true,
+            bookingCode: created.groupCode,
+            totalAmount: created.amountDue,
+            paymentDeadlineAt: created.paymentDeadlineAt,
+          };
+          setActiveBooking(group);
+        }
+        const doneState = {
+          state: {
+            message: `Đặt ${seatIds.length} chỗ thành công! Mã đơn nhóm của bạn là ${group.bookingCode}.`,
+            newBookingCode: group.bookingCode,
+            branchName: state.branchName || "CoSpace Chi nhánh",
+          },
+        };
+        if (group.totalAmount <= 0) {
+          showToast(`Đặt ${seatIds.length} chỗ thành công!`, 'success');
+          navigate('/customer/history', doneState);
+          return;
+        }
+        showToast('Đang kết nối cổng thanh toán VietQR (PayOS)…', 'info');
+        const payRes = await bookingGroupApi.payPayos(group.id);
+        if (payRes.checkoutUrl && payRes.checkoutUrl.startsWith('http')) {
+          window.location.href = payRes.checkoutUrl;
+        } else {
+          navigate('/customer/history', doneState);
+        }
+        return;
+      }
+
       let bookingRes = activeBooking;
       if (!bookingRes) {
         bookingRes = await bookingApi.createBooking({
@@ -296,7 +355,7 @@ const BookingCheckoutPage: React.FC = () => {
 
       // 2. Handle Payment Flow
       if (paymentMethod === 'payos') {
-        showToast('Đang kết nối cổng thanh toán VietQR (PayOS)...', 'info');
+        showToast('Đang kết nối cổng thanh toán VietQR (PayOS)…', 'info');
         const payosRes = await bookingApi.createPayosPayment(bookingRes.id, bookingRes.totalAmount);
 
         if (payosRes.checkoutUrl && payosRes.checkoutUrl.startsWith('http')) {
@@ -316,7 +375,7 @@ const BookingCheckoutPage: React.FC = () => {
       }
 
       // 3. Request MoMo Sandbox Payment API & redirect to MoMo Gateway
-      showToast('Đang chuyển hướng sang cổng thanh toán MoMo Sandbox...', 'info');
+      showToast('Đang chuyển hướng sang cổng thanh toán MoMo Sandbox…', 'info');
       const momoRes = await bookingApi.createMomoPayment(bookingRes.id, bookingRes.totalAmount);
 
       if (momoRes.payUrl && momoRes.payUrl.startsWith('http')) {
@@ -344,23 +403,29 @@ const BookingCheckoutPage: React.FC = () => {
       <div className="flex items-center justify-between mb-4">
         <button 
           onClick={() => navigate(-1)} 
-          className="flex items-center gap-2 px-4 py-2 font-semibold text-sm  tracking-tight rounded-3xl border border-border bg-card text-foreground shadow-sm hover:-translate-y-1 hover:shadow-sm transition-all"
+          className="flex items-center gap-2 px-4 py-2 font-semibold text-sm tracking-tight rounded-3xl border border-border bg-card text-foreground shadow-sm hover:shadow-sm transition"
         >
           <FiChevronLeft className="h-5 w-5" /> Quay lại chọn chỗ
         </button>
 
         {/* Live Countdown Badge */}
-        <div className={`flex items-center gap-2 px-4 py-2 rounded-3xl text-sm font-semibold font-mono  border border-border shadow-sm ${
-          timeLeft < 180 ? 'bg-rose-500 text-white animate-pulse border-rose-600' : 'bg-muted text-foreground'
-        }`}>
-          <FiClock className="h-5 w-5" />
-          <span>Giữ chỗ: {formatCountdown(timeLeft)}</span>
-        </div>
+        <HoldCountdown
+          deadlineMs={holdDeadlineMs}
+          onExpire={() => setHoldExpired(true)}
+          className="flex items-center gap-2 px-4 py-2 rounded-3xl text-sm font-semibold font-mono tabular-nums border border-border shadow-sm bg-muted text-foreground"
+          urgentClassName="flex items-center gap-2 px-4 py-2 rounded-3xl text-sm font-semibold font-mono tabular-nums border shadow-sm bg-rose-500 text-white motion-safe:animate-pulse border-rose-600"
+        >
+          {(time) => (
+            <>
+              <FiClock className="h-5 w-5" aria-hidden="true" />
+              <span>Giữ chỗ: {time}</span>
+            </>
+          )}
+        </HoldCountdown>
       </div>
 
       {/* Header Banner */}
       <div className="bg-slate-900 rounded-3xl p-8 border border-border shadow-sm relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-muted rounded-full mix-blend-multiply filter blur-3xl opacity-50 translate-x-1/3 -translate-y-1/3"></div>
         
         
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -385,22 +450,55 @@ const BookingCheckoutPage: React.FC = () => {
               
               <div className="relative z-10">
                 <h2 className="text-2xl font-semibold flex items-center gap-2 text-white">
-                  <FiMapPin className="text-slate-300 h-6 w-6" /> {workspace.name}
+                  <FiMapPin className="text-slate-300 h-6 w-6" /> {isGroup ? `Đặt ${seatIds.length} chỗ cùng lúc` : workspace.name}
                 </h2>
                 <p className="text-sm font-medium text-slate-300 mt-2 flex flex-wrap gap-2 items-center">
-                  <span className="bg-card/10 text-white px-2 py-1 rounded border border-white/10 text-[10px] tracking-tight">{workspaceType?.name || 'Không gian'}</span>
-                  <span>·</span>
-                  <span>Sức chứa: {workspace.capacity} chỗ</span>
+                  {isGroup ? (
+                    <span>{state?.branchName} · tổng sức chứa {[workspace, ...extraWorkspaces.map((e) => e.workspace)].reduce((n, w) => n + (w.capacity || 0), 0)} người</span>
+                  ) : (
+                    <>
+                      <span className="bg-card/10 text-white px-2 py-1 rounded border border-white/10 text-[10px] tracking-tight">{workspaceType?.name || 'Không gian'}</span>
+                      <span>·</span>
+                      <span>Sức chứa: {workspace.capacity} chỗ</span>
+                    </>
+                  )}
                 </p>
               </div>
               <span className="px-4 py-2 rounded-3xl text-lg font-semibold font-mono bg-card/10 text-white border border-white/10 relative z-10">
-                {workspace.code}
+                {isGroup ? `${seatIds.length} chỗ` : workspace.code}
               </span>
             </div>
 
+            {isGroup && (
+              <div className="p-6 pb-0 bg-card">
+                <p className="text-sm font-semibold text-foreground mb-3">Các chỗ trong đơn ({seatIds.length})</p>
+                <ul className="divide-y divide-border rounded-2xl border border-border">
+                  {[{ workspace }, ...extraWorkspaces].map(({ workspace: seat }) => {
+                    const sq = groupQuote?.seats.find((x) => x.workspaceId === seat.id);
+                    return (
+                      <li key={seat.id} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
+                        <span className="min-w-0">
+                          <span className="font-semibold text-foreground block truncate">{seat.name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {seat.workspaceTypeName} · {seat.capacity} chỗ · {seat.code}
+                          </span>
+                        </span>
+                        <span className="font-mono text-foreground shrink-0">
+                          {sq ? formatVND(sq.totalAmount) : '—'}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Mỗi chỗ là một đơn riêng với mã check-in riêng; bạn thanh toán tất cả một lần.
+                </p>
+              </div>
+            )}
+
             <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-6 bg-card">
               <div className="space-y-2 p-4 bg-muted/50 rounded-3xl border border-border shadow-inner">
-                <p className="text-[10px] text-foreground  tracking-tight font-semibold">
+                <p className="text-[10px] text-foreground tracking-tight font-semibold">
                   {isMultiDay ? 'Từ ngày' : 'Ngày sử dụng'}
                 </p>
                 <p className="flex items-center gap-3 font-semibold text-lg text-foreground">
@@ -423,7 +521,7 @@ const BookingCheckoutPage: React.FC = () => {
                   </>
                 ) : (
                   <>
-                    <p className="text-[10px] text-foreground  tracking-tight font-semibold">Khung giờ</p>
+                    <p className="text-[10px] text-foreground tracking-tight font-semibold">Khung giờ</p>
                     <div className="flex items-center gap-3 font-semibold text-lg text-foreground">
                       <div className="p-2 bg-card border border-border rounded-lg shadow-sm"><FiClock className="text-foreground h-5 w-5" /></div>
                       <span>{String(startHour).padStart(2, '0')}:00 → {String(endHour).padStart(2, '0')}:00</span>
@@ -444,12 +542,11 @@ const BookingCheckoutPage: React.FC = () => {
               </h3>
               <div className="space-y-4">
                 {addons.map(addon => {
-                  const serviceIcon = getServiceIcon(addon.unit, addon.name);
                   return (
                     <div key={addon.serviceId} className="flex items-center justify-between p-4 rounded-3xl border border-border bg-muted/50 hover:bg-muted/50 transition-colors">
                       <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-3xl bg-card border border-border text-foreground flex items-center justify-center text-xl shadow-sm">
-                          {serviceIcon}
+                        <div className="h-12 w-12 rounded-xl bg-card border border-border text-muted-foreground flex items-center justify-center">
+                          <ServiceIcon name={addon.name} className="h-5 w-5" />
                         </div>
                         <div>
                           <p className="font-semibold text-lg text-foreground">{addon.name}</p>
@@ -486,6 +583,16 @@ const BookingCheckoutPage: React.FC = () => {
           )}
 
           {/* Promotion code */}
+          {isGroup ? (
+            <section className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+              <h3 className="font-semibold text-xl text-foreground flex items-center gap-2">
+                <FiGift className="text-foreground" /> Mã khuyến mãi
+              </h3>
+              <p className="text-sm text-muted-foreground mt-2">
+                Mã khuyến mãi chỉ áp dụng cho đơn 1 chỗ. Đơn nhiều chỗ vẫn được giảm giá theo hạng thành viên của bạn.
+              </p>
+            </section>
+          ) : (
           <section className="rounded-3xl border border-border bg-card p-6 shadow-sm space-y-4">
             <h3 className="font-semibold text-xl text-foreground flex items-center gap-2">
               <FiGift className="text-foreground" /> Mã khuyến mãi
@@ -501,7 +608,7 @@ const BookingCheckoutPage: React.FC = () => {
                 </div>
                 {!activeBooking && (
                   <button onClick={removePromo} className="p-2 rounded-full hover:bg-emerald-100 dark:hover:bg-emerald-900/40" aria-label="Bỏ mã khuyến mãi">
-                    <FiX className="h-4 w-4" />
+                    <FiX className="h-4 w-4" aria-hidden="true" />
                   </button>
                 )}
               </div>
@@ -510,17 +617,21 @@ const BookingCheckoutPage: React.FC = () => {
                 <div className="flex gap-2">
                   <input
                     className="input-field flex-1 font-mono uppercase"
-                    placeholder="Nhập mã khuyến mãi"
+                    aria-label="Mã khuyến mãi"
+                    name="promo-code"
+                    autoComplete="off"
+                    spellCheck={false}
+                    placeholder="Nhập mã khuyến mãi…"
                     value={promoInput}
                     disabled={!!activeBooking || !quote}
                     onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
                     onKeyDown={(e) => { if (e.key === 'Enter') applyPromo(promoInput); }}
                   />
                   <Button onClick={() => applyPromo(promoInput)} disabled={!promoInput.trim() || isApplyingPromo || !!activeBooking || !quote}>
-                    {isApplyingPromo ? 'Đang kiểm tra...' : 'Áp dụng'}
+                    {isApplyingPromo ? 'Đang kiểm tra…' : 'Áp dụng'}
                   </Button>
                 </div>
-                {promoError && <p className="text-sm text-destructive">{promoError}</p>}
+                {promoError && <p role="alert" className="text-sm text-destructive">{promoError}</p>}
                 {!quote && <p className="text-xs text-muted-foreground">Mã khuyến mãi chỉ áp dụng khi kết nối được máy chủ.</p>}
               </div>
             )}
@@ -554,6 +665,7 @@ const BookingCheckoutPage: React.FC = () => {
               </div>
             )}
           </section>
+          )}
 
           {/* Payment Method Selector */}
           <section className="rounded-3xl border border-border bg-card p-6 shadow-sm space-y-6">
@@ -563,8 +675,8 @@ const BookingCheckoutPage: React.FC = () => {
             
             <div className="space-y-4">
               {/* PayOS VietQR Option */}
-              <label className={`flex items-center justify-between p-4 rounded-3xl border-4 cursor-pointer transition-all ${
-                paymentMethod === 'payos' ? 'border-[#0052cc] bg-blue-50/20 dark:bg-blue-950/20 shadow-sm' : 'border-border hover:-translate-y-1 hover:shadow-sm'
+              <label className={`flex items-center justify-between p-4 rounded-3xl border-4 cursor-pointer transition ${
+                paymentMethod === 'payos' ? 'border-[#0052cc] bg-blue-50/20 dark:bg-blue-950/20 shadow-sm' : 'border-border hover:shadow-sm'
               }`}>
                 <div className="flex items-center gap-4">
                   <input 
@@ -588,8 +700,10 @@ const BookingCheckoutPage: React.FC = () => {
                 </div>
               </label>
 
-              <label className={`flex items-center justify-between p-4 rounded-3xl border-4 cursor-pointer transition-all ${
-                paymentMethod === 'momo' ? 'border-[#A50064] bg-muted/5 shadow-sm' : 'border-border hover:-translate-y-1 hover:shadow-sm'
+              {/* MoMo pays one booking per order; a group is paid with one VietQR instead. */}
+              {!isGroup && (
+              <label className={`flex items-center justify-between p-4 rounded-3xl border-4 cursor-pointer transition ${
+                paymentMethod === 'momo' ? 'border-[#A50064] bg-muted/5 shadow-sm' : 'border-border hover:shadow-sm'
               }`}>
                 <div className="flex items-center gap-4">
                   <input 
@@ -612,6 +726,7 @@ const BookingCheckoutPage: React.FC = () => {
                   <FiCheckCircle className="h-5 w-5 font-semibold" />
                 </div>
               </label>
+              )}
 
               <div className="p-4 rounded-3xl bg-muted/50 border border-border text-sm font-medium text-foreground flex items-start gap-3 shadow-inner">
                 <FiLock className="h-6 w-6 shrink-0 text-foreground mt-0.5" />
@@ -637,7 +752,11 @@ const BookingCheckoutPage: React.FC = () => {
             <div className="p-6 space-y-4">
               <div className="flex flex-col gap-2 p-4 bg-muted/50 rounded-3xl border border-border">
                 <div className="flex justify-between items-center text-sm font-medium text-foreground/70">
-                  <span className="">Tiền thuê ({formatVND(displayBasePrice)}) × {unitCount}{bookingDurationUnit === 'week' ? ' tuần' : bookingDurationUnit === 'day' ? ' ngày' : 'h'}</span>
+                  <span className="">
+                    {isGroup
+                      ? `Tiền thuê ${seatIds.length} chỗ × ${unitCount}${bookingDurationUnit === 'week' ? ' tuần' : bookingDurationUnit === 'day' ? ' ngày' : 'h'}`
+                      : <>Tiền thuê ({formatVND(displayBasePrice)}) × {unitCount}{bookingDurationUnit === 'week' ? ' tuần' : bookingDurationUnit === 'day' ? ' ngày' : 'h'}</>}
+                  </span>
                   <span className="font-semibold text-foreground font-mono text-lg">{formatVND(rentalSubtotal)}</span>
                 </div>
 
@@ -671,7 +790,7 @@ const BookingCheckoutPage: React.FC = () => {
                 <div className="flex justify-between items-end">
                   <div>
                     <span className="font-semibold text-lg block text-foreground ">Tổng cộng</span>
-                    <span className="text-[10px] font-medium text-foreground/50  tracking-tight">Đã bao gồm VAT</span>
+                    <span className="text-[10px] font-medium text-foreground/50 tracking-tight">Đã bao gồm VAT</span>
                   </div>
                   <span className="font-semibold text-3xl text-foreground font-mono">{formatVND(grandTotal)}</span>
                 </div>
@@ -679,20 +798,41 @@ const BookingCheckoutPage: React.FC = () => {
             </div>
 
             <div className="p-6 bg-slate-900 space-y-4">
+              {reputation && reputation.restriction !== 'none' && !activeBooking && (
+                <p className="text-sm text-amber-200 bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3 flex gap-2">
+                  <FiAlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                  <span>
+                    Điểm uy tín của bạn là {reputation.score}/{reputation.maxScore}.{' '}
+                    {reputation.restriction === 'blocked'
+                      ? 'Bạn tạm thời không thể đặt chỗ online, vui lòng đặt trực tiếp tại quầy.'
+                      : 'Bạn chỉ được giữ 1 đơn chưa sử dụng tại một thời điểm.'}
+                  </span>
+                </p>
+              )}
+              {reputation && checkinDeadlineApplies && (
+                <p className="text-xs text-white/80 bg-white/5 border border-white/10 rounded-2xl p-3 flex gap-2 leading-relaxed">
+                  <FiShield className="h-4 w-4 shrink-0 mt-0.5 text-sky-300" />
+                  <span>
+                    Vui lòng check-in tại quầy trước <strong className="text-white">{checkinDeadlineText}</strong>{' '}
+                    ({reputation.checkinDeadlineMinutes} phút sau giờ bắt đầu). Quá hạn sẽ bị trừ {reputation.missedCheckinPenalty} điểm uy tín;
+                    check-in đúng giờ được cộng {reputation.onTimeCheckinReward} điểm. Chúng tôi sẽ nhắc bạn trước giờ bắt đầu.
+                  </span>
+                </p>
+              )}
               {!activeBooking && quoteError && (
                 <p className="text-sm text-rose-300 bg-rose-500/10 border border-rose-500/30 rounded-2xl p-3">{quoteError}</p>
               )}
               <button 
                 onClick={handleCreateBooking} 
-                disabled={isProcessing || timeLeft <= 0 || (!activeBooking && !quote)}
-                className={`w-full py-5 text-lg font-semibold tracking-tight border border-border rounded-3xl shadow-sm hover:-translate-y-1 hover:shadow-sm transition-all flex justify-center items-center gap-3 ${
-                  isProcessing || timeLeft <= 0 || (!activeBooking && !quote) ? 'bg-gray-600 text-white opacity-50 cursor-not-allowed' : 'bg-[#A50064] text-white hover:bg-[#8A0053]'
+                disabled={isProcessing || holdExpired || (!activeBooking && !quote)}
+                className={`w-full py-5 text-lg font-semibold tracking-tight border border-border rounded-3xl shadow-sm hover:shadow-sm transition flex justify-center items-center gap-3 ${
+                  isProcessing || holdExpired || (!activeBooking && !quote) ? 'bg-gray-600 text-white opacity-50 cursor-not-allowed' : 'bg-[#A50064] text-white hover:bg-[#8A0053]'
                 }`}
               >
                 {isProcessing ? (
                   <div className="flex items-center gap-2">
                     <span className="h-5 w-5 rounded-full border-4 border-white border-t-transparent animate-spin" />
-                    <span>Đang xử lý...</span>
+                    <span>Đang xử lý…</span>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">

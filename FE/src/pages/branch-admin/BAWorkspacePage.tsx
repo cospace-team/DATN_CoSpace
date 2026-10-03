@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import {
   FiLayers, FiPlus, FiEdit2, FiAlertCircle,
-  FiTrash2, FiUploadCloud, FiCheckCircle, FiLayout, FiMap, FiMapPin, FiX,
+  FiTrash2, FiUploadCloud, FiCheckCircle, FiMap, FiMapPin,
 } from 'react-icons/fi';
 import FloorPlanEditor from '../../components/floor-plan/FloorPlanEditor';
 import FloorPlanViewer from '../../components/floor-plan/FloorPlanViewer';
@@ -639,7 +640,7 @@ const BAWorkspacePage: React.FC<BAWorkspacePageProps> = ({ isSuperAdminView = fa
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-muted-foreground text-sm">Đang tải dữ liệu...</div>
+        <div className="text-muted-foreground text-sm">Đang tải dữ liệu…</div>
       </div>
     );
   }
@@ -648,13 +649,13 @@ const BAWorkspacePage: React.FC<BAWorkspacePageProps> = ({ isSuperAdminView = fa
     <div className="space-y-6 animate-fade-in relative">
       {/* Toast Notifications */}
       {successMsg && (
-        <div className="fixed top-4 right-4 z-[70] animate-slide-up flex items-center gap-2 bg-success text-success-foreground px-4 py-3 rounded-xl shadow-xl">
+        <div className="fixed top-4 right-4 z-[70] animate-slide-in-up flex items-center gap-2 bg-success text-success-foreground px-4 py-3 rounded-xl shadow-xl">
           <FiCheckCircle className="h-5 w-5" />
           <p className="font-medium text-sm">{successMsg}</p>
         </div>
       )}
       {errorMsg && !modal && (
-        <div className="fixed top-4 right-4 z-[70] animate-slide-up flex items-center gap-2 bg-destructive text-destructive-foreground px-4 py-3 rounded-xl shadow-xl">
+        <div className="fixed top-4 right-4 z-[70] animate-slide-in-up flex items-center gap-2 bg-destructive text-destructive-foreground px-4 py-3 rounded-xl shadow-xl">
           <FiAlertCircle className="h-5 w-5" />
           <p className="font-medium text-sm">{errorMsg}</p>
         </div>
@@ -684,7 +685,7 @@ const BAWorkspacePage: React.FC<BAWorkspacePageProps> = ({ isSuperAdminView = fa
                 <select
                   value={selectedBranchId}
                   onChange={(e) => setSelectedBranchId(e.target.value)}
-                  className="bg-transparent text-sm font-semibold text-foreground focus:outline-none cursor-pointer"
+                  className="bg-transparent text-sm font-semibold text-foreground cursor-pointer"
                 >
                   {branches.map((b) => (
                     <option key={b.id} value={b.id} className="bg-card text-foreground">
@@ -701,7 +702,7 @@ const BAWorkspacePage: React.FC<BAWorkspacePageProps> = ({ isSuperAdminView = fa
               disabled={(isSuperAdminView && !selectedBranchId) || isBranchInactive}
               title={isBranchInactive ? 'Chi nhánh đang tạm ngưng hoạt động' : undefined}
             >
-              <FiPlus className="h-4 w-4" /> Thêm Tầng Mới
+              <FiPlus className="h-4 w-4" /> Thêm tầng mới
             </button>
           </div>
         </div>
@@ -730,7 +731,7 @@ const BAWorkspacePage: React.FC<BAWorkspacePageProps> = ({ isSuperAdminView = fa
         {floors.length === 0 ? (
           <div className="flex flex-col items-center py-10 gap-2 text-muted-foreground">
             <FiAlertCircle className="h-8 w-8 opacity-40" />
-            <p className="text-sm">Chưa có tầng nào. Nhấn "Thêm Tầng Mới" để bắt đầu.</p>
+            <p className="text-sm">Chưa có tầng nào. Nhấn "Thêm tầng mới" để bắt đầu.</p>
           </div>
         ) : (
           <div className="flex gap-2 flex-wrap">
@@ -738,7 +739,7 @@ const BAWorkspacePage: React.FC<BAWorkspacePageProps> = ({ isSuperAdminView = fa
               <div key={f.id} className="flex items-center gap-1 group">
                 <button
                   onClick={() => setSelectedFloorId(f.id)}
-                  className={`btn px-4 py-2 text-sm font-medium transition-all ${
+                  className={`btn px-4 py-2 text-sm font-medium transition ${
                     selectedFloorId === f.id
                       ? 'bg-primary text-primary-foreground shadow-md'
                       : 'bg-muted/50 text-foreground hover:bg-muted'
@@ -753,15 +754,17 @@ const BAWorkspacePage: React.FC<BAWorkspacePageProps> = ({ isSuperAdminView = fa
                       onClick={() => openFloorModal('edit', f)}
                       className="btn btn-ghost btn-sm p-1.5 text-muted-foreground hover:text-primary"
                       title="Sửa tầng"
+                      aria-label="Sửa tầng"
                     >
-                      <FiEdit2 className="h-4 w-4" />
+                      <FiEdit2 className="h-4 w-4" aria-hidden="true" />
                     </button>
                     <button
                       onClick={() => deleteFloor(f.id, f.name)}
                       className="btn btn-ghost btn-sm p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                       title="Xóa tầng"
+                      aria-label="Xóa tầng"
                     >
-                      <FiTrash2 className="h-4 w-4" />
+                      <FiTrash2 className="h-4 w-4" aria-hidden="true" />
                     </button>
                   </div>
                 )}
@@ -775,11 +778,11 @@ const BAWorkspacePage: React.FC<BAWorkspacePageProps> = ({ isSuperAdminView = fa
       {currentFloor && !loading && !loadingWorkspaces && orphanWorkspaceElements.length > 0 && (
         <div className="p-4 bg-warning/15 border border-warning/30 rounded-xl text-warning flex items-center justify-between flex-wrap gap-4 shadow-sm mb-6 animate-fade-in">
           <div className="flex items-center gap-3">
-            <FiAlertCircle className="h-5 w-5 shrink-0 animate-bounce" />
+            <FiAlertCircle className="h-5 w-5 shrink-0" />
             <div>
               <p className="font-semibold text-sm">Sơ đồ có các phần tử chưa đồng bộ với Database</p>
               <p className="text-xs opacity-95">
-                Phát hiện {orphanWorkspaceElements.length} phần tử (bàn, phòng...) trên sơ đồ mang ID chưa tồn tại trong
+                Phát hiện {orphanWorkspaceElements.length} phần tử (bàn, phòng…) trên sơ đồ mang ID chưa tồn tại trong
                 Database (do mới thêm hoặc import mẫu).
               </p>
             </div>
@@ -792,10 +795,10 @@ const BAWorkspacePage: React.FC<BAWorkspacePageProps> = ({ isSuperAdminView = fa
             {syncing ? (
               <>
                 <span className="animate-spin rounded-full h-3 w-3 border-2 border-warning-foreground border-t-transparent"></span>
-                Đang đồng bộ...
+                Đang đồng bộ…
               </>
             ) : (
-              '⚡ Đồng bộ & Tạo ngay'
+              'Đồng bộ & tạo ngay'
             )}
           </button>
         </div>
@@ -811,8 +814,8 @@ const BAWorkspacePage: React.FC<BAWorkspacePageProps> = ({ isSuperAdminView = fa
                 <h2 className="font-semibold text-sm">Sơ đồ mặt bằng — {currentFloor.name}</h2>
                 <div className="text-xs text-muted-foreground">
                   {assigningWsId ? (
-                    <span className="text-warning font-medium animate-pulse flex items-center gap-1.5">
-                      👉 Đang gán không gian {assigningWsCode}. Click bàn/phòng trên sơ đồ để gán.
+                    <span className="text-warning font-medium flex items-center gap-1.5">
+                      Đang gán không gian {assigningWsCode}. Click bàn/phòng trên sơ đồ để gán.
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -836,7 +839,7 @@ const BAWorkspacePage: React.FC<BAWorkspacePageProps> = ({ isSuperAdminView = fa
                 onClick={() => setShowEditorPopup(true)}
                 className="btn btn-primary btn-sm flex items-center gap-2"
               >
-                <FiEdit2 className="h-3.5 w-3.5" /> Chỉnh sửa Layout
+                <FiEdit2 className="h-3.5 w-3.5" /> Chỉnh sửa sơ đồ
               </button>
             </div>
           </div>
@@ -982,32 +985,13 @@ const BAWorkspacePage: React.FC<BAWorkspacePageProps> = ({ isSuperAdminView = fa
       )}
 
       {/* ── Fullscreen Editor Popup ── */}
-      {showEditorPopup && currentFloor && (
-        <div className="fixed inset-0 z-[60] flex flex-col bg-background animate-fade-in">
-          {/* Popup Header */}
-          <div className="flex items-center justify-between px-6 py-3 border-b border-border bg-card shadow-sm shrink-0 text-foreground">
-            <div className="flex items-center gap-3">
-              <FiLayout className="h-5 w-5 text-primary" />
-              <div>
-                <h2 className="text-sm font-bold font-heading text-foreground">
-                  Chỉnh sửa Layout — {currentFloor.name}
-                </h2>
-                <p className="text-xs text-muted-foreground">
-                  Kéo thả elements từ panel trái để thiết kế, gán workspace từ panel phải
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => setShowEditorPopup(false)}
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-muted border border-border hover:bg-muted/70 text-foreground flex items-center gap-2 transition-all shadow-sm active:scale-95"
-            >
-              <FiX className="h-4 w-4" /> Đóng Editor
-            </button>
-          </div>
-          {/* Editor */}
+      {/* Portal to <body>: inside the page it inherited the list's top margin and left a gap above the editor. */}
+      {showEditorPopup && currentFloor && createPortal(
+        <div className="fixed inset-0 z-[60] flex flex-col bg-background" role="dialog" aria-modal="true" aria-label={`Thiết kế sơ đồ ${currentFloor.name}`}>
           <div className="flex-1 overflow-hidden">
             <FloorPlanEditor
               key={`floor-editor-${currentFloor.id}`}
+              onClose={() => setShowEditorPopup(false)}
               initialLayout={
                 currentFloor.layoutJson
                   ? (JSON.parse(currentFloor.layoutJson) as FloorLayout)
@@ -1191,7 +1175,8 @@ const BAWorkspacePage: React.FC<BAWorkspacePageProps> = ({ isSuperAdminView = fa
               }}
             />
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

@@ -114,7 +114,7 @@ const ConfirmDialog: React.FC<{ open: boolean; title: string; message: string; o
 /* ── Tab Button ── */
 const TabBtn: React.FC<{ active: boolean; onClick: () => void; children: React.ReactNode }> = ({ active, onClick, children }) => (
   <button onClick={onClick}
-    className={`relative px-5 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${active ? 'bg-primary text-primary-foreground shadow-md shadow-primary/25' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>
+    className={`relative px-5 py-2.5 text-sm font-semibold rounded-lg transition duration-200 ${active ? 'bg-primary text-primary-foreground shadow-md shadow-primary/25' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>
     {children}
   </button>
 );
@@ -303,14 +303,14 @@ const BranchManagementPage: React.FC = () => {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {branchLoading ? (
               <div className="col-span-full flex items-center justify-center py-12 gap-3 text-muted-foreground">
-                <FiRefreshCw className="h-5 w-5 animate-spin" /> Đang tải danh sách chi nhánh...
+                <FiRefreshCw className="h-5 w-5 animate-spin" /> Đang tải danh sách chi nhánh…
               </div>
             ) : branchList.length === 0 ? (
               <div className="col-span-full text-center py-12 text-muted-foreground bg-card rounded-2xl border border-border">
                 Chưa có chi nhánh nào trong hệ thống.
               </div>
             ) : branchList.map(b => (
-              <div key={b.id} className="bg-card rounded-2xl border border-border p-5 hover:border-primary/50 transition-all flex flex-col justify-between shadow-xs">
+              <div key={b.id} className="bg-card rounded-2xl border border-border p-5 hover:border-primary/50 transition flex flex-col justify-between shadow-xs">
                 <div>
                   <div className="flex items-center justify-between gap-2 mb-2">
                     <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-muted text-muted-foreground">{b.code}</span>
@@ -324,8 +324,8 @@ const BranchManagementPage: React.FC = () => {
                 <div className="flex items-center justify-between pt-4 mt-4 border-t border-border/60">
                   <span className="text-xs text-muted-foreground">{b.city || 'Việt Nam'}</span>
                   <div className="flex gap-1">
-                    <button onClick={() => openEdit('branch', b)} className="btn btn-ghost btn-sm !p-1.5" title="Chỉnh sửa"><FiEdit2 className="h-3.5 w-3.5" /></button>
-                    <button onClick={() => setDeleteConfirm({ type: 'branch', name: b.name, id: b.id })} className="btn btn-ghost btn-sm !p-1.5 text-destructive hover:!text-destructive" title="Xóa"><FiTrash2 className="h-3.5 w-3.5" /></button>
+                    <button onClick={() => openEdit('branch', b)} className="btn btn-ghost btn-sm !p-1.5" title="Chỉnh sửa" aria-label="Chỉnh sửa"><FiEdit2 className="h-3.5 w-3.5" aria-hidden="true" /></button>
+                    <button onClick={() => setDeleteConfirm({ type: 'branch', name: b.name, id: b.id })} className="btn btn-ghost btn-sm !p-1.5 text-destructive hover:!text-destructive" title="Xóa" aria-label="Xóa"><FiTrash2 className="h-3.5 w-3.5" aria-hidden="true" /></button>
                   </div>
                 </div>
               </div>
@@ -357,7 +357,7 @@ const BranchManagementPage: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-border">
                 {typeLoading ? (
-                  <tr><td colSpan={4} className="py-12 text-center text-muted-foreground">Đang tải loại không gian...</td></tr>
+                  <tr><td colSpan={4} className="py-12 text-center text-muted-foreground">Đang tải loại không gian…</td></tr>
                 ) : typeList.length === 0 ? (
                   <tr><td colSpan={4} className="py-12 text-center text-muted-foreground">Chưa có loại không gian nào.</td></tr>
                 ) : typeList.map(t => {
@@ -380,8 +380,8 @@ const BranchManagementPage: React.FC = () => {
                       <td className="px-6 py-4 text-muted-foreground">{t.capacityDefault} người</td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-1">
-                          <button onClick={() => openEdit('type', t)} className="btn btn-ghost btn-sm !p-1.5" title="Chỉnh sửa"><FiEdit2 className="h-3.5 w-3.5" /></button>
-                          <button onClick={() => setDeleteConfirm({ type: 'type', name: t.name, id: t.id })} className="btn btn-ghost btn-sm !p-1.5 text-destructive hover:!text-destructive" title="Xóa"><FiTrash2 className="h-3.5 w-3.5" /></button>
+                          <button onClick={() => openEdit('type', t)} className="btn btn-ghost btn-sm !p-1.5" title="Chỉnh sửa" aria-label="Chỉnh sửa"><FiEdit2 className="h-3.5 w-3.5" aria-hidden="true" /></button>
+                          <button onClick={() => setDeleteConfirm({ type: 'type', name: t.name, id: t.id })} className="btn btn-ghost btn-sm !p-1.5 text-destructive hover:!text-destructive" title="Xóa" aria-label="Xóa"><FiTrash2 className="h-3.5 w-3.5" aria-hidden="true" /></button>
                         </div>
                       </td>
                     </tr>
@@ -398,7 +398,7 @@ const BranchManagementPage: React.FC = () => {
         <form className="space-y-5" onSubmit={submitBranch}>
           <div><label className="text-sm font-medium block mb-1.5">Tên chi nhánh *</label><input required className="input-field" placeholder="VD: CoSpace Cầu Giấy" value={branchForm.name} onChange={e => setBranchForm(p => ({ ...p, name: e.target.value }))} /></div>
           <div><label className="text-sm font-medium block mb-1.5">Mã chi nhánh *</label><input required disabled={!!editItem} className="input-field font-mono uppercase disabled:opacity-60" placeholder="VD: CS-CG" value={branchForm.code} onChange={e => setBranchForm(p => ({ ...p, code: e.target.value.toUpperCase() }))} /></div>
-          <div><label className="text-sm font-medium block mb-1.5">Địa chỉ *</label><textarea required className="input-field !min-h-[80px]" placeholder="Nhập địa chỉ đầy đủ..." value={branchForm.address} onChange={e => setBranchForm(p => ({ ...p, address: e.target.value }))} /></div>
+          <div><label className="text-sm font-medium block mb-1.5">Địa chỉ *</label><textarea required className="input-field !min-h-[80px]" placeholder="Nhập địa chỉ đầy đủ…" value={branchForm.address} onChange={e => setBranchForm(p => ({ ...p, address: e.target.value }))} /></div>
           <div className="grid grid-cols-2 gap-4">
             <div><label className="text-sm font-medium block mb-1.5">Thành phố</label><input className="input-field" placeholder="Hà Nội" value={branchForm.city} onChange={e => setBranchForm(p => ({ ...p, city: e.target.value }))} /></div>
             <div><label className="text-sm font-medium block mb-1.5">Múi giờ</label>
@@ -414,7 +414,7 @@ const BranchManagementPage: React.FC = () => {
               <div className="relative inline-flex items-center cursor-pointer">
                 <input type="checkbox" className="sr-only peer" checked={branchForm.status === 'active'}
                   onChange={e => setBranchForm(p => ({ ...p, status: e.target.checked ? 'active' : 'inactive' }))} />
-                <div className="w-11 h-6 bg-muted rounded-full peer peer-checked:bg-primary transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full" />
+                <div className="w-11 h-6 bg-muted rounded-full peer peer-checked:bg-primary transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:rounded-full after:h-5 after:w-5 after:transition-transform peer-checked:after:translate-x-full" />
               </div>
             </div>
           )}
@@ -441,7 +441,7 @@ const BranchManagementPage: React.FC = () => {
                       key={arc.id}
                       type="button"
                       onClick={() => handleSelectArchetype(arc)}
-                      className={`p-2.5 rounded-xl border text-left transition-all flex flex-col justify-between ${
+                      className={`p-2.5 rounded-xl border text-left transition flex flex-col justify-between ${
                         isSelected 
                           ? 'border-primary bg-primary/10 shadow-xs' 
                           : 'border-border bg-card hover:bg-muted/40'
@@ -498,7 +498,7 @@ const BranchManagementPage: React.FC = () => {
             </div>
 
             <div className="p-3.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-700 dark:text-amber-300 mb-5">
-              ⚠️ <strong>Lưu ý quan trọng:</strong> Nếu không cấu hình mức giá, khách hàng sẽ không thể tra cứu giá hoặc hệ thống có nguy cơ cho đặt chỗ với giá 0đ. Hãy thiết lập ngay 4 mốc giá cơ bản.
+              <strong>Lưu ý:</strong> Nếu không cấu hình mức giá, khách hàng sẽ không thể tra cứu giá hoặc hệ thống có nguy cơ cho đặt chỗ với giá 0đ. Hãy thiết lập ngay 4 mốc giá cơ bản.
             </div>
 
             <div className="flex items-center justify-end gap-3">

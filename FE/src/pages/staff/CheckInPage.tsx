@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, Suspense } from 'react';
 import { 
   FiHash, FiCheckCircle, FiAlertCircle, FiLogOut, FiClock, 
   FiInbox, FiSearch, FiUser, FiMapPin, FiCalendar, FiDollarSign, 
@@ -10,14 +10,19 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { useLocation } from 'react-router-dom';
 import { staffApi, BookingWithDetailsDto, BranchTodayBookingDto } from '../../api/staffApi';
 import { useAuth } from '../../context/AuthContext';
-import QrScannerModal from '../../components/QrScannerModal';
 import BookingTabPanel from '../../components/staff/BookingTabPanel';
 import ExtendBookingPanel from '../../components/ExtendBookingPanel';
 import type { BookingTabDto } from '../../api/addonApi';
 import { CheckoutModal } from './checkin/CheckoutModal';
 import { TodayScheduleTab } from './checkin/TodayScheduleTab';
+import { ReputationBadge } from '../../components/reputation/ReputationBadge';
+import { CustomerReputationModal } from '../../components/reputation/CustomerReputationModal';
+import { StaffBookingActionModal } from '../../components/staff/StaffBookingActionModal';
 
 import { BookingPackageDisplay, getBookingPackageDisplay } from '../../utils/bookingPackage';
+
+// html5-qrcode is ~300 kB: load the scanner only when the receptionist opens it.
+const QrScannerModal = React.lazy(() => import('../../components/QrScannerModal'));
 
 export type { BookingPackageDisplay };
 export { getBookingPackageDisplay };
@@ -47,6 +52,10 @@ const CheckInPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [searchedBooking, setSearchedBooking] = useState<BookingWithDetailsDto | null>(null);
+  /** Customer whose reputation history is open, if any. */
+  const [reputationUserId, setReputationUserId] = useState<string | null>(null);
+  /** Booking being cancelled / ended early with a refund, if any. */
+  const [actionTarget, setActionTarget] = useState<{ id: string; customerName?: string; workspaceName?: string } | null>(null);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -206,7 +215,7 @@ const CheckInPage: React.FC = () => {
 
     try {
       await staffApi.checkin(searchedBooking.booking.id, 'Check-in tại quầy');
-      setSuccessMessage(`✅ Check-in thành công! Mời khách hàng ${searchedBooking.customer?.fullName || ''} vào vị trí ${searchedBooking.workspace?.name || ''}.`);
+      setSuccessMessage(`Check-in thành công. Mời khách hàng ${searchedBooking.customer?.fullName || ''} vào vị trí ${searchedBooking.workspace?.name || ''}.`);
       setSearchedBooking(null);
       setCode('');
       await fetchActiveCheckins();
@@ -232,7 +241,7 @@ const CheckInPage: React.FC = () => {
 
     try {
       await staffApi.checkout(selectedCheckoutItem.activeCheckin.id, checkoutNote);
-      setSuccessMessage(`✅ Đã Check-out và giải phóng vị trí "${selectedCheckoutItem.workspace?.name}" thành công!`);
+      setSuccessMessage(`Đã check-out và giải phóng vị trí "${selectedCheckoutItem.workspace?.name}" thành công!`);
       setTimeout(() => setSuccessMessage(null), 4000);
       setSelectedCheckoutItem(null);
       setCheckoutNote('');
@@ -377,20 +386,19 @@ const CheckInPage: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in pb-24 lg:pb-6">
       {/* Header */}
-      <div className="rounded-2xl border border-border bg-card p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-sm">
+      <div className="rounded-xl border border-border bg-card p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold font-heading">Kiểm tra & Xác nhận Check-in</h1>
+            <h1 className="text-2xl font-bold font-heading">Check-in</h1>
             <span className="text-xs bg-primary/10 text-primary px-3 py-1 rounded-full font-semibold border border-primary/20 flex items-center gap-1.5">
               <FiMapPin className="h-3.5 w-3.5" /> {branchName}
             </span>
           </div>
-          <p className="text-xs text-muted-foreground mt-1">Theo dõi khách hàng đang có mặt tại không gian và quản lý ra vào theo thời gian thực</p>
+          <p className="text-xs text-muted-foreground mt-1">Tra mã đặt chỗ để check-in, theo dõi khách đang ngồi và check-out.</p>
         </div>
 
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 bg-muted/60 border border-border px-3.5 py-2 rounded-xl text-xs font-mono font-bold shadow-inner">
-            <span className="h-2 w-2 rounded-full bg-green-500 animate-ping" />
             <FiClock className="h-4 w-4 text-primary" />
             <span>{currentClockStr}</span>
           </div>
@@ -398,9 +406,10 @@ const CheckInPage: React.FC = () => {
             onClick={() => fetchActiveCheckins()} 
             disabled={refreshing}
             title="Làm mới danh sách"
+            aria-label="Làm mới danh sách"
             className="btn btn-outline !p-2.5 rounded-xl text-muted-foreground hover:text-foreground"
           >
-            <FiRefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin text-primary' : ''}`} />
+            <FiRefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin text-primary' : ''}`} aria-hidden="true" />
           </button>
         </div>
       </div>
@@ -447,14 +456,14 @@ const CheckInPage: React.FC = () => {
               <div className="grid grid-cols-2 gap-3">
                 <button 
                   onClick={() => setShowQrScanner(true)} 
-                  className="btn btn-secondary justify-center !h-13 text-base font-bold transition-all border-2 border-dashed hover:border-primary hover:text-primary"
+                  className="btn btn-secondary justify-center !h-13 text-base font-bold transition border-2 border-dashed hover:border-primary hover:text-primary"
                 >
                   <FiCamera className="mr-2 h-5 w-5" /> Quét QR
                 </button>
                 <button 
                   onClick={() => handleSearchTicket(code)} 
                   disabled={!code.trim() || loading} 
-                  className="btn btn-primary justify-center !h-13 shadow-lg shadow-primary/20 text-base font-bold transition-all"
+                  className="btn btn-primary justify-center !h-13 shadow-lg shadow-primary/20 text-base font-bold transition"
                 >
                   {loading && !searchedBooking ? (
                     <span className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -507,7 +516,7 @@ const CheckInPage: React.FC = () => {
               (searchedBooking.booking.status === 'CONFIRMED' || (isMultiDay && searchedBooking.booking.status === 'CHECKED_IN'));
 
             return (
-              <div className="rounded-2xl border-2 border-primary bg-card p-6 shadow-xl animate-scale-up relative overflow-hidden">
+              <div className="rounded-2xl border-2 border-primary bg-card p-6 shadow-xl animate-scale-in relative overflow-hidden">
                 <div className={`absolute top-0 right-0 px-4 py-1.5 rounded-bl-xl text-xs font-bold uppercase tracking-wider shadow-sm flex items-center gap-1.5 ${pkg.badgeClass}`}>
                   <FiTag /> {pkg.packageType}
                 </div>
@@ -519,6 +528,14 @@ const CheckInPage: React.FC = () => {
                   <div>
                     <p className="text-xs text-muted-foreground flex items-center gap-1.5 mb-1"><FiUser /> Khách hàng</p>
                     <p className="font-bold text-base">{searchedBooking.customer?.fullName || 'Khách vãng lai'}</p>
+                    {searchedBooking.customer?.reputationScore != null && (
+                      <div className="mt-1">
+                        <ReputationBadge
+                          score={searchedBooking.customer.reputationScore}
+                          onClick={() => setReputationUserId(searchedBooking.customer.id)}
+                        />
+                      </div>
+                    )}
                     <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
                       <FiPhone className="h-3 w-3" /> {searchedBooking.customer?.phone || 'Chưa cập nhật SĐT'}
                     </p>
@@ -548,14 +565,14 @@ const CheckInPage: React.FC = () => {
                   <button 
                     onClick={handleConfirmCheckin} 
                     disabled={loading}
-                    className="btn btn-primary w-full justify-center !h-14 text-lg font-bold shadow-lg shadow-primary/30 transition-all hover:scale-[1.01]"
+                    className="btn btn-primary w-full justify-center !h-14 text-lg font-bold shadow-lg shadow-primary/30 transition "
                   >
                     {loading ? (
                       <span className="h-6 w-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     ) : (
                       <>
                         <FiCheck className="h-6 w-6 mr-2" /> 
-                        {isMultiDay ? 'Xác nhận Check-in ca hôm nay' : 'Xác nhận Cho Khách Vào (Check-in)'}
+                        {isMultiDay ? 'Xác nhận Check-in ca hôm nay' : 'Xác nhận check-in'}
                       </>
                     )}
                   </button>
@@ -563,10 +580,23 @@ const CheckInPage: React.FC = () => {
                   <div className="rounded-xl bg-destructive/10 border border-destructive/20 p-4 text-center">
                     <p className="text-sm font-semibold text-destructive">
                       {searchedBooking.alreadyCheckedIn 
-                        ? '⚠️ Khách hàng này đang sử dụng không gian, không thể Check-in thêm.' 
-                        : '⚠️ Vé chưa được thanh toán hoặc không ở trạng thái hợp lệ để Check-in.'}
+                        ? 'Khách hàng này đang sử dụng không gian, không thể Check-in thêm.' 
+                        : 'Vé chưa được thanh toán hoặc không ở trạng thái hợp lệ để Check-in.'}
                     </p>
                   </div>
+                )}
+                {['CONFIRMED', 'PENDING_PAYMENT', 'CHECKED_IN'].includes(searchedBooking.booking?.status) && (
+                  <button
+                    type="button"
+                    onClick={() => setActionTarget({
+                      id: searchedBooking.booking.id,
+                      customerName: searchedBooking.customer?.fullName,
+                      workspaceName: searchedBooking.workspace?.name,
+                    })}
+                    className="mt-3 w-full text-sm font-medium text-red-600 hover:text-red-700 hover:underline cursor-pointer"
+                  >
+                    {searchedBooking.booking.status === 'CHECKED_IN' ? 'Kết thúc sớm & hoàn tiền' : 'Hủy đơn & hoàn tiền'}
+                  </button>
                 )}
               </div>
             );
@@ -580,7 +610,7 @@ const CheckInPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setActiveView('seated')}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
                     activeView === 'seated'
                       ? 'bg-background text-foreground shadow-sm'
                       : 'text-muted-foreground hover:text-foreground'
@@ -594,7 +624,7 @@ const CheckInPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setActiveView('today_schedule')}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
                     activeView === 'today_schedule'
                       ? 'bg-background text-foreground shadow-sm'
                       : 'text-muted-foreground hover:text-foreground'
@@ -609,11 +639,11 @@ const CheckInPage: React.FC = () => {
               <button
                 onClick={fetchDashboardData}
                 disabled={refreshing}
-                className="p-1.5 px-3 rounded-xl border border-border/60 bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground transition-all text-xs flex items-center gap-1.5 font-medium"
+                className="p-1.5 px-3 rounded-xl border border-border/60 bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground transition text-xs flex items-center gap-1.5 font-medium"
                 title="Làm mới dữ liệu"
               >
                 <FiRefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin text-primary' : ''}`} />
-                <span>{refreshing ? 'Đang tải...' : 'Làm mới'}</span>
+                <span>{refreshing ? 'Đang tải…' : 'Làm mới'}</span>
               </button>
             </div>
 
@@ -644,25 +674,25 @@ const CheckInPage: React.FC = () => {
                   <div className="flex items-center gap-1.5 bg-muted/60 p-1 rounded-xl w-full sm:w-auto overflow-x-auto">
                     <button 
                       onClick={() => setActiveTab('all')} 
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'all' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${activeTab === 'all' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                     >
                       Tất cả ({counts.all})
                     </button>
                     <button 
                       onClick={() => setActiveTab('valid')} 
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'valid' ? 'bg-background text-green-600 shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${activeTab === 'valid' ? 'bg-background text-green-600 shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                     >
                       Trong giờ ({counts.valid})
                     </button>
                     <button 
                       onClick={() => setActiveTab('near_expiry')} 
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'near_expiry' ? 'bg-background text-amber-600 shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${activeTab === 'near_expiry' ? 'bg-background text-amber-600 shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                     >
                       Sắp hết ({counts.near_expiry})
                     </button>
                     <button 
                       onClick={() => setActiveTab('overdue')} 
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'overdue' ? 'bg-background text-red-600 shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${activeTab === 'overdue' ? 'bg-background text-red-600 shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                     >
                       Quá giờ ({counts.overdue})
                     </button>
@@ -674,7 +704,7 @@ const CheckInPage: React.FC = () => {
                       type="text" 
                       value={filterText} 
                       onChange={e => setFilterText(e.target.value)} 
-                      placeholder="Tìm tên, SĐT, mã, phòng..." 
+                      placeholder="Tìm tên, SĐT, mã, phòng…"
                       className="input-field !pl-8 !h-9 text-xs bg-muted/50 focus:bg-background"
                     />
                   </div>
@@ -714,15 +744,19 @@ const CheckInPage: React.FC = () => {
                           >
                             {/* Khách hàng */}
                             <td className="py-4 font-medium">
-                              <div className="font-bold text-foreground flex items-center gap-1.5">
+                              <div className="font-bold text-foreground flex items-center gap-1.5 flex-wrap">
                                 {ci.customer?.fullName || 'Khách vãng lai'}
+                                <ReputationBadge
+                                  score={ci.customer?.reputationScore}
+                                  onClick={ci.customer?.id ? () => setReputationUserId(ci.customer.id) : undefined}
+                                />
                               </div>
                               <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                                 <FiPhone className="h-3 w-3" /> {ci.customer?.phone || 'Chưa cập nhật SĐT'}
                               </div>
                             </td>
 
-                            {/* Mã Vé & Vị trí */}
+                            {/* Mã vé & vị trí */}
                             <td className="py-4">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <span className="font-bold text-primary text-sm">{ci.workspace?.name}</span>
@@ -772,7 +806,7 @@ const CheckInPage: React.FC = () => {
                                 </span>
                               ) : ci.meta.timeStatus === 'near_expiry' ? (
                                 <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-950/50 px-2.5 py-1 rounded-full border border-amber-200 dark:border-amber-800">
-                                  <FiClock className="h-3.5 w-3.5 animate-spin-slow" /> {ci.meta.remainingFormatted}
+                                  <FiClock className="h-3.5 w-3.5" /> {ci.meta.remainingFormatted}
                                 </span>
                               ) : (
                                 <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/50 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-800">
@@ -792,7 +826,7 @@ const CheckInPage: React.FC = () => {
                               </button>
                               <button 
                                 onClick={() => openCheckoutModal(ci)} 
-                                className={`btn btn-sm transition-all shadow-sm ${
+                                className={`btn btn-sm transition shadow-sm ${
                                   ci.meta.timeStatus === 'overdue'
                                     ? 'btn-destructive text-xs font-bold shadow-red-500/20'
                                     : 'btn-outline border-border hover:bg-destructive hover:text-destructive-foreground hover:border-destructive text-xs'
@@ -801,6 +835,17 @@ const CheckInPage: React.FC = () => {
                               >
                                 <FiLogOut className="h-3.5 w-3.5 mr-1" />
                                 {ci.meta.pkg?.isMultiDay ? 'Check-out hôm nay' : 'Ra về (Check-out)'}
+                              </button>
+                              <button
+                                onClick={() => setActionTarget({
+                                  id: ci.booking.id,
+                                  customerName: ci.customer?.fullName,
+                                  workspaceName: ci.workspace?.name,
+                                })}
+                                className="btn btn-sm btn-ghost text-xs ml-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
+                                title="Kết thúc sớm vì sự cố / lý do khác và hoàn tiền"
+                              >
+                                Kết thúc sớm
                               </button>
                             </td>
                           </tr>
@@ -847,7 +892,7 @@ const CheckInPage: React.FC = () => {
           onClick={() => setTabItem(null)}
         >
           <div
-            className="bg-card border border-border rounded-2xl p-6 max-w-lg w-full shadow-2xl animate-scale-up space-y-4"
+            className="bg-card border border-border rounded-2xl p-6 max-w-lg w-full shadow-2xl animate-scale-in space-y-4"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between pb-3 border-b border-border">
@@ -873,16 +918,47 @@ const CheckInPage: React.FC = () => {
         </div>
       )}
 
+      {actionTarget && (
+        <StaffBookingActionModal
+          bookingId={actionTarget.id}
+          customerName={actionTarget.customerName}
+          workspaceName={actionTarget.workspaceName}
+          onClose={() => setActionTarget(null)}
+          onDone={() => {
+            setSearchedBooking(null);
+            fetchDashboardData();
+          }}
+        />
+      )}
+
+      {reputationUserId && (
+        <CustomerReputationModal
+          userId={reputationUserId}
+          onClose={() => setReputationUserId(null)}
+          onChanged={(score) => {
+            // Keep the open ticket's badge in step with the reverted score.
+            setSearchedBooking((prev) =>
+              prev && prev.customer?.id === reputationUserId
+                ? { ...prev, customer: { ...prev.customer, reputationScore: score } }
+                : prev);
+          }}
+        />
+      )}
+
       {/* QR Scanner Modal */}
-      <QrScannerModal
-        isOpen={showQrScanner}
-        onClose={() => setShowQrScanner(false)}
-        onScanSuccess={(scannedCode) => {
-          setShowQrScanner(false);
-          setCode(scannedCode);
-          handleSearchTicket(scannedCode);
-        }}
-      />
+      {showQrScanner && (
+        <Suspense fallback={null}>
+          <QrScannerModal
+            isOpen
+            onClose={() => setShowQrScanner(false)}
+            onScanSuccess={(scannedCode) => {
+              setShowQrScanner(false);
+              setCode(scannedCode);
+              handleSearchTicket(scannedCode);
+            }}
+          />
+        </Suspense>
+      )}
     </div>
   );
 };

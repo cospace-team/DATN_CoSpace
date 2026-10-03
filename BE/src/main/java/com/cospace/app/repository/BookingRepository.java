@@ -50,20 +50,19 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
      * booking that WAS paid keeps it, otherwise a single-use code could be reused for ever by
      * booking and cancelling.
      */
-    String PROMOTION_STILL_REDEEMED = "b.promotionId = :promotionId "
-            + "AND b.status <> com.cospace.app.entity.BookingStatus.EXPIRED "
+    String PROMOTION_STILL_REDEEMED = "b.status <> com.cospace.app.entity.BookingStatus.EXPIRED "
             + "AND (b.status <> com.cospace.app.entity.BookingStatus.CANCELLED OR EXISTS ("
             + "  SELECT 1 FROM Payment p WHERE p.bookingId = b.id "
             + "  AND p.status = com.cospace.app.entity.PaymentStatus.PAID))";
 
-    @org.springframework.data.jpa.repository.Query("SELECT COUNT(b) FROM Booking b WHERE " + PROMOTION_STILL_REDEEMED)
+    @org.springframework.data.jpa.repository.Query("SELECT COUNT(b) FROM Booking b WHERE b.promotionId = :promotionId AND " + PROMOTION_STILL_REDEEMED)
     long countPromotionUsage(@org.springframework.data.repository.query.Param("promotionId") UUID promotionId);
 
     @org.springframework.data.jpa.repository.Query("SELECT b.promotionId, COUNT(b) FROM Booking b WHERE b.promotionId IN :promotionIds AND " + PROMOTION_STILL_REDEEMED + " GROUP BY b.promotionId")
     List<Object[]> countPromotionUsageBatch(@org.springframework.data.repository.query.Param("promotionIds") Collection<UUID> promotionIds);
 
-    @org.springframework.data.jpa.repository.Query("SELECT COUNT(b) FROM Booking b WHERE " + PROMOTION_STILL_REDEEMED
-            + " AND b.userId = :userId")
+    @org.springframework.data.jpa.repository.Query("SELECT COUNT(b) FROM Booking b WHERE b.promotionId = :promotionId AND "
+            + PROMOTION_STILL_REDEEMED + " AND b.userId = :userId")
     long countPromotionUsageByUser(@org.springframework.data.repository.query.Param("promotionId") UUID promotionId,
                                    @org.springframework.data.repository.query.Param("userId") UUID userId);
 
@@ -82,9 +81,44 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
     List<UUID> findIdsByStatusAndEndAtBefore(@org.springframework.data.repository.query.Param("status") BookingStatus status,
                                              @org.springframework.data.repository.query.Param("before") OffsetDateTime before);
 
+    /**
+     * Ids of bookings in a status that started inside [startedAfter, startedBefore) and have never
+     * been checked in — candidates for the missed check-in penalty.
+     */
+    @org.springframework.data.jpa.repository.Query("SELECT b.id FROM Booking b WHERE b.status = :status "
+            + "AND b.startAt < :startedBefore AND b.startAt >= :startedAfter "
+            + "AND NOT EXISTS (SELECT 1 FROM CheckinLog c WHERE c.bookingId = b.id)")
+    List<UUID> findIdsNotCheckedInStartedBetween(@org.springframework.data.repository.query.Param("status") BookingStatus status,
+                                                 @org.springframework.data.repository.query.Param("startedAfter") OffsetDateTime startedAfter,
+                                                 @org.springframework.data.repository.query.Param("startedBefore") OffsetDateTime startedBefore);
+
     int countByBranchIdAndStatus(UUID branchId, BookingStatus status);
 
     int countByUserIdAndStatus(UUID userId, BookingStatus status);
+
+    long countByUserIdAndStatusIn(UUID userId, Collection<BookingStatus> statuses);
+
+    List<Booking> findByGroupIdOrderByCreatedAtAsc(UUID groupId);
+
+    /** Single bookings of a customer in a status (seats of a booking group are counted per group below). */
+    @org.springframework.data.jpa.repository.Query("SELECT COUNT(b) FROM Booking b WHERE b.userId = :userId AND b.status = :status AND b.groupId IS NULL")
+    long countUngroupedByUserIdAndStatus(@org.springframework.data.repository.query.Param("userId") UUID userId,
+                                         @org.springframework.data.repository.query.Param("status") BookingStatus status);
+
+    /** Booking groups of a customer with at least one seat in a status. */
+    @org.springframework.data.jpa.repository.Query("SELECT COUNT(DISTINCT b.groupId) FROM Booking b WHERE b.userId = :userId AND b.status = :status AND b.groupId IS NOT NULL")
+    long countGroupsByUserIdAndStatus(@org.springframework.data.repository.query.Param("userId") UUID userId,
+                                      @org.springframework.data.repository.query.Param("status") BookingStatus status);
+
+    /** [groupId, seat count] for the given groups. */
+    @org.springframework.data.jpa.repository.Query("SELECT b.groupId, COUNT(b) FROM Booking b WHERE b.groupId IN :groupIds GROUP BY b.groupId")
+    List<Object[]> countSeatsByGroupIds(@org.springframework.data.repository.query.Param("groupIds") Collection<UUID> groupIds);
+
+    /** Ids of bookings in a status whose start lies in [from, to) — candidates for reminders. */
+    @org.springframework.data.jpa.repository.Query("SELECT b.id FROM Booking b WHERE b.status = :status AND b.startAt >= :from AND b.startAt < :to")
+    List<UUID> findIdsByStatusAndStartAtBetween(@org.springframework.data.repository.query.Param("status") BookingStatus status,
+                                                @org.springframework.data.repository.query.Param("from") OffsetDateTime from,
+                                                @org.springframework.data.repository.query.Param("to") OffsetDateTime to);
 
     List<Booking> findByBranchIdAndStatus(UUID branchId, BookingStatus status);
 

@@ -66,6 +66,12 @@ public class RefundService {
         return Math.max(0, received - alreadyRefunded);
     }
 
+    /** Refunds already owed or paid out for a booking. */
+    @Transactional(readOnly = true)
+    public long refundedOrOwed(UUID bookingId) {
+        return refundRepository.sumAmountByBookingAndStatuses(bookingId, OPEN_OR_DONE);
+    }
+
     /**
      * Records a refund owed to the booking's customer and notifies them. Amounts of zero or less are
      * ignored; a payment-specific refund is created at most once per payment and reason.

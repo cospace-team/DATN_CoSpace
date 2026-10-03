@@ -33,6 +33,9 @@ public class UserService {
      */
     public static final String WALKIN_EMAIL_DOMAIN = "@walkin.local";
 
+    /** The phone the counter's quick mode sends for a guest who gives none (WalkinBookingPage). */
+    static final String SHARED_WALKIN_PHONE = "0900000000";
+
     private final UserRepository userRepository;
     private final ProfileRepository profileRepository;
     private final com.cospace.app.repository.BranchEntityRepository branchEntityRepository;
@@ -141,10 +144,28 @@ public class UserService {
     @Transactional
     @CacheEvict(value = CacheConfig.ADMIN_USERS, allEntries = true)
     public UserProfileDto createWalkinUser(com.cospace.app.dto.api.WalkinUserCreateRequest req) {
+        String phone = req.getPhone() != null ? req.getPhone().trim() : null;
+        String fullName = req.getFullName() != null ? req.getFullName().trim() : null;
+        // A returning walk-in guest (same phone and name) keeps one account and one booking history
+        // instead of a new placeholder account on every visit. Guests who gave no phone all arrive
+        // with the counter's shared placeholder number and are never merged: one shared account would
+        // pile up their spending into a membership discount and hit the limit on unpaid bookings.
+        if (phone != null && !phone.isEmpty() && !SHARED_WALKIN_PHONE.equals(phone)
+                && fullName != null && !fullName.isEmpty()) {
+            java.util.Optional<User> existing = userRepository
+                    .findFirstByPhoneAndFullNameIgnoreCaseAndEmailEndingWithOrderByCreatedAtAsc(phone, fullName, WALKIN_EMAIL_DOMAIN)
+                    .filter(u -> u.getStatus() == User.Status.active);
+            if (existing.isPresent()) {
+                User user = existing.get();
+                Profile profile = profileRepository.findById(user.getId())
+                        .orElseGet(() -> profileRepository.save(Profile.builder().userId(user.getId()).contactPublic(false).build()));
+                return convertToDto(user, profile);
+            }
+        }
         User user = User.builder()
                 .email("walkin_" + UUID.randomUUID().toString().substring(0, 8) + WALKIN_EMAIL_DOMAIN)
-                .fullName(req.getFullName())
-                .phone(req.getPhone())
+                .fullName(fullName)
+                .phone(phone)
                 .role(User.Role.customer)
                 .status(User.Status.active)
                 .build();
@@ -271,6 +292,7 @@ public class UserService {
                 .contactPublic(profile.isContactPublic())
                 .contactLink(profile.getContactLink())
                 .membershipTier(user.getMembershipTier())
+                .reputationScore(user.getReputationScore())
                 .createdAt(user.getCreatedAt())
                 .build();
     }

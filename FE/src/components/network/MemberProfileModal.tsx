@@ -29,9 +29,9 @@ const isImage = (s?: string | null) =>
 
 const Avatar: React.FC<{ src?: string | null; name: string }> = ({ src, name }) =>
   isImage(src) ? (
-    <img src={src as string} alt={name} className="h-20 w-20 rounded-2xl object-cover ring-4 ring-card bg-muted" />
+    <img src={src as string} alt={name} width={80} height={80} className="h-20 w-20 rounded-2xl object-cover ring-4 ring-card bg-muted" />
   ) : (
-    <div className="h-20 w-20 rounded-2xl ring-4 ring-card bg-gradient-to-tr from-indigo-500 to-purple-600 text-white flex items-center justify-center text-3xl font-bold">
+    <div className="h-20 w-20 rounded-2xl ring-4 ring-card bg-primary/10 text-primary flex items-center justify-center text-3xl font-bold">
       {(name || 'U').charAt(0).toUpperCase()}
     </div>
   );
@@ -118,7 +118,7 @@ const MemberProfileModal: React.FC<Props> = ({ member, onClose, onChanged }) => 
         aria-modal="true"
         aria-label={`Hồ sơ ${name}`}
       >
-        <div className="h-24 bg-gradient-to-r from-indigo-600 to-purple-600 relative">
+        <div className="h-24 bg-primary relative">
           <button
             onClick={onClose}
             className="absolute top-4 right-4 h-9 w-9 rounded-full bg-black/30 hover:bg-black/50 text-white flex items-center justify-center cursor-pointer"
@@ -133,7 +133,7 @@ const MemberProfileModal: React.FC<Props> = ({ member, onClose, onChanged }) => 
             <Avatar src={profile?.avatarUrl || member.avatar} name={name} />
             <div className="flex flex-col items-end gap-1">
               {typeof member.matchScore === 'number' && (
-                <span className="px-3 py-1 rounded-full text-xs font-bold bg-indigo-500 text-white shadow-sm">
+                <span className="px-3 py-1 rounded-full text-xs font-bold bg-primary text-primary-foreground shadow-sm">
                   {member.matchScore}% phù hợp
                 </span>
               )}
@@ -227,7 +227,7 @@ const MemberProfileModal: React.FC<Props> = ({ member, onClose, onChanged }) => 
                 <button
                   onClick={() => act(() => connectionApi.send(member.userId, message.trim() || undefined))}
                   disabled={busy}
-                  className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl text-sm hover:bg-primary/90 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                  className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl text-sm hover:bg-primary/90 transition shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
                 >
                   <FiUserPlus className="h-4 w-4" /> Gửi lời mời kết nối
                 </button>

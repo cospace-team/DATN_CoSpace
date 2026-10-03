@@ -4,6 +4,7 @@ import { formatVND } from '../../../utils/formatters';
 import { Card, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Badge } from '../../../components/ui/badge';
 import { Skeleton } from '../../../components/ui/Skeleton';
+import { ServiceIcon, serviceTypeLabel } from '../../../components/ui/ServiceIcon';
 import type { ExtraServiceDto } from '../../../api/staffApi';
 
 interface ExtraServicesTabProps {
@@ -90,15 +91,8 @@ export const ExtraServicesTab: React.FC<ExtraServicesTabProps> = ({
                     </td>
                     <td className="px-6 py-4">
                       <Badge variant="neutral" className="gap-1 font-medium text-xs">
-                        <span>
-                          {svc.serviceType === 'drink' ? '☕'
-                            : svc.serviceType === 'meal' ? '🥐'
-                            : svc.serviceType === 'printing' ? '🖨️'
-                            : svc.serviceType === 'equipment' ? '📽️'
-                            : svc.serviceType === 'facility' ? '🚪'
-                            : '✨'}
-                        </span>
-                        <span className="capitalize">{svc.serviceType}</span>
+                        <ServiceIcon type={svc.serviceType} name={svc.name} className="h-3.5 w-3.5" />
+                        <span>{serviceTypeLabel(svc.serviceType)}</span>
                       </Badge>
                     </td>
                     <td className="px-6 py-4 text-muted-foreground font-medium">{svc.unit}</td>
@@ -117,7 +111,7 @@ export const ExtraServicesTab: React.FC<ExtraServicesTabProps> = ({
                     <td className="px-6 py-4 text-center">
                       <button
                         onClick={() => onToggleActive(svc)}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition ${
                           svc.isActive 
                             ? 'bg-success/15 text-success hover:bg-success/25 border border-success/30' 
                             : 'bg-muted text-muted-foreground hover:bg-muted/80 border border-border'
@@ -130,8 +124,8 @@ export const ExtraServicesTab: React.FC<ExtraServicesTabProps> = ({
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => onOpenEdit(svc)} className="btn btn-ghost btn-sm !p-1.5" title="Sửa dịch vụ"><FiEdit2 className="h-4 w-4" /></button>
-                        <button onClick={() => onDelete(svc)} className="btn btn-ghost btn-sm !p-1.5 text-destructive hover:!text-destructive" title="Xóa"><FiTrash2 className="h-4 w-4" /></button>
+                        <button onClick={() => onOpenEdit(svc)} className="btn btn-ghost btn-sm !p-1.5" title="Sửa dịch vụ" aria-label="Sửa dịch vụ"><FiEdit2 className="h-4 w-4" aria-hidden="true" /></button>
+                        <button onClick={() => onDelete(svc)} className="btn btn-ghost btn-sm !p-1.5 text-destructive hover:!text-destructive" title="Xóa" aria-label="Xóa"><FiTrash2 className="h-4 w-4" aria-hidden="true" /></button>
                       </div>
                     </td>
                   </tr>

@@ -38,7 +38,7 @@ export const TodayScheduleTab: React.FC<TodayScheduleTabProps> = ({
         <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-xl w-full sm:w-auto border border-border/50">
           <button
             onClick={() => setScheduleTab('all')}
-            className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+            className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer ${
               scheduleTab === 'all'
                 ? 'bg-background text-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'
@@ -51,7 +51,7 @@ export const TodayScheduleTab: React.FC<TodayScheduleTabProps> = ({
           </button>
           <button
             onClick={() => setScheduleTab('incoming')}
-            className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+            className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer ${
               scheduleTab === 'incoming'
                 ? 'bg-background text-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'
@@ -64,7 +64,7 @@ export const TodayScheduleTab: React.FC<TodayScheduleTabProps> = ({
           </button>
           <button
             onClick={() => setScheduleTab('seated')}
-            className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+            className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer ${
               scheduleTab === 'seated'
                 ? 'bg-background text-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'
@@ -77,7 +77,7 @@ export const TodayScheduleTab: React.FC<TodayScheduleTabProps> = ({
           </button>
           <button
             onClick={() => setScheduleTab('completed')}
-            className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+            className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer ${
               scheduleTab === 'completed'
                 ? 'bg-background text-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'
@@ -94,10 +94,10 @@ export const TodayScheduleTab: React.FC<TodayScheduleTabProps> = ({
           <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground w-3.5 h-3.5" />
           <input
             type="text"
-            placeholder="Tìm tên, SĐT, mã vé, bàn..."
+            placeholder="Tìm tên, SĐT, mã vé, bàn…"
             value={scheduleSearch}
             onChange={e => setScheduleSearch(e.target.value)}
-            className="w-full bg-muted/40 border border-border rounded-xl pl-10 pr-8 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary focus:bg-background transition-all text-foreground"
+            className="w-full bg-muted/40 border border-border rounded-xl pl-10 pr-8 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary focus:bg-background transition text-foreground"
           />
           {scheduleSearch && (
             <button
@@ -130,7 +130,7 @@ export const TodayScheduleTab: React.FC<TodayScheduleTabProps> = ({
             return (
               <div
                 key={b.id}
-                className={`p-4 rounded-2xl border transition-all duration-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3.5 ${
+                className={`p-4 rounded-2xl border transition duration-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3.5 ${
                   b.status === 'CONFIRMED'
                     ? 'bg-card border-border/80 hover:border-primary/50 shadow-xs'
                     : b.status === 'CHECKED_IN'
@@ -227,7 +227,7 @@ export const TodayScheduleTab: React.FC<TodayScheduleTabProps> = ({
                   {b.status === 'CONFIRMED' ? (
                     <button
                       onClick={() => onSelectBookingForCheckin(b.bookingCode)}
-                      className="btn btn-primary btn-sm rounded-xl px-3.5 py-1.5 text-xs font-bold shadow-sm flex items-center gap-1.5 hover:scale-[1.02] transition-transform cursor-pointer"
+                      className="btn btn-primary btn-sm rounded-xl px-3.5 py-1.5 text-xs font-bold shadow-sm flex items-center gap-1.5  transition-transform cursor-pointer"
                       title="Điền mã và chuẩn bị Check-in"
                     >
                       <FiCheckCircle className="w-3.5 h-3.5" />
@@ -235,7 +235,7 @@ export const TodayScheduleTab: React.FC<TodayScheduleTabProps> = ({
                     </button>
                   ) : b.status === 'CHECKED_IN' ? (
                     <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> Đang
+                      <span className="w-2 h-2 rounded-full bg-emerald-500" /> Đang
                       ngồi
                     </span>
                   ) : (

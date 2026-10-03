@@ -4,7 +4,9 @@
  */
 
 import React from 'react';
+import { MdOutlineLock } from 'react-icons/md';
 import type { LayoutElement } from '../../types/floorPlan';
+import { getElementIcon } from './elementIcons';
 
 interface Props {
   element: LayoutElement;
@@ -18,17 +20,39 @@ interface Props {
   cursor?: string;
 }
 
+/** The element type's line icon, centred and sized as a share of the element's shorter side. */
+const CentredIcon: React.FC<{ el: LayoutElement; scale: number }> = ({ el, scale }) => {
+  const Icon = getElementIcon(el.type);
+  const size = Math.min(el.width, el.height) * scale;
+  return (
+    <Icon
+      x={(el.width - size) / 2}
+      y={(el.height - size) / 2}
+      size={size}
+      color="var(--text-secondary, #64748B)"
+      style={{ pointerEvents: 'none' }}
+      aria-hidden="true"
+    />
+  );
+};
+
 /** Render type-specific inner decoration inside the element bounds */
 const InnerDecoration: React.FC<{
   el: LayoutElement;
   isSelected: boolean;
 }> = ({ el }) => {
-  const cx = el.width / 2;
   const cy = el.height / 2;
 
   switch (el.type) {
     case 'desk':
-    case 'standing_desk':
+    case 'standing_desk': {
+      // A shared desk (bench, cluster) seats people on both long sides: half the chairs above the
+      // table, the rest below. A single desk keeps its one chair above the table.
+      const seats = el.type === 'desk' ? Math.max(1, el.seatCount ?? 1) : 1;
+      const above = Math.ceil(seats / 2);
+      const below = seats - above;
+      const chairR = Math.min(Math.min(el.width, el.height) * 0.08, 7);
+      const chairX = (i: number, n: number) => el.width * (0.15 + (0.7 * (i + 0.5)) / n);
       return (
         <g>
           {/* Table surface */}
@@ -42,13 +66,13 @@ const InnerDecoration: React.FC<{
             stroke="var(--border-strong, #CBD5E1)"
             strokeWidth={0.8}
           />
-          {/* Chair dot */}
-          <circle
-            cx={cx}
-            cy={el.height * 0.15}
-            r={Math.min(el.width, el.height) * 0.08}
-            fill={el.strokeColor || '#22C55E'}
-          />
+          {/* Chairs */}
+          {Array.from({ length: above }, (_, i) => (
+            <circle key={`a${i}`} cx={chairX(i, above)} cy={el.height * 0.15} r={chairR} fill={el.strokeColor || '#22C55E'} />
+          ))}
+          {Array.from({ length: below }, (_, i) => (
+            <circle key={`b${i}`} cx={chairX(i, below)} cy={el.height * 0.75} r={chairR} fill={el.strokeColor || '#22C55E'} />
+          ))}
           {el.type === 'standing_desk' && (
             <line
               x1={el.width * 0.25}
@@ -62,6 +86,7 @@ const InnerDecoration: React.FC<{
           )}
         </g>
       );
+    }
 
     case 'chair':
       return (
@@ -244,17 +269,7 @@ const InnerDecoration: React.FC<{
       );
 
     case 'plant':
-      return (
-        <text
-          x={cx}
-          y={cy + 4}
-          fontSize={Math.min(el.width, el.height) * 0.6}
-          textAnchor="middle"
-          dominantBaseline="middle"
-        >
-          🌿
-        </text>
-      );
+      return <CentredIcon el={el} scale={0.6} />;
 
     case 'staircase':
       return (
@@ -274,110 +289,28 @@ const InnerDecoration: React.FC<{
       );
 
     case 'elevator':
-      return (
-        <g>
-          <text
-            x={cx}
-            y={cy + 4}
-            fontSize={Math.min(el.width, el.height) * 0.45}
-            textAnchor="middle"
-            dominantBaseline="middle"
-          >
-            🛗
-          </text>
-        </g>
-      );
+      return <CentredIcon el={el} scale={0.45} />;
 
     case 'restroom':
-      return (
-        <text
-          x={cx}
-          y={cy + 4}
-          fontSize={Math.min(el.width, el.height) * 0.45}
-          textAnchor="middle"
-          dominantBaseline="middle"
-        >
-          🚻
-        </text>
-      );
+      return <CentredIcon el={el} scale={0.45} />;
 
     case 'kitchen':
-      return (
-        <text
-          x={cx}
-          y={cy + 4}
-          fontSize={Math.min(el.width, el.height) * 0.45}
-          textAnchor="middle"
-          dominantBaseline="middle"
-        >
-          🍳
-        </text>
-      );
+      return <CentredIcon el={el} scale={0.45} />;
 
     case 'lounge':
-      return (
-        <text
-          x={cx}
-          y={cy + 4}
-          fontSize={Math.min(el.width, el.height) * 0.35}
-          textAnchor="middle"
-          dominantBaseline="middle"
-        >
-          ☕
-        </text>
-      );
+      return <CentredIcon el={el} scale={0.35} />;
 
     case 'reception':
-      return (
-        <text
-          x={cx}
-          y={cy + 3}
-          fontSize={Math.min(el.width, el.height) * 0.4}
-          textAnchor="middle"
-          dominantBaseline="middle"
-        >
-          📋
-        </text>
-      );
+      return <CentredIcon el={el} scale={0.4} />;
 
     case 'phone_booth':
-      return (
-        <text
-          x={cx}
-          y={cy + 3}
-          fontSize={Math.min(el.width, el.height) * 0.45}
-          textAnchor="middle"
-          dominantBaseline="middle"
-        >
-          📞
-        </text>
-      );
+      return <CentredIcon el={el} scale={0.45} />;
 
     case 'event_space':
-      return (
-        <text
-          x={cx}
-          y={cy + 3}
-          fontSize={Math.min(el.width, el.height) * 0.25}
-          textAnchor="middle"
-          dominantBaseline="middle"
-        >
-          🎤
-        </text>
-      );
+      return <CentredIcon el={el} scale={0.25} />;
 
     case 'custom_workspace':
-      return (
-        <text
-          x={cx}
-          y={cy + 3}
-          fontSize={Math.min(el.width, el.height) * 0.35}
-          textAnchor="middle"
-          dominantBaseline="middle"
-        >
-          ✨
-        </text>
-      );
+      return <CentredIcon el={el} scale={0.35} />;
 
     default:
       return null;
@@ -492,17 +425,17 @@ const ElementRenderer: React.FC<Props> = ({
         </text>
       )}
 
-      {/* Lock indicator */}
-      {el.locked && (
-        <text
-          x={el.width - 8}
-          y={12}
-          fontSize={10}
-          textAnchor="middle"
+      {/* Lock indicator: only the editor (the one view that drags elements) needs it; on the
+          read-only plans it would put padlocks on every locked wall. */}
+      {el.locked && onMouseDown && (
+        <MdOutlineLock
+          x={el.width - 14}
+          y={3}
+          size={11}
+          color="var(--text-secondary, #64748B)"
           style={{ pointerEvents: 'none' }}
-        >
-          🔒
-        </text>
+          aria-hidden="true"
+        />
       )}
     </g>
   );

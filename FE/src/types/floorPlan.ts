@@ -81,7 +81,6 @@ export interface FloorLayout {
 export interface ElementCatalogItem {
   type: ElementType;
   label: string;
-  icon: string;        // emoji
   category: 'workspace' | 'structure' | 'furniture' | 'utility';
   defaultWidth: number;
   defaultHeight: number;

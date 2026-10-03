@@ -7,6 +7,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { formatTime, formatVND, bookingStatusLabel, bookingStatusColor } from '../../utils/formatters';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { StatCard } from '../../components/ui/StatCard';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
 import { staffApi, StaffDashboardStatsDto, BranchTodayBookingDto } from '../../api/staffApi';
 import { getBookingPackageDisplay } from '../../utils/bookingPackage';
@@ -116,7 +117,7 @@ const OperationsDashboardPage: React.FC = () => {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] text-muted-foreground gap-3">
         <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm font-medium">Đang tải dữ liệu ca trực ban...</p>
+        <p className="text-sm font-medium">Đang tải dữ liệu ca trực ban…</p>
       </div>
     );
   }
@@ -124,104 +125,63 @@ const OperationsDashboardPage: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in pb-24 lg:pb-6">
       {/* Header */}
-      <div className="rounded-2xl border border-border bg-card p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-sm">
+      <div className="rounded-xl border border-border bg-card p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold font-heading text-foreground">Dashboard Trực Ban</h1>
+            <h1 className="text-2xl font-bold font-heading text-foreground">Trực ban</h1>
             <span className="text-xs bg-primary/10 text-primary border border-primary/20 px-3 py-1 rounded-full font-medium">
               {branchName}
             </span>
           </div>
-          <p className="text-xs text-muted-foreground">Theo dõi thời gian thực lưu lượng khách và điều phối không gian</p>
+          <p className="text-xs text-muted-foreground">Khách đến hôm nay, chỗ trống và doanh thu của chi nhánh</p>
         </div>
         
         <div className="flex items-center gap-2 bg-muted/60 p-1.5 rounded-xl border border-border/50">
           <button 
             onClick={() => setTimeFilter('day')} 
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${timeFilter === 'day' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ${timeFilter === 'day' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
           >
             Hôm nay
           </button>
           <button 
             onClick={() => setTimeFilter('week')} 
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${timeFilter === 'week' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ${timeFilter === 'week' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
           >
             Tuần này
           </button>
           <button 
             onClick={() => setTimeFilter('month')} 
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${timeFilter === 'month' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ${timeFilter === 'month' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
           >
             Tháng này
           </button>
           <button 
             onClick={() => setTimeFilter('year')} 
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${timeFilter === 'year' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ${timeFilter === 'year' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
           >
             Năm nay
           </button>
         </div>
 
-        <div className="flex items-center gap-3 bg-primary/5 border border-primary/20 text-primary px-4 py-2.5 rounded-xl shadow-inner hidden lg:flex">
-          <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
-            <FiUsers className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Khách đang ngồi</p>
-            <p className="font-bold text-lg leading-tight text-foreground">{stats?.activeGuests || 0} khách hàng</p>
-          </div>
-        </div>
       </div>
 
-      {/* Thẻ Chỉ Số Kinh Doanh & Vận Hành */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm flex items-center gap-4 transition-all hover:shadow-md">
-          <div className="h-12 w-12 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-            <FiDollarSign className="h-6 w-6" />
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard icon={FiDollarSign} label={`Doanh thu ${timeLabel}`} value={formatVND(stats?.revenue || 0)} sub="Đã gồm dịch vụ thêm" />
+        <StatCard icon={FiTrendingUp} label="Tỷ lệ lấp đầy" value={`${stats?.occupancyRate || 0}%`}>
+          <div className="w-full bg-muted rounded-full h-1.5 mt-2 overflow-hidden">
+            <div className="bg-primary h-1.5 rounded-full transition-[width] duration-500" style={{ width: `${Math.min(stats?.occupancyRate || 0, 100)}%` }} />
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Doanh thu {timeLabel}</p>
-            <p className="text-xl font-bold text-foreground mt-0.5 truncate">{formatVND(stats?.revenue || 0)}</p>
-            <p className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-1 flex items-center gap-1 font-medium">
-              <FiTrendingUp /> Đã bao gồm dịch vụ
-            </p>
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm flex items-center gap-4 transition-all hover:shadow-md">
-          <div className="h-12 w-12 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-            <FiTrendingUp className="h-6 w-6" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Tỷ lệ lấp đầy</p>
-            <p className="text-xl font-bold text-foreground mt-0.5">{stats?.occupancyRate || 0}%</p>
-            <div className="w-full bg-muted rounded-full h-1.5 mt-2 overflow-hidden">
-              <div className="bg-blue-500 h-1.5 rounded-full transition-all duration-500" style={{ width: `${Math.min(stats?.occupancyRate || 0, 100)}%` }} />
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm flex items-center gap-4 transition-all hover:shadow-md">
-          <div className="h-12 w-12 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
-            <FiUsers className="h-6 w-6" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Khách đang ngồi</p>
-            <p className="text-xl font-bold text-foreground mt-0.5">{stats?.activeGuests || 0} <span className="text-xs font-normal text-muted-foreground">/ {stats?.totalCapacity || 0} chỗ</span></p>
-            <p className="text-[11px] text-muted-foreground mt-1 font-medium">Sức chứa tối đa hiện tại</p>
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm flex items-center gap-4 transition-all hover:shadow-md">
-          <div className="h-12 w-12 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-            <FiLayers className="h-6 w-6" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Bàn Trống / Tổng số</p>
-            <p className="text-xl font-bold text-foreground mt-0.5">{stats?.availableWs || 0} <span className="text-xs font-normal text-muted-foreground">/ {stats?.totalWs || 0} bàn</span></p>
-            <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1 font-medium">Sẵn sàng đón khách</p>
-          </div>
-        </div>
+        </StatCard>
+        <StatCard
+          icon={FiUsers}
+          label="Khách đang ngồi"
+          value={<>{stats?.activeGuests || 0} <span className="text-sm font-normal text-muted-foreground">/ {stats?.totalCapacity || 0} chỗ</span></>}
+        />
+        <StatCard
+          icon={FiLayers}
+          label="Bàn trống"
+          value={<>{stats?.availableWs || 0} <span className="text-sm font-normal text-muted-foreground">/ {stats?.totalWs || 0} bàn</span></>}
+        />
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
@@ -301,10 +261,10 @@ const OperationsDashboardPage: React.FC = () => {
           <div className="rounded-2xl border border-border bg-card p-5 shadow-sm h-full flex flex-col">
             {/* Header Lịch Trình & Filter Tabs */}
             <div className="flex flex-col gap-4 mb-5 pb-4 border-b border-border">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <div className="flex flex-col 2xl:flex-row justify-between items-start 2xl:items-center gap-3">
                 <div className="flex items-center gap-2">
-                  <h2 className="font-bold text-base flex items-center gap-2 text-foreground">
-                    <FiClock className="text-primary" /> Lịch Trình Khách Đến Hôm Nay
+                  <h2 className="font-bold text-base flex items-center gap-2 text-foreground whitespace-nowrap">
+                    <FiClock className="text-primary" /> Khách đến hôm nay
                     <span className="text-xs font-semibold bg-muted px-2 py-0.5 rounded-full text-muted-foreground">
                       {counts.all}
                     </span>
@@ -312,7 +272,7 @@ const OperationsDashboardPage: React.FC = () => {
                   <button 
                     onClick={() => navigate('/staff/checkin')}
                     className="hidden sm:inline-flex items-center gap-1 text-xs text-primary hover:underline font-medium ml-2"
-                    title="Mở Quầy Check-in"
+                    title="Mở quầy check-in"
                   >
                     <span>Quầy Check-in</span>
                     <FiArrowRight className="w-3 h-3" />
@@ -320,10 +280,10 @@ const OperationsDashboardPage: React.FC = () => {
                 </div>
 
                 {/* Tabs trạng thái có số lượng */}
-                <div className="flex gap-1 bg-muted/60 p-1 rounded-xl w-full sm:w-auto border border-border/50">
+                <div className="flex gap-1 bg-muted/60 p-1 rounded-xl w-full 2xl:w-auto border border-border/50 overflow-x-auto">
                   <button 
                     onClick={() => setActiveTab('all')} 
-                    className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
+                    className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 ${
                       activeTab === 'all' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
                     }`}
                   >
@@ -332,7 +292,7 @@ const OperationsDashboardPage: React.FC = () => {
                   </button>
                   <button 
                     onClick={() => setActiveTab('incoming')} 
-                    className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
+                    className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 ${
                       activeTab === 'incoming' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
                     }`}
                   >
@@ -341,7 +301,7 @@ const OperationsDashboardPage: React.FC = () => {
                   </button>
                   <button 
                     onClick={() => setActiveTab('seated')} 
-                    className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
+                    className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 ${
                       activeTab === 'seated' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
                     }`}
                   >
@@ -350,7 +310,7 @@ const OperationsDashboardPage: React.FC = () => {
                   </button>
                   <button 
                     onClick={() => setActiveTab('completed')} 
-                    className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
+                    className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 ${
                       activeTab === 'completed' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
                     }`}
                   >
@@ -365,17 +325,18 @@ const OperationsDashboardPage: React.FC = () => {
                 <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
                 <input 
                   type="text"
-                  placeholder="Tìm kiếm theo tên khách, số điện thoại, mã vé (#WH-...), tên bàn..."
+                  placeholder="Tìm kiếm theo tên khách, số điện thoại, mã vé (#WH-...), tên bàn…"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-muted/40 border border-border rounded-xl pl-10 pr-8 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary focus:bg-background transition-all"
+                  className="w-full bg-muted/40 border border-border rounded-xl pl-10 pr-8 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary focus:bg-background transition"
                 />
                 {searchTerm && (
                   <button 
                     onClick={() => setSearchTerm('')}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5"
+                    aria-label="Xóa từ khóa tìm kiếm"
                   >
-                    <FiX className="w-3.5 h-3.5" />
+                    <FiX className="w-3.5 h-3.5" aria-hidden="true" />
                   </button>
                 )}
               </div>
@@ -413,7 +374,7 @@ const OperationsDashboardPage: React.FC = () => {
                   return (
                     <div 
                       key={b.id} 
-                      className="flex items-center gap-3.5 rounded-2xl bg-card p-3.5 border border-border/80 transition-all hover:border-primary/40 hover:shadow-sm"
+                      className="flex items-center gap-3.5 rounded-2xl bg-card p-3.5 border border-border/80 transition hover:border-primary/40 hover:shadow-sm"
                     >
                       {/* Cột 1: Thông tin gói & Giờ */}
                       {pkg.isMultiDay ? (
@@ -497,7 +458,7 @@ const OperationsDashboardPage: React.FC = () => {
                         {isSeated && (
                           <button 
                             onClick={() => navigate('/staff/checkin', { state: { bookingCode: b.bookingCode } })}
-                            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 border border-amber-500/30 transition-all flex items-center gap-1.5 shadow-sm"
+                            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 border border-amber-500/30 transition flex items-center gap-1.5 shadow-sm"
                             title="Check-out kết thúc lượt sử dụng"
                           >
                             <span>Check-out</span>

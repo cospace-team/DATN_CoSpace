@@ -2,22 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { FiTool, FiPlus, FiX, FiCheck, FiAlertCircle } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import { staffApi, type MaintenanceResponseDto, type WorkspaceMaintenanceStatusDto } from '../../api/staffApi';
+import { Modal } from '../../components/ui/Modal';
 
 // ─── Modal Wrapper ────────────────────────────────────────────────────────────
-const Modal: React.FC<{ title: string; onClose: () => void; children: React.ReactNode }> = ({
-  title, onClose, children,
-}) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in" onClick={onClose}>
-    <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md animate-scale-in flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-        <h2 className="text-base font-bold font-heading">{title}</h2>
-        <button onClick={onClose} className="btn btn-ghost btn-sm p-1"><FiX className="h-4 w-4" /></button>
-      </div>
-      <div className="px-6 py-5 overflow-y-auto">{children}</div>
-    </div>
-  </div>
-);
-
 // ─── Constants ────────────────────────────────────────────────────────────────
 const STATUS_BADGE: Record<MaintenanceResponseDto['status'], "badge-warning" | "badge-info" | "badge-success" | "badge-neutral"> = {
   scheduled: 'badge-warning',
@@ -168,8 +155,9 @@ const BAMaintenancePage: React.FC = () => {
               className="btn btn-ghost btn-sm p-1 text-destructive hover:bg-destructive/10"
               onClick={() => deleteMaintenance(m.id)}
               title="Hủy lịch"
+              aria-label="Hủy lịch"
             >
-              <FiX className="h-4 w-4" />
+              <FiX className="h-4 w-4" aria-hidden="true" />
             </button>
           )}
         </div>
@@ -181,7 +169,7 @@ const BAMaintenancePage: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in relative pb-10">
       {successMsg && (
-        <div className="fixed top-4 right-4 z-50 animate-slide-up flex items-center gap-2 bg-success text-success-foreground px-4 py-3 rounded-xl shadow-xl">
+        <div className="fixed top-4 right-4 z-50 animate-slide-in-up flex items-center gap-2 bg-success text-success-foreground px-4 py-3 rounded-xl shadow-xl">
           <FiCheck className="h-5 w-5" />
           <p className="font-medium text-sm">{successMsg}</p>
         </div>
@@ -327,7 +315,7 @@ const BAMaintenancePage: React.FC = () => {
                 id="reason"
                 className="input-field resize-y min-h-[80px]"
                 rows={3}
-                placeholder="Ví dụ: Sửa chữa thiết bị, làm sạch tổng thể..."
+                placeholder="Ví dụ: Sửa chữa thiết bị, làm sạch tổng thể…"
                 value={form.reason}
                 onChange={(e) => setForm((p) => ({ ...p, reason: e.target.value }))}
               />

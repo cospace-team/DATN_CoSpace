@@ -68,7 +68,7 @@ const ConnectionsPanel: React.FC<Props> = ({ reloadKey, onOpenMember, onChanged 
                 setTab(t.id);
                 setTabChosen(true);
               }}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition ${
                 tab === t.id ? 'bg-primary text-primary-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
               }`}
             >
@@ -106,9 +106,9 @@ const ConnectionsPanel: React.FC<Props> = ({ reloadKey, onOpenMember, onChanged 
               className="flex items-center gap-3 min-w-0 flex-1 text-left cursor-pointer"
             >
               {item.member.avatarUrl ? (
-                <img src={item.member.avatarUrl} alt="" className="h-10 w-10 rounded-xl object-cover shrink-0" />
+                <img src={item.member.avatarUrl} alt="" width={40} height={40} loading="lazy" className="h-10 w-10 rounded-xl object-cover shrink-0" />
               ) : (
-                <span className="h-10 w-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 text-white flex items-center justify-center text-sm font-bold shrink-0">
+                <span className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-sm font-bold shrink-0">
                   {initial(item.member.name)}
                 </span>
               )}

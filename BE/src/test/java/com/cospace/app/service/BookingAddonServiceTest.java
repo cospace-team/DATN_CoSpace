@@ -39,6 +39,8 @@ class BookingAddonServiceTest {
     private BookingServiceItemRepository itemRepository;
     @Mock
     private PaymentRepository paymentRepository;
+    @Mock
+    private ServiceLimitService serviceLimitService;
 
     @InjectMocks
     private BookingAddonService addonService;

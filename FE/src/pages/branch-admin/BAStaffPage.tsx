@@ -107,7 +107,7 @@ const BAStaffPage: React.FC = () => {
     <div className="space-y-6 animate-fade-in relative">
       {/* Toast Notification */}
       {successMessage && (
-        <div className="fixed top-4 right-4 z-50 animate-slide-up flex items-center gap-2 bg-success text-success-foreground px-4 py-3 rounded-xl shadow-xl">
+        <div className="fixed top-4 right-4 z-50 animate-slide-in-up flex items-center gap-2 bg-success text-success-foreground px-4 py-3 rounded-xl shadow-xl">
           <FiCheckCircle className="h-5 w-5" />
           <p className="font-medium text-sm">{successMessage}</p>
         </div>
@@ -159,7 +159,7 @@ const BAStaffPage: React.FC = () => {
                   <tr key={s.id} className="hover:bg-muted/30 transition-colors">
                     <td className="max-w-[200px]">
                       <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-primary-foreground text-sm font-bold shrink-0 shadow-sm">
+                        <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary text-sm font-bold shrink-0">
                           {s.fullName.charAt(0)}
                         </div>
                         <span className="font-medium">{s.fullName}</span>
@@ -175,24 +175,26 @@ const BAStaffPage: React.FC = () => {
                     </td>
                     <td className="text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <button onClick={() => handleOpenModal(s)} className="btn btn-ghost btn-sm text-muted-foreground hover:text-primary">
-                          <FiEdit2 className="h-4 w-4" />
+                        <button onClick={() => handleOpenModal(s)} className="btn btn-ghost btn-sm text-muted-foreground hover:text-primary" title="Chỉnh sửa" aria-label={`Chỉnh sửa ${s.fullName}`}>
+                          <FiEdit2 className="h-4 w-4" aria-hidden="true" />
                         </button>
                         {s.status === 'active' ? (
                           <button 
                             onClick={() => { setStaffToToggle(s); setIsConfirmToggleOpen(true); }} 
                             className="btn btn-ghost btn-sm text-muted-foreground hover:text-destructive"
                             title="Khóa tài khoản"
+                            aria-label="Khóa tài khoản"
                           >
-                            <FiLock className="h-4 w-4" />
+                            <FiLock className="h-4 w-4" aria-hidden="true" />
                           </button>
                         ) : (
                           <button 
                             onClick={() => { setStaffToToggle(s); setIsConfirmToggleOpen(true); }} 
                             className="btn btn-ghost btn-sm text-muted-foreground hover:text-success"
                             title="Mở khóa tài khoản"
+                            aria-label="Mở khóa tài khoản"
                           >
-                            <FiUnlock className="h-4 w-4" />
+                            <FiUnlock className="h-4 w-4" aria-hidden="true" />
                           </button>
                         )}
                       </div>
@@ -219,8 +221,8 @@ const BAStaffPage: React.FC = () => {
           <div className="bg-card w-full max-w-md rounded-2xl shadow-xl border border-border overflow-hidden flex flex-col max-h-[90vh]">
             <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-muted/30">
               <h2 className="text-lg font-bold">{editingStaff ? 'Cập nhật nhân viên' : 'Thêm nhân viên mới'}</h2>
-              <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-muted rounded-full transition-colors text-muted-foreground">
-                <FiX className="h-5 w-5" />
+              <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-muted rounded-full transition-colors text-muted-foreground" aria-label="Đóng">
+                <FiX className="h-5 w-5" aria-hidden="true" />
               </button>
             </div>
             

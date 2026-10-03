@@ -86,6 +86,15 @@ class BookingServiceTest {
     @Mock
     private BookingAddonService bookingAddonService;
 
+    @Mock
+    private ReputationService reputationService;
+    @Mock
+    private com.cospace.app.repository.WorkspaceTypeRepository workspaceTypeRepository;
+    @Mock
+    private com.cospace.app.repository.ReputationEventRepository reputationEventRepository;
+    @Mock
+    private com.cospace.app.repository.BookingGroupRepository bookingGroupRepository;
+
     @InjectMocks
     private BookingService bookingService;
 
@@ -190,7 +199,7 @@ class BookingServiceTest {
 
         @Test
         void rejectsFourthPendingBooking() {
-            when(bookingRepository.countByUserIdAndStatus(userId, BookingStatus.PENDING_PAYMENT)).thenReturn(3);
+            when(bookingRepository.countUngroupedByUserIdAndStatus(userId, BookingStatus.PENDING_PAYMENT)).thenReturn(3L);
 
             assertThatThrownBy(() -> bookingService.createBooking(userId, request(DurationUnit.hour, 2)))
                     .isInstanceOf(IllegalStateException.class);
@@ -203,6 +212,20 @@ class BookingServiceTest {
 
             assertThatThrownBy(() -> bookingService.createBooking(userId, request(DurationUnit.hour, 2)))
                     .isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @Test
+        void rejectsWorkspaceSwitchedToMaintenanceOrInactive() {
+            for (WorkspaceEntity.Status status : List.of(WorkspaceEntity.Status.maintenance, WorkspaceEntity.Status.inactive)) {
+                when(workspaceEntityRepository.findById(workspaceId)).thenReturn(Optional.of(WorkspaceEntity.builder()
+                        .id(workspaceId).floorId(floorId).workspaceTypeId(workspaceTypeId)
+                        .name("Desk A1").status(status).build()));
+
+                assertThatThrownBy(() -> bookingService.createBooking(userId, request(DurationUnit.hour, 2)))
+                        .isInstanceOf(IllegalArgumentException.class)
+                        .hasMessageContaining("Desk A1");
+            }
+            verify(bookingRepository, never()).save(any());
         }
 
         @Test
@@ -545,6 +568,96 @@ class BookingServiceTest {
 
             assertThatThrownBy(() -> bookingService.getBookingByCode("WH-ABC234", UUID.randomUUID()))
                     .isInstanceOf(IllegalArgumentException.class);
+        }
+    }
+
+    @Nested
+    class GroupBooking {
+
+        private final UUID seatB = UUID.randomUUID();
+
+        private com.cospace.app.dto.api.BookingGroupDto.CreateRequest groupRequest(java.util.List<UUID> seats) {
+            OffsetDateTime start = OffsetDateTime.now(ZoneOffset.UTC).plusDays(1);
+            return com.cospace.app.dto.api.BookingGroupDto.CreateRequest.builder()
+                    .workspaceIds(seats).startAt(start).endAt(start.plusHours(2)).unit(DurationUnit.hour).build();
+        }
+
+        private void givenSeats(UUID branchOfB) {
+            UUID floorB = UUID.randomUUID();
+            WorkspaceEntity a = WorkspaceEntity.builder().id(workspaceId).floorId(floorId).workspaceTypeId(workspaceTypeId).name("Desk A1").build();
+            WorkspaceEntity b = WorkspaceEntity.builder().id(seatB).floorId(floorB).workspaceTypeId(workspaceTypeId).name("Desk A2").build();
+            when(workspaceEntityRepository.findAllById(any())).thenReturn(java.util.List.of(a, b));
+            when(floorRepository.findById(floorId)).thenReturn(Optional.of(Floor.builder().id(floorId).branchId(realBranchId).build()));
+            when(floorRepository.findById(floorB)).thenReturn(Optional.of(Floor.builder().id(floorB).branchId(branchOfB).build()));
+            org.mockito.Mockito.lenient().when(workspaceEntityRepository.findById(workspaceId)).thenReturn(Optional.of(a));
+            org.mockito.Mockito.lenient().when(workspaceEntityRepository.findById(seatB)).thenReturn(Optional.of(b));
+        }
+
+        @Test
+        void rejectsEmptySelection() {
+            assertThatThrownBy(() -> bookingService.createGroupBooking(userId, groupRequest(java.util.List.of())))
+                    .isInstanceOf(IllegalArgumentException.class);
+            verify(bookingRepository, never()).save(any());
+        }
+
+        @Test
+        void rejectsMoreSeatsThanTheLimit() {
+            java.util.List<UUID> seats = java.util.stream.Stream.generate(UUID::randomUUID).limit(11).toList();
+
+            assertThatThrownBy(() -> bookingService.createGroupBooking(userId, groupRequest(seats)))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("tối đa 10");
+        }
+
+        @Test
+        void rejectsPromotionCodeOnSeveralSeats() {
+            com.cospace.app.dto.api.BookingGroupDto.CreateRequest req = groupRequest(java.util.List.of(workspaceId, seatB));
+            req.setPromotionCode("SUMMER");
+
+            assertThatThrownBy(() -> bookingService.createGroupBooking(userId, req))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("khuyến mãi");
+        }
+
+        @Test
+        void rejectsSeatsFromDifferentBranches() {
+            givenSeats(UUID.randomUUID());
+
+            assertThatThrownBy(() -> bookingService.createGroupBooking(userId, groupRequest(java.util.List.of(workspaceId, seatB))))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("cùng một chi nhánh");
+            verify(bookingGroupRepository, never()).save(any());
+        }
+
+        @Test
+        void booksEverySeatUnderOneGroupAndChecksLimitsOnce() {
+            givenSeats(realBranchId);
+            givenSaveSucceeds();
+            givenNoMembershipTier();
+            when(bookingGroupRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+            when(pricingService.getUnitPriceVnd(realBranchId, workspaceTypeId.toString(), "hour")).thenReturn(50_000L);
+
+            bookingService.createGroupBooking(userId, groupRequest(java.util.List.of(workspaceId, seatB)));
+
+            ArgumentCaptor<Booking> captor = ArgumentCaptor.forClass(Booking.class);
+            verify(bookingRepository, org.mockito.Mockito.times(2)).save(captor.capture());
+            java.util.List<Booking> saved = captor.getAllValues();
+            assertThat(saved).extracting(Booking::getWorkspaceId).containsExactlyInAnyOrder(workspaceId, seatB);
+            assertThat(saved).extracting(Booking::getGroupId).doesNotContainNull().hasSameElementsAs(java.util.List.of(saved.get(0).getGroupId()));
+            assertThat(saved).extracting(Booking::getTotalAmount).containsOnly(100_000L);
+            // Limits are checked once for the group, with its size, not once per seat.
+            verify(reputationService).requireCanBookOnline(userId, 2);
+            verify(reputationService, never()).requireCanBookOnline(userId, 1);
+        }
+
+        @Test
+        void pendingGroupCountsAsOneOrder() {
+            when(bookingRepository.countUngroupedByUserIdAndStatus(userId, BookingStatus.PENDING_PAYMENT)).thenReturn(1L);
+            when(bookingRepository.countGroupsByUserIdAndStatus(userId, BookingStatus.PENDING_PAYMENT)).thenReturn(2L);
+
+            assertThatThrownBy(() -> bookingService.createBooking(userId, request(DurationUnit.hour, 2)))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("3 đơn");
         }
     }
 }

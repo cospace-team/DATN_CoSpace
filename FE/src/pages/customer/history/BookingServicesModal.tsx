@@ -179,7 +179,7 @@ const BookingServicesModal: React.FC<Props> = ({ bookingId, bookingCode, branchI
                 <option value="">Chọn dịch vụ…</option>
                 {catalogue.map((s) => (
                   <option key={s.id} value={s.id}>
-                    {s.name} — {formatVND(s.price)}/{s.unit}
+                    {s.name} ({formatVND(s.price)}/{s.unit})
                   </option>
                 ))}
               </select>
