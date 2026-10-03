@@ -1,213 +1,189 @@
-\chapter{Cơ sở lý thuyết và công nghệ nền tảng}
+\chapter{Cơ sở lý thuyết và công nghệ}
 \label{ch:cosolythuyet}
 
 \section{Cơ sở lý thuyết}
 \label{sec:coso_lythuyet}
 
 \subsection{Kiến trúc ứng dụng web nhiều tầng}
-Hệ thống CoSpace được thiết kế dựa trên mô hình kiến trúc khách--chủ ba tầng tiêu chuẩn (Client--Server 3-Tier Architecture) kết hợp với mô hình phân lớp nội bộ (Layered Architecture) ở phía máy chủ \cite{martin2017clean}. Mô hình ba tầng phân tách hệ thống thành ba khối độc lập:
+CoSpace theo mô hình khách -- chủ ba tầng, phía máy chủ được chia tiếp thành các lớp theo trách nhiệm \cite{martin2017clean}:
 \begin{itemize}
-    \item \textbf{Tầng trình bày (Presentation Tier):} Ứng dụng Web Single Page Application (SPA) xây dựng bằng React/TypeScript chạy trực tiếp trên trình duyệt của người dùng cuối, chịu trách nhiệm nhận tương tác, kết xuất đồ họa vector sơ đồ mặt bằng và hiển thị dữ liệu.
-    \item \textbf{Tầng logic nghiệp vụ (Application / Business Logic Tier):} Máy chủ ứng dụng Spring Boot 3 tiếp nhận các yêu cầu HTTP/HTTPS, thực hiện xác thực bảo mật, kiểm tra quyền truy cập, áp dụng các quy tắc nghiệp vụ và điều phối các giao dịch cơ sở dữ liệu.
-    \item \textbf{Tầng dữ liệu (Data Tier):} Hệ quản trị cơ sở dữ liệu quan hệ PostgreSQL (được quản lý bởi nền tảng Supabase), chịu trách nhiệm lưu trữ bền vững, bảo đảm tính toàn vẹn giao dịch và thực thi các ràng buộc loại trừ dữ liệu.
+    \item \textbf{Tầng trình bày:} ứng dụng một trang (Single Page Application -- SPA) viết bằng React và TypeScript, chạy trên trình duyệt; hiển thị dữ liệu, vẽ sơ đồ mặt bằng và thu nhận thao tác người dùng. Tầng này không chứa quy tắc nghiệp vụ.
+    \item \textbf{Tầng ứng dụng:} máy chủ Spring Boot nhận yêu cầu HTTPS, xác thực, phân quyền, thực thi quy tắc nghiệp vụ và quản lý giao dịch.
+    \item \textbf{Tầng dữ liệu:} PostgreSQL trên Supabase, lưu trữ dữ liệu và thực thi các ràng buộc toàn vẹn.
 \end{itemize}
 
-\hinhdongang{Chuong3/arch-phantang}{Mô hình kiến trúc phân tầng của ứng dụng web và cách ánh xạ vào CoSpace}{fig:kientruc_phantang}
+\hinhdongang{Chuong3/arch-phantang}{Kiến trúc phân tầng của CoSpace}{fig:kientruc_phantang}
 
-Phía máy chủ Back-end áp dụng mô hình ba lớp nghiêm ngặt nhằm tách biệt rạch ròi trách nhiệm (Separation of Concerns):
+Phía máy chủ gồm ba lớp:
 \begin{enumerate}
-    \item \textbf{Lớp điều khiển (Controller Layer):} Đóng vai trò là cổng giao tiếp tiếp nhận các yêu cầu HTTP RESTful từ máy khách. Controller chỉ thực hiện nhiệm vụ xác thực sơ bộ định dạng dữ liệu đầu vào thông qua các chú thích chuẩn (Jakarta Validation), kiểm tra quyền hạn của người gọi và chuyển tiếp lời gọi đến tầng dịch vụ. Controller không chứa logic nghiệp vụ và không thực hiện truy vấn cơ sở dữ liệu trực tiếp.
-    \item \textbf{Lớp dịch vụ (Service Layer):} Trái tim xử lý nghiệp vụ của toàn bộ hệ thống. Toàn bộ các quy tắc nghiệp vụ, ranh giới giao dịch (\texttt{@Transactional}), thuật toán tính toán tài chính, cơ chế khóa tương tranh và việc chuyển đổi trạng thái đơn đặt chỗ thông qua máy trạng thái (\texttt{BookingStateMachine}) đều được đóng gói tại đây.
-    \item \textbf{Lớp truy cập dữ liệu (Repository / Data Access Layer):} Sử dụng Spring Data JPA để trừu tượng hóa các câu lệnh SQL. Repository chỉ đảm nhận việc đọc và ghi dữ liệu từ các bảng CSDL, cung cấp các phương thức truy vấn tùy biến và các câu lệnh khóa dòng dữ liệu.
+    \item \textbf{Controller:} nhận yêu cầu REST, kiểm tra định dạng dữ liệu vào bằng Jakarta Validation, kiểm tra quyền và gọi tầng dịch vụ. Controller không chứa quy tắc nghiệp vụ.
+    \item \textbf{Service:} chứa quy tắc nghiệp vụ, ranh giới giao dịch (\mt{@Transactional}), khóa tương tranh và chuyển trạng thái đơn qua lớp \mt{BookingStateMachine}.
+    \item \textbf{Repository:} dùng Spring Data JPA để đọc và ghi dữ liệu, gồm cả các truy vấn khóa dòng (\mt{SELECT \ldots{} FOR UPDATE}).
 \end{enumerate}
 
-\subsection{Kiến trúc REST và giao thức HTTP}
-Hệ thống áp dụng phong cách kiến trúc REST (Representational State Transfer) do Roy Fielding đề xuất \cite{fielding2000rest} để xây dựng các giao diện lập trình ứng dụng (API). Các nguyên tắc REST cốt lõi được hệ thống tuân thủ bao gồm:
+\subsection{Kiến trúc REST}
+API của hệ thống theo phong cách REST \cite{fielding2000rest}:
 \begin{itemize}
-    \item \textbf{Giao tiếp không trạng thái (Stateless):} Mọi yêu cầu từ máy khách gửi lên máy chủ đều phải chứa đầy đủ thông tin xác thực (thông qua tiêu đề \texttt{Authorization: Bearer <token>}). Máy chủ không lưu trữ trạng thái phiên (Session) của người dùng trong bộ nhớ, giúp hệ thống dễ dàng mở rộng theo chiều ngang.
-    \item \textbf{Định hướng tài nguyên (Resource-oriented):} Các đường dẫn (URI) được đặt tên theo danh từ số nhiều đại diện cho các thực thể dữ liệu (ví dụ: \texttt{/api/workspaces}, \texttt{/api/bookings}, \texttt{/api/payments}), tránh sử dụng động từ trong đường dẫn.
-    \item \textbf{Ánh xạ phương thức HTTP chuẩn:}
-    \begin{itemize}
-        \item \texttt{GET}: Truy vấn dữ liệu tài nguyên, bảo đảm tính an toàn (Safe) và bất biến khi gọi lại (Idempotent).
-        \item \texttt{POST}: Khởi tạo một tài nguyên mới (tạo đơn đặt chỗ, thanh toán, gửi bài viết).
-        \item \texttt{PUT}: Cập nhật toàn bộ thuộc tính của tài nguyên hoặc thực hiện thao tác có tính bất biến.
-        \item \texttt{DELETE}: Xóa hoặc vô hiệu hóa tài nguyên (hủy đơn, tắt trạng thái chi nhánh).
-    \end{itemize}
-    \item \textbf{Mã trạng thái HTTP chuẩn và cấu trúc phản hồi lỗi thống nhất:} Hệ thống phân loại mã trạng thái rõ ràng: \texttt{200 OK} (thành công), \texttt{201 Created} (tạo mới thành công), \texttt{400 Bad Request} (dữ liệu đầu vào không hợp lệ), \texttt{401 Unauthorized} (chưa xác thực hoặc token hết hạn), \texttt{403 Forbidden} (không có quyền truy cập), \texttt{404 Not Found} (không tìm thấy tài nguyên), \texttt{409 Conflict} (xung đột dữ liệu hoặc trùng lịch) và \texttt{500 Internal Server Error}.
+    \item \textbf{Không lưu trạng thái phiên:} mỗi yêu cầu mang token trong tiêu đề \mt{Authorization: Bearer <token>}, máy chủ không giữ phiên đăng nhập trong bộ nhớ.
+    \item \textbf{Định danh tài nguyên bằng URI:} ví dụ \mt{/api/bookings}, \mt{/api/payments}, \mt{/api/refunds}. Một số thao tác nghiệp vụ không phải CRUD được biểu diễn bằng URI con dạng động từ, ví dụ \mt{POST /api/bookings/\{id\}/cancel-v2} hay \mt{POST /api/refunds/\{id\}/process}.
+    \item \textbf{Phương thức HTTP:} \mt{GET} để đọc; \mt{POST} để tạo hoặc thực hiện thao tác nghiệp vụ; \mt{PUT}, \mt{PATCH} để cập nhật; \mt{DELETE} để xóa hoặc ngừng sử dụng. Theo RFC 9110, \mt{GET}, \mt{PUT} và \mt{DELETE} là các phương thức lũy đẳng \cite{rfc9110}.
+    \item \textbf{Mã trạng thái:} \mt{200}/\mt{201} khi thành công; \mt{400} khi dữ liệu không hợp lệ hoặc vi phạm quy tắc (ví dụ chỗ đã có người đặt); \mt{401} khi thiếu hoặc sai token; \mt{403} khi không đủ quyền; \mt{409} khi thao tác không phù hợp với trạng thái hiện tại (ví dụ đã có ba đơn chờ thanh toán); \mt{500} cho lỗi không lường trước.
 \end{itemize}
 
-\subsection{Xác thực và phân quyền}
-Bảo mật hệ thống được xây dựng trên nền tảng khung ủy quyền OAuth 2.0 (RFC 6749) \cite{rfc6749} và chuẩn định dạng thẻ xác thực JSON Web Token (JWT -- RFC 7519) \cite{rfc7519}.
+\subsection{Xác thực bằng JWT}
+Hệ thống dựa trên OAuth 2.0 \cite{rfc6749} và JSON Web Token (JWT) \cite{rfc7519}. Một JWT gồm ba phần \mt{Header.Payload.Signature}: phần đầu ghi thuật toán ký, phần thân chứa các claim như \mt{sub} (mã người dùng), \mt{iat}, \mt{exp}, \mt{iss}, và phần chữ ký. Với thuật toán HS384, chữ ký được tính bằng
+\begin{equation}
+    Signature = \text{HMAC-SHA384}\big(\text{base64url}(Header) \,\|\, \text{``.''} \,\|\, \text{base64url}(Payload),\ secret\big)
+    \label{eq:jwt}
+\end{equation}
 
-Một thẻ JWT bao gồm ba phần được phân tách bằng dấu chấm: \texttt{Header.Payload.Signature}:
-\begin{itemize}
-    \item \textbf{Header:} Chỉ định thuật toán băm chữ ký (ví dụ: HS384 hoặc RS256) và loại token.
-    \item \textbf{Payload:} Chứa các tuyên bố dữ liệu (Claims) bao gồm: mã định danh người dùng (\texttt{sub}), thời điểm phát hành (\texttt{iat}), thời điểm hết hạn (\texttt{exp}), nhà phát hành (\texttt{iss}) và các thuộc tính nghiệp vụ.
-    \item \textbf{Signature:} Chữ ký điện tử được tạo ra bằng cách băm chuỗi kết hợp của Header và Payload với một khóa bí mật (Secret Key) thông qua thuật toán HMAC-SHA:
-    \begin{equation}
-        Signature = \text{HMAC-SHA384}(\text{base64UrlEncode}(Header) + "." + \text{base64UrlEncode}(Payload), \text{secret})
-        \label{eq:jwt}
-    \end{equation}
-\end{itemize}
-
-Hệ thống CoSpace áp dụng \textbf{mô hình xác thực kép (Dual-issuer Authentication)}:
+CoSpace chấp nhận hai loại token:
 \begin{enumerate}
-    \item Đăng nhập mạng xã hội (Google Single Sign-On): Người dùng xác thực thông qua dịch vụ Supabase Auth. Token do Supabase phát hành được ký bằng thuật toán mã hóa bất đối xứng ECC P-256. Máy chủ Spring Boot giải mã và kiểm tra chữ ký thông qua tập khóa công khai JWKS của Supabase.
-    \item Đăng nhập bằng tài khoản nội bộ (Email và Mật khẩu): Máy chủ ứng dụng tự kiểm tra mật khẩu đã được mã hóa một chiều bằng hàm băm mật mã BCrypt lưu trong bảng \texttt{users}, sau đó phát hành cặp token nội bộ được ký đối xứng bằng khóa bí mật HS384 (tối thiểu 48 bytes): Access Token có hiệu lực 1 giờ và Refresh Token có hiệu lực 30 ngày.
+    \item \textbf{Token của Supabase Auth} khi người dùng đăng nhập bằng Google. Token được ký bằng khóa bất đối xứng trên đường cong P-256; máy chủ kiểm tra chữ ký bằng khóa công khai lấy từ điểm cuối JWKS của Supabase.
+    \item \textbf{Token do CoSpace cấp} khi đăng nhập bằng email và mật khẩu. Mật khẩu được băm bằng BCrypt; token truy cập có hạn 1 giờ, token làm mới có hạn 30 ngày, cả hai được ký HS384 với khóa bí mật dài tối thiểu 48 byte.
 \end{enumerate}
 
-\subsection{Giao dịch và điều khiển tương tranh trong cơ sở dữ liệu quan hệ}
-Một hệ thống cơ sở dữ liệu quan hệ bảo đảm 4 tính chất ACID (Atomicity -- Tính nguyên tố, Consistency -- Tính nhất quán, Isolation -- Tính cô lập, Durability -- Tính bền vững) \cite{kleppmann2017ddia}.
+\subsection{Giao dịch và điều khiển tương tranh}
+Cơ sở dữ liệu quan hệ bảo đảm các tính chất ACID cho giao dịch \cite{kleppmann2017ddia}. Tuy vậy, nếu ứng dụng ``đọc rồi mới ghi'' mà không khóa, hai giao dịch chạy song song có thể cùng thấy một chỗ còn trống và cùng tạo đơn, dẫn đến đặt trùng (Hình~\ref{fig:race_condition}).
 
-Khi nhiều giao dịch cùng thao tác đọc và ghi trên cùng một tập dữ liệu đồng thời, các hiện tượng bất thường có thể xảy ra:
-\begin{itemize}
-    \item \textbf{Tranh chấp ghi mất dữ liệu (Lost Update / Race Condition):} Hai giao dịch $T_1$ và $T_2$ cùng đọc trạng thái của một không gian làm việc tại cùng một thời điểm (cả hai đều thấy trạng thái trống). Sau đó, $T_1$ ghi nhận đặt chỗ và $T_2$ cũng ghi nhận đặt chỗ cho cùng khung giờ đó. Kết quả là giao dịch ghi sau ghi đè lên kết quả của giao dịch trước, dẫn đến hiện tượng đặt trùng lịch nghiêm trọng (Double Booking).
-\end{itemize}
+\hinhdo{Chuong3/race-condition}{Hai khách cùng đặt một chỗ: không có bảo vệ, chỉ có ràng buộc EXCLUDE, và khóa tư vấn kết hợp EXCLUDE}{fig:race_condition}
 
-\hinhdo{Chuong3/race-condition}{Tình huống tương tranh khi hai người dùng cùng đặt một không gian: không bảo vệ, chỉ có ràng buộc EXCLUDE, và khóa tư vấn kết hợp EXCLUDE}{fig:race_condition}
-
-Hệ thống CoSpace giải quyết bài toán này thông qua việc kết hợp hai cơ chế tiên tiến của PostgreSQL \cite{postgresql_documentation}:
+CoSpace dùng hai cơ chế của PostgreSQL \cite{postgresql_documentation}:
 \begin{enumerate}
-    \item \textbf{Khóa tư vấn ở cấp độ giao dịch (Transaction-level Advisory Lock):} Sử dụng hàm \texttt{pg\_advisory\_xact\_lock(key)} của PostgreSQL. Khóa tư vấn không khóa lên bất kỳ dòng hay bảng vật lý nào mà khóa trên một số nguyên 64-bit do ứng dụng tự định nghĩa (tạo ra từ hàm băm chuỗi \texttt{hashtext('booking:' || workspace\_id)}). Hai giao dịch cùng đặt một không gian sẽ có cùng giá trị khóa, buộc giao dịch thứ hai phải xếp hàng đợi giao dịch thứ nhất hoàn tất. Khi giao dịch kết thúc (Commit hoặc Rollback), khóa tư vấn sẽ tự động được giải phóng mà không lo bị rò rỉ khóa.
-    \item \textbf{Ràng buộc loại trừ khoảng thời gian (Exclusion Constraint):} Sử dụng phần mở rộng \texttt{btree\_gist} trên PostgreSQL để thiết lập ràng buộc \texttt{EXCLUDE USING gist (workspace\_id WITH =, tstzrange(start\_at, end\_at) WITH \&\&)}. Ràng buộc này đóng vai trò là chốt chặn an toàn cuối cùng ở tầng lưu trữ CSDL, bảo đảm toán học rằng không thể tồn tại hai dòng dữ liệu có cùng \texttt{workspace\_id} mà khoảng thời gian \texttt{tstzrange} có điểm giao nhau (\texttt{\&\&}).
+    \item \textbf{Khóa tư vấn mức giao dịch (\mt{pg\_advisory\_xact\_lock}):} khóa đặt trên một số nguyên do ứng dụng quy định, không khóa bảng hay dòng. Khóa được tính bằng \mt{hashtext('booking:' || workspaceId)}. Hai giao dịch đặt cùng một chỗ nhận cùng khóa nên phải chạy lần lượt; khóa tự nhả khi giao dịch kết thúc. Vì \mt{hashtext} trả về số nguyên 32 bit, hai chỗ khác nhau có thể trùng khóa; khi đó giao dịch chỉ phải chờ thêm chứ không làm sai kết quả.
+    \item \textbf{Ràng buộc loại trừ (exclusion constraint):} dùng phần mở rộng \mt{btree\_gist} để khai báo
+\begin{verbatim}
+EXCLUDE USING gist (workspace_id WITH =,
+                    tstzrange(start_at, end_at) WITH &&)
+WHERE (status IN ('PENDING_PAYMENT','CONFIRMED','CHECKED_IN'))
+\end{verbatim}
+    Với ràng buộc này, cơ sở dữ liệu từ chối thao tác ghi làm cho hai đơn đang hiệu lực trên cùng chỗ có khoảng thời gian giao nhau. Đây là lớp chặn cuối nếu một luồng xử lý nào đó bỏ qua khóa tư vấn.
 \end{enumerate}
 
-\subsection{Tính bất biến khi xử lý lặp trong tích hợp thanh toán}
-Trong kiến trúc phân tán, khi tích hợp cổng thanh toán trực tuyến (PayOS, MoMo), cổng thanh toán sẽ gửi thông báo kết quả giao dịch về máy chủ CoSpace thông qua giao thức Webhook (HTTP POST) \cite{payos_docs}. Do đặc tính của mạng Internet, các gói tin Webhook có thể bị gửi lặp lại nhiều lần khi cổng thanh toán không nhận được phản hồi kịp thời (cơ chế Retry).
-
-Tính bất biến (Idempotency) là tính chất của một thao tác mà khi thực hiện một lần hay nhiều lần liên tiếp với cùng một dữ liệu đầu vào thì kết quả hệ thống và trạng thái dữ liệu vẫn hoàn toàn không thay đổi \cite{fowler2002poeaa}:
+\subsection{Tính lũy đẳng khi xử lý webhook thanh toán}
+Cổng thanh toán (PayOS, MoMo) báo kết quả giao dịch cho máy chủ bằng webhook, tức một yêu cầu HTTP POST \cite{payos_docs}. Nếu không nhận được phản hồi kịp thời, cổng thanh toán gửi lại, nên máy chủ có thể nhận cùng một thông báo nhiều lần. Một thao tác $f$ là \textbf{lũy đẳng} (idempotent) nếu thực hiện nhiều lần cho cùng kết quả như thực hiện một lần:
 \begin{equation}
     f(f(x)) = f(x)
     \label{eq:idempotency}
 \end{equation}
 
-Hệ thống CoSpace hiện thực tính bất biến dựa trên trạng thái của giao dịch: khi nhận Webhook, hệ thống kiểm tra chữ ký HMAC, khóa bản ghi giao dịch bằng \texttt{SELECT FOR UPDATE}, nếu trạng thái đã là \texttt{PAID} thì lập tức bỏ qua xử lý nghiệp vụ và trả về mã thành công \texttt{200 OK}.
+CoSpace xử lý webhook như sau: kiểm tra chữ ký HMAC-SHA256; tìm giao dịch theo mã đơn; nếu giao dịch đã ở trạng thái \mt{PAID} thì bỏ qua và trả \mt{200}; ngược lại cập nhật giao dịch rồi khóa dòng đơn đặt chỗ bằng \mt{SELECT \ldots{} FOR UPDATE} trước khi xác nhận đơn. Nếu tiền về khi đơn đã hết hạn hoặc đã bị hủy, hoặc khách đã thanh toán đơn đó bằng một giao dịch khác, hệ thống tạo yêu cầu hoàn tiền thay vì xác nhận đơn. Chỉ mục duy nhất trên cặp (\mt{payment\_id}, \mt{reason\_type}) của bảng \mt{refunds} ngăn tạo hai yêu cầu hoàn tiền cho cùng một giao dịch và lý do.
 
-\subsection{Độ đo tương đồng Jaccard và thuật toán gợi ý đối tác}
-Để giải quyết bài toán gợi ý đối tác kinh doanh giữa các thành viên làm việc trong cùng một không gian, hệ thống vận dụng hệ số tương đồng Jaccard (Jaccard Similarity Coefficient) \cite{jaccard1912}:
+\subsection{Hệ số Jaccard và điểm gợi ý đối tác}
+Hệ số Jaccard đo độ giống nhau của hai tập hợp \cite{jaccard1912}:
 \begin{equation}
-    J(A, B) = \frac{|A \cap B|}{|A \cup B|} = \frac{|A \cap B|}{|A| + |B| - |A \cap B|}
+    J(A, B) = \frac{|A \cap B|}{|A \cup B|}
     \label{eq:jaccard_formula}
 \end{equation}
 
-Nhóm đã xây dựng **công thức tính điểm tương đồng tổng hợp có trọng số (Weighted Multi-factor Matching Score)**:
+CoSpace tính điểm gợi ý giữa người dùng $u$ và ứng viên $c$ từ ba tín hiệu:
+\begin{itemize}
+    \item $s_1 = J(K_u, K_c)$: độ giống nhau của tập kỹ năng;
+    \item $s_2 = J(I_u, I_c)$: độ giống nhau của tập sở thích;
+    \item $s_3 = \dfrac{|T_c \cap T_u|}{\min(|T_c|, |T_u|)}$: mức trùng giữa chủ đề các bài viết của ứng viên ($T_c$) và các chủ đề người dùng quan tâm ($T_u$, gồm kỹ năng, sở thích và chủ đề bài viết của chính người dùng).
+\end{itemize}
+Mỗi tín hiệu $k$ có trọng số $w_1 = 0{,}5$, $w_2 = 0{,}2$, $w_3 = 0{,}2$ và chỉ được tính khi cả hai phía đều có dữ liệu ($\delta_k = 1$). Điểm cuối cùng là
 \begin{equation}
-    S_{total} = w_1 \cdot J(Skills_A, Skills_B) + w_2 \cdot S_{field} + w_3 \cdot J(Interests_A, Interests_B) + w_4 \cdot I_{branch}
+    S(u, c) = \min\left(1,\ \frac{\sum_k w_k\, \delta_k\, s_k}{\sum_k w_k\, \delta_k} + 0{,}15 \cdot b(u, c)\right)
     \label{eq:weighted_jaccard}
 \end{equation}
-Trong đó:
-\begin{itemize}
-    \item $w_1 = 0.5$: Trọng số tương đồng về kỹ năng chuyên môn.
-    \item $w_2 = 0.2$: Trọng số tương đồng về lĩnh vực ngành nghề ($S_{field} = 1$ nếu cùng lĩnh vực, ngược lại $0$).
-    \item $w_3 = 0.2$: Trọng số tương đồng về sở thích kết nối cá nhân.
-    \item $w_4 = 0.15$: Điểm cộng ưu tiên nếu hai thành viên cùng hoạt động tại một chi nhánh cơ sở ($I_{branch} = 1$).
-\end{itemize}
+trong đó $b(u, c) = 1$ nếu hai người có cùng chi nhánh làm việc chính, ngược lại bằng 0. Vì chỉ chia cho tổng trọng số của các tín hiệu có dữ liệu, thành viên chưa khai báo kỹ năng vẫn được tính điểm từ các tín hiệu còn lại.
 
-\subsection{Mô hình ngôn ngữ lớn và khả năng gọi hàm (Function Calling)}
-Hệ thống CoSpace tích hợp mô hình **Google Gemini Flash** thông qua cơ chế **Gọi hàm (Function Calling / Tool Calling)** \cite{gemini_function_calling}. Thay vì trả về văn bản tự do, LLM trích xuất các tham số từ câu nói tự nhiên của người dùng và gọi các hàm nghiệp vụ (như tra cứu phòng, tìm kiếm chi nhánh). 
+\subsection{Mô hình ngôn ngữ lớn và gọi hàm}
+Trợ lý ảo dùng Google Gemini qua cơ chế gọi hàm (function calling) \cite{gemini_function_calling}. Máy chủ gửi kèm danh sách hàm dưới dạng lược đồ JSON; thay vì chỉ trả lời bằng văn bản, mô hình có thể trả về yêu cầu gọi một hàm với tham số trích từ câu hỏi của người dùng. Máy chủ thực thi hàm, gửi kết quả lại cho mô hình và lặp cho đến khi mô hình đưa ra câu trả lời.
 
-Đặc biệt, hệ thống thiết lập **rào chắn xác nhận của người dùng (Confirmation Barrier)**: các thao tác tạo đơn hoặc hủy đơn đều yêu cầu khách hàng nhấn nút xác nhận trên giao diện trước khi dữ liệu được ghi nhận vào CSDL.
+Để mô hình không tự ý thay đổi dữ liệu, các hàm được chia làm hai nhóm. Hàm chỉ đọc (tra cứu chi nhánh, chỗ trống, đơn đặt chỗ, chính sách) được thực thi ngay. Hàm ghi (đặt chỗ, hủy chỗ, gọi thêm dịch vụ) chỉ tạo một đề xuất; giao diện hiển thị thẻ xác nhận và thao tác chỉ được thực hiện khi người dùng bấm xác nhận.
 
-\section{Công nghệ phía giao diện người dùng}
+\section{Công nghệ phía giao diện}
 \label{sec:cn_frontend}
 
-\subsection{Thư viện React 18 và ngôn ngữ TypeScript 5}
-Phía giao diện người dùng (Front-end) của hệ thống CoSpace được xây dựng dựa trên thư viện \textbf{React 18.3} \cite{react_docs} kết hợp với ngôn ngữ \textbf{TypeScript 5.6}. React cung cấp mô hình phát triển dựa trên thành phần (Component-based Architecture), cho phép phân rã các màn hình phức tạp thành các khối giao diện độc lập, dễ dàng tái sử dụng và kiểm thử đơn vị. Với cơ chế Virtual DOM cùng các tính năng mới trong phiên bản 18 như Concurrent Rendering và tự động nhóm các cập nhật trạng thái (Automatic Batching), ứng dụng duy trì được tốc độ khung hình ổn định và phản hồi mượt mà ngay cả khi hiển thị các sơ đồ mặt bằng lớn chứa hàng trăm vị trí chỗ ngồi.
+\subsection{React 18 và TypeScript 5}
+Giao diện dùng React 18.3 \cite{react_docs} và TypeScript 5.6 ở chế độ \mt{strict}. Định tuyến dùng React Router 7; các trang được tải lười bằng \mt{React.lazy} để giảm dung lượng tải ban đầu.
 
-Việc tích hợp chặt chẽ ngôn ngữ \textbf{TypeScript} loại bỏ triệt để việc sử dụng kiểu ngầm định (\texttt{any}). 100\% các thuộc tính truyền vào thành phần (Props), trạng thái cục bộ (State) và các đối tượng dữ liệu truyền tải nhận từ máy chủ (DTO) đều được định nghĩa kiểu dữ liệu tĩnh nghiêm ngặt. Điều này giúp phát hiện sớm các lỗi sai lệch cấu trúc dữ liệu ngay trong quá trình biên dịch (Compile-time), đồng thời cung cấp khả năng gợi ý mã nguồn thông minh (IntelliSense), hỗ trợ nhóm phát triển tăng tốc độ lập trình và bảo đảm tính bền vững của mã nguồn khi hệ thống mở rộng.
+\subsection{Vite và Tailwind CSS}
+Vite 5.4 \cite{vite_docs} dùng ES module gốc của trình duyệt khi phát triển và dùng Rollup khi đóng gói. Cấu hình \mt{manualChunks} tách các thư viện dùng chung (React, Supabase, Framer Motion, react-icons) thành các tệp riêng để trình duyệt lưu đệm độc lập với mã ứng dụng. Giao diện dùng Tailwind CSS 3.4 \cite{tailwind_docs} và hỗ trợ chế độ sáng/tối qua lớp \mt{dark} trên phần tử gốc.
 
-\subsection{Công cụ đóng gói Vite và khung giao diện Tailwind CSS}
-Dự án lựa chọn \textbf{Vite 5.4} \cite{vite_docs} làm công cụ đóng gói và máy chủ phát triển cục bộ thay cho các công cụ truyền thống như Webpack hay Create React App. Nhờ tận dụng cơ chế Native ES Modules của trình duyệt hiện đại kết hợp trình biên dịch Esbuild viết bằng ngôn ngữ Go, Vite mang lại tốc độ khởi động máy chủ gần như tức thì ($<300$ms) và thời gian phản ánh thay đổi mã nguồn lên trình duyệt (Hot Module Replacement -- HMR) chỉ trong vài chục mili-giây. Khi đóng gói sản phẩm để triển khai thực tế (Production Build), Vite sử dụng Rollup để tối ưu hóa kích thước gói mã nguồn thông qua kỹ thuật loại bỏ mã thừa (Tree-shaking) và phân tách gói động (Code-splitting / Dynamic chunking), giúp thời gian tải trang đầu tiên của khách hàng giảm xuống dưới 1.2 giây.
+\subsection{Hiển thị sơ đồ mặt bằng}
+Bố cục mỗi tầng được lưu dưới dạng JSON gồm kích thước khung vẽ, kích thước ô lưới và danh sách phần tử (bàn, phòng, tường, cửa, thang máy\ldots). Mỗi phần tử có vị trí, kích thước, góc xoay và có thể gắn với một không gian (\mt{workspaceId}). Thành phần \mt{FloorPlanViewer} vẽ bố cục này thành SVG và tô màu các phần tử có gắn không gian theo tình trạng tại khung giờ đang chọn: xanh lá là còn trống, đỏ là đã có người đặt, xám là đang bảo trì. Người dùng có thể phóng to, thu nhỏ và kéo sơ đồ.
 
-Về mặt tạo kiểu dáng và phong cách giao diện, hệ thống áp dụng \textbf{Tailwind CSS 3.4} \cite{tailwind_docs}. Tailwind CSS là một framework CSS theo định hướng tiện ích (Utility-first CSS Framework), cho phép xây dựng các giao diện hiện đại trực tiếp trong mã JSX mà không cần viết các tệp CSS tùy biến rời rạc. Hệ thống xây dựng một bảng mã màu và khoảng cách đồng nhất (Design Tokens), hỗ trợ thiết kế đáp ứng toàn diện (Responsive Design) cho cả máy tính để bàn, máy tính bảng và điện thoại di động, đồng thời tích hợp mượt mà chế độ giao diện sáng/tối (Light/Dark Theme) dựa trên lớp cấu hình gốc.
-
-\subsection{Kết xuất và tương tác với đồ họa vector SVG (Floor Plan Canvas)}
-Một trong những thách thức kỹ thuật quan trọng nhất phía Front-end là hiển thị sơ đồ mặt bằng các tầng của chi nhánh một cách trực quan, cho phép khách hàng tương tác và chọn vị trí ghế hoặc phòng làm việc trong không gian thực tế. Thay vì sử dụng các tệp hình ảnh tĩnh (PNG/JPEG) hoặc các canvas bitmap phức tạp, đề tài lựa chọn giải pháp kết xuất dựa trên định dạng đồ họa vector có thể mở rộng (\textbf{Scalable Vector Graphics -- SVG}).
-
-Sơ đồ mặt bằng SVG được cấu trúc theo từng nhóm phần tử hình học (\texttt{<rect>}, \texttt{<path>}, \texttt{<circle>}) đại diện cho các bàn làm việc, phòng họp và lối đi. Mỗi phần tử không gian được gắn kèm thuộc tính định danh duy nhất \texttt{data-space-id}. Khi dữ liệu trạng thái chỗ ngồi từ máy chủ được nạp về, thành phần \texttt{FloorPlanViewer} sẽ duyệt qua cây phân cấp DOM của SVG để tô màu trạng thái động: màu xanh lá đại diện cho chỗ khả dụng, màu đỏ cho chỗ đã có người đặt, màu vàng cho chỗ đang chọn và màu xám cho khu vực đang bảo trì. Giải pháp này đảm bảo sơ đồ luôn sắc nét ở mọi độ phân giải màn hình, hỗ trợ thao tác phóng to, thu nhỏ, kéo rê (Pan/Zoom) mượt mà và phản hồi sự kiện chuột (Click/Hover) tức thời.
-
-\subsection{Thư viện trực quan hóa dữ liệu Recharts và biểu tượng Lucide}
-Nhằm phục vụ phân hệ quản trị và báo cáo kinh doanh của Ban quản lý chi nhánh và Quản trị viên hệ thống, ứng dụng tích hợp thư viện \textbf{Recharts}. Recharts được xây dựng trên nền tảng React và thư viện tính toán đồ thị D3.js, cung cấp các biểu đồ đường (LineChart), biểu đồ cột (BarChart) và biểu đồ tròn (PieChart) trực quan hóa các chỉ số hiệu năng kinh doanh then chốt như: biến động doanh thu theo ngày/tháng, tỷ lệ lấp đầy theo khung giờ và cơ cấu doanh thu theo loại hình không gian. Bên cạnh đó, hệ thống sử dụng bộ biểu tượng đồ họa vector \textbf{Lucide React} với hơn 40 biểu tượng chuẩn hóa, tạo nên trải nghiệm giao diện người dùng hiện đại, tinh gọn và thân thiện.
+\subsection{Các thư viện khác}
+\begin{itemize}
+    \item \textbf{Recharts:} vẽ biểu đồ doanh thu và cơ cấu đơn trên các trang báo cáo.
+    \item \textbf{react-icons:} bộ biểu tượng dùng trong toàn bộ giao diện.
+    \item \textbf{Framer Motion:} hiệu ứng chuyển cảnh.
+    \item \textbf{html5-qrcode:} quét mã QR đặt chỗ bằng camera trên trang check-in.
+    \item \textbf{DOMPurify:} làm sạch nội dung HTML trước khi hiển thị, kết hợp chính sách Trusted Types trong tiêu đề Content-Security-Policy.
+\end{itemize}
 
 \section{Công nghệ phía máy chủ}
 \label{sec:cn_backend}
 
-\subsection{Nền tảng Spring Boot 3 và Spring Security OAuth2}
-Tầng dịch vụ máy chủ (Back-end) được phát triển trên nền tảng \textbf{Spring Boot 3.1.12} \cite{spring_boot_docs} biên dịch trên môi trường Java 17 và vận hành chính thức trên JRE 21. Spring Boot là khung ứng dụng cấp doanh nghiệp hàng đầu hiện nay, cung cấp cơ chế cấu hình tự động (Auto-configuration), quản lý phụ thuộc (Dependency Injection / Inversion of Control) và máy chủ nhúng Tomcat hiệu năng cao, giúp chuẩn hóa toàn bộ quy trình phát triển dịch vụ phần mềm.
+\subsection{Spring Boot 3 và Spring Security}
+Máy chủ dùng Spring Boot 3.1.12 \cite{spring_boot_docs}, mã nguồn biên dịch cho Java 17 và chạy trên JRE 21 trong container. Spring Security 6 được cấu hình như một máy chủ tài nguyên OAuth 2.0: mỗi yêu cầu được xác thực từ token, không dùng phiên đăng nhập. Bộ giải mã token (\mt{JwtDecoder}) đọc trường \mt{iss} để chọn cách kiểm tra: token của Supabase được kiểm tra bằng JWKS, token của CoSpace được kiểm tra bằng khóa HS384. Sau đó lớp \mt{SupabaseJwtAuthenticationConverter} đọc lại vai trò, chi nhánh và trạng thái tài khoản từ cơ sở dữ liệu. Nhờ bước này, vai trò ghi trong token không dùng được để leo thang quyền, và tài khoản bị khóa mất quyền truy cập từ yêu cầu tiếp theo.
 
-Hạ tầng bảo mật và phân quyền được thiết lập thông qua \textbf{Spring Security 6}. Hệ thống cấu hình máy chủ hoạt động theo mô hình máy chủ tài nguyên OAuth 2.0 không trạng thái (\texttt{STATELESS Resource Server}). Mỗi yêu cầu HTTP gửi đến đều được kiểm duyệt thông qua bộ lọc bảo mật tùy biến, tích hợp cơ chế giải mã mã thông báo kép (\texttt{JwtDecoder}):
+\subsection{Spring Data JPA và bộ nhớ đệm Caffeine}
+Tầng truy cập dữ liệu dùng Spring Data JPA với Hibernate 6. Các thực thể tham chiếu nhau bằng trường khóa ngoại kiểu UUID thay vì các quan hệ \mt{@ManyToOne}/\mt{@OneToMany}; cách làm này tránh truy vấn N+1 và lỗi nạp lười ngoài giao dịch, đổi lại các truy vấn cần dữ liệu liên quan phải được viết tường minh.
+
+Các danh mục ít thay đổi (chi nhánh, loại không gian, bảng giá, dịch vụ thêm, chính sách hủy, tiện ích, hạng thành viên) và một số truy vấn quản trị được lưu đệm bằng Caffeine \cite{caffeine_github}. Mỗi bộ đệm có thời gian sống từ 1 đến 10 phút, tối đa 500 phần tử, và được xóa (\mt{@CacheEvict}) khi dữ liệu tương ứng bị sửa.
+
+\subsection{Tác vụ định kỳ}
+Hai tác vụ định kỳ dùng \mt{@Scheduled}:
 \begin{itemize}
-    \item \textbf{Token từ Supabase Auth:} Được xác thực bằng khóa công khai bất đối xứng elliptic (ECC P-256) thông qua điểm cuối JWKS (JSON Web Key Set).
-    \item \textbf{Token nội bộ do CoSpace cấp phát:} Được xác thực bằng thuật toán khóa đối xứng HMAC-SHA384 bảo mật cao.
+    \item \mt{BookingExpiryScheduler} chạy mỗi 30 giây, tìm các đơn \mt{PENDING\_PAYMENT} đã quá hạn thanh toán và chuyển sang \mt{EXPIRED} để giải phóng chỗ.
+    \item \mt{BookingLifecycleScheduler} chạy mỗi 5 phút: tự check-out các đơn \mt{CHECKED\_IN} đã quá giờ kết thúc 120 phút, và đóng các đơn \mt{CONFIRMED} đã hết giờ thành \mt{COMPLETED} (nếu đã từng check-in) hoặc \mt{NO\_SHOW}.
 \end{itemize}
-Cơ chế chuyển đổi quyền hạn \texttt{SupabaseJwtAuthenticationConverter} sẽ đọc lại vai trò và trạng thái khóa tài khoản trực tiếp từ cơ sở dữ liệu để loại trừ hoàn toàn nguy cơ leo thang đặc quyền khi thông tin vai trò ở tầng máy khách bị giả mạo.
+Mỗi đơn được xử lý trong một giao dịch riêng và được đọc lại dưới khóa dòng, nên lỗi ở một đơn không làm dừng các đơn còn lại và không ghi đè kết quả của webhook đến cùng lúc.
 
-\subsection{Spring Data JPA và Bộ nhớ đệm Caffeine}
-Tầng truy xuất dữ liệu sử dụng \textbf{Spring Data JPA} kết hợp với trình ánh xạ quan hệ đối tượng \textbf{Hibernate 6}. Thay vì phụ thuộc vào các liên kết thực thể lồng nhau phức tạp (\texttt{@ManyToOne}, \texttt{@OneToMany}) dễ gây ra lỗi truy vấn bùng nổ $N+1$ hoặc rủi ro nạp dữ liệu lười biếng (\texttt{LazyInitializationException}), kiến trúc hệ thống áp dụng nguyên tắc liên kết thông qua khóa nhận dạng UUID thuần túy giữa các bảng độc lập. Các giao dịch sửa đổi dữ liệu quan trọng đều được kiểm soát trong ranh giới giao dịch khai báo (\texttt{@Transactional}) với cấp độ cô lập phù hợp.
-
-Nhằm giảm tải cho cơ sở dữ liệu và tăng tốc độ phản hồi đối với các dữ liệu danh mục tĩnh hoặc ít biến động (như danh sách chi nhánh, bảng giá dịch vụ, chính sách hủy hoàn tiền), hệ thống tích hợp bộ nhớ đệm trong bộ nhớ \textbf{Caffeine Cache} \cite{caffeine_github}. Caffeine là thư viện bộ nhớ đệm hiệu năng cao dựa trên thuật toán thay thế bộ nhớ Window TinyLFU, cho phép cấu hình thời gian hết hạn dữ liệu (TTL) và tự động làm rỗng bộ nhớ đệm khi có thao tác cập nhật danh mục từ quản trị viên, giúp thời gian phản hồi của các API tra cứu giảm xuống dưới 15ms.
-
-\subsection{Bộ lập lịch tác vụ nền và Quản lý vòng đời đơn đặt chỗ}
-Để đảm bảo hệ thống vận hành tự động liên tục mà không cần sự can thiệp thủ công của con người, Back-end triển khai các tác vụ định kỳ sử dụng cơ chế \textbf{Spring Task Scheduling} (\texttt{@Scheduled}):
-\begin{itemize}
-    \item \texttt{BookingExpiryScheduler}: Chạy ngầm với chu kỳ 60 giây một lần, tự động quét và thu hồi các đơn đặt chỗ ở trạng thái chờ thanh toán (\texttt{PENDING\_PAYMENT}) đã quá thời hạn giữ chỗ quy định (15 phút), giải phóng ngay lập tức tài nguyên chỗ ngồi cho các khách hàng khác.
-    \item \texttt{BookingLifecycleScheduler}: Vận hành định kỳ để cập nhật tự động các trạng thái của đơn đặt chỗ theo dòng thời gian thực tế: chuyển từ trạng thái đã xác nhận (\texttt{CONFIRMED}) sang trạng thái đang hoạt động (\texttt{IN\_PROGRESS}) khi đến giờ bắt đầu, và tự động đóng đơn hoàn tất (\texttt{COMPLETED}) khi thời gian thuê kết thúc.
-\end{itemize}
-
-\section{Cơ sở dữ liệu và tích hợp dịch vụ bên thứ ba}
+\section{Cơ sở dữ liệu và dịch vụ bên ngoài}
 \label{sec:cn_database}
 
-\subsection{Hệ quản trị cơ sở dữ liệu PostgreSQL và Nền tảng Supabase}
-Cơ sở dữ liệu trung tâm của hệ thống là \textbf{PostgreSQL 15} \cite{postgresql_documentation} được triển khai trên nền tảng đám mây phân tán \textbf{Supabase}. PostgreSQL được lựa chọn nhờ sở hữu những tính năng dữ liệu tiên tiến mà các hệ quản trị CSDL quan hệ phổ biến khác (như MySQL hay MariaDB) không hỗ trợ hoặc hỗ trợ chưa hoàn chỉnh:
+\subsection{PostgreSQL trên Supabase}
+Cơ sở dữ liệu là PostgreSQL \cite{postgresql_documentation} do Supabase quản lý \cite{supabase_docs}. Các tính năng được dùng:
 \begin{itemize}
-    \item \textbf{Kiểu dữ liệu khoảng thời gian có múi giờ (\texttt{tstzrange}):} Biểu diễn chính xác khoảng thời gian đặt chỗ $[start\_at, end\_at)$ với độ phân giải cao và khả năng xử lý múi giờ \texttt{Asia/Ho\_Chi\_Minh} chuẩn xác.
-    \item \textbf{Chỉ mục không gian GiST (\texttt{btree\_gist}):} Tối ưu hóa tốc độ tìm kiếm giao thoa khoảng thời gian thông qua toán tử chứa/chồng lấn (\texttt{\&\&}), đảm bảo tốc độ phản hồi dưới 20ms ngay cả khi bảng chứa hàng chục nghìn lượt đặt chỗ.
-    \item \textbf{Cơ chế khóa tư vấn mức giao dịch (\texttt{pg\_advisory\_xact\_lock}):} Cho phép tầng ứng dụng khóa độc quyền logic theo mã định danh không gian làm việc (\texttt{workspace\_id}) trong suốt thời gian thực thi giao dịch mà không làm khóa cứng toàn bộ bảng CSDL.
+    \item Kiểu khoảng thời gian có múi giờ (\mt{tstzrange}) và toán tử giao nhau \mt{\&\&}.
+    \item Phần mở rộng \mt{btree\_gist} để kết hợp phép so sánh bằng trên \mt{workspace\_id} với phép giao khoảng thời gian trong một ràng buộc loại trừ.
+    \item Khóa tư vấn mức giao dịch \mt{pg\_advisory\_xact\_lock}.
 \end{itemize}
-Toàn bộ quá trình di trú và đồng bộ hóa lược đồ dữ liệu giữa môi trường phát triển và môi trường thực tế được quản lý tự động thông qua công cụ \textbf{Flyway Migration}, đảm bảo tính nhất quán về cấu trúc bảng và các chỉ mục toàn vẹn.
+Lược đồ được quản lý bằng Flyway: \mt{V1\_\_baseline.sql} là lược đồ gốc, \mt{V2\_\_constraints.sql} bổ sung các ràng buộc toàn vẹn, \mt{V3} thêm dòng phí phát sinh, voucher hoàn tiền, ảnh không gian và bảng kết nối đối tác. Supabase còn cung cấp dịch vụ đăng nhập Google và kho lưu ảnh không gian (Supabase Storage).
 
-\subsection{Cổng thanh toán tự động VietQR PayOS và Ví điện tử MoMo}
-Hệ thống giải quyết triệt để bài toán thanh toán không tiền mặt thông qua việc tích hợp trực tiếp với cổng thanh toán \textbf{PayOS} \cite{payos_docs}. PayOS hỗ trợ tạo mã thanh toán chuẩn quốc gia \textbf{VietQR Napas 24/7}. Khi khách hàng tiến hành đặt chỗ, máy chủ tự động sinh mã QR động chứa số tài khoản, số tiền chính xác và mã đơn hàng duy nhất. Ngay khi khách hàng quét mã và chuyển khoản thành công qua ứng dụng ngân hàng bất kỳ, PayOS sẽ gửi tức thời thông báo giao dịch (Webhook IPN) về máy chủ CoSpace. Hệ thống kiểm tra chữ ký điện tử HMAC-SHA256 để chống giả mạo, tự động kích hoạt đơn sang trạng thái đã thanh toán mà không cần bất kỳ sự can thiệp thủ công nào từ nhân viên thu ngân.
+\subsection{Cổng thanh toán PayOS và ví MoMo}
+PayOS \cite{payos_docs} tạo mã VietQR chứa sẵn số tài khoản, số tiền và nội dung chuyển khoản. Khi khách chuyển khoản thành công, PayOS gửi webhook về máy chủ; dữ liệu được ký bằng HMAC-SHA256 trên chuỗi \mt{key=value} của các trường, sắp theo thứ tự bảng chữ cái, với khóa checksum của cửa hàng. Khi chưa cấu hình khóa thật, dịch vụ PayOS chạy ở chế độ demo: mọi webhook bị từ chối, việc thanh toán được giả lập qua một điểm cuối riêng. Lớp \mt{PayosProductionGuard} không cho ứng dụng khởi động ở cấu hình production nếu PayOS vẫn ở chế độ demo.
 
-Bên cạnh PayOS, hệ thống tích hợp thêm cổng thanh toán ví điện tử \textbf{MoMo} (môi trường Sandbox), mở rộng thêm kênh thanh toán di động thuận tiện cho đối tượng khách hàng trẻ tuổi.
+MoMo \cite{momo_docs} được tích hợp ở môi trường sandbox: máy chủ tạo yêu cầu thanh toán có chữ ký HMAC-SHA256 và kiểm tra chữ ký của thông báo IPN do MoMo gửi về.
 
-\subsection{Mô hình Trí tuệ nhân tạo Google Gemini API (Function Calling)}
-Nhằm nâng cao trải nghiệm người dùng và tự động hóa quy trình hỗ trợ khách hàng, CoSpace tích hợp mô hình ngôn ngữ lớn tiên tiến \textbf{Google Gemini Flash} \cite{google_gemini_api, gemini_function_calling}. Khác với các chatbot trả lời câu hỏi thông thường, hệ thống vận dụng kỹ thuật \textbf{Gọi hàm (Function Calling / Tool Calling)}. 
-
-Mô hình AI được cung cấp danh mục các lược đồ hàm nghiệp vụ (JSON Schema) của CoSpace như: tra cứu chi nhánh (\texttt{getBranches}), kiểm tra bàn trống theo giờ (\texttt{checkAvailableSpaces}), và tính toán báo giá dự kiến (\texttt{calculatePricing}). Khi người dùng đặt câu hỏi bằng ngôn ngữ tự nhiên (ví dụ: \textit{``Tìm giúp tôi phòng họp cho 6 người tại chi nhánh Quận 1 sáng mai từ 9h đến 11h''}), mô hình sẽ tự động trích xuất các tham số thực tế, kích hoạt API tương ứng, nhận dữ liệu có cấu trúc từ máy chủ và tổng hợp câu trả lời thân thiện cho khách hàng. Đối với các thao tác ghi dữ liệu nhạy cảm (như tạo đơn đặt chỗ), hệ thống thiết lập cơ chế rào chắn xác nhận (Confirmation Barrier), chỉ thực thi khi khách hàng chủ động nhấn nút xác nhận trên giao diện.
+\subsection{Google Gemini API}
+Máy chủ gọi Gemini qua REST (\mt{generateContent}) \cite{google_gemini_api}. Tên mô hình được cấu hình qua biến môi trường; cấu hình mặc định dùng \mt{gemini-3.5-flash} và chuyển sang mô hình dự phòng \mt{gemini-3.7-flash} khi mô hình chính quá tải hoặc từ chối yêu cầu. Gemini được dùng cho trợ lý ảo và để viết câu giải thích ngắn cho mỗi gợi ý đối tác.
 
 \section{Tổng hợp lựa chọn công nghệ}
 \label{sec:tonghop_congnghe}
 
-Bảng \ref{tab:lua_chon_congnghe} tổng hợp các quyết định công nghệ quan trọng nhất của hệ thống, so sánh với các phương án thay thế khả dĩ và lý do lựa chọn khoa học.
-
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
-\caption{Bảng đối chiếu lựa chọn công nghệ và lý do lựa chọn của đề tài}
+\caption{Lựa chọn công nghệ và lý do}
 \label{tab:lua_chon_congnghe}
 \small
 \renewcommand{\arraystretch}{1.2}
-\begin{tabular}{|p{2.3cm}|p{2.7cm}|p{3.0cm}|p{6.0cm}|}
+\begin{tabularx}{\linewidth}{|P{2.4cm}|P{2.8cm}|P{2.8cm}|L|}
 \hline
-\textbf{Hạng mục} & \textbf{Công nghệ chọn} & \textbf{Phương án thay thế} & \textbf{Lý do lựa chọn cốt lõi} \\
+\textbf{Hạng mục} & \textbf{Lựa chọn} & \textbf{Phương án khác} & \textbf{Lý do} \\
 \hline
-Ngôn ngữ \& Nền tảng Back-end & Java 17 / 21, Spring Boot 3.1 & Node.js (Express/Nest), Python (Django/FastAPI) & Đảm bảo tính an toàn kiểu dữ liệu chặt chẽ; hệ sinh thái bảo mật và quản lý giao dịch doanh nghiệp toàn diện; kiểm soát tương tranh tin cậy \\
+Máy chủ & Java 17, Spring Boot 3.1 & Node.js (NestJS), Python (FastAPI) & Kiểu tĩnh; hỗ trợ sẵn bảo mật, giao dịch khai báo và lập lịch; nhóm đã quen với Spring \\
 \hline
-Thư viện Front-end & React 18.3, TypeScript 5.6 & Vue.js, Angular, Next.js & Hệ sinh thái thành phần phong phú; mô hình Virtual DOM tối ưu; TypeScript loại bỏ hoàn toàn lỗi kiểu dữ liệu lúc thực thi \\
+Giao diện & React 18, TypeScript 5 & Vue, Angular & Hệ sinh thái thư viện lớn; TypeScript phát hiện lỗi kiểu khi biên dịch \\
 \hline
-Công cụ đóng gói Front-end & Vite 5.4 & Webpack, Create React App & Tốc độ khởi động và làm mới mô-đun (HMR) cực nhanh nhờ native ES Modules; cấu hình đóng gói chia chunk tinh gọn \\
+Đóng gói giao diện & Vite 5 & Webpack, Create React App & Khởi động nhanh khi phát triển, cấu hình tách gói đơn giản \\
 \hline
-Hệ quản trị CSDL & PostgreSQL trên Supabase & MySQL, MongoDB & Hỗ trợ tốt các kiểu dữ liệu thời gian có múi giờ, khóa tư vấn mức giao dịch và ràng buộc loại trừ GiST chống trùng lịch \\
+Cơ sở dữ liệu & PostgreSQL (Supabase) & MySQL, MongoDB & Có kiểu khoảng thời gian, khóa tư vấn và ràng buộc loại trừ; Supabase có sẵn đăng nhập Google và kho lưu tệp \\
 \hline
-Kiểm soát tương tranh & Khóa tư vấn CSDL + Ràng buộc GiST & Khóa phân tán Redis (Redlock), Khóa quan mạo & Không phát sinh thêm hạ tầng phụ thuộc bên ngoài; bảo đảm tính toàn vẹn giao dịch ACID trong cùng một phiên CSDL \\
+Chống đặt trùng & Khóa tư vấn và ràng buộc EXCLUDE & Khóa phân tán Redis, khóa lạc quan & Không cần thêm hạ tầng; khóa và ràng buộc nằm cùng giao dịch với thao tác ghi \\
 \hline
-Cổng thanh toán & PayOS (VietQR) và MoMo & Stripe, PayPal, VNPay & Chuẩn VietQR Napas 24/7 tối ưu cho người dùng Việt Nam; chi phí giao dịch thấp; webhook hỗ trợ xác thực chữ ký an toàn \\
+Thanh toán & PayOS (VietQR), MoMo & VNPay, Stripe & VietQR phổ biến ở Việt Nam; PayOS có webhook ký HMAC và tài liệu tích hợp \\
 \hline
-Mô hình AI & Google Gemini Flash (API) & OpenAI GPT-4o, Mô hình cục bộ Llama & Tốc độ phản hồi nhanh ($<1$s); hỗ trợ Function Calling chuẩn xác; chi phí sử dụng API tối ưu \\
+Trợ lý ảo & Google Gemini API & OpenAI API, mô hình chạy cục bộ & Hỗ trợ gọi hàm; có hạn mức miễn phí phù hợp quy mô đồ án \\
 \hline
-Quản lý di trú CSDL & Flyway Migration & Liquibase, Hibernate ddl-auto & Đơn giản, dựa trên các tệp SQL thuần túy; kiểm soát chặt chẽ phiên bản lược đồ CSDL giữa các môi trường \\
+Quản lý lược đồ & Flyway & Liquibase, Hibernate \mt{ddl-auto} & Dùng tệp SQL thuần, có đánh số phiên bản \\
 \hline
-Đóng gói ứng dụng & Docker Multi-stage & Dựng tệp JAR thủ công & Giảm kích thước ảnh container từ hơn 600MB xuống dưới 220MB; cô lập hoàn toàn môi trường chạy JRE an toàn \\
+Đóng gói máy chủ & Docker nhiều giai đoạn & Chạy tệp JAR trực tiếp & Ảnh chạy không chứa Maven và mã nguồn; môi trường giống nhau giữa máy phát triển và Render \\
 \hline
-\end{tabular}
+\end{tabularx}
 \end{table}

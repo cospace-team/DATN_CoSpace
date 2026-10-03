@@ -4,113 +4,89 @@
 \section{Các khái niệm liên quan}
 \label{sec:khainiem}
 
-\subsection{Văn phòng chia sẻ (Co-working Space)}
-Văn phòng chia sẻ (Co-working Space) là mô hình dịch vụ cung cấp không gian làm việc chung được trang bị đầy đủ tiện nghi, trong đó nhiều cá nhân hoặc nhóm doanh nghiệp độc lập cùng chia sẻ cơ sở hạ tầng vật lý và các tiện ích vận hành \cite{deskmag2023, coworking_vs_traditional_replus}. Ra đời từ đầu những năm 2000 tại San Francisco (Mỹ), mô hình này đã nhanh chóng lan rộng ra toàn cầu và trở thành một phân khúc bất động sản thương mại phát triển mạnh mẽ nhất trong kỷ nguyên số.
-
-Trong một không gian làm việc chia sẻ điển hình, các loại hình chỗ ngồi phổ biến bao gồm:
+\subsection{Văn phòng chia sẻ}
+Văn phòng chia sẻ (co-working space) là không gian làm việc chung có sẵn tiện nghi, được nhiều cá nhân và doanh nghiệp độc lập cùng sử dụng. Mô hình này hình thành ở Mỹ vào giữa những năm 2000 và hiện có ở nhiều thành phố lớn. Các loại chỗ thường gặp gồm:
 \begin{itemize}
-    \item \textbf{Chỗ ngồi linh hoạt (Hot Desk):} Khách hàng được quyền sử dụng bất kỳ vị trí bàn làm việc còn trống nào trong khu vực không gian chung (Open Space). Loại hình này có chi phí thấp nhất, phù hợp với các cá nhân làm việc tự do (Freelancers) hoặc người có lịch trình di chuyển linh hoạt.
-    \item \textbf{Chỗ ngồi cố định (Dedicated Desk):} Khách hàng được dành riêng một vị trí bàn làm việc cố định trong suốt thời hạn hợp đồng (theo tuần, tháng hoặc quý), có hộc tủ khóa an toàn để tài liệu và trang thiết bị cá nhân.
-    \item \textbf{Phòng làm việc riêng (Private Office):} Không gian văn phòng khép kín hoàn toàn, có khóa riêng, được trang bị đầy đủ bàn ghế, bảng viết và cơ sở hạ tầng mạng bảo mật, phục vụ cho các nhóm khởi nghiệp hoặc doanh nghiệp quy mô từ 3 đến 20 nhân sự.
-    \item \textbf{Phòng họp (Meeting Room):} Không gian cách âm được trang bị màn hình trình chiếu, bảng kính, máy chiếu và hệ thống hội nghị truyền hình, thường được cho thuê theo khung giờ phục vụ các buổi họp nội bộ, tiếp đón đối tác hoặc phỏng vấn tuyển dụng.
-    \item \textbf{Không gian tổ chức sự kiện (Event Space):} Khu vực diện tích lớn, có sân khấu, hệ thống âm thanh, ánh sáng chuyên dụng, phục vụ các buổi hội thảo công nghệ, tọa đàm (Talkshow) hoặc sinh hoạt cộng đồng.
+    \item \textbf{Chỗ ngồi linh hoạt (hot desk):} khách dùng bất kỳ bàn trống nào trong khu vực chung; giá thấp, phù hợp người làm việc tự do.
+    \item \textbf{Chỗ ngồi cố định (dedicated desk):} một bàn dành riêng cho khách trong thời hạn thuê, thường kèm tủ cá nhân.
+    \item \textbf{Văn phòng riêng (private office):} phòng kín có khóa, dành cho nhóm hoặc doanh nghiệp nhỏ.
+    \item \textbf{Phòng họp (meeting room):} phòng cách âm có màn hình, bảng viết, thường thuê theo giờ.
+    \item \textbf{Buồng gọi điện (phone booth) và khu sự kiện (event space):} không gian nhỏ để gọi điện hoặc khu lớn để tổ chức hội thảo.
 \end{itemize}
+Trong CoSpace, các loại không gian được khai báo trong danh mục \mt{workspace\_types}; dữ liệu mặc định gồm bàn làm việc, phòng họp, văn phòng riêng, buồng gọi điện và khu sự kiện.
 
-\subsection{Đặc điểm vận hành của mô hình}
-So với mô hình cho thuê bất động sản truyền thống, hoạt động kinh doanh văn phòng chia sẻ mang các đặc trưng vận hành mang tính quyết định đến thiết kế kiến trúc của hệ thống phần mềm quản lý:
+\subsection{Đặc điểm vận hành}
+Các đặc điểm sau ảnh hưởng trực tiếp đến thiết kế phần mềm quản lý:
 \begin{itemize}
-    \item \textbf{Tài nguyên hữu hạn theo thời gian (Time-slotted Finite Resources):} Chỗ ngồi hoặc phòng làm việc là một tài nguyên cố định về số lượng vật lý nhưng có thể được tái sử dụng liên tục theo các phân đoạn thời gian. Một khoảng thời gian không có người thuê đồng nghĩa với doanh thu bị mất đi vĩnh viễn (perishable inventory). Do đó, hệ thống phần mềm phải quản lý tình trạng khả dụng chính xác đến từng phút.
-    \item \textbf{Đa dạng đơn vị tính giá và biểu phí bậc thang:} Hệ thống phải hỗ trợ tính giá linh hoạt theo giờ, theo ngày, theo tuần hoặc theo tháng. Giá thuê thường có xu hướng giảm dần theo thời lượng thuê dài hơn nhằm khuyến khích khách hàng ký hợp đồng dài hạn.
-    \item \textbf{Dịch vụ gia tăng phát sinh linh hoạt (Extra Services / Running Tab):} Trong quá trình làm việc, khách hàng có nhu cầu sử dụng thêm các dịch vụ tại chỗ như: máy in, đồ ăn nhanh, nước uống, thiết bị chuyển đổi, phòng họp phát sinh. Hệ thống cần cơ chế ghi nhận nhanh các khoản phí phát sinh này vào hóa đơn tổng để thanh toán một lần khi trả phòng.
-    \item \textbf{Yêu cầu cao về tính cộng đồng và môi trường kết nối:} Giá trị thặng dư giữ chân khách hàng tại co-working space không chỉ nằm ở cơ sở vật chất mà nằm ở mạng lưới quan hệ (Networking). Khách hàng mong muốn tìm thấy các đối tác tiềm năng, chuyên gia công nghệ, nhà thiết kế hoặc chuyên gia pháp lý cùng hoạt động tại cơ sở.
+    \item \textbf{Tài nguyên hữu hạn theo thời gian:} số chỗ cố định nhưng được cho thuê lại theo từng khoảng thời gian, nên hệ thống phải theo dõi tình trạng của từng chỗ theo thời gian.
+    \item \textbf{Nhiều đơn vị tính giá:} giá theo giờ, ngày, tuần hoặc tháng; thuê dài thường có đơn giá thấp hơn.
+    \item \textbf{Dịch vụ phát sinh:} trong lúc làm việc, khách có thể gọi thêm đồ uống, in ấn, thuê thiết bị. Các khoản này được ghi vào hóa đơn của lượt đặt chỗ và thanh toán trước khi trả chỗ.
+    \item \textbf{Tính cộng đồng:} khách muốn gặp đối tác, chuyên gia làm việc trong cùng không gian.
 \end{itemize}
 
 \subsection{So sánh với văn phòng truyền thống}
-Bảng \ref{tab:sosanh_vanphong} trình bày sự khác biệt toàn diện giữa văn phòng chia sẻ và văn phòng truyền thống theo các tiêu chí vận hành cốt lõi.
+Bảng~\ref{tab:sosanh_vanphong} so sánh hai mô hình theo một số tiêu chí vận hành.
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
-\caption{So sánh văn phòng chia sẻ và văn phòng truyền thống theo các tiêu chí vận hành}
+\caption{So sánh văn phòng chia sẻ và văn phòng truyền thống}
 \label{tab:sosanh_vanphong}
 \small
-\renewcommand{\arraystretch}{1.25}
-\begin{tabular}{|p{3.4cm}|p{5.4cm}|p{5.4cm}|}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{|P{3.3cm}|L|L|}
 \hline
-\textbf{Tiêu chí} & \textbf{Văn phòng truyền thống} & \textbf{Văn phòng chia sẻ (Co-working Space)} \\
+\textbf{Tiêu chí} & \textbf{Văn phòng truyền thống} & \textbf{Văn phòng chia sẻ} \\
 \hline
-Thời hạn cam kết hợp đồng & Dài hạn, thông thường từ 2 đến 5 năm & Linh hoạt: theo giờ, ngày, tuần, tháng hoặc năm \\
+Thời hạn hợp đồng & Dài hạn, thường vài năm & Theo giờ, ngày, tuần, tháng hoặc năm \\
 \hline
-Chi phí đầu tư ban đầu & Rất lớn (thiết kế, thi công, nội thất, tiền cọc 3--6 tháng) & Gần như bằng 0, chỉ trả tiền thuê cho thời gian sử dụng \\
+Chi phí ban đầu & Lớn (thiết kế, nội thất, tiền cọc) & Thấp, chủ yếu là tiền thuê \\
 \hline
-Khả năng điều chỉnh quy mô & Kém linh hoạt; khó mở rộng hoặc thu hẹp diện tích nhanh chóng & Tức thời; có thể tăng hoặc giảm số lượng chỗ ngồi theo tuần \\
+Điều chỉnh quy mô & Khó mở rộng hoặc thu hẹp nhanh & Tăng giảm số chỗ theo nhu cầu \\
 \hline
-Chi phí vận hành và nhân sự & Doanh nghiệp tự chi trả (lễ tân, bảo vệ, vệ sinh, Internet, điện) & Trọn gói trong giá thuê; đơn vị vận hành chịu trách nhiệm \\
+Chi phí vận hành & Doanh nghiệp tự chi trả (lễ tân, vệ sinh, Internet, điện) & Đã tính trong giá thuê \\
 \hline
-Tiện ích sử dụng chung & Tự trang bị hoặc dùng chung trong tòa nhà văn phòng & Đầy đủ tiện nghi: pantry, phòng họp, máy in, khu thư giãn \\
+Tiện ích chung & Tự trang bị & Có sẵn pantry, phòng họp, máy in \\
 \hline
-Mạng lưới kết nối cộng đồng & Khép kín, cô lập giữa các doanh nghiệp khác tầng & Mở rộng; dễ dàng giao lưu, hợp tác với cộng đồng thành viên \\
+Kết nối cộng đồng & Ít giao lưu giữa các doanh nghiệp & Dễ gặp gỡ các thành viên khác \\
 \hline
-\end{tabular}
+\end{tabularx}
 \end{table}
 
-\subsection{Các khái niệm kỹ thuật cốt lõi của bài toán}
-Trong phạm vi đề tài, một số khái niệm kỹ thuật chuyên ngành được định nghĩa và áp dụng xuyên suốt:
+\subsection{Các khái niệm kỹ thuật dùng trong đề tài}
 \begin{itemize}
-    \item \textbf{Đặt chỗ theo khoảng thời gian (Interval Booking):} Một đơn đặt chỗ được xác định bởi cặp giá trị thời gian bắt đầu và kết thúc $[start\_at, end\_at)$. Hệ thống quy ước sử dụng khoảng nửa mở (nửa đóng, nửa mở bên phải) để đảm bảo một đơn kết thúc lúc $10:00$ sẽ không bị coi là xung đột với đơn tiếp theo bắt đầu lúc $10:00$.
-    \item \textbf{Xung đột lịch đặt chỗ (Schedule Overlap):} Hai đơn đặt chỗ $A$ và $B$ trên cùng một không gian làm việc bị coi là xung đột nếu và chỉ nếu:
+    \item \textbf{Đặt chỗ theo khoảng thời gian:} mỗi đơn có thời điểm bắt đầu và kết thúc, biểu diễn bằng khoảng nửa mở $[start\_at, end\_at)$. Với cách biểu diễn này, đơn kết thúc lúc 10:00 không xung đột với đơn bắt đầu lúc 10:00.
+    \item \textbf{Xung đột lịch:} hai đơn $A$ và $B$ trên cùng một không gian xung đột khi và chỉ khi
     \begin{equation}
         start\_at_A < end\_at_B \quad \text{và} \quad end\_at_A > start\_at_B
         \label{eq:overlap}
     \end{equation}
-    \item \textbf{Chính sách hủy theo bậc thời gian (Tiered Cancellation Policy):} Quy tắc xác định tỷ lệ hoàn tiền (\%) dựa trên khoảng cách thời gian giữa thời điểm yêu cầu hủy được gửi đến máy chủ ($now$) so với thời điểm bắt đầu của đơn đặt chỗ ($start\_at$). Khoảng thời gian được tính bằng phút và so khớp theo khoảng nửa mở $[min\_hours\_before \times 60, max\_hours\_before \times 60)$.
-    \item \textbf{Đối soát thanh toán bất biến (Idempotent Payment Reconciliation):} Nguyên lý thiết kế đảm bảo khi cổng thanh toán gửi lại cùng một thông báo giao dịch (Webhook) nhiều lần do lỗi đường truyền mạng, trạng thái đơn đặt chỗ và số dư tài chính trong hệ thống chỉ được cập nhật đúng một lần duy nhất.
-    \item \textbf{Nhật ký kiểm toán (Audit Log):} Bản ghi bất biến ghi lại mọi thao tác nhạy cảm của người dùng (thay đổi giá, hủy đơn đặc cách, khóa tài khoản, duyệt hoàn tiền), lưu trữ định danh người thực hiện, địa chỉ IP, giá trị dữ liệu cũ và giá trị mới nhằm phục vụ công tác truy vết và hậu kiểm an ninh.
+    \item \textbf{Chính sách hủy nhiều bậc:} tỷ lệ hoàn tiền phụ thuộc khoảng thời gian từ lúc hủy đến lúc bắt đầu (hoặc từ lúc đặt, với bậc ``thời gian ân hạn''). Khoảng thời gian được tính theo phút và so với các khoảng nửa mở $[min, max)$ của từng bậc.
+    \item \textbf{Xử lý lũy đẳng (idempotent):} khi cổng thanh toán gửi lại cùng một thông báo nhiều lần, trạng thái đơn và giao dịch chỉ thay đổi ở lần xử lý đầu tiên.
+    \item \textbf{Nhật ký kiểm toán (audit log):} bản ghi lưu người thực hiện, hành động, đối tượng, giá trị cũ, giá trị mới, địa chỉ IP và thời điểm của các thao tác quản trị.
 \end{itemize}
 
 \section{Khảo sát các hệ thống hiện có}
 \label{sec:khaosat_hethong}
 
-\subsection{Nhóm chuỗi văn phòng chia sẻ trong nước}
-Khảo sát thực tế tại thị trường Việt Nam tập trung vào ba đơn vị tiêu biểu có quy mô chuỗi chi nhánh lớn:
+Nhóm khảo sát bốn nhóm giải pháp: các chuỗi co-working trong nước, chuỗi quốc tế có mặt tại Việt Nam, phần mềm quản lý co-working dạng SaaS và cách quản lý thủ công. Các nhận xét dưới đây dựa trên trang web công khai và trải nghiệm đặt chỗ của nhóm tại thời điểm thực hiện đề tài (năm 2026), nên có thể thay đổi theo thời gian.
+
+\subsection{Các chuỗi co-working trong nước}
 \begin{itemize}
-    \item \textbf{CirCO Co-working Space (TP. Hồ Chí Minh):} Là một trong những chuỗi không gian làm việc linh hoạt hàng đầu với hơn 6 chi nhánh tại các quận trung tâm. 
-    \begin{itemize}
-        \item \textit{Quy trình đặt chỗ:} Khách hàng có thể tham khảo bảng giá và hình ảnh chi nhánh trên trang web chính thức, sau đó điền biểu mẫu liên hệ hoặc gọi điện thoại đến tổng đài để nhân viên kinh doanh tư vấn.
-        \item \textit{Điểm mạnh:} Cơ sở vật chất hiện đại, vị trí đắc địa, thương hiệu uy tín với tệp khách hàng doanh nghiệp khởi nghiệp đông đảo.
-        \item \textit{Hạn chế:} Chưa hỗ trợ sơ đồ mặt bằng tương tác thời gian thực; quy trình đặt chỗ chưa được tự động hóa hoàn toàn trên web; việc đặt chỗ theo giờ ngắn hạn vẫn đòi hỏi xác nhận thủ công từ nhân viên lễ tân; chưa có nền tảng số hóa kết nối cộng đồng.
-    \end{itemize}
-    \item \textbf{Toong Coworking Space (Hà Nội, TP.HCM, Vientiane):} Thành lập năm 2015, là chuỗi không gian làm việc quy mô lớn đầu tiên tại Đông Dương với hơn 14 cơ sở. Toong tiên phong đưa nghệ thuật và kiến trúc bản địa vào môi trường công sở hiện đại.
-    \begin{itemize}
-        \item \textit{Quy trình đặt chỗ:} Khách hàng tiếp cận thông tin mặt bằng qua website hoặc nhân viên kinh doanh, chủ yếu ký hợp đồng trọn gói dài hạn theo tháng/năm hoặc dịch vụ văn phòng ảo.
-        \item \textit{Điểm mạnh:} Không gian văn hóa độc đáo, hệ sinh thái đối tác doanh nghiệp lớn, cộng đồng tri thức đa dạng.
-        \item \textit{Hạn chế:} Chưa xây dựng cổng tự động hóa đặt chỗ trực tuyến theo giờ; quy trình giữ chỗ vẫn phụ thuộc vào xử lý thủ công của đội ngũ vận hành; chưa tích hợp thanh toán VietQR Napas tức thời.
-    \end{itemize}
-    \item \textbf{Dreamplex (TP. Hồ Chí Minh):} Tiên phong từ năm 2015 tại TP.HCM, là thương hiệu văn phòng chia sẻ nổi tiếng từng tiếp đón cựu Tổng thống Mỹ Barack Obama năm 2016. Dreamplex định hướng mô hình \textit{Workplace-as-a-Service (WaaS)}, tập trung vào văn hóa gắn kết nhân viên.
-    \begin{itemize}
-        \item \textit{Quy trình đặt chỗ:} Đăng ký thông qua tư vấn viên tại quầy hoặc biểu mẫu trực tuyến trên website, phục vụ các doanh nghiệp từ 10 đến 100 nhân sự.
-        \item \textit{Điểm mạnh:} Dịch vụ chăm sóc khách hàng cao cấp, nhiều sự kiện kết nối thành viên và đào tạo kỹ năng.
-        \item \textit{Hạn chế:} Ứng dụng quản trị chủ yếu phục vụ đăng ký tham gia sự kiện và truyền thông nội bộ; chưa có cơ chế kiểm soát tương tranh đặt chỗ tự động ở tầng dữ liệu và chưa có hệ thống trợ lý ảo AI hỗ trợ giải đáp 24/7.
-    \end{itemize}
-    \item \textbf{Regus / Spaces (Tập đoàn IWG -- Toàn quốc):} Đại diện cho chuỗi văn phòng chia sẻ cao cấp chuẩn quốc tế có mặt tại cả Hà Nội, Đà Nẵng và TP. Hồ Chí Minh.
-    \begin{itemize}
-        \item \textit{Quy trình đặt chỗ:} Hỗ trợ ứng dụng di động và cổng thông tin toàn cầu (MyRegus) cho phép thành viên mua gói dịch vụ (Business Lounge Pass) và đặt phòng họp trực tuyến.
-        \item \textit{Điểm mạnh:} Mạng lưới chi nhánh toàn cầu, hệ thống phần mềm quản trị tập trung mạnh mẽ, chuẩn hóa dịch vụ cao cấp.
-        \item \textit{Hạn chế:} Chi phí thuê rất đắt đỏ, không phù hợp với phân khúc sinh viên, freelancer và startup mới thành lập; phương thức thanh toán chủ yếu yêu cầu thẻ tín dụng quốc tế (Visa/Mastercard), không hỗ trợ các phương thức quét mã QR ngân hàng nội địa VietQR vốn rất phổ biến tại Việt Nam; cấu hình chính sách hủy cứng nhắc.
-    \end{itemize}
-    \item \textbf{WorkFlow Space:} Chuỗi không gian làm việc chia sẻ phân khúc tầm trung hướng tới đối tượng người làm việc tự do và các nhóm học tập.
-    \begin{itemize}
-        \item \textit{Quy trình đặt chỗ:} Chủ yếu tiếp nhận qua Fanpage Facebook, ứng dụng Zalo và đón tiếp khách vãng lai trực tiếp tại quầy lễ tân.
-        \item \textit{Điểm mạnh:} Chi phí hợp lý, không gian thân thiện, thủ tục nhanh chóng.
-        \item \textit{Hạn chế:} Không có hệ thống phần mềm chuyên dụng; quản lý bằng bảng tính Excel dễ dẫn đến sai lệch sổ sách khi đông khách; đối soát thanh toán chuyển khoản thủ công qua ảnh chụp màn hình ngân hàng; nguy cơ trùng lịch phòng họp cao vào các ngày cuối tuần.
-    \end{itemize}
+    \item \textbf{CirCO (TP. Hồ Chí Minh):} chuỗi co-working có nhiều chi nhánh ở các quận trung tâm. Khách xem bảng giá, hình ảnh trên trang web rồi gửi biểu mẫu hoặc gọi điện để được tư vấn. Nhóm chưa thấy sơ đồ chỗ ngồi tương tác, và việc đặt chỗ theo giờ vẫn cần nhân viên xác nhận.
+    \item \textbf{Toong:} chuỗi co-working có cơ sở ở Hà Nội và TP. Hồ Chí Minh, chủ yếu bán gói thuê theo tháng, năm và văn phòng ảo qua nhân viên kinh doanh. Nhóm chưa thấy chức năng đặt chỗ theo giờ và thanh toán trực tuyến trên trang web.
+    \item \textbf{Dreamplex (TP. Hồ Chí Minh):} tập trung vào khách hàng doanh nghiệp và các sự kiện cộng đồng. Việc đăng ký chủ yếu qua tư vấn viên hoặc biểu mẫu trực tuyến.
+    \item \textbf{Các không gian quy mô nhỏ:} nhận đặt chỗ qua Fanpage, Zalo hoặc trực tiếp tại quầy, quản lý bằng bảng tính và đối soát chuyển khoản qua ảnh chụp màn hình.
 \end{itemize}
 
-\begin{figure}[H]
+\subsection{Chuỗi quốc tế có mặt tại Việt Nam}
+\textbf{Regus / Spaces (tập đoàn IWG)} có cơ sở ở Hà Nội, Đà Nẵng và TP. Hồ Chí Minh. Thành viên có thể đặt phòng họp và mua gói dịch vụ qua ứng dụng và cổng thông tin trực tuyến. Hạn chế đối với nhóm khách hàng mục tiêu của đề tài là giá thuê cao và phương thức thanh toán chủ yếu bằng thẻ quốc tế. Hình~\ref{fig:khaosat_trongnuoc} minh họa giao diện đặt chỗ của CirCO và Regus.
+
+\begin{figure}[!htbp]
   \centering
   \begin{subfigure}[b]{0.48\textwidth}
     \centering
     \includegraphics[width=\textwidth,height=5.2cm,keepaspectratio]{circo-booking-system.png}
-    \caption{Giao diện đặt chỗ trực tuyến của CirCO}
+    \caption{Giao diện đặt chỗ của CirCO}
     \label{fig:circo_booking}
   \end{subfigure}
   \hfill
@@ -120,149 +96,122 @@ Khảo sát thực tế tại thị trường Việt Nam tập trung vào ba đ�
     \caption{Giao diện đặt phòng họp của Regus}
     \label{fig:regus_booking}
   \end{subfigure}
-  \caption{Giao diện của một số hệ thống văn phòng chia sẻ trong nước và quốc tế}
+  \caption{Giao diện đặt chỗ của một số chuỗi văn phòng chia sẻ}
   \label{fig:khaosat_trongnuoc}
 \end{figure}
 
-\subsection{Nhóm nền tảng phần mềm quản lý chuyên dụng quốc tế}
-Trên thị trường phần mềm quốc tế, các giải pháp dạng dịch vụ (Software-as-a-Service -- SaaS) chuyên dụng cho co-working space rất phát triển, điển hình như:
+\subsection{Phần mềm quản lý co-working dạng SaaS}
 \begin{itemize}
-    \item \textbf{Nexudus:} Nền tảng quản trị co-working toàn diện nhất hiện nay, cung cấp từ quản lý hội viên, sơ đồ mặt bằng, tích hợp khóa cửa thông minh (Salto, Kisi), đến hệ thống thanh toán và ứng dụng di động cho thành viên.
-    \item \textbf{OfficeRnD:} Nền tảng quản lý không gian làm việc linh hoạt mạnh mẽ, hỗ trợ kết nối với các hệ sinh thái Microsoft Teams, Google Workspace và tích hợp CRM Salesforce.
-    \item \textbf{Cobot:} Giải pháp SaaS tinh gọn tập trung vào quản lý tự động hóa việc tính cước thuê bao và đặt phòng họp cho các không gian làm việc quy mô nhỏ.
+    \item \textbf{Nexudus:} nền tảng quản lý co-working có quản lý thành viên, sơ đồ mặt bằng, thanh toán, ứng dụng di động và tích hợp khóa cửa.
+    \item \textbf{OfficeRnD:} nền tảng quản lý không gian làm việc linh hoạt, tích hợp với các bộ công cụ văn phòng và hệ thống CRM.
+    \item \textbf{Cobot:} phần mềm dành cho không gian nhỏ, tập trung vào thu phí thành viên và đặt phòng họp.
 \end{itemize}
+Các nền tảng này có nhiều chức năng nhưng khó áp dụng cho chuỗi co-working nhỏ tại Việt Nam vì ba lý do: chi phí thuê bao tính theo số thành viên hoặc số chỗ, cổng thanh toán tích hợp sẵn chủ yếu là các cổng quốc tế (chưa hỗ trợ VietQR), và quy trình khó tùy biến cho thói quen thanh toán tiền mặt tại quầy.
 
-\textit{Nhận xét chung về nhóm phần mềm quốc tế:} Mặc dù sở hữu tập tính năng phong phú và kiến trúc hoàn thiện, các giải pháp này bộc lộ những rào cản rất lớn khi áp dụng tại Việt Nam:
-\begin{enumerate}
-    \item \textbf{Chi phí bản quyền quá cao:} Mô hình định giá tính theo số lượng người dùng hoạt động hoặc số lượng bàn (từ 150 USD đến trên 600 USD mỗi tháng cho một cơ sở), vượt quá khả năng tài chính của các đơn vị vận hành co-working vừa và nhỏ tại Việt Nam.
-    \item \textbf{Thiếu hỗ trợ phương thức thanh toán nội địa:} Các nền tảng trên chỉ tích hợp sẵn với Stripe, PayPal hoặc Adyen, hoàn toàn không hỗ trợ thanh toán qua mã chuẩn quốc gia VietQR Napas 24/7 hay các ví điện tử phổ biến tại Việt Nam (MoMo, ZaloPay).
-    \item \textbf{Khó khăn trong việc tùy biến quy trình:} Không hỗ trợ biểu phí hủy linh hoạt phân cấp theo chi nhánh, không có cơ chế xử lý ngoại lệ cho nhân viên lễ tân tại quầy theo thói quen giao dịch tiền mặt của người Việt.
-\end{enumerate}
+\subsection{Quản lý thủ công}
+Nhiều không gian độc lập dùng kết hợp Google Sheets, sổ ghi chép và nhóm chat để quản lý chỗ trống. Cách này rẻ nhưng dễ ghi đè dữ liệu khi nhiều người cùng sửa, không ngăn được đặt trùng khi có khách đặt đột xuất, khó kiểm soát khách ngồi quá giờ và mất nhiều thời gian để tổng hợp doanh thu cuối tháng.
 
-\subsection{Nhóm giải pháp thủ công đang được sử dụng phổ biến}
-Tại nhiều không gian làm việc độc lập quy mô nhỏ tại Việt Nam, quy trình vận hành vẫn dựa trên sự phối hợp giữa:
-\begin{itemize}
-    \item Bảng tính Google Sheets dùng chung giữa các nhân viên trong ca làm việc.
-    \item Sổ ghi chép thông tin khách vãng lai và biên lai thu tiền giấy.
-    \item Kênh chat nhóm Zalo hoặc tin nhắn Fanpage để kiểm tra chéo chỗ trống phòng họp.
-\end{itemize}
-Phương pháp này bộc lộ nhiều rủi ro nghiêm trọng: dễ bị mất mát hoặc ghi đè dữ liệu khi nhiều người cùng mở bảng tính; không có cơ chế ngăn chặn đặt trùng phòng khi có khách đặt đột xuất; không kiểm soát được tình trạng khách ngồi quá giờ quy định; và việc tổng hợp báo cáo tài chính cuối tháng mất nhiều ngày với nguy cơ thất thoát tiền mặt cao.
-
-\section{So sánh và đánh giá các hệ thống khảo sát}
+\section{So sánh các giải pháp}
 \label{sec:sosanh}
 
-Để có cái nhìn tổng quan và khoa học, Bảng \ref{tab:sosanh_hethong} so sánh các giải pháp trên theo bộ tiêu chí vận hành và kỹ thuật thống nhất.
+Bảng~\ref{tab:sosanh_hethong} so sánh các giải pháp theo các tiêu chí liên quan đến bài toán. ``Chưa ghi nhận'' nghĩa là nhóm không tìm thấy chức năng này trong quá trình khảo sát.
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
-\caption{So sánh các hệ thống khảo sát theo bộ tiêu chí vận hành và kỹ thuật}
+\caption{So sánh các giải pháp đã khảo sát}
 \label{tab:sosanh_hethong}
-\small
+\footnotesize
 \renewcommand{\arraystretch}{1.2}
-\begin{tabular}{|p{3.2cm}|c|c|c|c|c|}
+\begin{tabularx}{\linewidth}{|L|P{2.1cm}|P{1.9cm}|P{1.9cm}|P{1.8cm}|P{1.9cm}|}
 \hline
-\textbf{Tiêu chí đánh giá} & \textbf{CirCO/Toong} & \textbf{Regus} & \textbf{Nexudus} & \textbf{Thủ công} & \textbf{CoSpace} \\
+\textbf{Tiêu chí} & \textbf{Chuỗi trong nước} & \textbf{Regus} & \textbf{Nexudus} & \textbf{Thủ công} & \textbf{CoSpace} \\
 \hline
-Sơ đồ mặt bằng tương tác SVG & Chưa có & Chưa có & Có & Không có & \textbf{Có} \\
+Sơ đồ chỗ ngồi tương tác & Chưa ghi nhận & Chưa ghi nhận & Có & Không & Có \\
 \hline
-Đặt chỗ thời gian thực trực tuyến & Một phần & Có & Có & Không có & \textbf{Có} \\
+Đặt chỗ trực tuyến theo giờ & Một phần & Có & Có & Không & Có \\
 \hline
-Chống trùng lịch tự động (khóa) & Thủ công & Tự động & Tự động & Thủ công & \textbf{2 lớp bảo vệ} \\
+Tự động chống đặt trùng & Thủ công & Có & Có & Thủ công & Có (2 lớp) \\
 \hline
-Thanh toán VietQR Napas 24/7 & Không & Không & Không & Thủ công & \textbf{Tự động} \\
+Thanh toán VietQR & Chuyển khoản thủ công & Chưa ghi nhận & Chưa ghi nhận & Thủ công & Có (PayOS) \\
 \hline
-Thanh toán ví điện tử MoMo & Không & Không & Không & Thủ công & \textbf{Có (Sandbox)} \\
+Chính sách hủy tự động & Thủ công & Có & Có & Thủ công & Có, theo chi nhánh \\
 \hline
-Chính sách hủy tự động theo bậc & Thủ công & Cứng nhắc & Có & Thủ công & \textbf{Linh hoạt} \\
+Quản lý nhiều chi nhánh & Một phần & Có & Có & Không & Có \\
 \hline
-Quản lý đa chi nhánh phân cấp & Một phần & Có & Có & Không & \textbf{Phân quyền RBAC} \\
+Gợi ý kết nối thành viên & Chưa ghi nhận & Chưa ghi nhận & Chưa ghi nhận & Không & Có \\
 \hline
-Gợi ý kết nối đối tác thông minh & Không có & Không có & Rất cơ bản & Không có & \textbf{Có (Jaccard)} \\
+Trợ lý ảo & Chưa ghi nhận & Chưa ghi nhận & Chưa ghi nhận & Không & Có (Gemini) \\
 \hline
-Trợ lý ảo AI hội thoại nghiệp vụ & Không có & Không có & Không có & Không có & \textbf{Có (Gemini AI)} \\
-\hline
-Chi phí triển khai và sở hữu & Tự phát triển & Rất cao & Rất cao & Rất thấp & \textbf{Tối ưu (Mở)} \\
-\hline
-\end{tabular}
+\end{tabularx}
 \end{table}
 
-\noindent\textbf{Đánh giá tổng hợp:} 
-Từ bảng so sánh trên, có thể thấy các chuỗi không gian làm việc trong nước hiện nay (như CirCO, Toong, Dreamplex) mới dừng lại ở mức giới thiệu mặt bằng và tiếp nhận yêu cầu đặt chỗ bán tự động, thiếu vắng công cụ tương tác trực quan và phụ thuộc nhiều vào nhân sự. Trong khi đó, các phần mềm quốc tế (như Regus, Nexudus) dù mạnh mẽ về quản lý nhưng lại có chi phí sở hữu quá cao, thiếu sự tương thích với hạ tầng thanh toán số của Việt Nam (VietQR) và hoàn toàn bỏ ngỏ tính năng kết nối đối tác thông minh hay ứng dụng AI hỗ trợ khách hàng. Giải pháp thủ công tuy tiết kiệm ban đầu nhưng tiềm ẩn rủi ro rất lớn về thất thoát và không thể mở rộng chuỗi chi nhánh.
+\noindent\textbf{Nhận xét:} các chuỗi trong nước mới dừng ở mức giới thiệu và nhận yêu cầu đặt chỗ, phụ thuộc nhiều vào nhân viên. Chuỗi quốc tế và phần mềm SaaS có quy trình hoàn chỉnh hơn nhưng chi phí cao và chưa hỗ trợ các cách thanh toán thường dùng ở Việt Nam như VietQR hay tiền mặt tại quầy. Cách quản lý thủ công rẻ nhưng không mở rộng được khi số chi nhánh tăng.
 
-\section{Phân tích khoảng trống và cơ hội}
+\section{Khoảng trống và định hướng giải pháp}
 \label{sec:gap}
 
-Dựa trên kết quả khảo sát và đối sánh hệ thống, nhóm thực hiện đã chỉ ra 5 khoảng trống công nghệ và nghiệp vụ lớn, từ đó định hình các cơ hội phát triển tính năng cốt lõi cho hệ thống CoSpace (Bảng \ref{tab:gap_tinhnang}).
+Từ kết quả khảo sát, nhóm xác định sáu khoảng trống và chức năng tương ứng của CoSpace (Bảng~\ref{tab:gap_tinhnang}).
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
-\caption{Ánh xạ khoảng trống khảo sát sang tính năng đề xuất của hệ thống CoSpace}
+\caption{Khoảng trống khảo sát và chức năng tương ứng của CoSpace}
 \label{tab:gap_tinhnang}
 \small
-\renewcommand{\arraystretch}{1.25}
-\begin{tabular}{|p{0.8cm}|p{6.0cm}|p{7.4cm}|}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{|P{0.8cm}|L|L|}
 \hline
-\textbf{STT} & \textbf{Khoảng trống trong các hệ thống hiện có} & \textbf{Tính năng đề xuất tương ứng trong CoSpace} \\
+\textbf{STT} & \textbf{Khoảng trống} & \textbf{Chức năng đề xuất} \\
 \hline
-1 & Thiếu trải nghiệm sơ đồ mặt bằng trực quan; khách hàng khó chọn đúng vị trí chỗ ngồi mong muốn & Bộ soạn thảo và trình kết xuất sơ đồ mặt bằng đồ họa vector SVG động, hiển thị trạng thái khả dụng theo thời gian thực \\
+1 & Khách khó chọn đúng vị trí mong muốn & Sơ đồ mặt bằng hiển thị tình trạng từng chỗ theo khung giờ; công cụ vẽ sơ đồ cho quản lý chi nhánh \\
 \hline
-2 & Thiếu cơ chế kiểm soát tương tranh mạnh; dễ phát sinh lỗi đặt trùng phòng trong điều kiện nhiều người cùng truy cập & Kiến trúc điều khiển tương tranh hai lớp: Khóa tư vấn \texttt{pg\_advisory\_xact\_lock} ở tầng dịch vụ và ràng buộc loại trừ \texttt{EXCLUDE} ở CSDL \\
+2 & Dễ đặt trùng khi nhiều người đặt cùng lúc & Khóa tư vấn \mt{pg\_advisory\_xact\_lock} ở tầng dịch vụ và ràng buộc \mt{EXCLUDE} ở cơ sở dữ liệu \\
 \hline
-3 & Các giải pháp quốc tế không hỗ trợ hạ tầng thanh toán số nội địa; giải pháp trong nước đối soát chuyển khoản thủ công & Tích hợp cổng PayOS với mã VietQR động tự động điền số tiền và nội dung; xử lý Webhook bất biến đảm bảo an toàn dòng tiền \\
+3 & Đối soát chuyển khoản thủ công & Mã VietQR có sẵn số tiền và nội dung qua PayOS; webhook xác nhận đơn tự động \\
 \hline
-4 & Chính sách hủy phòng cứng nhắc hoặc thiếu minh bạch; nhân viên tính toán số tiền phạt thủ công dễ gây tranh chấp & Bộ máy tự động tính toán phí phạt hủy theo bậc thời gian; ưu tiên chính sách riêng của chi nhánh trước chính sách toàn cục \\
+4 & Chính sách hủy thiếu minh bạch, tính tay & Tính số tiền hoàn theo bậc thời gian; chính sách chi nhánh ưu tiên hơn chính sách chung \\
 \hline
-5 & Không gian làm việc chung bị biến thành ``văn phòng cho thuê bàn ghế điện tử'', thiếu gắn kết thành viên & Module hồ sơ năng lực cá nhân, thuật toán gợi ý đối tác tiềm năng (Jaccard Similarity) và diễn đàn bảng tin cộng đồng \\
+5 & Thiếu gắn kết giữa các thành viên & Hồ sơ năng lực, gợi ý đối tác, lời mời kết nối, bảng tin cộng đồng \\
 \hline
-6 & Người dùng gặp khó khăn trong việc tra cứu chính sách phức tạp và thực hiện nhanh các thao tác đặt chỗ & Trợ lý ảo AI đàm thoại tự nhiên (Google Gemini) tích hợp cơ chế Function Calling có rào chắn xác nhận giao dịch an toàn \\
+6 & Tra cứu chính sách và đặt chỗ còn nhiều bước & Trợ lý ảo Gemini tra cứu dữ liệu thật và đề xuất thao tác, người dùng xác nhận trước khi thực hiện \\
 \hline
-\end{tabular}
+\end{tabularx}
 \end{table}
 
 \section{Đề xuất hệ thống CoSpace}
 \label{sec:dexuat}
 
-\subsection{Ý tưởng và định vị giải pháp}
-Hệ thống \textbf{CoSpace} được định vị là một nền tảng quản trị chuỗi văn phòng chia sẻ thế hệ mới (Next-Generation Co-working Management Platform), kết hợp hài hòa giữa:
-\begin{itemize}
-    \item Sự tiện lợi, hiện đại và chuẩn mực kỹ thuật của các nền tảng quốc tế cao cấp.
-    \item Sự tương thích sâu sắc với thói quen sử dụng và hạ tầng tài chính công nghệ tại Việt Nam (VietQR Napas 24/7, MoMo, hỗ trợ quầy tiền mặt).
-    \item Sự tối ưu hóa chi phí đầu tư hạ tầng thông qua kiến trúc đám mây hiện đại, mã nguồn mở và dễ mở rộng.
-    \item Sự tiên phong trong việc biến không gian vật lý thành một mạng lưới cộng đồng gắn kết thông qua trí tuệ nhân tạo và thuật toán kết nối đối tác.
-\end{itemize}
+\subsection{Định hướng}
+CoSpace là ứng dụng web quản lý chuỗi văn phòng chia sẻ, hướng đến các chuỗi quy mô vừa và nhỏ tại Việt Nam. Hệ thống hỗ trợ cả kênh trực tuyến (đặt chỗ, thanh toán VietQR, ví MoMo) lẫn kênh tại quầy (khách vãng lai, tiền mặt), cho phép mỗi chi nhánh có bảng giá và chính sách riêng, và bổ sung các chức năng cộng đồng.
 
-\subsection{Nhóm người dùng mục tiêu}
-Hệ thống CoSpace tập trung giải quyết trọn vẹn nhu cầu của bốn nhóm người dùng chính:
+\subsection{Nhóm người dùng}
 \begin{enumerate}
-    \item \textbf{Khách hàng cá nhân và doanh nghiệp thuê chỗ:} Cần trải nghiệm tìm kiếm, chọn chỗ trên sơ đồ mặt bằng, đặt chỗ và thanh toán trực tuyến nhanh chóng, tự động nhận mã check-in và mở rộng mạng lưới quan hệ hợp tác kinh doanh.
-    \item \textbf{Nhân viên vận hành trực ban tại chi nhánh:} Cần công cụ bảng điều khiển trực quan để thực hiện check-in/out nhanh cho khách, tạo đơn tại quầy cho khách vãng lai, thu tiền mặt và ghi nhận dịch vụ phát sinh chính xác.
-    \item \textbf{Quản lý chi nhánh:} Cần quyền tự chủ cấu hình mặt bằng, thiết lập giá thuê theo đặc thù cơ sở, cấu hình biểu phí phạt hủy linh hoạt, duyệt hoàn tiền và theo dõi báo cáo tỷ lệ lấp đầy.
-    \item \textbf{Ban giám đốc và Quản trị viên toàn chuỗi:} Cần công cụ quản lý hợp nhất mạng lưới chi nhánh, thiết lập các chính sách chuẩn mực toàn hệ thống, kiểm soát phân quyền nhân sự và giám sát nhật ký kiểm toán nhằm ngăn ngừa gian lận.
+    \item \textbf{Khách hàng:} tìm và chọn chỗ trên sơ đồ, đặt chỗ, thanh toán, nhận mã check-in, kết nối với thành viên khác.
+    \item \textbf{Nhân viên quầy:} check-in, check-out, tạo đơn cho khách vãng lai, thu tiền mặt, ghi nhận dịch vụ phát sinh.
+    \item \textbf{Quản lý chi nhánh:} cấu hình mặt bằng, giá, chính sách hủy, xử lý hoàn tiền và theo dõi báo cáo của chi nhánh.
+    \item \textbf{Quản trị viên hệ thống:} quản lý mạng lưới chi nhánh, chính sách chung, phân quyền và nhật ký kiểm toán.
 \end{enumerate}
 
-\subsection{Các nhóm chức năng chính}
-Hệ thống được thiết kế theo cấu trúc mô-đun hóa cao, bao gồm 8 phân hệ nghiệp vụ cốt lõi:
+\subsection{Các phân hệ chức năng}
+Hệ thống gồm tám phân hệ:
 \begin{itemize}
-    \item \textbf{Phân hệ Quản trị không gian và Sơ đồ mặt bằng (Workspace \& Floorplan Management):} Quản lý cấu trúc phân cấp Chi nhánh -- Tầng -- Không gian; trình chỉnh sửa và kết xuất sơ đồ SVG tương tác.
-    \item \textbf{Phân hệ Đặt chỗ và Quản lý vòng đời (Booking Lifecycle Management):} Tạo đơn trực tuyến/tại quầy, giữ chỗ tạm thời 15 phút, tính toán đơn vị thời gian và kiểm soát trạng thái bằng máy trạng thái hữu hạn (\texttt{BookingStateMachine}).
-    \item \textbf{Phân hệ Thanh toán và Đối soát (Payment \& Reconciliation):} Tích hợp cổng PayOS VietQR, MoMo sandbox, tiền mặt tại quầy; cơ chế Webhook Idempotency bảo vệ dòng tiền.
-    \item \textbf{Phân hệ Hủy đặt chỗ và Hoàn tiền (Cancellation \& Refund):} Bộ quy tắc tính phạt theo phút, ưu tiên chi nhánh trước toàn cục, hàng chờ phê duyệt hoàn tiền minh bạch.
-    \item \textbf{Phân hệ Vận hành quầy và Check-in (Operations \& Check-in):} Check-in/out một chạm bằng mã định danh hoặc mã QR, kiểm tra dung sai 30 phút, quản lý dịch vụ gọi thêm (Running Tab) và quản lý bảo trì không gian.
-    \item \textbf{Phân hệ Thành viên, Ưu đãi và Khuyến mãi (Loyalty \& Promotions):} Quản lý mã giảm giá đa tiêu chí và tự động đánh giá hạng thành viên (Đồng, Bạc, Vàng, Kim Cương) theo tổng chi tiêu thực tế.
-    \item \textbf{Phân hệ Cộng đồng và Gợi ý đối tác (Community \& Partner Matching):} Hồ sơ năng lực thành viên, diễn đàn thảo luận và thuật toán tính độ tương đồng Jaccard đa yếu tố.
-    \item \textbf{Phân hệ Trợ lý ảo thông minh (AI Virtual Assistant):} Tích hợp Google Gemini Flash hỗ trợ đàm thoại giải đáp nghiệp vụ và hỗ trợ tạo đơn thông qua cơ chế Function Calling có xác nhận.
+    \item \textbf{Không gian và sơ đồ mặt bằng:} cấu trúc chi nhánh -- tầng -- không gian; công cụ vẽ sơ đồ và gắn phần tử trên sơ đồ với không gian.
+    \item \textbf{Đặt chỗ và vòng đời đơn:} đặt trực tuyến hoặc tại quầy, giữ chỗ 15 phút, tính số đơn vị thời gian ở máy chủ; mọi chuyển trạng thái đi qua lớp \mt{BookingStateMachine}.
+    \item \textbf{Thanh toán:} PayOS (VietQR), MoMo (sandbox), tiền mặt tại quầy; xử lý webhook lũy đẳng.
+    \item \textbf{Hủy đơn và hoàn tiền:} chính sách nhiều bậc tính theo phút, ưu tiên chính sách chi nhánh; hàng chờ hoàn tiền do quản lý xử lý.
+    \item \textbf{Vận hành quầy:} check-in bằng mã đặt chỗ hoặc QR, ghi nhận dịch vụ phát sinh, gia hạn, phí trả chỗ muộn, lịch bảo trì.
+    \item \textbf{Thành viên và khuyến mãi:} mã giảm giá, voucher cá nhân, bốn hạng thành viên (Bronze, Silver, Gold, Platinum) xét theo chi tiêu thực tế.
+    \item \textbf{Cộng đồng và gợi ý đối tác:} hồ sơ năng lực, bảng tin, gợi ý đối tác dựa trên hệ số Jaccard, lời mời kết nối.
+    \item \textbf{Trợ lý ảo:} Google Gemini với cơ chế gọi hàm để tra cứu dữ liệu và đề xuất đặt chỗ, hủy chỗ, gọi thêm dịch vụ.
 \end{itemize}
 
-\section{Các bài toán kỹ thuật trọng tâm}
+\section{Các bài toán kỹ thuật chính}
 \label{sec:baitoan_kythuat}
 
-Để hiện thực hóa thành công hệ thống CoSpace, nhóm phát triển phải đối mặt và giải quyết sáu bài toán kỹ thuật then chốt:
-
 \begin{enumerate}
-    \item \textbf{Bài toán trực quan hóa và tương tác với sơ đồ mặt bằng SVG:} Xây dựng một trình hiển thị đồ họa vector hai chiều (2D SVG Viewer) có khả năng co giãn đa thiết bị, cho phép ánh xạ tọa độ không gian làm việc với trạng thái cơ sở dữ liệu thời gian thực mà không làm giảm tốc độ kết xuất trang.
-    \item \textbf{Bài toán kiểm soát tương tranh thời gian thực (Real-time Concurrency Control):} Ngăn chặn hiện tượng xung đột đặt trùng chỗ (Double Booking) khi nhiều người dùng cùng chọn một bàn trong cùng một khoảng thời gian ngắn mà không làm giảm thông lượng phục vụ của hệ thống.
-    \item \textbf{Bài toán thanh toán tự động và xử lý Webhook bất biến (Idempotent Payment):} Thiết kế quy trình tiếp nhận thông báo biến động số dư từ cổng thanh toán VietQR đảm bảo an toàn giao dịch, loại trừ rủi ro cộng tiền lặp lại khi nhận Webhook nhiều lần hoặc cập nhật đơn khi đã hết hạn thanh toán (Late Webhook).
-    \item \textbf{Bài toán tính toán chính sách hủy linh hoạt phân cấp:} Xây dựng thuật toán so khớp bậc thời gian tính bằng phút, cho phép áp dụng linh hoạt chính sách riêng của từng chi nhánh hoặc kế thừa chính sách chung của toàn chuỗi một cách tự động và minh bạch.
-    \item \textbf{Bài toán thuật toán so khớp đối tác tối ưu (Partner Matching Engine):} Thiết kế độ đo tương đồng kết hợp giữa hệ số Jaccard trên tập hợp kỹ năng, sở thích và khoảng cách địa lý tại chi nhánh để đề xuất đối tác chính xác, phản hồi nhanh dưới 100ms.
-    \item \textbf{Bài toán tích hợp Trợ lý ảo AI có kiểm soát an toàn (Guarded AI Assistant):} Ứng dụng mô hình ngôn ngữ lớn để hỗ trợ người dùng bằng ngôn ngữ tự nhiên, đồng thời thiết lập rào chắn xác nhận hai bước (Confirmation Barrier) đối với các hành động gọi hàm làm thay đổi dữ liệu cơ sở dữ liệu.
+    \item \textbf{Hiển thị và chỉnh sửa sơ đồ mặt bằng:} lưu bố cục tầng, vẽ lại trên trình duyệt ở mọi kích thước màn hình và gắn từng phần tử với một không gian trong cơ sở dữ liệu để tô màu theo tình trạng.
+    \item \textbf{Chống đặt trùng khi có yêu cầu đồng thời:} không để hai đơn đang hiệu lực giao nhau trên cùng một không gian.
+    \item \textbf{Xử lý thanh toán tự động:} kiểm tra chữ ký webhook, không ghi nhận lặp, xử lý tiền về sau khi đơn đã hết hạn giữ chỗ và trường hợp khách trả hai lần.
+    \item \textbf{Chính sách hủy theo chi nhánh:} chọn đúng bậc chính sách theo phút, ưu tiên chính sách của chi nhánh và bảo đảm tiền hoàn cộng phí phạt bằng tổng tiền đơn.
+    \item \textbf{Gợi ý đối tác:} tính điểm tương đồng từ kỹ năng, sở thích và chủ đề bài viết, cộng điểm khi cùng chi nhánh.
+    \item \textbf{Trợ lý ảo có kiểm soát:} cho mô hình ngôn ngữ gọi các hàm tra cứu, nhưng mọi thao tác ghi dữ liệu phải qua bước xác nhận của người dùng.
 \end{enumerate}

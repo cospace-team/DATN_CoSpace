@@ -1,129 +1,150 @@
-\chapter{Tổng kết và Hướng phát triển}
+\chapter{Tổng kết và hướng phát triển}
 \label{ch:tong-ket-va-huong-phat-trien}
-
-Chương này tổng kết các kết quả đạt được, đánh giá ưu điểm và hạn chế, đồng thời đề xuất hướng phát triển cho hệ thống CoSpace.
 
 \section{Kết quả đạt được}
 \label{sec:tk-ket-qua}
 
-Sau 15 tuần nghiên cứu và phát triển, đề tài đã hoàn thành các mục tiêu đề ra. Hệ thống CoSpace cung cấp nền tảng quản lý chuỗi văn phòng chia sẻ đa chi nhánh, tự động hóa thanh toán trực tuyến và hỗ trợ kết nối cộng đồng thành viên.
+Nhóm đã xây dựng hệ thống CoSpace gồm ứng dụng web React, máy chủ Spring Boot và cơ sở dữ liệu PostgreSQL trên Supabase, phục vụ bốn nhóm người dùng: khách hàng, nhân viên, quản lý chi nhánh và quản trị viên hệ thống. Bảng~\ref{tab:tk-so-lieu} tóm tắt quy mô sản phẩm; các số liệu được đếm trực tiếp từ mã nguồn.
 
-Bảng~\ref{tab:kl_solieu} tổng hợp các số liệu kỹ thuật của sản phẩm.
-
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
-\caption{Số liệu tổng hợp quy mô kỹ thuật hệ thống CoSpace}
-\label{tab:kl_solieu}
+\caption{Quy mô sản phẩm}
+\label{tab:tk-so-lieu}
 \small
-\renewcommand{\arraystretch}{1.25}
-\begin{tabular}{|p{7.2cm}|p{6.8cm}|}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{|L|P{3.2cm}|}
 \hline
-\textbf{Hạng mục} & \textbf{Kết quả} \\
+\textbf{Hạng mục} & \textbf{Số lượng} \\
 \hline
-Vai trò người dùng & 4 vai trò (Customer, Staff, Branch Admin, Admin); 33 trang giao diện \\
+Yêu cầu chức năng được đặc tả (Chương~\ref{ch:yeucau}) & 34 \\
 \hline
-API Back-end & 26 Controllers; 133 API endpoints RESTful \\
+Bảng dữ liệu (sau migration Flyway \mt{V1}--\mt{V3}) & 32 \\
 \hline
-Cơ sở dữ liệu & 30 bảng quan hệ, chỉ mục GiST và B-tree \\
+Controller REST phía máy chủ & 28 \\
 \hline
-Chống đặt trùng lịch & 2 tầng: \texttt{pg\_advisory\_xact\_lock} + \texttt{EXCLUDE USING gist} \\
+Điểm cuối API & 153 \\
 \hline
-Thanh toán & PayOS VietQR Napas 24/7, MoMo Sandbox, Tiền mặt \\
+Trang chức năng trên giao diện (theo bốn vai trò và trang công khai) & 31 \\
 \hline
-Trợ lý ảo AI & Google Gemini 1.5 Flash, 9 Function Tools \\
+Ca kiểm thử tự động phía máy chủ & 307 (306 đạt, 1 bỏ qua) \\
 \hline
-Kiểm thử tự động & 307 ca / 24 lớp, 0 thất bại (100\% pass) \\
+Ca kiểm thử ràng buộc trên PostgreSQL & 17 (17 đạt) \\
 \hline
-Gói Front-end & 193.0 kB Gzip (chia nhỏ manualChunks Vite) \\
-\hline
-Docker image Back-end & 215 MB (Multi-stage build, Alpine Linux) \\
-\hline
-\end{tabular}
+\end{tabularx}
 \end{table}
 
-Bảng~\ref{tab:kl_muctieu} đối chiếu các mục tiêu đề ra với kết quả thực tế.
+Bảng~\ref{tab:tk-muc-tieu} đối chiếu kết quả với các mục tiêu đã đặt ra ở Mục~\ref{sec:muctieu}.
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
-\caption{Đối chiếu mục tiêu đề tài với kết quả đạt được}
-\label{tab:kl_muctieu}
-\small
-\renewcommand{\arraystretch}{1.22}
-\begin{tabular}{|p{1.4cm}|p{4.0cm}|p{6.8cm}|c|}
+\caption{Đối chiếu kết quả với mục tiêu}
+\label{tab:tk-muc-tieu}
+\footnotesize
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{|P{3.6cm}|L|P{1.9cm}|}
 \hline
-\textbf{Nhóm} & \textbf{Mục tiêu} & \textbf{Kết quả đạt được} & \textbf{Đánh giá} \\
+\textbf{Mục tiêu} & \textbf{Kết quả} & \textbf{Mức độ} \\
 \hline
-Nghiệp vụ & 1. Số hóa vòng đời đặt chỗ & Tra cứu mặt bằng SVG, giữ chỗ 15 phút, thanh toán VietQR, nhận QR Pass. & Đạt \\
-\cline{2-4}
- & 2. Quản lý chuỗi đa chi nhánh & Phân cấp Tòa nhà -- Tầng -- Không gian; phân quyền 4 vai trò; bảng giá riêng từng cơ sở. & Đạt \\
-\cline{2-4}
- & 3. Tự động hóa chính sách hủy & Tính phí phạt và hoàn tiền tự động theo bậc thời gian $[min, max)$. & Đạt \\
-\cline{2-4}
- & 4. Tối ưu vận hành quầy & Check-in dung sai $\pm 30$ phút; tạo đơn tại quầy; Running Tab. & Đạt \\
-\cline{2-4}
- & 5. Kết nối cộng đồng & Hồ sơ năng lực; gợi ý đối tác Jaccard có trọng số; tóm tắt bằng Gemini AI. & Đạt \\
-\cline{2-4}
- & 6. Báo cáo quản trị & Dashboard doanh thu, tỷ lệ lấp đầy, so sánh hiệu quả giữa các chi nhánh. & Đạt \\
+\multicolumn{3}{|l|}{\textit{Mục tiêu nghiệp vụ}} \\
 \hline
-Kỹ thuật & 7. Kiến trúc phân tầng & 3 tầng: React Front-end, Spring Boot Back-end, PostgreSQL; tách biệt DTO. & Đạt \\
-\cline{2-4}
- & 8. Chống đặt trùng tương tranh & \texttt{pg\_advisory\_xact\_lock} + \texttt{EXCLUDE USING gist}. & Đạt \\
-\cline{2-4}
- & 9. Thanh toán an toàn & Xác thực HMAC-SHA256; Idempotency; xử lý Ghost Payment. & Đạt \\
-\cline{2-4}
- & 10. Phân quyền và cô lập dữ liệu & JWT kép (Supabase + nội bộ HS384); \texttt{BranchAccessGuard} chống IDOR. & Đạt \\
-\cline{2-4}
- & 11. AI có kiểm soát an toàn & Gemini 1.5 Flash; thẻ đề xuất Proposal Card bắt buộc xác nhận trước ghi dữ liệu. & Đạt \\
-\cline{2-4}
- & 12. Triển khai đám mây & Docker Multi-stage (215MB); Vercel, Render, Supabase; CI/CD GitHub Actions. & Đạt \\
+Số hóa quy trình đặt chỗ & Tìm chỗ trên sơ đồ tầng, giữ chỗ 15 phút, thanh toán VietQR (PayOS) hoặc MoMo, nhận mã đặt chỗ và mã QR để check-in & Đạt \\
 \hline
-\end{tabular}
+Quản lý nhiều chi nhánh & Phân cấp chi nhánh -- tầng -- không gian; bảng giá, dịch vụ, chính sách hủy riêng cho chi nhánh; dữ liệu mẫu 3 chi nhánh, 9 tầng & Đạt \\
+\hline
+Tự động hóa hủy và hoàn tiền & Tính tiền hoàn theo bậc chính sách, giải phóng chỗ ngay khi hủy; việc trả tiền cho khách vẫn làm thủ công rồi đánh dấu trên hệ thống, hoặc hoàn bằng voucher & Đạt một phần \\
+\hline
+Hỗ trợ vận hành quầy & Đơn tại quầy, thu tiền mặt, check-in, check-out, dịch vụ phát sinh, gia hạn, phí trả chỗ muộn & Đạt \\
+\hline
+Kết nối cộng đồng & Hồ sơ năng lực, gợi ý đối tác theo độ tương đồng Jaccard, lời mời kết nối, bảng tin có thẻ chủ đề & Đạt \\
+\hline
+Báo cáo quản trị & Doanh thu, số đơn, tỷ lệ hủy, so sánh chi nhánh, xuất tệp & Đạt \\
+\hline
+\multicolumn{3}{|l|}{\textit{Mục tiêu kỹ thuật}} \\
+\hline
+Kiến trúc phân tầng & Controller -- service -- repository phía máy chủ; giao diện tổ chức theo vai trò & Đạt \\
+\hline
+Chống đặt trùng lịch & Khóa tư vấn \mt{pg\_advisory\_xact\_lock} và ràng buộc \mt{EXCLUDE USING gist}; đã kiểm thử ở mức đơn vị và trên PostgreSQL, chưa kiểm thử tải đồng thời qua API & Đạt \\
+\hline
+Xử lý webhook thanh toán & Kiểm tra chữ ký, bỏ qua webhook lặp, xử lý thanh toán muộn và thanh toán trùng. Khóa MoMo đang là khóa sandbox & Đạt một phần \\
+\hline
+Bảo mật và phân quyền & Hai loại JWT, phân quyền theo vai trò, \mt{BranchAccessGuard}; còn các điểm tồn đọng ở Mục~\ref{sec:tk-han-che} & Đạt một phần \\
+\hline
+Trợ lý ảo có kiểm soát & 9 công cụ gọi hàm, thao tác ghi dữ liệu phải qua bước xác nhận & Đạt \\
+\hline
+Triển khai đám mây & Máy chủ đóng gói Docker chạy trên Render, giao diện trên Vercel, cơ sở dữ liệu trên Supabase & Đạt \\
+\hline
+\end{tabularx}
 \end{table}
 
-\section{Ưu điểm nổi bật}
-\label{sec:tk-uu-diem}
-
-\begin{enumerate}
-    \item \textbf{Kiểm soát tương tranh hai tầng:} Kết hợp \texttt{pg\_advisory\_xact\_lock} (tuần tự hóa yêu cầu, giới hạn 3 đơn chờ) với ràng buộc \texttt{EXCLUDE USING gist} ở tầng CSDL, loại bỏ hoàn toàn nguy cơ đặt trùng lịch (Double Booking) ngay cả khi nhiều yêu cầu đồng thời.
-    \item \textbf{Thanh toán VietQR tự động, an toàn lỗi:} Tạo mã QR động theo đơn hàng, đối soát chữ ký HMAC-SHA256, đảm bảo Idempotency và xử lý Ghost Payment (chuyển tiền muộn sau khi đơn bị hủy).
-    \item \textbf{Trợ lý AI có kiểm soát (Proposal-Confirmation):} Gemini 1.5 Flash chỉ sinh thẻ đề xuất cho các thao tác ghi dữ liệu, buộc người dùng xác nhận trước khi thực thi, ngăn ngừa AI thay đổi dữ liệu trái phép.
-    \item \textbf{Trải nghiệm người dùng trực quan:} Sơ đồ mặt bằng SVG tương tác hiển thị trạng thái chỗ ngồi thời gian thực; check-in dung sai $\pm 30$ phút; quản lý dịch vụ phát sinh Running Tab.
-    \item \textbf{Hiệu năng và triển khai tối ưu:} Docker Multi-stage build (215MB), gói Front-end Gzip 193kB trên Vercel Edge CDN; thời gian tải trang và độ trễ API đáp ứng yêu cầu phi chức năng.
-    \item \textbf{307 ca kiểm thử tự động:} Bao phủ các luồng nghiệp vụ quan trọng, hỗ trợ phát hiện lỗi hồi quy khi nâng cấp mã nguồn.
-\end{enumerate}
+Các phần kỹ thuật đã hiện thực và có kiểm thử đi kèm:
+\begin{itemize}
+    \item \textbf{Chống đặt trùng hai lớp:} khóa tư vấn làm các giao dịch đặt cùng một chỗ chạy lần lượt; ràng buộc loại trừ trong cơ sở dữ liệu là lớp chặn cuối cùng. Luồng tạo lịch bảo trì dùng chung khóa với luồng đặt chỗ.
+    \item \textbf{Tính toán phía máy chủ:} giá, số đơn vị thời gian, chi nhánh của đơn và tiền dịch vụ đều do máy chủ tính; giao diện chỉ hiển thị báo giá lấy từ API.
+    \item \textbf{Máy trạng thái đơn đặt chỗ:} mọi chuyển trạng thái đi qua \mt{BookingStateMachine}; các luồng hủy, check-in và tác vụ định kỳ đều khóa bản ghi và kiểm tra lại trạng thái trước khi ghi.
+    \item \textbf{Xử lý thanh toán lặp và muộn:} webhook đến lần hai không được xử lý lại; tiền về sau khi đơn hết hạn hoặc bị hủy được đưa vào hàng chờ hoàn tiền thay vì làm sống lại đơn.
+    \item \textbf{Phân quyền đọc lại từ cơ sở dữ liệu:} vai trò và trạng thái tài khoản được nạp lại ở mỗi yêu cầu, nên tài khoản bị khóa mất quyền truy cập ngay.
+    \item \textbf{Lược đồ quản lý bằng Flyway:} một cơ sở dữ liệu trống dựng được bằng ba migration \mt{V1}--\mt{V3}.
+\end{itemize}
 
 \section{Hạn chế}
 \label{sec:tk-han-che}
 
+Hệ thống còn các hạn chế sau. Một số mục đã được ghi trong tài liệu rà soát logic của nhóm và chưa được khắc phục.
+
+\subsection{Bảo mật}
 \begin{enumerate}
-    \item \textbf{Kiểm thử tích hợp chưa dùng CSDL thật:} 307 ca kiểm thử chạy trên Mockito và CSDL giả lập trong bộ nhớ. Các kịch bản SQL đã kiểm tra riêng trên PostgreSQL thật, nhưng chưa tích hợp Testcontainers vào quy trình CI/CD.
-    \item \textbf{Hoàn tiền còn bước thủ công:} Hệ thống tự động tính phí phạt và ghi nhận số tiền hoàn, nhưng việc chuyển khoản hoàn tiền vẫn cần Quản lý chi nhánh phê duyệt thủ công.
-    \item \textbf{Tác vụ định kỳ đơn phiên bản:} \texttt{BookingExpiryScheduler} và bộ nhớ đệm hoạt động trong bộ nhớ máy chủ. Khi mở rộng nhiều phiên bản (Horizontal Scaling) cần bổ sung khóa phân tán (Distributed Lock).
-    \item \textbf{Chưa có ứng dụng di động và IoT:} Hệ thống hoạt động trên nền Web Responsive, chưa xây dựng Native Mobile App và chưa tích hợp khóa cửa điện tử IoT.
+    \item Khóa bí mật MoMo trong \mt{application.yml} là khóa sandbox công khai và chưa có cơ chế chặn khi chạy ở môi trường production (PayOS đã có \mt{PayosProductionGuard}, MoMo chưa có). Với cấu hình này, người biết khóa có thể giả mạo thông báo thanh toán MoMo.
+    \item Token truy cập và token làm mới được lưu trong \mt{localStorage}; chưa có cơ chế thu hồi token, nên khi đăng xuất token cũ vẫn dùng được đến khi hết hạn (tài khoản bị khóa thì bị chặn ngay vì trạng thái được đọc lại từ cơ sở dữ liệu).
+    \item API tạo chính sách hủy nhận trực tiếp đối tượng thực thể từ yêu cầu (mass assignment), nên quản lý chi nhánh có thể gửi \mt{id} của một chính sách khác và ghi đè nó.
+    \item Nhân viên và quản lý chi nhánh xem được danh sách người dùng của mọi chi nhánh.
+    \item Chưa có giới hạn tần suất yêu cầu (rate limiting) cho các API đăng nhập và trợ lý ảo.
+    \item Quy tắc cho phép truy cập \mt{/h2-console/**} vẫn còn trong cấu hình bảo mật dù dự án không dùng H2.
+\end{enumerate}
+
+\subsection{Nghiệp vụ}
+\begin{enumerate}
+    \item Chính sách hủy chưa lọc theo loại không gian (\mt{workspace\_type\_id}) và thời gian hiệu lực (\mt{effective\_from}, \mt{effective\_to}) dù các cột này có trong bảng. Các dòng chính sách kiểu cũ (\mt{HOURS\_BEFORE\_START}) vẫn hiển thị ở màn hình quản trị nhưng không được dùng khi tính tiền hoàn.
+    \item Hoàn tiền chưa tích hợp với cổng thanh toán: quản lý chi nhánh chuyển tiền cho khách ngoài hệ thống rồi đánh dấu đã xử lý.
+    \item Màn hình đặt chỗ tại quầy có hiển thị các lựa chọn MoMo và thẻ, nhưng hệ thống chỉ ghi nhận thanh toán tiền mặt cho đơn tại quầy.
+    \item Nhật ký kiểm toán chưa ghi các thao tác đổi vai trò người dùng, xác nhận thu tiền mặt và check-in. Bảng \mt{payment\_events} có trong lược đồ nhưng chưa được sử dụng.
+\end{enumerate}
+
+\subsection{Kỹ thuật và vận hành}
+\begin{enumerate}
+    \item Hai cột \mt{svg\_content} và \mt{layout\_json} của bảng \mt{floors} có trong cơ sở dữ liệu đang chạy nhưng chưa có trong migration \mt{V1\_\_baseline.sql}; một cơ sở dữ liệu mới dựng hoàn toàn bằng Flyway sẽ thiếu hai cột này và chức năng sơ đồ tầng sẽ lỗi.
+    \item Các tác vụ định kỳ (hết hạn đơn mỗi 30 giây, cập nhật vòng đời đơn mỗi 5 phút) chỉ chạy đúng khi có một phiên bản máy chủ; chưa có khóa phân tán kiểu ShedLock để chạy nhiều phiên bản.
+    \item Bộ nhớ đệm Caffeine nằm trong bộ nhớ của từng phiên bản máy chủ, không chia sẻ giữa các phiên bản.
+    \item Máy chủ chạy ở gói miễn phí của Render nên bị tạm dừng khi không có truy cập; yêu cầu đầu tiên sau đó phải chờ máy chủ khởi động lại.
+    \item Chưa có quy trình CI tự động chạy kiểm thử; chưa có kiểm thử tích hợp với PostgreSQL thật, kiểm thử tải đồng thời qua API và kiểm thử tự động cho giao diện (Mục~\ref{sec:kt-danh-gia-chung}).
 \end{enumerate}
 
 \section{Hướng phát triển}
 \label{sec:tk-huong-phat-trien}
 
 \subsection{Ngắn hạn}
-
-\begin{itemize}
-    \item \textbf{Testcontainers và kiểm thử E2E:} Tích hợp PostgreSQL thật qua Testcontainers trong CI/CD; bổ sung kiểm thử giao diện tự động bằng Playwright.
-    \item \textbf{Redis và ShedLock:} Thay bộ nhớ đệm nội bộ bằng Redis Cluster; dùng ShedLock đồng bộ tác vụ định kỳ khi mở rộng đa phiên bản.
-    \item \textbf{Rate Limiting:} Tích hợp Bucket4j + Redis Token Bucket cho các API nhạy cảm (đăng nhập, thanh toán, Gemini AI).
-    \item \textbf{Bảo mật phiên:} Chuyển Access Token từ \texttt{localStorage} sang Cookie \texttt{HttpOnly}, \texttt{Secure}, \texttt{SameSite=Strict} để chống XSS.
-\end{itemize}
+Các việc sau khắc phục trực tiếp những hạn chế ở Mục~\ref{sec:tk-han-che}:
+\begin{enumerate}
+    \item Đưa khóa MoMo ra biến môi trường và thêm cơ chế chặn khởi động tương tự \mt{PayosProductionGuard} khi production dùng khóa sandbox.
+    \item Thêm migration \mt{V4} bổ sung hai cột còn thiếu của bảng \mt{floors}, và một bước kiểm tra tự động đối chiếu lược đồ Flyway với các lớp thực thể.
+    \item Dùng DTO riêng cho API tạo và sửa chính sách hủy; giới hạn danh sách người dùng theo chi nhánh của người gọi; bổ sung lọc theo loại không gian và thời gian hiệu lực của chính sách.
+    \item Xóa quy tắc \mt{/h2-console/**} và bật lại ca kiểm thử \mt{h2ConsoleIsNotPublic}.
+    \item Thiết lập CI (ví dụ GitHub Actions) chạy \mt{mvn test} và build giao diện cho mỗi thay đổi; thêm kiểm thử tích hợp dùng Testcontainers với PostgreSQL, trong đó có kiểm thử nhiều luồng đặt cùng một chỗ.
+    \item Ghi nhật ký kiểm toán cho thao tác đổi vai trò, thu tiền mặt và check-in.
+\end{enumerate}
 
 \subsection{Dài hạn}
-
-\begin{itemize}
-    \item \textbf{Ứng dụng di động:} Phát triển app iOS/Android bằng React Native hoặc Flutter; hỗ trợ Push Notification, quét QR và đăng nhập sinh trắc học.
-    \item \textbf{Tích hợp IoT:} Kết nối khóa cửa thông minh và cảm biến hiện diện qua MQTT; tự động sinh mã PIN/QR mở cửa theo khung giờ đặt chỗ.
-    \item \textbf{Multi-Tenancy SaaS:} Nâng cấp kiến trúc để nhiều doanh nghiệp văn phòng chia sẻ độc lập cùng sử dụng trên một hạ tầng tập trung.
-    \item \textbf{Gợi ý đối tác bằng Vector Embeddings:} Dùng mô hình nhúng ngữ nghĩa kết hợp \texttt{pgvector} để phân tích hồ sơ chuyên sâu hơn thuật toán Jaccard hiện tại.
-\end{itemize}
+\begin{enumerate}
+    \item \textbf{Bảo mật phiên đăng nhập:} chuyển token làm mới sang cookie \mt{HttpOnly}, thêm danh sách thu hồi token và giới hạn tần suất yêu cầu.
+    \item \textbf{Chạy nhiều phiên bản máy chủ:} dùng ShedLock hoặc khóa trên PostgreSQL cho tác vụ định kỳ; chuyển bộ nhớ đệm dùng chung sang Redis.
+    \item \textbf{Hoàn tiền tự động:} tích hợp API hoàn tiền của cổng thanh toán thay cho bước chuyển khoản thủ công.
+    \item \textbf{Ứng dụng di động} cho khách hàng và cho nhân viên quét mã check-in.
+    \item \textbf{Thiết bị tại chỗ:} kết nối khóa cửa hoặc cảm biến để tự động check-in và ghi nhận tình trạng sử dụng chỗ.
+    \item \textbf{Cải thiện gợi ý đối tác:} thử nghiệm biểu diễn hồ sơ bằng vector nhúng (ví dụ lưu bằng pgvector) và so sánh với cách tính Jaccard hiện tại.
+\end{enumerate}
 
 \section{Kết luận}
-\label{sec:tk-ket-luan-chung}
+\label{sec:tk-ket-luan}
 
-Đề tài đã hoàn thành tất cả 12 mục tiêu nghiệp vụ và kỹ thuật đề ra. Hệ thống CoSpace vận hành ổn định trên nền tảng đám mây, giải quyết được các bài toán cốt lõi: kiểm soát tương tranh đặt chỗ, thanh toán trực tuyến an toàn, và kết nối cộng đồng thành viên. Quá trình thực hiện đồ án đã giúp nhóm tích lũy kinh nghiệm thực tế về thiết kế kiến trúc phần mềm, kiểm thử tự động và quy trình phát triển Agile -- là nền tảng để tiếp tục phát triển sản phẩm trong tương lai.
+Đồ án đã xây dựng được một hệ thống quản lý văn phòng chia sẻ nhiều chi nhánh chạy được trên môi trường đám mây, bao phủ các luồng chính: đặt chỗ, thanh toán trực tuyến, hủy và hoàn tiền, vận hành tại quầy, kết nối cộng đồng và báo cáo. Các quy tắc nghiệp vụ chính, nhất là chống đặt trùng lịch và xử lý webhook thanh toán, được kiểm thử bằng các ca tự động ở mức đơn vị và trên cơ sở dữ liệu.
+
+Hệ thống chưa sẵn sàng cho vận hành thương mại: cần xử lý các điểm bảo mật tồn đọng (đặc biệt là cấu hình MoMo), bổ sung migration còn thiếu, kiểm thử tích hợp và CI trước khi đưa vào sử dụng thật. Qua đồ án, nhóm có thêm kinh nghiệm về thiết kế cơ sở dữ liệu có ràng buộc toàn vẹn, xử lý tương tranh, tích hợp cổng thanh toán và rà soát lỗi logic trong một hệ thống có nhiều vai trò người dùng.
