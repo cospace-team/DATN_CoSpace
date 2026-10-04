@@ -517,6 +517,11 @@ a, button, input, select, textarea, label, summary, [role="button"], [role="tab"
 .btn-primary:hover:not(:disabled) { filter: brightness(1.1); }
 .btn-secondary { background: hsl(var(--card)); color: hsl(var(--foreground)); border: 1px solid hsl(var(--border)); }
 .btn-secondary:hover:not(:disabled) { background: hsl(var(--muted)); border-color: hsl(var(--primary)); }
+/* Used across the app (extend, export, filters…) but was never defined, so those buttons rendered as bare text.
+   Only the frame is set (it has to beat .btn's border:none); text colour and the hover background are left
+   to the utilities on each button. */
+.btn-outline { border: 1px solid hsl(var(--border)); }
+:where(.btn-outline:hover:not(:disabled)) { background: hsl(var(--muted)); }
 .btn-danger { background: hsl(var(--destructive)); color: hsl(var(--destructive-foreground)); }
 .btn-danger:hover:not(:disabled) { opacity: 0.9; }
 .btn-ghost { background: transparent; color: hsl(var(--muted-foreground)); }

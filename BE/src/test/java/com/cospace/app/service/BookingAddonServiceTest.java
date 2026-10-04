@@ -317,4 +317,20 @@ class BookingAddonServiceTest {
         assertThat(b.getEndAt()).isEqualTo(start.plusHours(2));
         assertThat(b.getTotalAmount()).isEqualTo(100_000L);
     }
+
+    @Test
+    void lineTotalsSplitExtraHoursAndLateFeesFromServicesAndCountWhatIsOwed() {
+        UUID paid = UUID.randomUUID();
+        UUID untouched = UUID.randomUUID();
+        when(itemRepository.sumLiveLinesByBookings(List.of(paid, untouched))).thenReturn(List.of(
+                new Object[]{paid, BookingServiceItem.LINE_SERVICE, BookingServiceItem.STATUS_PAID, 1L, 45_000L},
+                new Object[]{paid, BookingServiceItem.LINE_EXTENSION, BookingServiceItem.STATUS_UNPAID, 1L, 30_000L},
+                new Object[]{paid, BookingServiceItem.LINE_EXTENSION, BookingServiceItem.STATUS_PAID, 2L, 60_000L},
+                new Object[]{paid, BookingServiceItem.LINE_LATE_FEE, BookingServiceItem.STATUS_UNPAID, 1L, 45_000L}));
+
+        var totals = addonService.lineTotals(List.of(paid, untouched));
+
+        assertThat(totals).doesNotContainKey(untouched);
+        assertThat(totals.get(paid)).isEqualTo(new BookingAddonService.LineTotals(75_000L, 90_000L, 3, 45_000L));
+    }
 }

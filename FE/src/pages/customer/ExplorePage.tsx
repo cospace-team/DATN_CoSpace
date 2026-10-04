@@ -46,7 +46,7 @@ import { addonApi, type ExtraServiceDto } from "../../api/addonApi";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
 
-import { ExploreFilters, type ExploreFilter } from "./explore/ExploreFilters";
+import { ExploreFilters, fitSlotToHours, type ExploreFilter } from "./explore/ExploreFilters";
 import { ExploreResults } from "./explore/ExploreResults";
 import { serviceLimitApi, type ServiceAvailabilityDto } from "../../api/addonApi";
 import {
@@ -288,11 +288,16 @@ const ExplorePage: React.FC = () => {
     [apiBranches, selectedBranch],
   );
 
-  // Keep the selected hour inside the branch's opening hours.
+  // Keep the selected slot inside the branch's opening hours and out of the past: hours already
+  // gone today are skipped, and once the branch has closed for today the slot moves to tomorrow.
   useEffect(() => {
-    if (selectedHour < openHour) setSelectedHour(openHour);
-    else if (selectedHour >= closeHour) setSelectedHour(Math.max(openHour, closeHour - 1));
-  }, [openHour, closeHour]);
+    const slot = { date: selectedDate, startHour: selectedHour, endHour: filterEndHour };
+    const fitted = fitSlotToHours(slot, openHour, closeHour);
+    if (fitted === slot) return;
+    if (fitted.date !== selectedDate) setSelectedDate(fitted.date);
+    if (fitted.startHour !== selectedHour) setSelectedHour(fitted.startHour);
+    if (fitted.endHour !== filterEndHour) setFilterEndHour(fitted.endHour);
+  }, [openHour, closeHour, selectedDate, selectedHour]);
 
   // Real prices and extra services of the selected branch.
   useEffect(() => {
@@ -770,7 +775,8 @@ const ExplorePage: React.FC = () => {
       setSelectedBranch(next.branchId);
       setSelectedFloor("");
     }
-    setDraft(next);
+    const hours = branchHourRange(apiBranches.find((b) => b.id === next.branchId));
+    setDraft(fitSlotToHours(next, hours.openHour, hours.closeHour));
   };
   const activeDraft = draft ?? currentFilter;
 

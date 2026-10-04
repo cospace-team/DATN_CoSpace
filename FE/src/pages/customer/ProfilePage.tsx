@@ -275,12 +275,8 @@ const ProfilePage: React.FC = () => {
               }))
             );
           } else {
-            // Default initial suggestions if empty
-            setSkills([
-              { tagName: 'UI/UX Design' },
-              { tagName: 'Frontend Dev' },
-              { tagName: 'Khởi nghiệp' },
-            ]);
+            // No skills yet: start empty (the popular tags are offered as suggestions instead).
+            setSkills([]);
           }
 
           if (data.contactLink) {
@@ -889,6 +885,7 @@ const ProfilePage: React.FC = () => {
   };
 
   // ── Filtered & Sorted Partners ──
+  const bestMatchCount = partnersList.filter((partner) => partner.matchScore >= 50).length;
   const sortedAndFilteredPartners = partnersList
     .filter(partner => {
       const matchesSearch =
@@ -1227,9 +1224,12 @@ const ProfilePage: React.FC = () => {
         >
           <FiUsers className="h-4 w-4 text-primary" />
           <span>Mạng lưới kết nối</span>
-          <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-primary/10 text-primary">
-            {partnersList.length}
-          </span>
+          {/* Same count as the tab opens on ("Phù hợp nhất"), so the badge never promises more. */}
+          {bestMatchCount > 0 && (
+            <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-primary/10 text-primary">
+              {bestMatchCount}
+            </span>
+          )}
         </button>
 
         <button

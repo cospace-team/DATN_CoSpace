@@ -623,9 +623,9 @@ const BookingHistoryPage: React.FC = () => {
                 Chính sách
               </div>
               <div className="flex justify-between text-sm font-medium text-foreground/80 pt-2">
-                <span>Tổng giá trị đơn:</span>
+                <span>{cancelPreview ? "Bạn đã thanh toán:" : "Tổng giá trị đơn:"}</span>
                 <span className="font-mono">
-                  {formatVND(selectedCancelBooking.totalAmount)}
+                  {formatVND(cancelPreview ? cancelPreview.paid : selectedCancelBooking.totalAmount)}
                 </span>
               </div>
               {selectedCancelBooking.status === "pending_payment" ? (
@@ -638,7 +638,7 @@ const BookingHistoryPage: React.FC = () => {
               ) : cancelPreview ? (
                 <>
                   <div className="flex justify-between text-sm font-medium text-foreground/80">
-                    <span>Bạn được hoàn{cancelPreview.refundPercent ? ` (${cancelPreview.refundPercent}% tiền thuê)` : ''}:</span>
+                    <span>Bạn được hoàn{cancelPreview.refundPercent ? ` (${cancelPreview.refundPercent}%)` : ''}:</span>
                     <span className="font-mono font-semibold text-emerald-700 dark:text-emerald-400">
                       {formatVND(cancelPreview.refundAmount)}
                     </span>
@@ -649,6 +649,11 @@ const BookingHistoryPage: React.FC = () => {
                   </div>
                   {cancelPreview.policyName && (
                     <p className="text-xs text-muted-foreground">Theo: {cancelPreview.policyName}</p>
+                  )}
+                  {(selectedCancelBooking.raw?.unpaidAmount ?? 0) > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      Khoản chưa thanh toán ({formatVND(selectedCancelBooking.raw?.unpaidAmount ?? 0)}) sẽ được hủy, bạn không phải trả.
+                    </p>
                   )}
                 </>
               ) : (

@@ -141,6 +141,9 @@ ON CONFLICT (id) DO UPDATE SET
 
 -- WELCOME2026 chỉ dành cho khách đặt chỗ lần đầu (cột từ migration V10).
 UPDATE promotions SET new_customers_only = true WHERE code = 'WELCOME2026';
+-- Điều kiện khớp mô tả: VIPMEMBER cho hạng Gold trở lên, TECHFEST26 chỉ cho phòng họp.
+UPDATE promotions SET min_tier_code = 'gold' WHERE code = 'VIPMEMBER';
+UPDATE promotions SET workspace_type_id = (SELECT id FROM workspace_types WHERE code = 'meeting_room') WHERE code = 'TECHFEST26';
 
 
 -- ─────────────────────────────────────────────────────────────────────────────

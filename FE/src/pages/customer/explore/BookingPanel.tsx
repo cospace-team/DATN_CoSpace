@@ -7,6 +7,7 @@ import { QuantityStepper } from '../../../components/ui/QuantityStepper';
 import WorkspaceGallery from '../../../components/workspace/WorkspaceGallery';
 import { ServiceIcon } from '../../../components/ui/ServiceIcon';
 import type { ExtraServiceResponse } from '../../../lib/spaceApi';
+import { firstBookableHour } from './ExploreFilters';
 
 export type DurationUnitMode = 'hour' | 'day' | 'week';
 
@@ -378,7 +379,7 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
                   {Array.from(
                     { length: Math.max(0, closeHour - openHour) },
                     (_, i) => i + openHour
-                  ).map(h => (
+                  ).filter(h => h >= firstBookableHour(selectedDate, openHour, closeHour)).map(h => (
                     <option key={h} value={h}>
                       {String(h).padStart(2, '0')}:00
                     </option>

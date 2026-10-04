@@ -369,6 +369,8 @@ public class PartnerMatchingService {
                 if (!commonTags.contains(tag.getName())) commonTags.add(tag.getName());
             }
 
+            // Nothing in common: show what the member works on instead, without calling it shared.
+            boolean commonTagsShared = !commonTags.isEmpty();
             if (commonTags.isEmpty()) {
                 for (UUID tagId : candSkillTagIds) {
                     Tag tag = tagMap.get(tagId);
@@ -408,6 +410,7 @@ public class PartnerMatchingService {
                     .avatar(avatar)
                     .matchScore(scorePercent)
                     .commonTags(commonTags)
+                    .commonTagsShared(commonTagsShared)
                     .contactPublic(contactPublic)
                     .contactVisible(contactVisible)
                     .connectionState(connectionState)
@@ -502,7 +505,8 @@ public class PartnerMatchingService {
                     PartnerSuggestionDto s = shortlist.get(i);
                     prompt.append(i + 1).append(". ").append(s.getName())
                             .append(" — ").append(s.getProfession()).append(" tại ").append(s.getCompany())
-                            .append("; điểm chung: ").append(String.join(", ", s.getCommonTags()));
+                            .append(s.isCommonTagsShared() ? "; điểm chung: " : "; chưa có điểm chung, kỹ năng của họ: ")
+                            .append(String.join(", ", s.getCommonTags()));
                     if (s.getPostTags() != null && !s.getPostTags().isEmpty()) {
                         prompt.append("; đã viết bài về: ").append(String.join(", ", s.getPostTags()));
                     }
@@ -549,8 +553,14 @@ public class PartnerMatchingService {
         return s.getId() + "_" + s.isSameBranch() + "_" + common + "_" + post;
     }
 
-    private String fallbackReason(PartnerSuggestionDto s) {
+    static String fallbackReason(PartnerSuggestionDto s) {
         List<String> tags = s.getCommonTags();
+        if (tags != null && !tags.isEmpty() && !s.isCommonTagsShared()) {
+            String joined = String.join(", ", tags.size() > 3 ? tags.subList(0, 3) : tags);
+            return s.isSameBranch()
+                    ? "Cùng chi nhánh với bạn, làm về " + joined + "."
+                    : "Làm về " + joined + ".";
+        }
         if (tags != null && !tags.isEmpty()) {
             String joined = String.join(", ", tags.size() > 3 ? tags.subList(0, 3) : tags);
             return s.isSameBranch()

@@ -42,6 +42,13 @@ public class BookingDto {
     private long taxAmount;
     private long serviceFeeAmount;
     private long totalAmount;
+    /** Still owed on the tab (extra services, extra hours, late fee) after the booking was paid. */
+    private long unpaidAmount;
+    /** Part of addonAmount that is extra hours bought after booking, and how many hours. */
+    private long extensionAmount;
+    private int extensionHours;
+    /** Part of addonAmount that is a late check-out fee. */
+    private long lateFeeAmount;
 
     // Payment Info
     private String paymentDeadlineAt;

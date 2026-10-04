@@ -42,6 +42,8 @@ export interface PartnerSuggestion {
   company: string;
   avatar: string;
   matchScore: number;
+  /** False when commonTags only lists the member's own skills (nothing shared yet). */
+  commonTagsShared?: boolean;
   commonTags: string[];
   contactPublic: boolean;
   contactVisible?: boolean;

@@ -180,9 +180,23 @@ const BookingCard: React.FC<BookingCardProps> = ({
   if (raw.promotionDiscountAmount) {
     priceLines.push({ label: `Mã ${raw.promotionCode ?? "khuyến mãi"}`, value: raw.promotionDiscountAmount, tone: "minus" });
   }
-  if (raw.addonAmount) priceLines.push({ label: "Dịch vụ", value: raw.addonAmount, tone: "plus" });
+  const extensionAmount = raw.extensionAmount ?? 0;
+  const lateFeeAmount = raw.lateFeeAmount ?? 0;
+  const serviceAmount = (raw.addonAmount ?? 0) - extensionAmount - lateFeeAmount;
+  if (serviceAmount > 0) priceLines.push({ label: "Dịch vụ", value: serviceAmount, tone: "plus" });
+  if (extensionAmount > 0) priceLines.push({ label: `Gia hạn ${raw.extensionHours ?? 0} giờ`, value: extensionAmount, tone: "plus" });
+  if (lateFeeAmount > 0) priceLines.push({ label: "Phụ phí trả chỗ muộn", value: lateFeeAmount, tone: "plus" });
   if (raw.taxAmount) priceLines.push({ label: "Thuế", value: raw.taxAmount, tone: "plus" });
   if (raw.serviceFeeAmount) priceLines.push({ label: "Phí dịch vụ", value: raw.serviceFeeAmount, tone: "plus" });
+
+  // Extra services, hours or a late fee added after the booking was paid and not settled yet.
+  const owed = ["confirmed", "checked_in", "completed", "no_show"].includes(booking.status) ? raw.unpaidAmount ?? 0 : 0;
+  const extensionHours = raw.extensionHours ?? 0;
+  const durationText = !booking.unitCount || !booking.unit
+    ? null
+    : booking.unit === "hour"
+      ? `${booking.unitCount + extensionHours} giờ${extensionHours ? ` (gồm ${extensionHours} giờ gia hạn)` : ""}`
+      : `${booking.unitCount} ${UNIT_TEXT[booking.unit] ?? booking.unit}${extensionHours ? ` + ${extensionHours} giờ gia hạn` : ""}`;
 
   const paymentText =
     raw.paidVia
@@ -249,9 +263,7 @@ const BookingCard: React.FC<BookingCardProps> = ({
           </p>
           <p className="text-sm text-foreground">
             {time(booking.date)} → {time(booking.endDate)}
-            {booking.unitCount && booking.unit && (
-              <span className="text-muted-foreground"> · {booking.unitCount} {UNIT_TEXT[booking.unit] ?? booking.unit}</span>
-            )}
+            {durationText && <span className="text-muted-foreground"> · {durationText}</span>}
           </p>
         </div>
         <div className="p-4 space-y-1 min-w-0">
@@ -267,6 +279,11 @@ const BookingCard: React.FC<BookingCardProps> = ({
           <p className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5"><FiCreditCard className="h-3.5 w-3.5" /> Thanh toán</p>
           <p className="text-base font-semibold text-foreground font-mono">{formatVND(booking.totalAmount)}</p>
           <p className="text-sm text-muted-foreground">{paymentText}</p>
+          {owed > 0 && (
+            <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
+              Còn {formatVND(owed)} chưa thanh toán
+            </p>
+          )}
         </div>
       </div>
 

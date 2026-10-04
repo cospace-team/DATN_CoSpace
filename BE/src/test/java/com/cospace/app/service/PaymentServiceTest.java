@@ -157,6 +157,26 @@ class PaymentServiceTest {
         }
 
         @Test
+        void confirmedBookingNotifiesTheCustomer() {
+            NotificationService notifications = org.mockito.Mockito.mock(NotificationService.class);
+            org.springframework.test.util.ReflectionTestUtils.setField(paymentService, "notificationService", notifications);
+            Booking booking = booking(BookingStatus.PENDING_PAYMENT);
+            booking.setStartAt(OffsetDateTime.parse("2026-10-05T02:00:00Z"));
+            Payment payment = payment(booking, "PAYOS-112", PaymentStatus.PENDING);
+            PayosWebhookDto webhook = payosWebhook(112L, "00");
+            when(payosService.verifyWebhookSignature(anyMap(), anyString())).thenReturn(true);
+            when(paymentRepository.findByOrderId("PAYOS-112")).thenReturn(Optional.of(payment));
+            when(bookingRepository.findByIdWithLock(booking.getId())).thenReturn(Optional.of(booking));
+
+            paymentService.handlePayosWebhook(webhook);
+
+            ArgumentCaptor<String> content = ArgumentCaptor.forClass(String.class);
+            verify(notifications).createNotificationInNewTransaction(eq(userId), eq("Đặt chỗ thành công"), content.capture(),
+                    eq(PaymentService.NOTIFY_BOOKING_CONFIRMED), eq(booking.getId()), eq("BOOKING"));
+            assertThat(content.getValue()).contains("WH-ABC234").contains("150.000đ").contains("09:00 ngày 05/10/2026");
+        }
+
+        @Test
         void failedWebhookMarksPaymentFailedAndLeavesBookingPending() {
             Booking booking = booking(BookingStatus.PENDING_PAYMENT);
             Payment payment = payment(booking, "PAYOS-111", PaymentStatus.PENDING);

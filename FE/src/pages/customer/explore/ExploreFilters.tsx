@@ -43,6 +43,38 @@ const startOfDay = (d: Date) => {
   return r;
 };
 
+/**
+ * First hour that can still be booked on {@code date}: the current hour is bookable (the backend
+ * allows it), anything earlier is gone. Returns closeHour when nothing is left that day.
+ */
+export const firstBookableHour = (date: Date, openHour: number, closeHour: number, now: Date = new Date()) =>
+  date.toDateString() === now.toDateString() ? Math.min(Math.max(openHour, now.getHours()), closeHour) : openHour;
+
+/**
+ * Moves a slot that has already passed onto the next bookable one: a past date becomes today, a
+ * start hour that has gone by moves to the current hour, and once the branch has closed for today
+ * the slot moves to tomorrow's opening. Returns the same object when nothing needed to change.
+ */
+export function fitSlotToHours<T extends { date: Date; startHour: number; endHour: number }>(
+  slot: T, openHour: number, closeHour: number, now: Date = new Date(),
+): T {
+  if (closeHour <= openHour) return slot;
+  const today = startOfDay(now);
+  let date = startOfDay(slot.date) < today ? today : slot.date;
+  let startHour = Math.min(Math.max(slot.startHour, firstBookableHour(date, openHour, closeHour, now)), closeHour - 1);
+  let endHour = Math.min(Math.max(slot.endHour, startHour + 1), closeHour);
+  if (firstBookableHour(date, openHour, closeHour, now) >= closeHour) {
+    // Closed for today: same length of stay, from tomorrow's opening.
+    date = new Date(today);
+    date.setDate(date.getDate() + 1);
+    const length = Math.max(1, slot.endHour - slot.startHour);
+    startHour = openHour;
+    endHour = Math.min(openHour + length, closeHour);
+  }
+  if (date === slot.date && startHour === slot.startHour && endHour === slot.endHour) return slot;
+  return { ...slot, date, startHour, endHour };
+}
+
 /** Toggleable pill used for types and equipment. */
 const Chip: React.FC<{ active: boolean; onClick: () => void; children: React.ReactNode }> = ({ active, onClick, children }) => (
   <button
@@ -84,6 +116,10 @@ export const ExploreFilters: React.FC<ExploreFiltersProps> = ({
   tomorrow.setDate(tomorrow.getDate() + 1);
   const isSameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
   const hours = Array.from({ length: Math.max(0, closeHour - openHour) }, (_, i) => openHour + i);
+  // Hours already gone today are not offered; once the branch has closed, today is not either.
+  const firstToday = firstBookableHour(today, openHour, closeHour);
+  const todayClosed = firstToday >= closeHour;
+  const startHours = isSameDay(value.date, today) ? hours.filter((h) => h >= firstToday) : hours;
   const hero = variant === 'hero';
   const selectCls = 'input-field w-full text-sm';
 
@@ -114,7 +150,7 @@ export const ExploreFilters: React.FC<ExploreFiltersProps> = ({
             id="f-date"
             type="date"
             value={toDateInputValue(value.date)}
-            min={toDateInputValue(today)}
+            min={toDateInputValue(todayClosed ? tomorrow : today)}
             onChange={(e) => {
               const d = new Date(e.target.value + 'T00:00:00');
               if (!isNaN(d.getTime())) set({ date: d });
@@ -122,13 +158,17 @@ export const ExploreFilters: React.FC<ExploreFiltersProps> = ({
             className={selectCls}
           />
           <div className="flex gap-1.5">
-            {[{ d: today, label: 'Hôm nay' }, { d: tomorrow, label: 'Ngày mai' }].map(({ d, label }) => (
+            {[{ d: today, label: 'Hôm nay', closed: todayClosed }, { d: tomorrow, label: 'Ngày mai', closed: false }].map(({ d, label, closed }) => (
               <button
                 key={label}
                 type="button"
+                disabled={closed}
+                title={closed ? 'Chi nhánh đã đóng cửa hôm nay' : undefined}
                 onClick={() => set({ date: d })}
-                className={`text-xs px-2 py-0.5 rounded-md border cursor-pointer ${
-                  isSameDay(value.date, d) ? 'border-primary text-primary bg-primary/5' : 'border-border text-muted-foreground hover:text-foreground'
+                className={`text-xs px-2 py-0.5 rounded-md border ${
+                  closed
+                    ? 'border-border text-muted-foreground/60 cursor-not-allowed line-through'
+                    : isSameDay(value.date, d) ? 'border-primary text-primary bg-primary/5 cursor-pointer' : 'border-border text-muted-foreground hover:text-foreground cursor-pointer'
                 }`}
               >
                 {label}
@@ -148,7 +188,7 @@ export const ExploreFilters: React.FC<ExploreFiltersProps> = ({
               }}
               className={selectCls}
             >
-              {hours.map((h) => <option key={h} value={h}>{pad(h)}</option>)}
+              {startHours.map((h) => <option key={h} value={h}>{pad(h)}</option>)}
             </select>
             <span className="text-muted-foreground">→</span>
             <select

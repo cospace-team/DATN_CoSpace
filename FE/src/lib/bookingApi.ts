@@ -46,6 +46,13 @@ export interface BookingResponse {
   promotionDiscountAmount?: number;
   addonAmount: number;
   totalAmount: number;
+  /** Still owed on the tab (extra services, extra hours, late fee) after the booking was paid. */
+  unpaidAmount?: number;
+  /** Part of addonAmount that is extra hours, and how many hours were added. */
+  extensionAmount?: number;
+  extensionHours?: number;
+  /** Part of addonAmount that is a late check-out fee. */
+  lateFeeAmount?: number;
   paymentDeadlineAt?: string;
   source: string;
   createdAt: string;

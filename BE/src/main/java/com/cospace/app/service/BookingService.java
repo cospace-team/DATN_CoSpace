@@ -1009,7 +1009,8 @@ public class BookingService {
         String customerName = customer != null ? customer.getFullName() : null;
         String customerPhone = customer != null ? customer.getPhone() : null;
 
-        BookingDto dto = buildDto(b, workspaceName, branchName, customerName, customerPhone, latestPaymentOpt);
+        BookingDto dto = withLineTotals(buildDto(b, workspaceName, branchName, customerName, customerPhone, latestPaymentOpt),
+                bookingAddonService.lineTotals(List.of(b.getId())).get(b.getId()));
         if (b.getStatus() != BookingStatus.CANCELLED) {
             return dto;
         }
@@ -1096,6 +1097,9 @@ public class BookingService {
                 .stream().collect(java.util.stream.Collectors.groupingBy(com.cospace.app.entity.ReputationEvent::getBookingId,
                         java.util.stream.Collectors.summingInt(com.cospace.app.entity.ReputationEvent::getDelta)));
 
+        // What each tab still owes and how much of it is extra hours or a late fee, one query.
+        java.util.Map<UUID, BookingAddonService.LineTotals> lineTotals = bookingAddonService.lineTotals(bookingIds);
+
         // Batch fetch cancellations for cancelled bookings (single query instead of N)
         java.util.Map<UUID, com.cospace.app.entity.BookingCancellation> cancellations = new java.util.HashMap<>();
         java.util.Set<UUID> cancelledBookingIds = bookings.stream()
@@ -1142,6 +1146,7 @@ public class BookingService {
                     .groupCode(b.getGroupId() != null ? groupCodes.get(b.getGroupId()) : null)
                     .groupSize(b.getGroupId() != null ? groupSizes.get(b.getGroupId()) : null)
                     .build();
+            dto = withLineTotals(dto, lineTotals.get(b.getId()));
 
             // Attach cancellation info if present
             if (b.getStatus() == BookingStatus.CANCELLED) {
@@ -1162,6 +1167,16 @@ public class BookingService {
             result.add(dto);
         }
         return result;
+    }
+
+    private static BookingDto withLineTotals(BookingDto dto, BookingAddonService.LineTotals totals) {
+        if (totals == null) return dto;
+        return dto.toBuilder()
+                .unpaidAmount(totals.unpaidAmount())
+                .extensionAmount(totals.extensionAmount())
+                .extensionHours(totals.extensionHours())
+                .lateFeeAmount(totals.lateFeeAmount())
+                .build();
     }
 
     private BookingDto buildDto(Booking b, String workspaceName, String branchName,

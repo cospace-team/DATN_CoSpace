@@ -481,9 +481,11 @@ const CommunityPage: React.FC = () => {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2">
                           <p className="text-xs font-bold text-foreground truncate">{p.name}</p>
-                          <span className="text-[10px] font-bold text-primary shrink-0">
-                            {p.matchScore}%
-                          </span>
+                          {p.matchScore > 0 && (
+                            <span className="text-[10px] font-bold text-primary shrink-0">
+                              {p.matchScore}%
+                            </span>
+                          )}
                         </div>
                         <p className="text-[11px] text-muted-foreground truncate">{p.profession}</p>
 
