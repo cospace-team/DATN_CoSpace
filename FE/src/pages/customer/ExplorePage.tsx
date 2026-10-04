@@ -64,6 +64,13 @@ type ViewMode = "results" | "map" | "day";
 const DEFAULT_OPEN_HOUR = 6;
 const DEFAULT_CLOSE_HOUR = 23;
 
+/** "Tầng 1 · Open Hotdesking", without repeating the number when the name already starts with it. */
+const floorLabel = (f: { floorNo: number; name?: string | null }) => {
+  const name = (f.name || "").trim();
+  if (!name) return `Tầng ${f.floorNo}`;
+  return /^tầng\s*\d+/i.test(name) ? name : `Tầng ${f.floorNo} · ${name}`;
+};
+
 /** Whole bookable hours [openHour, closeHour) of a branch, from its "HH:mm:ss" opening hours. */
 const branchHourRange = (branch?: Pick<BranchResponse, "openTime" | "closeTime"> | null) => {
   const toMinutes = (t?: string | null) => {
@@ -920,15 +927,15 @@ const ExplorePage: React.FC = () => {
           </div>
 
           {viewMode !== "results" && branchFloors.length > 0 && (
-            <div className="relative">
+            <div className="relative min-w-0 max-w-full">
               <select
                 value={currentFloor}
                 onChange={(e) => setSelectedFloor(e.target.value)}
                 aria-label="Chọn tầng"
-                className="appearance-none bg-card border border-border rounded-xl px-3 py-2 pr-9 text-xs font-medium text-foreground cursor-pointer"
+                className="appearance-none max-w-full truncate bg-card border border-border rounded-xl px-3 py-2 pr-9 text-xs font-medium text-foreground cursor-pointer"
               >
                 {branchFloors.map((f) => (
-                  <option key={f.id} value={f.id}>Tầng {f.floorNo} · {f.name}</option>
+                  <option key={f.id} value={f.id}>{floorLabel(f)}</option>
                 ))}
               </select>
               <FiChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground pointer-events-none" />
@@ -1023,6 +1030,10 @@ const ExplorePage: React.FC = () => {
                 loading={loading || workspacesLoading}
                 selectedWs={selectedWs}
                 onSelect={openSpace}
+                onSearchSeparateSeats={() => {
+                  applyFilter({ ...currentFilter, people: 1 });
+                  showToast("Chọn một bàn, rồi dùng \"Đặt thêm chỗ cùng khung giờ\" để thêm bàn cho cả nhóm.", "info");
+                }}
                 onShowOnMap={(ws) => { openSpace(ws); setViewMode("map"); }}
                 onEditFilters={() => setEditingFilters(true)}
               />

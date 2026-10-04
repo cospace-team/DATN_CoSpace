@@ -29,6 +29,7 @@ public class CancellationPolicyController {
 
     private final CancellationPolicyRepository policyRepository;
     private final CancellationService cancellationService;
+    private final com.cospace.app.service.RefundService refundService;
     private final BranchAccessGuard branchAccessGuard;
     private final AuditLogService auditLogService;
     private final HttpServletRequest httpServletRequest;
@@ -132,6 +133,15 @@ public class CancellationPolicyController {
     }
 
     /** What cancelling now would refund, so the customer sees the amount before confirming. */
+    /** The customer's bank account for the refund of a cancelled booking still waiting on the branch. */
+    @PutMapping("/bookings/{bookingId}/refund-account")
+    public Map<String, Object> setRefundAccount(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID bookingId,
+                                                @jakarta.validation.Valid @RequestBody com.cospace.app.dto.api.RefundDto.ReceivingAccountRequest req) {
+        UUID userId = UUID.fromString(jwt.getSubject());
+        int updated = refundService.setReceivingAccount(userId, bookingId, req.getBankName(), req.getAccountNumber(), req.getAccountName());
+        return Map.of("updated", updated);
+    }
+
     @GetMapping("/bookings/{bookingId}/cancel-preview")
     public ResponseEntity<CancellationService.CustomerCancelPreview> previewCancellation(
             @AuthenticationPrincipal Jwt jwt,

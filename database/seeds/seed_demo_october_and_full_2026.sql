@@ -456,6 +456,15 @@ VALUES (
   850000, 'PAID', '2026-10-04 16:00:00+07'::timestamptz, '2026-10-04 15:50:00+07'::timestamptz, 'booking'
 ) ON CONFLICT (id) DO NOTHING;
 
+-- Đơn đang CHECKED_IN phải có lượt check-in đang mở, nếu không trang khách hiện "Đang sử dụng"
+-- nhưng mục Check-in trống, còn lễ tân không thấy khách trong danh sách đang ngồi.
+INSERT INTO checkin_logs (id, booking_id, staff_user_id, checkin_at, checkout_at, note)
+VALUES (
+  'ca261005-0000-0000-0000-000000000003'::uuid, 'b0261005-0000-0000-0000-000000000003'::uuid,
+  'd3000001-0000-0000-0000-000000000001'::uuid, '2026-10-05 08:35:00+07'::timestamptz,
+  NULL, 'Thành viên thuê tuần, check-in ngày đầu'
+) ON CONFLICT (id) DO NOTHING;
+
 -- 6.4 Đơn 4 — CONFIRMED Đặt tại quầy Chi nhánh Thủ Đức (Bàn TA-101)
 INSERT INTO bookings (
   id, booking_code, user_id, workspace_id, branch_id, workspace_type_id,
@@ -514,3 +523,19 @@ INSERT INTO payments (id, booking_id, user_id, provider, method, order_id, amoun
 ON CONFLICT (id) DO NOTHING;
 
 COMMIT;
+
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- DỮ LIỆU NHẤT QUÁN: đơn không thể được tạo sau lúc nó được thanh toán.
+-- Các INSERT bookings ở trên không ghi created_at nên nhận giờ chạy seed, làm lịch sử
+-- của khách hiện "Đặt chỗ" sau "Thanh toán". Lùi giờ tạo về trước lần thanh toán đầu tiên.
+-- ─────────────────────────────────────────────────────────────────────────────
+UPDATE bookings b
+SET created_at = p.first_payment - interval '5 minutes'
+FROM (
+  SELECT booking_id, MIN(created_at) AS first_payment
+  FROM payments
+  GROUP BY booking_id
+) p
+WHERE p.booking_id = b.id
+  AND b.created_at > p.first_payment;

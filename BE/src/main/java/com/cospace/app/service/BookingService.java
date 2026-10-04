@@ -67,6 +67,9 @@ public class BookingService {
     private final com.cospace.app.repository.WorkspaceTypeRepository workspaceTypeRepository;
     private final com.cospace.app.repository.ReputationEventRepository reputationEventRepository;
     private final com.cospace.app.repository.BookingGroupRepository bookingGroupRepository;
+    /** Optional so hand-built test instances keep working; Spring always provides it. */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private RefundService refundService;
 
     /** Most seats one booking group may hold. */
     @org.springframework.beans.factory.annotation.Value("${app.booking.max-group-size:10}")
@@ -1011,6 +1014,9 @@ public class BookingService {
 
         BookingDto dto = withLineTotals(buildDto(b, workspaceName, branchName, customerName, customerPhone, latestPaymentOpt),
                 bookingAddonService.lineTotals(List.of(b.getId())).get(b.getId()));
+        if (refundService != null) {
+            dto = withRefundInfo(dto, refundService.customerRefundInfo(List.of(b.getId())).get(b.getId()));
+        }
         if (b.getStatus() != BookingStatus.CANCELLED) {
             return dto;
         }
@@ -1099,6 +1105,8 @@ public class BookingService {
 
         // What each tab still owes and how much of it is extra hours or a late fee, one query.
         java.util.Map<UUID, BookingAddonService.LineTotals> lineTotals = bookingAddonService.lineTotals(bookingIds);
+        java.util.Map<UUID, RefundService.CustomerRefundInfo> refundInfo = refundService != null
+                ? refundService.customerRefundInfo(bookingIds) : java.util.Map.of();
 
         // Batch fetch cancellations for cancelled bookings (single query instead of N)
         java.util.Map<UUID, com.cospace.app.entity.BookingCancellation> cancellations = new java.util.HashMap<>();
@@ -1142,11 +1150,13 @@ public class BookingService {
                     .lastCheckoutAt(logs.stream().map(com.cospace.app.entity.CheckinLog::getCheckoutAt).filter(java.util.Objects::nonNull)
                             .max(java.util.Comparator.naturalOrder()).map(Object::toString).orElse(null))
                     .checkinCount(logs.size())
+                    .visitMinutes(visitMinutes(logs))
                     .reputationDelta(reputationDeltas.get(b.getId()))
                     .groupCode(b.getGroupId() != null ? groupCodes.get(b.getGroupId()) : null)
                     .groupSize(b.getGroupId() != null ? groupSizes.get(b.getGroupId()) : null)
                     .build();
             dto = withLineTotals(dto, lineTotals.get(b.getId()));
+            dto = withRefundInfo(dto, refundInfo.get(b.getId()));
 
             // Attach cancellation info if present
             if (b.getStatus() == BookingStatus.CANCELLED) {
@@ -1167,6 +1177,30 @@ public class BookingService {
             result.add(dto);
         }
         return result;
+    }
+
+    /** Time on site over a booking's visits; a visit still open counts up to now. */
+    static long visitMinutes(List<com.cospace.app.entity.CheckinLog> logs) {
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        long minutes = 0;
+        for (com.cospace.app.entity.CheckinLog log : logs) {
+            if (log.getCheckinAt() == null) continue;
+            OffsetDateTime out = log.getCheckoutAt() != null ? log.getCheckoutAt() : now;
+            minutes += Math.max(0, java.time.Duration.between(log.getCheckinAt(), out).toMinutes());
+        }
+        return minutes;
+    }
+
+    private static BookingDto withRefundInfo(BookingDto dto, RefundService.CustomerRefundInfo info) {
+        if (info == null) return dto;
+        return dto.toBuilder()
+                .refundMethod(info.method())
+                .refundProcessedAt(info.processedAt() != null ? info.processedAt().toString() : null)
+                .refundVoucherCode(info.voucherCode())
+                .refundBankName(info.bankName())
+                .refundAccountNumber(info.accountNumber())
+                .refundAccountName(info.accountName())
+                .build();
     }
 
     private static BookingDto withLineTotals(BookingDto dto, BookingAddonService.LineTotals totals) {

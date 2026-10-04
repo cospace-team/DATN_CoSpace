@@ -45,6 +45,28 @@ public class RefundDto {
         private String processedByName;
         private OffsetDateTime processedAt;
         private OffsetDateTime createdAt;
+        /** Bank account the customer asked a transfer refund to be sent to. */
+        private String receivingBankName;
+        private String receivingAccountNumber;
+        private String receivingAccountName;
+    }
+
+    /** The customer's bank account for receiving a refund by transfer. */
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ReceivingAccountRequest {
+        @jakarta.validation.constraints.NotBlank(message = "Vui lòng nhập tên ngân hàng")
+        @Size(max = 100, message = "Tên ngân hàng tối đa 100 ký tự")
+        private String bankName;
+
+        @jakarta.validation.constraints.NotBlank(message = "Vui lòng nhập số tài khoản")
+        @jakarta.validation.constraints.Pattern(regexp = "^[0-9 ]{6,24}$", message = "Số tài khoản chỉ gồm 6–20 chữ số")
+        private String accountNumber;
+
+        @jakarta.validation.constraints.NotBlank(message = "Vui lòng nhập tên chủ tài khoản")
+        @Size(max = 100, message = "Tên chủ tài khoản tối đa 100 ký tự")
+        private String accountName;
     }
 
     @Data

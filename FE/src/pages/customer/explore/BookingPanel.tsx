@@ -532,14 +532,22 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
                   aria-label="Thêm chỗ"
                 >
                   <option value="">+ Thêm chỗ trống ({addable.length})</option>
-                  {addable.map((c) => {
-                    const p = getSeatPrice?.(c.workspace_type_id, durationUnit);
-                    return (
-                      <option key={c.id} value={c.id}>
-                        {c.name}{floorNameOf && c.floor_id !== ws.floor_id ? ` (${floorNameOf(c.floor_id)})` : ''} · {c.capacity} chỗ{p ? ` · ${formatVND(p.price)}/${durationUnitLabel[p.duration_unit]?.toLowerCase()}` : ''}
-                      </option>
-                    );
-                  })}
+                  {/* Same kind of space first (another desk for a desk), other kinds apart, smallest first. */}
+                  {[
+                    { label: 'Cùng loại chỗ', items: addable.filter((c) => c.workspace_type_id === ws.workspace_type_id) },
+                    { label: 'Loại khác', items: addable.filter((c) => c.workspace_type_id !== ws.workspace_type_id) },
+                  ].filter((g) => g.items.length > 0).map((g) => (
+                    <optgroup key={g.label} label={g.label}>
+                      {[...g.items].sort((a, b) => a.capacity - b.capacity).map((c) => {
+                        const p = getSeatPrice?.(c.workspace_type_id, durationUnit);
+                        return (
+                          <option key={c.id} value={c.id}>
+                            {c.name}{floorNameOf && c.floor_id !== ws.floor_id ? ` (${floorNameOf(c.floor_id)})` : ''} · {c.capacity} chỗ{p ? ` · ${formatVND(p.price)}/${durationUnitLabel[p.duration_unit]?.toLowerCase()}` : ''}
+                          </option>
+                        );
+                      })}
+                    </optgroup>
+                  ))}
                 </select>
               );
             })()}

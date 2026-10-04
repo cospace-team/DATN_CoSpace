@@ -491,6 +491,7 @@ const BookingHistoryPage: React.FC = () => {
               onCancel={() => setShowCancelModal(booking.id)}
               onShowQr={() => setShowQrModal(booking)}
               onServices={() => setServicesBooking(booking)}
+              onRefundAccountSaved={() => setReloadKey((k) => k + 1)}
             />
           ))
         )}

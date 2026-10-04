@@ -686,4 +686,28 @@ class PaymentServiceTest {
             verify(bookingRepository, never()).findByIdWithLock(any());
         }
     }
+
+    @Test
+    void abandoningAQrOrderCancelsItsRowsAndReportsTheBookingsStillWaiting() {
+        Booking booking = booking(BookingStatus.PENDING_PAYMENT);
+        Payment payment = payment(booking, "PAYOS-555", PaymentStatus.PENDING);
+        when(paymentRepository.findByOrderId("PAYOS-555")).thenReturn(Optional.of(payment));
+        when(bookingRepository.findById(booking.getId())).thenReturn(Optional.of(booking));
+
+        PaymentService.AbandonedOrder order = paymentService.abandonPayosOrder(userId, "555");
+
+        assertThat(payment.getStatus()).isEqualTo(PaymentStatus.CANCELLED);
+        assertThat(order.tabPayment()).isFalse();
+        assertThat(order.pendingBookingIds()).containsExactly(booking.getId());
+    }
+
+    @Test
+    void aPaidOrSomeoneElsesQrOrderCannotBeAbandoned() {
+        Booking booking = booking(BookingStatus.CONFIRMED);
+        Payment paid = payment(booking, "PAYOS-556", PaymentStatus.PAID);
+        when(paymentRepository.findByOrderId("PAYOS-556")).thenReturn(Optional.of(paid));
+
+        assertThatThrownBy(() -> paymentService.abandonPayosOrder(userId, "556")).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> paymentService.abandonPayosOrder(UUID.randomUUID(), "556")).isInstanceOf(IllegalArgumentException.class);
+    }
 }

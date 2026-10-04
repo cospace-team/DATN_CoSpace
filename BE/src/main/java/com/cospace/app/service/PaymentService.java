@@ -620,6 +620,52 @@ public class PaymentService {
         markOrderPaid(rows, null, null);
     }
 
+    /** A QR order the customer walked away from: whether it paid a tab, and the bookings still waiting on it. */
+    public record AbandonedOrder(boolean tabPayment, List<UUID> pendingBookingIds) {
+    }
+
+    /**
+     * The customer gave up on a VietQR order ("Hủy" on the QR page): its unpaid rows are cancelled,
+     * and for a booking order the bookings still awaiting payment are returned so the caller can
+     * cancel them and free the seats. A payment that arrives afterwards is refunded like any late
+     * payment. Paid orders cannot be abandoned.
+     */
+    @Transactional
+    public AbandonedOrder abandonPayosOrder(UUID userId, String orderCode) {
+        String orderId = orderCode.startsWith("PAYOS-") ? orderCode : "PAYOS-" + orderCode;
+        Payment payment = paymentRepository.findByOrderId(orderId)
+                .filter(p -> userId.equals(p.getUserId()))
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy giao dịch thanh toán."));
+        if (payment.getStatus() == PaymentStatus.PAID) {
+            throw new IllegalStateException("Giao dịch đã được thanh toán. Bạn có thể hủy đơn trong Lịch sử để được hoàn tiền theo chính sách.");
+        }
+        boolean tab = Payment.PURPOSE_ADDON.equals(payment.getPurpose());
+        List<UUID> pending = new java.util.ArrayList<>();
+        for (Payment row : rowsOfOrder(payment)) {
+            if (row.getStatus() == PaymentStatus.INITIATED || row.getStatus() == PaymentStatus.PENDING) {
+                row.setStatus(PaymentStatus.CANCELLED);
+                paymentRepository.save(row);
+                if (tab) bookingAddonService.unlinkPayment(row.getBookingId(), row.getId());
+            }
+            if (!tab) {
+                bookingRepository.findById(row.getBookingId())
+                        .filter(b -> b.getStatus() == BookingStatus.PENDING_PAYMENT)
+                        .ifPresent(b -> pending.add(b.getId()));
+            }
+        }
+        return new AbandonedOrder(tab, pending);
+    }
+
+    /** Whether a QR order pays a booking or a running tab, so the QR page can word its buttons. */
+    @Transactional(readOnly = true)
+    public String getPaymentPurposeByOrderCode(String orderCode) {
+        String orderId = orderCode.startsWith("PAYOS-") ? orderCode : "PAYOS-" + orderCode;
+        return paymentRepository.findByOrderId(orderId)
+                .or(() -> paymentRepository.findByOrderId(orderCode))
+                .map(p -> p.getPurpose() == null ? Payment.PURPOSE_BOOKING : p.getPurpose())
+                .orElse(null);
+    }
+
     @Transactional(readOnly = true)
     public PaymentStatus getPaymentStatusByOrderCode(String orderCode) {
         String orderId = orderCode.startsWith("PAYOS-") ? orderCode : "PAYOS-" + orderCode;

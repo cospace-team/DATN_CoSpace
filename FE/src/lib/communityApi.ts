@@ -26,6 +26,20 @@ export interface CommunityPost {
   relevanceScore: number;
   matchedTags: string[];
   mine: boolean;
+  /** Replies under the post. */
+  commentCount?: number;
+}
+
+export interface PostComment {
+  id: string;
+  postId: string;
+  authorId: string;
+  authorName: string;
+  authorAvatar: string | null;
+  authorProfession: string | null;
+  content: string;
+  createdAt: string;
+  mine: boolean;
 }
 
 export interface CommunityTag {
@@ -145,6 +159,22 @@ export const communityApi = {
   deletePost: (postId: string) => {
     feedCache.clear();
     return apiFetch<{ success: boolean }>(`${API}/api/community/posts/${postId}`, { method: "DELETE" });
+  },
+
+  listComments: (postId: string): Promise<PostComment[]> =>
+    apiFetch<{ data: PostComment[] }>(`${API}/api/community/posts/${postId}/comments`).then((r) => r.data ?? []),
+
+  addComment: (postId: string, content: string) => {
+    feedCache.clear();
+    return apiFetch<PostComment>(`${API}/api/community/posts/${postId}/comments`, {
+      method: "POST",
+      body: JSON.stringify({ content }),
+    });
+  },
+
+  deleteComment: (commentId: string) => {
+    feedCache.clear();
+    return apiFetch<{ success: boolean }>(`${API}/api/community/comments/${commentId}`, { method: "DELETE" });
   },
 
   listTags: (forceRefresh = false): Promise<CommunityTag[]> => {

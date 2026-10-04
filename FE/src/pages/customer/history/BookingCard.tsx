@@ -15,7 +15,7 @@ import {
   FiX,
 } from "react-icons/fi";
 import { formatVND } from "../../../utils/formatters";
-import type { BookingResponse } from "../../../lib/bookingApi";
+import { bookingApi, type BookingResponse } from "../../../lib/bookingApi";
 
 /** One booking as the history page holds it: display fields plus the raw API row. */
 export interface CustomerBookingItem {
@@ -96,10 +96,99 @@ interface BookingCardProps {
   onCancel: () => void;
   onShowQr: () => void;
   onServices: () => void;
+  /** Reload after the customer saved where a refund should be sent. */
+  onRefundAccountSaved?: () => void;
 }
 
+const REFUND_METHOD_TEXT: Record<string, string> = {
+  bank_transfer: "chuyển khoản",
+  cash: "tiền mặt tại quầy",
+  voucher: "voucher đặt chỗ",
+};
+
+/**
+ * Where a refund stands, in the customer's words: once paid, how and when; while pending, where
+ * the money will go, with a form to give the bank account a transfer needs.
+ */
+const RefundStatus: React.FC<{ booking: CustomerBookingItem; onSaved?: () => void }> = ({ booking, onSaved }) => {
+  const raw = booking.raw;
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({
+    bankName: raw.refundBankName ?? "",
+    accountNumber: raw.refundAccountNumber ?? "",
+    accountName: raw.refundAccountName ?? "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const done = booking.refundStatus === "processed" || booking.refundStatus === "confirmed";
+
+  if (done) {
+    return (
+      <p className="text-xs text-emerald-700 dark:text-emerald-400">
+        Đã hoàn {formatVND(booking.refundAmount ?? 0)}
+        {raw.refundMethod ? ` qua ${REFUND_METHOD_TEXT[raw.refundMethod] ?? raw.refundMethod}` : ""}
+        {raw.refundProcessedAt ? ` lúc ${dateTime(raw.refundProcessedAt)}` : ""}
+        {raw.refundVoucherCode && <> · mã <span className="font-mono font-semibold">{raw.refundVoucherCode}</span></>}.
+      </p>
+    );
+  }
+  if (booking.refundStatus === "rejected") {
+    return <p className="text-xs text-rose-700 dark:text-rose-400">Yêu cầu hoàn tiền bị từ chối. Xem lý do trong thông báo hoặc liên hệ quầy.</p>;
+  }
+
+  const save = async () => {
+    setSaving(true);
+    setError("");
+    try {
+      await bookingApi.setRefundAccount(booking.id, form);
+      setEditing(false);
+      onSaved?.();
+    } catch (e: any) {
+      setError(e.message || "Không lưu được tài khoản nhận tiền.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="text-xs space-y-2 rounded-lg bg-muted/40 p-3">
+      <p className="text-foreground">
+        <strong>Đang chờ chi nhánh hoàn tiền.</strong> Tiền được chuyển khoản về tài khoản bạn cung cấp
+        (hoặc nhận tiền mặt tại quầy). Bạn sẽ nhận thông báo khi hoàn xong.
+      </p>
+      {raw.refundAccountNumber && !editing ? (
+        <p className="text-muted-foreground">
+          Nhận về: <span className="font-semibold text-foreground">{raw.refundBankName}</span> ·{" "}
+          <span className="font-mono font-semibold text-foreground">{raw.refundAccountNumber}</span> · {raw.refundAccountName}{" "}
+          <button type="button" onClick={() => setEditing(true)} className="text-primary font-semibold hover:underline">Sửa</button>
+        </p>
+      ) : !editing ? (
+        <button type="button" onClick={() => setEditing(true)} className="btn btn-outline btn-sm text-xs">
+          Nhập tài khoản nhận tiền
+        </button>
+      ) : (
+        <div className="grid gap-2 sm:grid-cols-3">
+          <input className="input-field text-sm" placeholder="Ngân hàng (VD: Vietcombank)" value={form.bankName}
+            onChange={(e) => setForm((f) => ({ ...f, bankName: e.target.value }))} aria-label="Ngân hàng" />
+          <input className="input-field text-sm font-mono" placeholder="Số tài khoản" inputMode="numeric" value={form.accountNumber}
+            onChange={(e) => setForm((f) => ({ ...f, accountNumber: e.target.value }))} aria-label="Số tài khoản" />
+          <input className="input-field text-sm uppercase" placeholder="Tên chủ tài khoản" value={form.accountName}
+            onChange={(e) => setForm((f) => ({ ...f, accountName: e.target.value }))} aria-label="Tên chủ tài khoản" />
+          {error && <p className="sm:col-span-3 text-rose-600">{error}</p>}
+          <div className="sm:col-span-3 flex gap-2">
+            <button type="button" onClick={() => void save()} disabled={saving} className="btn btn-primary btn-sm text-xs">
+              {saving ? "Đang lưu…" : "Lưu tài khoản"}
+            </button>
+            <button type="button" onClick={() => setEditing(false)} disabled={saving} className="btn btn-ghost btn-sm text-xs">Hủy</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const BookingCard: React.FC<BookingCardProps> = ({
-  booking, now, checkinDeadlineMinutes, apiLoaded, paying, onPay, onCancel, onShowQr, onServices,
+  booking, now, checkinDeadlineMinutes, apiLoaded, paying, onPay, onCancel, onShowQr, onServices, onRefundAccountSaved,
 }) => {
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -198,16 +287,21 @@ const BookingCard: React.FC<BookingCardProps> = ({
       ? `${booking.unitCount + extensionHours} giờ${extensionHours ? ` (gồm ${extensionHours} giờ gia hạn)` : ""}`
       : `${booking.unitCount} ${UNIT_TEXT[booking.unit] ?? booking.unit}${extensionHours ? ` + ${extensionHours} giờ gia hạn` : ""}`;
 
+  // Never paid: an expired hold (or an unpaid booking cancelled before payment) shows its value
+  // as not paid, so it does not read like money the customer spent.
+  const neverPaid = !raw.paidVia && (booking.status === "expired" || (isCancelled && !raw.paidAt));
   const paymentText =
     raw.paidVia
       ? `${PAID_VIA[raw.paidVia] ?? raw.paidVia}${raw.paidAt ? ` · ${dateTime(raw.paidAt)}` : ""}`
       : booking.status === "pending_payment"
         ? "Chưa thanh toán"
-        : raw.totalAmount === 0
-          ? "Không cần thanh toán"
-          : ["confirmed", "checked_in", "completed", "no_show"].includes(booking.status)
-            ? "Đã thanh toán"
-            : "—";
+        : neverPaid
+          ? booking.status === "expired" ? "Chưa thanh toán · hết hạn giữ chỗ" : "Chưa thanh toán"
+          : raw.totalAmount === 0
+            ? "Không cần thanh toán"
+            : ["confirmed", "checked_in", "completed", "no_show"].includes(booking.status)
+              ? "Đã thanh toán"
+              : "—";
 
   const spaceMeta = [
     raw.workspaceTypeName,
@@ -276,8 +370,8 @@ const BookingCard: React.FC<BookingCardProps> = ({
           )}
         </div>
         <div className="p-4 space-y-1">
-          <p className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5"><FiCreditCard className="h-3.5 w-3.5" /> Thanh toán</p>
-          <p className="text-base font-semibold text-foreground font-mono">{formatVND(booking.totalAmount)}</p>
+          <p className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5"><FiCreditCard className="h-3.5 w-3.5" /> {neverPaid ? "Giá trị đơn" : "Thanh toán"}</p>
+          <p className={`text-base font-semibold font-mono ${neverPaid ? "text-muted-foreground line-through" : "text-foreground"}`}>{formatVND(booking.totalAmount)}</p>
           <p className="text-sm text-muted-foreground">{paymentText}</p>
           {owed > 0 && (
             <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
@@ -329,16 +423,7 @@ const BookingCard: React.FC<BookingCardProps> = ({
                 <div><dt className="text-muted-foreground">Phí hủy</dt><dd className="font-semibold font-mono text-rose-700 dark:text-rose-400">{formatVND(booking.penaltyAmount ?? booking.totalAmount)}</dd></div>
               </dl>
               {(booking.refundAmount ?? 0) > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  Trạng thái hoàn tiền:{" "}
-                  <strong className="text-foreground">
-                    {booking.refundStatus === "processed" || booking.refundStatus === "confirmed"
-                      ? "Đã hoàn"
-                      : booking.refundStatus === "rejected"
-                        ? "Bị từ chối"
-                        : "Đang xử lý"}
-                  </strong>
-                </p>
+                <RefundStatus booking={booking} onSaved={onRefundAccountSaved} />
               )}
               {booking.cancellationReason && <p className="text-xs text-muted-foreground">Lý do: {booking.cancellationReason}</p>}
             </>

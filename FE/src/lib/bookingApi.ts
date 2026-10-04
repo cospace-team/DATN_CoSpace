@@ -46,6 +46,16 @@ export interface BookingResponse {
   promotionDiscountAmount?: number;
   addonAmount: number;
   totalAmount: number;
+  /** How the refund was paid (cash | bank_transfer | voucher) and when; the voucher code if any. */
+  refundMethod?: string | null;
+  refundProcessedAt?: string | null;
+  refundVoucherCode?: string | null;
+  /** Where the customer asked a transfer refund to go. */
+  refundBankName?: string | null;
+  refundAccountNumber?: string | null;
+  refundAccountName?: string | null;
+  /** Minutes actually spent on site over the booking's visits. */
+  visitMinutes?: number | null;
   /** Still owed on the tab (extra services, extra hours, late fee) after the booking was paid. */
   unpaidAmount?: number;
   /** Part of addonAmount that is extra hours, and how many hours were added. */
@@ -227,6 +237,31 @@ export const bookingApi = {
         ? err.message
         : 'Không kết nối được máy chủ để tải danh sách đơn đặt chỗ.');
     }
+  },
+
+  /** Tell the branch which bank account to send a pending refund to. */
+  async setRefundAccount(bookingId: string, account: { bankName: string; accountNumber: string; accountName: string }): Promise<void> {
+    const headers = await getAuthHeader();
+    const res = await fetch(`${API_BASE_URL}/api/bookings/${bookingId}/refund-account`, {
+      method: 'PUT',
+      headers: { ...(headers as Record<string, string>), 'Content-Type': 'application/json' },
+      body: JSON.stringify(account),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const field = data.fields ? Object.values(data.fields)[0] : null;
+      throw new Error((field as string) || data.message || 'Không lưu được tài khoản nhận tiền.');
+    }
+    invalidateBookingCache();
+  },
+
+  /** One of my bookings, fresh from the server (no cache). */
+  async getBooking(bookingId: string): Promise<BookingResponse> {
+    const headers = await getAuthHeader();
+    const res = await fetch(`${API_BASE_URL}/api/bookings/${bookingId}`, { headers });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || 'Không tải được đơn đặt chỗ.');
+    return data as BookingResponse;
   },
 
   /** What cancelling now would refund, under the same rules the cancellation itself applies. */

@@ -105,12 +105,60 @@ const BookingCheckoutPage: React.FC = () => {
   }, [workspace, services, serviceDetails.length]);
 
   const [isProcessing, setIsProcessing] = useState(false);
-  const [activeBooking, setActiveBooking] = useState<any | null>(null);
+  // The booking (or group) this page already created and is waiting to be paid. It is also kept in
+  // the history entry's state, so coming back from the payment page (Quay lại / browser Back)
+  // resumes the same booking instead of creating a second one with a fresh 15-minute clock.
+  const [activeBooking, setActiveBookingState] = useState<any | null>(() => state?.activeBooking ?? null);
+  const setActiveBooking = (booking: any | null) => {
+    setActiveBookingState(booking);
+    navigate(`${location.pathname}${location.search}`, { replace: true, state: { ...state, activeBooking: booking } });
+  };
   // Cash is a counter-only method (SYSTEM_SPEC §4.3): staff collect it and confirm the booking.
   // Offering it here created a booking on a 15-minute hold that expired long before the guest
   // arrived to pay, so the seat was given away under them.
   const [paymentMethod, setPaymentMethod] = useState<'payos' | 'momo'>('payos');
   const [holdExpired, setHoldExpired] = useState(false);
+
+  // Coming back to a booking created earlier: make sure it is still waiting for payment.
+  useEffect(() => {
+    const kept = state?.activeBooking;
+    if (!kept?.id) return;
+    let active = true;
+    const stillPending = kept.isGroup
+      ? bookingGroupApi.get(kept.id).then((g) => ({
+          pending: g.amountDue > 0 && !!g.paymentDeadlineAt && Date.parse(g.paymentDeadlineAt) > Date.now(),
+          paid: g.amountDue <= 0 && g.bookings.some((b) => String(b.status).toLowerCase() === 'confirmed'),
+          deadline: g.paymentDeadlineAt,
+        }))
+      : bookingApi.getBooking(kept.id).then((b) => ({
+          pending: String(b.status).toLowerCase() === 'pending_payment'
+            && !!b.paymentDeadlineAt && Date.parse(b.paymentDeadlineAt) > Date.now(),
+          paid: String(b.status).toLowerCase() === 'confirmed',
+          deadline: b.paymentDeadlineAt ?? null,
+        }));
+    stillPending
+      .then(({ pending, paid, deadline }) => {
+        if (!active) return;
+        if (pending) {
+          setActiveBookingState({ ...kept, paymentDeadlineAt: deadline });
+        } else if (paid) {
+          navigate('/customer/history', { replace: true, state: { message: `Đơn ${kept.bookingCode} đã được thanh toán.` } });
+        } else {
+          setActiveBooking(null);
+          showToast(`Đơn giữ chỗ ${kept.bookingCode} đã hết hạn hoặc đã hủy. Bạn có thể đặt lại.`, 'info');
+        }
+      })
+      .catch(() => {});
+    return () => { active = false; };
+    // Only when the page is (re)opened.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // The sticky pay bar (phones and tablets) lifts the chat button above it, see index.css.
+  useEffect(() => {
+    document.body.dataset.payBar = 'open';
+    return () => { delete document.body.dataset.payBar; };
+  }, []);
 
   // Before a booking is created there's no hold yet: the badge shows the full 15 minutes the hold
   // will last and nothing counts down (a client-only countdown used to reach 00:00 while the guest
@@ -412,8 +460,11 @@ const BookingCheckoutPage: React.FC = () => {
     }
   };
 
+  const payDisabled = isProcessing || holdExpired || (!activeBooking && !quote);
+  const payLabel = activeBooking ? 'Tiếp tục thanh toán' : 'Thanh toán ngay';
+
   return (
-    <div className="max-w-6xl mx-auto py-8 px-4 font-sans animate-fade-in space-y-8">
+    <div className="max-w-6xl mx-auto py-6 lg:py-8 px-4 font-sans animate-fade-in space-y-6 lg:space-y-8 pb-32 lg:pb-8">
       {/* Top Header */}
       <div className="flex items-center justify-between mb-4">
         <button 
@@ -440,15 +491,15 @@ const BookingCheckoutPage: React.FC = () => {
       </div>
 
       {/* Header Banner */}
-      <div className="bg-slate-900 rounded-3xl p-8 border border-border shadow-sm relative overflow-hidden">
+      <div className="bg-slate-900 rounded-3xl p-5 lg:p-8 border border-border shadow-sm relative overflow-hidden">
         
         
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
-            <h1 className="text-3xl md:text-4xl font-semibold  text-white tracking-tight ">
+            <h1 className="text-2xl md:text-4xl font-semibold  text-white tracking-tight ">
               Thanh toán Đặt chỗ
             </h1>
-            <p className="text-sm font-medium bg-muted text-foreground px-3 py-1.5 rounded-lg border border-border inline-block mt-3 shadow-sm">
+            <p className="hidden sm:inline-block text-sm font-medium bg-muted text-foreground px-3 py-1.5 rounded-lg border border-border mt-3 shadow-sm">
               Kiểm tra thông tin và hoàn tất thanh toán.
             </p>
           </div>
@@ -840,9 +891,11 @@ const BookingCheckoutPage: React.FC = () => {
               )}
               <button 
                 onClick={handleCreateBooking} 
-                disabled={isProcessing || holdExpired || (!activeBooking && !quote)}
+                disabled={payDisabled}
                 className={`w-full py-5 text-lg font-semibold tracking-tight border border-border rounded-3xl shadow-sm hover:shadow-sm transition flex justify-center items-center gap-3 ${
-                  isProcessing || holdExpired || (!activeBooking && !quote) ? 'bg-gray-600 text-white opacity-50 cursor-not-allowed' : 'bg-[#A50064] text-white hover:bg-[#8A0053]'
+                  payDisabled ? 'bg-gray-600 text-white opacity-50 cursor-not-allowed'
+                    // The button takes the colour of the chosen method: VietQR blue, MoMo pink.
+                    : paymentMethod === 'momo' ? 'bg-[#A50064] text-white hover:bg-[#8A0053]' : 'bg-[#0052cc] text-white hover:bg-[#0043a8]'
                 }`}
               >
                 {isProcessing ? (
@@ -853,7 +906,7 @@ const BookingCheckoutPage: React.FC = () => {
                 ) : (
                   <div className="flex items-center gap-2">
                     <FiCheckCircle className="h-6 w-6 font-semibold" />
-                    <span>Thanh toán ngay</span>
+                    <span>{payLabel}</span>
                   </div>
                 )}
               </button>
@@ -862,6 +915,27 @@ const BookingCheckoutPage: React.FC = () => {
               </p>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Phones and tablets: total and pay button always in reach, the invoice is far down the page. */}
+      <div className="checkout-paybar lg:hidden border-t border-border bg-card/95 backdrop-blur px-4 py-3">
+        <div className="max-w-6xl mx-auto flex items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] text-muted-foreground">Tổng cộng</p>
+            <p className="text-lg font-bold font-mono text-foreground truncate">{formatVND(grandTotal)}</p>
+          </div>
+          <button
+            type="button"
+            onClick={handleCreateBooking}
+            disabled={payDisabled}
+            className={`px-5 py-3 rounded-2xl text-sm font-semibold text-white shrink-0 ${
+              payDisabled ? 'bg-gray-500 opacity-60 cursor-not-allowed'
+                : paymentMethod === 'momo' ? 'bg-[#A50064] hover:bg-[#8A0053]' : 'bg-[#0052cc] hover:bg-[#0043a8]'
+            }`}
+          >
+            {isProcessing ? 'Đang xử lý…' : payLabel}
+          </button>
         </div>
       </div>
     </div>

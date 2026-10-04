@@ -28,6 +28,8 @@ interface ExploreResultsProps {
   onSelect: (ws: ExploreWorkspace) => void;
   onShowOnMap: (ws: ExploreWorkspace) => void;
   onEditFilters: () => void;
+  /** Search again for one person, so a group can book separate desks together. */
+  onSearchSeparateSeats?: () => void;
 }
 
 /**
@@ -36,7 +38,7 @@ interface ExploreResultsProps {
  */
 export const ExploreResults: React.FC<ExploreResultsProps> = ({
   workspaces, floors, people, typeIds, statusOf, priceOf, equipment, slotLabel, slotHours, loading, selectedWs,
-  onSelect, onShowOnMap, onEditFilters,
+  onSelect, onShowOnMap, onEditFilters, onSearchSeparateSeats,
 }) => {
   const [showTaken, setShowTaken] = useState(false);
   const [showOversized, setShowOversized] = useState(false);
@@ -65,6 +67,14 @@ export const ExploreResults: React.FC<ExploreResultsProps> = ({
     .filter((g) => g.items.length > 0);
 
   const outOfStock = equipment.filter((e) => e.stock && e.stock.remaining <= 0);
+  // What the list actually shows; larger spaces tucked behind the toggle are counted apart.
+  const freeShown = visible.filter((r) => r.status === 'available').length;
+  const hiddenOversizedFree = hideOversized ? withStatus.filter((r) => r.status === 'available' && isOversized(r.ws.capacity)).length : 0;
+  // A group can also sit at separate desks: smaller free spaces of the wanted type, booked together.
+  const smallerFree = people > 1
+    ? workspaces.filter((w) => w.capacity < people && (typeIds.length === 0 || typeIds.includes(w.workspace_type_id))
+        && statusOf(w.id) === 'available').length
+    : 0;
 
   return (
     <div className="p-4 sm:p-6 space-y-5">
@@ -72,10 +82,12 @@ export const ExploreResults: React.FC<ExploreResultsProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>
           <h2 className="text-xl font-semibold text-foreground">
-            {loading ? 'Đang tìm chỗ phù hợp…' : freeCount > 0 ? `${freeCount} chỗ trống phù hợp` : 'Chưa có chỗ trống phù hợp'}
+            {loading ? 'Đang tìm chỗ phù hợp…' : freeShown > 0 ? `${freeShown} chỗ trống phù hợp` : 'Chưa có chỗ trống phù hợp'}
           </h2>
           <p className="text-sm text-muted-foreground">
-            {slotLabel} · từ {people} người{matching.length > freeCount && !loading ? ` · ${matching.length - freeCount} chỗ phù hợp đã kín` : ''}
+            {slotLabel} · từ {people} người
+            {hiddenOversizedFree > 0 && !loading ? ` · thêm ${hiddenOversizedFree} không gian lớn hơn` : ''}
+            {matching.length > freeCount && !loading ? ` · ${matching.length - freeCount} chỗ phù hợp đã kín` : ''}
           </p>
         </div>
         <div className="flex flex-col gap-1.5 sm:items-end">
@@ -93,6 +105,17 @@ export const ExploreResults: React.FC<ExploreResultsProps> = ({
           )}
         </div>
       </div>
+
+      {!loading && smallerFree >= 2 && onSearchSeparateSeats && (
+        <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm flex flex-wrap items-center justify-between gap-2">
+          <span className="text-foreground">
+            Nhóm muốn ngồi bàn lẻ? Còn {smallerFree} chỗ nhỏ hơn đang trống trong khung giờ này, đặt chung một lần.
+          </span>
+          <button type="button" onClick={onSearchSeparateSeats} className="btn btn-outline btn-sm text-xs">
+            Xem bàn lẻ
+          </button>
+        </div>
+      )}
 
       {/* Equipment for the slot */}
       {equipment.length > 0 && (

@@ -88,6 +88,16 @@ public class Refund {
     @Column(name = "voucher_promotion_id")
     private UUID voucherPromotionId;
 
+    /** Where the customer wants a bank-transfer refund sent; filled in by the customer. */
+    @Column(name = "receiving_bank_name", length = 100)
+    private String receivingBankName;
+
+    @Column(name = "receiving_account_number", length = 30)
+    private String receivingAccountNumber;
+
+    @Column(name = "receiving_account_name", length = 100)
+    private String receivingAccountName;
+
     @Column(name = "processed_by")
     private UUID processedBy;
 

@@ -188,6 +188,14 @@ const RefundsPage: React.FC<{ scope: 'admin' | 'branch' }> = ({ scope }) => {
                       {r.paymentProvider && (
                         <p className="text-xs text-muted-foreground">Giao dịch: {PROVIDER_LABEL[r.paymentProvider] || r.paymentProvider}</p>
                       )}
+                      {r.receivingAccountNumber ? (
+                        <p className="text-xs mt-1 rounded-md bg-muted/50 px-2 py-1">
+                          Nhận về: <span className="font-semibold">{r.receivingBankName}</span> ·{' '}
+                          <span className="font-mono font-semibold">{r.receivingAccountNumber}</span> · {r.receivingAccountName}
+                        </p>
+                      ) : r.status === 'pending' && (
+                        <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">Khách chưa nhập tài khoản nhận tiền</p>
+                      )}
                     </td>
                     <td className="font-semibold text-primary whitespace-nowrap">{formatVND(r.amount)}</td>
                     <td className="text-xs whitespace-nowrap">{formatDateTime(r.createdAt)}</td>

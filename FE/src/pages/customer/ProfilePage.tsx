@@ -359,21 +359,10 @@ const ProfilePage: React.FC = () => {
             return ['confirmed', 'checked_in', 'checked_out', 'completed'].includes(s);
           });
           const totalBookings = valid.length;
-          let totalHours = 0;
-          valid.forEach(b => {
-            const u = (b.unit || '').toLowerCase();
-            const count = Number(b.unitCount) || 0;
-            if (u === 'hour' && count > 0) totalHours += count;
-            else if (u === 'day' && count > 0) totalHours += count * 8;
-            else if (u === 'week' && count > 0) totalHours += count * 40;
-            else if (u === 'month' && count > 0) totalHours += count * 160;
-            else if (b.startAt && b.endAt) {
-              const diff = new Date(b.endAt).getTime() - new Date(b.startAt).getTime();
-              totalHours += Math.max(1, Math.round(diff / 3600000));
-            } else {
-              totalHours += Math.max(1, count || 1);
-            }
-          });
+          // Hours actually spent at CoSpace (check-in to check-out), not hours booked: an upcoming
+          // weekly booking used to add 40 hours before the customer had set foot in the space.
+          const totalMinutes = valid.reduce((sum, b) => sum + (Number(b.visitMinutes) || 0), 0);
+          const totalHours = Math.round(totalMinutes / 60);
 
           let tier = 'Hạng Bronze';
           if (totalBookings >= 20 || totalHours >= 80) tier = 'Hạng Platinum';
@@ -1120,6 +1109,7 @@ const ProfilePage: React.FC = () => {
               <div>
                 <p className="text-[11px] font-medium text-muted-foreground">Giờ làm việc</p>
                 <p className="text-lg font-bold text-foreground">{realStats.totalHours} giờ</p>
+                <p className="text-[11px] text-muted-foreground">Tính từ các lượt check-in</p>
               </div>
             </div>
 
@@ -1184,12 +1174,12 @@ const ProfilePage: React.FC = () => {
                     {reputation.score}<span className="text-xs font-semibold text-muted-foreground">/{reputation.maxScore}</span>
                   </p>
                   <p
-                    className="text-[11px] text-muted-foreground truncate"
+                    className="text-[11px] text-muted-foreground leading-snug"
                     title={reputation.recentEvents[0]?.note ?? undefined}
                   >
                     {reputation.recentEvents[0]
                       ? `Gần nhất: ${reputation.recentEvents[0].delta} điểm (${new Date(reputation.recentEvents[0].createdAt).toLocaleDateString('vi-VN')})`
-                      : `Check-in trễ quá ${reputation.checkinDeadlineMinutes} phút: -${reputation.missedCheckinPenalty} điểm`}
+                      : `Trễ check-in >${reputation.checkinDeadlineMinutes}p: -${reputation.missedCheckinPenalty} điểm`}
                   </p>
                 </div>
               </div>

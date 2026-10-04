@@ -21,6 +21,7 @@ import java.util.UUID;
 public class CommunityPostController {
 
     private final CommunityPostService communityPostService;
+    private final com.cospace.app.service.PostCommentService postCommentService;
 
     @GetMapping("/posts")
     public ResponseEntity<?> listFeed(
@@ -30,7 +31,15 @@ public class CommunityPostController {
             @RequestParam(defaultValue = "relevant") String sort) {
         try {
             UUID userId = extractUserId(jwt);
-            List<PostDto> feed = communityPostService.listFeed(userId, tagId, type, sort);
+            List<PostDto> cached = communityPostService.listFeed(userId, tagId, type, sort);
+            Map<UUID, Long> counts = postCommentService.counts(cached.stream().map(PostDto::getId).toList());
+            // Copies: the feed list is shared through the service's cache.
+            List<PostDto> feed = cached.stream().map(p -> {
+                PostDto copy = PostDto.builder().build();
+                org.springframework.beans.BeanUtils.copyProperties(p, copy);
+                copy.setCommentCount(counts.getOrDefault(p.getId(), 0L));
+                return copy;
+            }).toList();
             return ResponseEntity.ok(Map.of("data", feed));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
@@ -53,6 +62,32 @@ public class CommunityPostController {
         try {
             UUID userId = extractUserId(jwt);
             communityPostService.deletePost(userId, postId);
+            return ResponseEntity.ok(Map.of("success", true));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/posts/{postId}/comments")
+    public ResponseEntity<?> listComments(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID postId) {
+        return ResponseEntity.ok(Map.of("data", postCommentService.list(extractUserId(jwt), postId)));
+    }
+
+    @PostMapping("/posts/{postId}/comments")
+    public ResponseEntity<?> addComment(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID postId,
+                                        @RequestBody Map<String, String> body) {
+        try {
+            UUID userId = extractUserId(jwt);
+            return ResponseEntity.status(HttpStatus.CREATED).body(postCommentService.add(userId, postId, body.get("content")));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/comments/{commentId}")
+    public ResponseEntity<?> deleteComment(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID commentId) {
+        try {
+            postCommentService.delete(extractUserId(jwt), commentId);
             return ResponseEntity.ok(Map.of("success", true));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
