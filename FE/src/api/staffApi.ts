@@ -136,6 +136,7 @@ export interface ReportOverviewDto {
   totalBookings: number;
   completedBookings: number;
   canceledBookings: number;
+  noShowBookings?: number;
   months: string[];
   monthlyRevenue: number[];
   monthlyBookings?: number[];

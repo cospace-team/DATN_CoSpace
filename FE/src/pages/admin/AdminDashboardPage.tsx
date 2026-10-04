@@ -165,6 +165,10 @@ const AdminDashboardPage: React.FC = () => {
 
   const kpis = useMemo(() => {
     if (!report) return [];
+    // Only bookings whose outcome is known: counting upcoming and in-progress ones as "not
+    // completed" made the rate look far worse than it is.
+    const ended = report.completedBookings + report.canceledBookings + (report.noShowBookings ?? 0);
+    const open = Math.max(0, report.totalBookings - ended);
     return [
       {
         icon: FiDollarSign,
@@ -176,13 +180,13 @@ const AdminDashboardPage: React.FC = () => {
         icon: FiCalendar,
         label: 'Tổng đơn đặt chỗ',
         value: String(report.totalBookings),
-        sub: `${report.completedBookings} hoàn thành · ${report.canceledBookings} hủy`,
+        sub: `${report.completedBookings} hoàn thành · ${report.canceledBookings} hủy${report.noShowBookings ? ` · ${report.noShowBookings} không đến` : ''}`,
       },
       {
         icon: FiActivity,
         label: 'Tỷ lệ hoàn thành',
-        value: `${report.totalBookings > 0 ? Math.round((report.completedBookings / report.totalBookings) * 100) : 0}%`,
-        sub: `${report.completedBookings} / ${report.totalBookings} đơn thành công`,
+        value: ended > 0 ? `${Math.round((report.completedBookings / ended) * 100)}%` : '—',
+        sub: `${report.completedBookings} / ${ended} đơn đã kết thúc${open > 0 ? ` · chưa tính ${open} đơn sắp tới/đang diễn ra` : ''}`,
       },
       {
         icon: FiMapPin,
@@ -537,7 +541,7 @@ const AdminDashboardPage: React.FC = () => {
                   <RePieChart>
                     <Pie
                       data={typeData}
-                      dataKey="count"
+                      dataKey="revenue"
                       nameKey="name"
                       cx="50%"
                       cy="50%"
@@ -569,8 +573,10 @@ const AdminDashboardPage: React.FC = () => {
 
               <div className="space-y-2.5">
                 {typeData.map((t) => {
-                  const total = typeData.reduce((s, x) => s + x.count, 0);
-                  const pct = total > 0 ? Math.round((t.count / total) * 100) : 0;
+                  // Share of revenue, matching the amount printed next to it (it used to be the
+                  // share of bookings, so "25.500.000 ₫ · 15%" read as 15% of revenue).
+                  const totalRevenue = typeData.reduce((s, x) => s + x.revenue, 0);
+                  const pct = totalRevenue > 0 ? Math.round((t.revenue / totalRevenue) * 100) : 0;
                   return (
                     <div key={t.name} className="p-2.5 rounded-xl bg-muted/40 border border-border/50 text-xs">
                       <div className="flex items-center justify-between mb-1.5">
@@ -582,7 +588,7 @@ const AdminDashboardPage: React.FC = () => {
                       </div>
                       <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-1">
                         <span>{t.count} đơn</span>
-                        <span className="font-mono font-medium">{pct}%</span>
+                        <span className="font-mono font-medium">{pct}% doanh thu</span>
                       </div>
                       <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
                         <div

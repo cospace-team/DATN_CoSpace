@@ -240,7 +240,7 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
     : wsAvail;
 
   return (
-    <div className="p-5">
+    <div className="p-5 bg-inherit">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-medium text-lg text-foreground">{ws.name}</h3>
         <button
@@ -600,8 +600,12 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
           </div>
         </div>
 
-        {/* Total Price summary */}
-        <div className="flex justify-between items-center pt-2 border-t border-[var(--border-subtle)]">
+      </div>
+
+      {/* Total + book button stay pinned to the bottom of the panel, so on a phone the customer
+          does not have to scroll past the photos and every add-on to find them. */}
+      <div className="sticky bottom-0 z-10 -mx-5 -mb-5 mt-4 px-5 pt-3 pb-5 bg-inherit border-t border-[var(--border-subtle)]">
+        <div className="flex justify-between items-center">
           <span className="text-sm font-semibold">
             Tổng cộng{seatCount > 1 && <span className="font-normal text-[var(--text-tertiary)]"> · {seatCount} chỗ</span>}
           </span>
@@ -609,18 +613,17 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
             {formatVND(total)}
           </span>
         </div>
-      </div>
 
       {/* Book button */}
       {currentAvail === 'available' && price && (
         <>
           {blockedExtras.length > 0 && (
-            <p className="mt-4 text-xs text-[var(--state-danger)]">
+            <p className="mt-3 text-xs text-[var(--state-danger)]">
               Bỏ {blockedExtras.length === 1 ? 'chỗ' : `${blockedExtras.length} chỗ`} không đặt được ở trên để tiếp tục.
             </p>
           )}
           <button
-            className="btn btn-primary w-full mt-5 cursor-pointer disabled:opacity-50"
+            className="btn btn-primary w-full mt-3 cursor-pointer disabled:opacity-50"
             disabled={blockedExtras.length > 0}
             onClick={() => onBookNow(endHour, services, subtotal, addonTotal, endDate, durationUnit, extraSeats.map((e) => e.seat.id))}
           >
@@ -630,7 +633,7 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
         </>
       )}
       {currentAvail?.startsWith('booked') && (
-        <div className="mt-5 rounded-2xl bg-[var(--state-danger-bg)] border border-[var(--state-danger-border)] p-3 text-center">
+        <div className="mt-3 rounded-2xl bg-[var(--state-danger-bg)] border border-[var(--state-danger-border)] p-3 text-center">
           <p className="text-sm font-semibold text-[var(--state-danger)]">
             Đã được đặt{' '}
             {currentAvail.split('|').length === 3
@@ -642,6 +645,7 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
           </p>
         </div>
       )}
+      </div>
     </div>
   );
 };

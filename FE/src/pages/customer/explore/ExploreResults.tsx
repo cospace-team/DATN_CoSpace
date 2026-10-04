@@ -21,6 +21,8 @@ interface ExploreResultsProps {
   /** Equipment the customer asked for, with what is left of each for the slot. */
   equipment: { id: string; name: string; stock?: ServiceAvailabilityDto }[];
   slotLabel: string;
+  /** Length of the searched slot in hours, to show what an hourly price adds up to. */
+  slotHours: number;
   loading: boolean;
   selectedWs: string | null;
   onSelect: (ws: ExploreWorkspace) => void;
@@ -33,10 +35,11 @@ interface ExploreResultsProps {
  * first. Taken spaces can be shown on request so the customer sees why a favourite is missing.
  */
 export const ExploreResults: React.FC<ExploreResultsProps> = ({
-  workspaces, floors, people, typeIds, statusOf, priceOf, equipment, slotLabel, loading, selectedWs,
+  workspaces, floors, people, typeIds, statusOf, priceOf, equipment, slotLabel, slotHours, loading, selectedWs,
   onSelect, onShowOnMap, onEditFilters,
 }) => {
   const [showTaken, setShowTaken] = useState(false);
+  const [showOversized, setShowOversized] = useState(false);
 
   const matching = useMemo(
     () => workspaces.filter((w) => w.capacity >= people && (typeIds.length === 0 || typeIds.includes(w.workspace_type_id))),
@@ -44,8 +47,17 @@ export const ExploreResults: React.FC<ExploreResultsProps> = ({
   );
   const withStatus = matching.map((w) => ({ ws: w, status: statusOf(w.id) }));
   const freeCount = withStatus.filter((r) => r.status === 'available').length;
+  // A 30-seat hall shown next to single desks for a solo search buries what the customer asked for.
+  // Much larger spaces are tucked behind a toggle, but only while something closer in size is free.
+  const isOversized = (capacity: number) => capacity >= people * 2 && capacity - people >= 8;
+  const hasFittingFree = withStatus.some((r) => r.status === 'available' && !isOversized(r.ws.capacity));
+  const hideOversized = hasFittingFree && !showOversized;
+  const oversizedCount = withStatus.filter(
+    (r) => isOversized(r.ws.capacity) && (showTaken || r.status === 'available'),
+  ).length;
   const visible = withStatus
     .filter((r) => showTaken || r.status === 'available')
+    .filter((r) => !hideOversized || !isOversized(r.ws.capacity))
     .sort((a, b) => Number(b.status === 'available') - Number(a.status === 'available') || a.ws.capacity - b.ws.capacity);
 
   const byFloor = floors
@@ -66,12 +78,20 @@ export const ExploreResults: React.FC<ExploreResultsProps> = ({
             {slotLabel} · từ {people} người{matching.length > freeCount && !loading ? ` · ${matching.length - freeCount} chỗ phù hợp đã kín` : ''}
           </p>
         </div>
-        {matching.length > freeCount && (
-          <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
-            <input type="checkbox" checked={showTaken} onChange={(e) => setShowTaken(e.target.checked)} className="rounded" />
-            Hiện cả chỗ đã kín
-          </label>
-        )}
+        <div className="flex flex-col gap-1.5 sm:items-end">
+          {matching.length > freeCount && (
+            <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+              <input type="checkbox" checked={showTaken} onChange={(e) => setShowTaken(e.target.checked)} className="rounded" />
+              Hiện cả chỗ đã kín
+            </label>
+          )}
+          {hasFittingFree && oversizedCount > 0 && (
+            <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+              <input type="checkbox" checked={showOversized} onChange={(e) => setShowOversized(e.target.checked)} className="rounded" />
+              Hiện cả không gian lớn hơn nhu cầu ({oversizedCount})
+            </label>
+          )}
+        </div>
       </div>
 
       {/* Equipment for the slot */}
@@ -100,7 +120,7 @@ export const ExploreResults: React.FC<ExploreResultsProps> = ({
       )}
 
       {loading ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(17rem,1fr))]">
           {[1, 2, 3, 4, 5, 6].map((i) => <div key={i} className="h-56 rounded-2xl bg-card border border-border animate-pulse" />)}
         </div>
       ) : byFloor.length === 0 ? (
@@ -122,7 +142,7 @@ export const ExploreResults: React.FC<ExploreResultsProps> = ({
               {/^tầng\b/i.test(floor.name.trim()) ? floor.name : `Tầng ${floor.floorNo} · ${floor.name}`}
               <span className="font-normal">({items.filter((r) => r.status === 'available').length} trống)</span>
             </h3>
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(17rem,1fr))]">
               {items.map(({ ws, status }) => {
                 const free = status === 'available';
                 const price = priceOf(ws.workspace_type_id);
@@ -162,16 +182,23 @@ export const ExploreResults: React.FC<ExploreResultsProps> = ({
                         <FiUsers className="h-4 w-4 text-muted-foreground" /> {ws.capacity} chỗ ngồi
                         <span className="text-muted-foreground font-mono text-xs ml-auto">{ws.code}</span>
                       </p>
-                      <div className="mt-auto pt-3 border-t border-border flex items-center justify-between gap-2">
-                        <p className="text-sm">
+                      <div className="mt-auto pt-3 border-t border-border flex flex-wrap items-center justify-between gap-2">
+                        <div className="text-sm">
                           {price ? (
                             <>
-                              <span className="font-semibold text-foreground">{formatVND(price.price)}</span>
-                              <span className="text-muted-foreground">/{durationUnitLabel[price.duration_unit]?.toLowerCase()}</span>
+                              <p>
+                                <span className="font-semibold text-foreground">{formatVND(price.price)}</span>
+                                <span className="text-muted-foreground">/{durationUnitLabel[price.duration_unit]?.toLowerCase()}</span>
+                              </p>
+                              {price.duration_unit === 'hour' && slotHours > 1 && (
+                                <p className="text-xs text-muted-foreground">
+                                  {formatVND(price.price * slotHours)} cho {slotHours} giờ
+                                </p>
+                              )}
                             </>
                           ) : <span className="text-muted-foreground">Chưa có giá</span>}
-                        </p>
-                        <div className="flex gap-1.5">
+                        </div>
+                        <div className="flex gap-1.5 ml-auto">
                           <button
                             type="button"
                             onClick={() => onShowOnMap(ws)}

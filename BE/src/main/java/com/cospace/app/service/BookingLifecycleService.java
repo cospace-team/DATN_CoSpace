@@ -99,13 +99,19 @@ public class BookingLifecycleService {
         bookingRepository.save(booking);
 
         if (!wasUsed) {
-            // Covers bookings that ended before the check-in deadline job reached them.
-            reputationService.penalizeMissedCheckin(booking);
-            notificationService.createNotification(booking.getUserId(),
-                    "Bạn đã bỏ lỡ lượt đặt chỗ",
-                    "Đơn " + booking.getBookingCode() + " đã kết thúc mà không có lượt check-in nào. "
-                            + "Theo chính sách, đơn không đến sẽ không được hoàn tiền.",
-                    "BOOKING", booking.getId(), "BOOKING");
+            // One message per missed booking. The check-in deadline job usually docked the points
+            // (and told the customer, refund policy included) earlier; if it hasn't, the penalty
+            // applied now carries the "missed booking" wording itself.
+            boolean notifiedEarlier = reputationService.hasMissedCheckinPenalty(booking.getId());
+            boolean penalizedNow = !notifiedEarlier && reputationService.penalizeMissedCheckin(booking, true);
+            if (!notifiedEarlier && !penalizedNow) {
+                // No penalty applies (turned off, or not a customer account), but the booking still closed.
+                notificationService.createNotification(booking.getUserId(),
+                        "Bạn đã bỏ lỡ lượt đặt chỗ",
+                        "Đơn " + booking.getBookingCode() + " đã kết thúc mà không có lượt check-in nào. "
+                                + "Theo chính sách, đơn không đến sẽ không được hoàn tiền.",
+                        "BOOKING", booking.getId(), "BOOKING");
+            }
         }
         log.info("Closed ended booking {} as {}", booking.getBookingCode(), target);
         return target;

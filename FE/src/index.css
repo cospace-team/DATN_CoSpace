@@ -588,3 +588,9 @@ a, button, input, select, textarea, label, summary, [role="button"], [role="tab"
   .mobile-main-content { padding-bottom: 64px; }
   .data-table th, .data-table td { padding: 8px 10px; font-size: 13px; }
 }
+/* Explore's booking panel is 20rem wide on the right; keep the chat button clear of it. */
+@media (min-width: 1024px) {
+  body[data-side-panel="open"] .chat-fab {
+    right: calc(20rem + 1.25rem);
+  }
+}

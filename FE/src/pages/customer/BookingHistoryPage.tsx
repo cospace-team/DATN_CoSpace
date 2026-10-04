@@ -395,7 +395,8 @@ const BookingHistoryPage: React.FC = () => {
           {([
             { id: "upcoming", label: "Sắp tới", icon: FiClock },
             { id: "past", label: "Hoàn thành", icon: FiCheckCircle },
-            { id: "canceled", label: "Đã hủy", icon: FiX },
+            // No-shows land here too, so the tab says so instead of reading as "cancelled by me".
+            { id: "canceled", label: "Hủy / Không đến", shortLabel: "Hủy/vắng", icon: FiX },
           ] as const).map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -411,7 +412,12 @@ const BookingHistoryPage: React.FC = () => {
                 }`}
               >
                 <Icon className="h-4 w-4 hidden sm:block" />
-                {tab.label}
+                {"shortLabel" in tab ? (
+                  <>
+                    <span className="sm:hidden">{tab.shortLabel}</span>
+                    <span className="hidden sm:inline">{tab.label}</span>
+                  </>
+                ) : tab.label}
                 <span className={`rounded-full px-1.5 text-[11px] ${isActive ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
                   {tabCount(tab.id)}
                 </span>

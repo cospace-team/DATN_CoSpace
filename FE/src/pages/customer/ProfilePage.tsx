@@ -205,8 +205,12 @@ const ProfilePage: React.FC = () => {
     totalBookings: 0,
     totalHours: 0,
     tier: 'Hạng Bronze',
-    memberSince: 'Năm 2026',
   });
+  // Account creation time, from the profile endpoint (falls back to the login payload).
+  const [joinedAt, setJoinedAt] = useState<string | null>(user?.createdAt ?? null);
+  const memberSince = joinedAt
+    ? (() => { const d = new Date(joinedAt); return `Tháng ${d.getMonth() + 1}/${d.getFullYear()}`; })()
+    : null;
   // Server-side membership tier; realStats.tier stays as the offline fallback.
   const [membership, setMembership] = useState<MyMembershipDto | null>(null);
   const [reputation, setReputation] = useState<MyReputationDto | null>(null);
@@ -325,12 +329,11 @@ const ProfilePage: React.FC = () => {
           setProfileForm(prev => {
             const next = {
               ...prev,
-              profession: data.profession || prev.profession || 'Frontend Developer & Co-worker',
-              company: data.company || prev.company || 'CoSpace Community',
-              bio:
-                data.bio ||
-                prev.bio ||
-                'Thành viên năng động tại CoSpace. Đam mê công nghệ, chia sẻ kinh nghiệm và tìm kiếm cơ hội hợp tác kết nối.',
+              // No made-up defaults: whatever is shown here is saved back with the next edit and
+              // shown to other members as if the customer had written it.
+              profession: data.profession || prev.profession || '',
+              company: data.company || prev.company || '',
+              bio: data.bio || prev.bio || '',
               contactPublic: data.contactPublic !== undefined ? data.contactPublic : true,
             };
             initialProfileRef.current = next;
@@ -338,6 +341,9 @@ const ProfilePage: React.FC = () => {
           });
           if (data.avatarUrl) {
             setCustomAvatarUrl(data.avatarUrl);
+          }
+          if (data.createdAt) {
+            setJoinedAt(data.createdAt);
           }
         }
       } catch (error) {
@@ -377,16 +383,7 @@ const ProfilePage: React.FC = () => {
           else if (totalBookings >= 10 || totalHours >= 40) tier = 'Hạng Gold';
           else if (totalBookings >= 3 || totalHours >= 10) tier = 'Hạng Silver';
 
-          let memberSince = 'Năm 2026';
-          if (user?.createdAt) {
-            const d = new Date(user.createdAt);
-            memberSince = `Tháng ${d.getMonth() + 1}/${d.getFullYear()}`;
-          } else if (valid.length > 0 && valid[0].createdAt) {
-            const d = new Date(valid[0].createdAt);
-            memberSince = `Tháng ${d.getMonth() + 1}/${d.getFullYear()}`;
-          }
-
-          setRealStats({ totalBookings, totalHours, tier, memberSince });
+          setRealStats({ totalBookings, totalHours, tier });
         }
       } catch (e) {
         console.warn('Failed to calculate real booking stats:', e);
@@ -1055,10 +1052,14 @@ const ProfilePage: React.FC = () => {
                 <p className="text-sm font-medium text-muted-foreground flex items-center justify-center sm:justify-start gap-2">
                   <FiBriefcase className="h-4 w-4 text-primary shrink-0" />
                   <span>
-                    <span className="text-foreground font-semibold">
-                      {profileForm.profession || 'Chuyên viên'}
-                    </span>
-                    {profileForm.company ? ` @ ${profileForm.company}` : ''}
+                    {profileForm.profession || profileForm.company ? (
+                      <>
+                        <span className="text-foreground font-semibold">{profileForm.profession}</span>
+                        {profileForm.company ? `${profileForm.profession ? ' @ ' : ''}${profileForm.company}` : ''}
+                      </>
+                    ) : (
+                      <span className="italic">Chưa cập nhật chức danh</span>
+                    )}
                   </span>
                 </p>
 
@@ -1066,9 +1067,11 @@ const ProfilePage: React.FC = () => {
                   <span className="flex items-center gap-1.5">
                     <FiMail className="h-3.5 w-3.5" /> {profileForm.email || user?.email}
                   </span>
-                  <span className="flex items-center gap-1.5">
-                    <FiCalendar className="h-3.5 w-3.5" /> Tham gia: {realStats.memberSince}
-                  </span>
+                  {memberSince && (
+                    <span className="flex items-center gap-1.5">
+                      <FiCalendar className="h-3.5 w-3.5" /> Tham gia: {memberSince}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -1101,6 +1104,7 @@ const ProfilePage: React.FC = () => {
               <div>
                 <p className="text-[11px] font-medium text-muted-foreground">Lượt đặt chỗ</p>
                 <p className="text-lg font-bold text-foreground">{realStats.totalBookings} lượt</p>
+                <p className="text-[11px] text-muted-foreground">Đã xác nhận &amp; hoàn thành</p>
               </div>
             </div>
 
@@ -1133,12 +1137,14 @@ const ProfilePage: React.FC = () => {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-[11px] font-medium text-muted-foreground">Hạng thành viên</p>
-                <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                <p className="text-lg font-bold leading-tight text-emerald-600 dark:text-emerald-400 break-words">
                   {tierLabel}
-                  {!!membership?.currentTier?.discountPercent && (
-                    <span className="ml-1.5 text-xs font-semibold">(-{membership.currentTier.discountPercent}%)</span>
-                  )}
                 </p>
+                {!!membership?.currentTier?.discountPercent && (
+                  <p className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                    Giảm {membership.currentTier.discountPercent}% mỗi đơn
+                  </p>
+                )}
                 {membership?.nextTier && (
                   <div className="mt-1 space-y-1">
                     <div className="h-1.5 w-full rounded-full bg-border overflow-hidden">

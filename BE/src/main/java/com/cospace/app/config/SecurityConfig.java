@@ -129,6 +129,8 @@ public class SecurityConfig {
                                                                 new AntPathRequestMatcher("/api/auth/register"),
                                                                 new AntPathRequestMatcher("/api/auth/login"),
                                                                 new AntPathRequestMatcher("/api/auth/refresh"),
+                                                                new AntPathRequestMatcher("/api/auth/forgot-password"),
+                                                                new AntPathRequestMatcher("/api/auth/reset-password"),
                                                                 new AntPathRequestMatcher("/api/customer/spaces/branches"),
                                                                 new AntPathRequestMatcher("/api/customer/spaces/pricing-summary"),
                                                                 new AntPathRequestMatcher("/error"))

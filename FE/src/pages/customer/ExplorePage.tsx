@@ -80,6 +80,16 @@ const branchHourRange = (branch?: Pick<BranchResponse, "openTime" | "closeTime">
 };
 
 /* ── Main Explore Page ── */
+const TIMELINE_PAST_CLASS = "bg-muted bg-[repeating-linear-gradient(45deg,transparent,transparent_4px,hsl(var(--border))_4px,hsl(var(--border))_6px)]";
+
+const TIMELINE_LEGEND = [
+  { label: "Trống", className: "bg-emerald-400" },
+  { label: "Đã đặt", className: "bg-rose-400" },
+  { label: "Bảo trì / không khả dụng", className: "bg-slate-300" },
+  { label: "Đã qua", className: TIMELINE_PAST_CLASS },
+  { label: "Đang chọn", className: "bg-[var(--brand-primary)]" },
+];
+
 const ExplorePage: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>("results");
   const navigate = useNavigate();
@@ -756,6 +766,11 @@ const ExplorePage: React.FC = () => {
   // One panel, placed by viewport: a side column on desktop, a bottom sheet on mobile. It used to be
   // rendered twice and hidden with CSS, so both copies fetched stock and kept their own state.
   const isDesktop = useMediaQuery("(min-width: 1024px)");
+
+  const now = new Date();
+  const isToday = selectedDate.toDateString() === now.toDateString();
+  const nowHour = now.getHours();
+
   const bookingPanel = selectedWs && selectedWsData ? (
     <BookingPanel
       ws={selectedWsData}
@@ -786,6 +801,15 @@ const ExplorePage: React.FC = () => {
       onBookNow={handleBookNow}
     />
   ) : null;
+
+  // The chat button sits bottom-right, exactly where the side panel's tabs and book button are.
+  // Flag the open panel on <body> so the button can move to the panel's left edge (see index.css).
+  const sidePanelOpen = Boolean(bookingPanel) && isDesktop;
+  useEffect(() => {
+    if (!sidePanelOpen) return;
+    document.body.dataset.sidePanel = "open";
+    return () => { delete document.body.dataset.sidePanel; };
+  }, [sidePanelOpen]);
 
   return (
     <div
@@ -966,6 +990,7 @@ const ExplorePage: React.FC = () => {
                   stock: equipmentStock[id],
                 }))}
                 slotLabel={slotLabel}
+                slotHours={currentFilter.endHour - selectedHour}
                 loading={loading || workspacesLoading}
                 selectedWs={selectedWs}
                 onSelect={openSpace}
@@ -975,7 +1000,16 @@ const ExplorePage: React.FC = () => {
             </div>
           ) : (
             /* ── DAY VIEW (Timeline) ── */
-            <div className="p-6 overflow-y-auto h-full bg-muted/50">
+            <div className="p-4 sm:p-6 overflow-y-auto h-full bg-muted/50">
+              <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground" aria-label="Chú thích màu">
+                {TIMELINE_LEGEND.map((item) => (
+                  <span key={item.label} className="flex items-center gap-1.5">
+                    <span className={`h-3 w-5 rounded-full border border-border ${item.className}`} aria-hidden />
+                    {item.label}
+                  </span>
+                ))}
+                <span className="basis-full sm:basis-auto sm:ml-auto">Kéo qua các ô xanh để chọn nhiều giờ.</span>
+              </div>
               <div className="bg-card border border-border rounded-2xl shadow-sm overflow-x-auto">
                 <div className="min-w-[700px]">
                   {/* Time header */}
@@ -1007,16 +1041,20 @@ const ExplorePage: React.FC = () => {
                         <div className="flex-1 flex">
                           {Array.from({ length: Math.max(0, closeHour - openHour) }, (_, i) => i + openHour).map(
                             (h) => {
-                              const avail = getWsAvailability(
-                                ws.id,
-                                selectedDate,
-                                h,
-                              );
+                              // An hour that has already ended today can't be booked, whatever the
+                              // schedule says, so it is never shown as free.
+                              const past = isToday && h < nowHour;
+                              const avail = past ? "past" : getWsAvailability(ws.id, selectedDate, h);
+                              const booked = avail.startsWith("booked");
                               return (
                                 <div
                                   key={h}
-                                  className="flex-1 border-r last:border-r-0 border-border p-1.5 cursor-pointer hover:bg-card/50 transition-colors"
+                                  className={`flex-1 border-r last:border-r-0 border-border p-1.5 transition-colors ${past ? "cursor-not-allowed" : "cursor-pointer hover:bg-card/50"}`}
+                                  title={`${String(h).padStart(2, "0")}:00 · ${
+                                    past ? "Đã qua" : avail === "available" ? "Trống" : booked ? "Đã đặt" : avail === "maintenance" ? "Bảo trì" : "Không khả dụng"
+                                  }`}
                                   onMouseDown={() => {
+                                    if (past) return;
                                     if (avail === "available") {
                                       setIsDraggingTime(true);
                                       setDragStartHour(h);
@@ -1035,7 +1073,7 @@ const ExplorePage: React.FC = () => {
                                         const start = Math.min(dragStartHour, h);
                                         const end = Math.max(dragStartHour, h);
                                         for (let i = start; i <= end; i++) {
-                                          if (getWsAvailability(ws.id, selectedDate, i) !== "available") {
+                                          if ((isToday && i < nowHour) || getWsAvailability(ws.id, selectedDate, i) !== "available") {
                                             allAvail = false;
                                             break;
                                           }
@@ -1052,11 +1090,13 @@ const ExplorePage: React.FC = () => {
                                     className={`w-full h-8 rounded-full border border-border ${
                                       (ws.id === selectedWs && h >= selectedHour && h < (selectedEndHour || selectedHour + 1))
                                         ? "bg-[var(--brand-primary)] shadow-[0_0_10px_rgba(37,99,235,0.4)] scale-[1.05]"
-                                        : avail === "available"
-                                          ? "bg-emerald-400"
-                                          : avail === "booked"
-                                            ? "bg-rose-400"
-                                            : "bg-slate-300"
+                                        : past
+                                          ? TIMELINE_PAST_CLASS
+                                          : avail === "available"
+                                            ? "bg-emerald-400"
+                                            : booked
+                                              ? "bg-rose-400"
+                                              : "bg-slate-300"
                                     } transition hover:opacity-80`}
                                   />
                                 </div>
@@ -1085,7 +1125,8 @@ const ExplorePage: React.FC = () => {
               onClick={() => setSelectedWs(null)}
               aria-hidden="true"
             />
-            <div className="bottom-sheet bottom-sheet-enter" role="dialog" aria-modal="true" aria-label={selectedWsData?.name}>
+            {/* No bottom padding: the panel's pinned total + book button must sit flush with the screen edge. */}
+            <div className="bottom-sheet bottom-sheet-enter !pb-0" role="dialog" aria-modal="true" aria-label={selectedWsData?.name}>
               <div className="bottom-sheet-handle" aria-hidden="true" />
               {bookingPanel}
             </div>

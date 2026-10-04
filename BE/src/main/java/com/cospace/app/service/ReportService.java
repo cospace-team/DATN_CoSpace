@@ -98,6 +98,7 @@ public class ReportService {
         int totalBookings = filtered.size();
         int completedBookings = (int) filtered.stream().filter(b -> b.getStatus() == BookingStatus.COMPLETED).count();
         int canceledBookings = (int) filtered.stream().filter(b -> b.getStatus() == BookingStatus.CANCELLED).count();
+        int noShowBookings = (int) filtered.stream().filter(b -> b.getStatus() == BookingStatus.NO_SHOW).count();
 
         long totalRevenue = computeRevenue(filtered, recognisedRevenue);
 
@@ -362,6 +363,7 @@ public class ReportService {
                 .totalBookings(totalBookings)
                 .completedBookings(completedBookings)
                 .canceledBookings(canceledBookings)
+                .noShowBookings(noShowBookings)
                 .months(months)
                 .monthlyRevenue(monthlyRevenue)
                 .monthlyBookings(monthlyBookings)
