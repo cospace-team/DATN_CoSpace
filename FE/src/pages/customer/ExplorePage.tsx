@@ -568,6 +568,19 @@ const ExplorePage: React.FC = () => {
     setSelectedDate(d);
   };
 
+  // Availability over the span a booking really takes. A day pass runs from opening time (or the
+  // current hour, today) to closing time on its last day, which is what checkout sends; checking
+  // only the searched hour let a seat booked at 09:00 look free for a day pass at 20:00.
+  const availabilityFor = (wsId: string, startHour: number, endHour: number, endDate: Date, unit: string) => {
+    if (unit === 'day') {
+      const isToday = selectedDate.toDateString() === new Date().toDateString();
+      const lastDay = new Date(endDate);
+      lastDay.setDate(lastDay.getDate() - 1);
+      return getWsAvailability(wsId, selectedDate, isToday ? Math.max(openHour, new Date().getHours()) : openHour, lastDay, closeHour);
+    }
+    return getWsAvailability(wsId, selectedDate, startHour, endDate, unit === 'hour' ? endHour : undefined);
+  };
+
   const handleBookNow = (
     endHour: number,
     services: Record<string, number>,
@@ -595,7 +608,7 @@ const ExplorePage: React.FC = () => {
       return;
     }
 
-    const avail = getWsAvailability(selectedWsData.id, selectedDate, selectedHour, endDate, durationUnit === 'hour' ? endHour : undefined);
+    const avail = availabilityFor(selectedWsData.id, selectedHour, endHour, endDate, durationUnit);
     
     if (avail?.startsWith('booked') || avail === 'booked') {
         const parts = avail.split('|');
@@ -628,7 +641,7 @@ const ExplorePage: React.FC = () => {
     for (const id of extraIds) {
       const seat = workspaceById.get(id);
       if (!seat) continue;
-      const seatAvail = getWsAvailability(id, selectedDate, selectedHour, endDate, durationUnit === 'hour' ? endHour : undefined);
+      const seatAvail = availabilityFor(id, selectedHour, endHour, endDate, durationUnit);
       if (seatAvail !== "available") {
         showToast(`Chỗ "${seat.name}" không còn trống trong khoảng thời gian này, vui lòng bỏ chỗ đó ra.`, "error");
         return;
@@ -652,6 +665,9 @@ const ExplorePage: React.FC = () => {
         endHour: endHour,
         endDate: endDate,
         durationUnit: durationUnit,
+        // A day pass is used during opening hours, so checkout needs the branch's hours.
+        openHour,
+        closeHour,
         services: services,
         serviceDetails: selectedServiceDetails,
         addons,
@@ -788,12 +804,12 @@ const ExplorePage: React.FC = () => {
       closeHour={closeHour}
       onClose={() => setSelectedWs(null)}
       onChangeStartHour={(h) => setSelectedHour(h)}
-      checkAvailability={(stH, endH, endD, unit) => getWsAvailability(selectedWs, selectedDate, stH, endD, unit === 'hour' ? endH : undefined)}
+      checkAvailability={(stH, endH, endD, unit) => availabilityFor(selectedWs, stH, endH, endD, unit)}
       availableServices={extraServices}
       candidateSeats={mappedWorkspaces}
       extraSeatIds={extraSeatIds}
       onToggleExtraSeat={toggleExtraSeat}
-      checkSeatAvailability={(wsId, stH, endH, endD, unit) => getWsAvailability(wsId, selectedDate, stH, endD, unit === 'hour' ? endH : undefined)}
+      checkSeatAvailability={(wsId, stH, endH, endD, unit) => availabilityFor(wsId, stH, endH, endD, unit)}
       getSeatPrice={(typeId, unit) => getPrice(typeId, unit)}
       maxSeats={MAX_GROUP_SEATS}
       multiSelect={multiSelect}

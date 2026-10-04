@@ -130,6 +130,16 @@ public class GlobalExceptionHandler {
                 "Dữ liệu đang được cập nhật bởi một thao tác khác. Vui lòng thử lại sau giây lát.");
     }
 
+    /** The client shows the list and sends the request again with confirmAffectedBookings. */
+    @ExceptionHandler(MaintenanceImpactException.class)
+    public ResponseEntity<Map<String, Object>> handleMaintenanceImpact(MaintenanceImpactException ex) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("error", "affected_bookings");
+        body.put("message", ex.getMessage());
+        body.put("bookings", ex.getBookings());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+    }
+
     @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
     public ResponseEntity<Map<String, Object>> handleDataIntegrityViolation(org.springframework.dao.DataIntegrityViolationException ex) {
         logger.warn("Data integrity violation: {}", ex.getMessage());

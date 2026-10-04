@@ -450,6 +450,25 @@ class BookingServiceTest {
         }
 
         @Test
+        void dayPassRunsWithinOpeningHoursAndNeverOvernight() {
+            givenBranchHours("08:00", "21:00");
+
+            // The old checkout sent "18:00 → 18:00 the next day" for one day.
+            assertThatThrownBy(() -> bookingService.validateSchedule(realBranchId, DurationUnit.day,
+                    vn("2026-10-02T18:00:00"), vn("2026-10-03T18:00:00"), now))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("21:00");
+            assertThatThrownBy(() -> bookingService.validateSchedule(realBranchId, DurationUnit.day,
+                    vn("2026-10-02T08:00:00"), vn("2026-10-03T00:00:00"), now))
+                    .isInstanceOf(IllegalArgumentException.class);
+
+            bookingService.validateSchedule(realBranchId, DurationUnit.day, vn("2026-10-02T08:00:00"), vn("2026-10-02T21:00:00"), now);
+            bookingService.validateSchedule(realBranchId, DurationUnit.day, vn("2026-10-02T08:00:00"), vn("2026-10-04T21:00:00"), now);
+            assertThat(BookingService.computeUnitCount(DurationUnit.day, vn("2026-10-02T08:00:00"), vn("2026-10-02T21:00:00"))).isEqualTo(1);
+            assertThat(BookingService.computeUnitCount(DurationUnit.day, vn("2026-10-02T08:00:00"), vn("2026-10-04T21:00:00"))).isEqualTo(3);
+        }
+
+        @Test
         void hourlyBookingMustFitInsideOpeningHoursInVietnamTime() {
             givenBranchHours("07:00", "22:00");
 
@@ -469,10 +488,10 @@ class BookingServiceTest {
         }
 
         @Test
-        void dailyBookingOnlyNeedsToStartWhileOpen() {
+        void dailyBookingMustStartWhileOpen() {
             givenBranchHours("07:00", "22:00");
 
-            bookingService.validateSchedule(realBranchId, DurationUnit.day, vn("2026-10-02T09:00:00"), vn("2026-10-04T09:00:00"), now);
+            bookingService.validateSchedule(realBranchId, DurationUnit.day, vn("2026-10-02T09:00:00"), vn("2026-10-04T22:00:00"), now);
             assertThatThrownBy(() -> bookingService.validateSchedule(realBranchId, DurationUnit.day,
                     vn("2026-10-02T23:00:00"), vn("2026-10-03T23:00:00"), now))
                     .isInstanceOf(IllegalArgumentException.class);
@@ -658,6 +677,44 @@ class BookingServiceTest {
             assertThatThrownBy(() -> bookingService.createBooking(userId, request(DurationUnit.hour, 2)))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("3 đơn");
+        }
+    }
+
+    @Nested
+    class OverstayingGuest {
+
+        private final OffsetDateTime now = OffsetDateTime.parse("2026-10-04T18:30:00+07:00");
+        private final UUID workspaceId = UUID.randomUUID();
+
+        private Booking stillInside() {
+            return Booking.builder().id(UUID.randomUUID()).bookingCode("CS-OLD-0005").workspaceId(workspaceId)
+                    .status(BookingStatus.CHECKED_IN)
+                    .startAt(now.minusHours(11)).endAt(now.minusHours(1)).build();
+        }
+
+        @Test
+        void walkInOnASeatWhoseGuestHasNotLeftIsRefused() {
+            when(bookingRepository.findOverstayingGuests(workspaceId, now)).thenReturn(List.of(stillInside()));
+
+            assertThatThrownBy(() -> bookingService.requireNotOccupiedByOverstayingGuest(workspaceId, now, now, BookingSource.counter))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("CS-OLD-0005");
+        }
+
+        @Test
+        void customersAreToldTheSeatIsTakenWithoutSomeoneElsesBookingCode() {
+            when(bookingRepository.findOverstayingGuests(workspaceId, now)).thenReturn(List.of(stillInside()));
+
+            assertThatThrownBy(() -> bookingService.requireNotOccupiedByOverstayingGuest(workspaceId, now, now, BookingSource.web))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageNotContaining("CS-OLD-0005");
+        }
+
+        @Test
+        void laterBookingsAreNotHeldBackByAGuestWhoMayLeaveAnyMinute() {
+            bookingService.requireNotOccupiedByOverstayingGuest(workspaceId, now.plusHours(2), now, BookingSource.web);
+
+            verify(bookingRepository, never()).findOverstayingGuests(any(), any());
         }
     }
 }

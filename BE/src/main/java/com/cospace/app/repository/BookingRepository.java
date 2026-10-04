@@ -38,6 +38,24 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
             @org.springframework.data.repository.query.Param("start") OffsetDateTime start, 
             @org.springframework.data.repository.query.Param("end") OffsetDateTime end);
 
+    /**
+     * Guests still checked in although their booked time is over: until someone checks them out
+     * they are sitting in the seat, so it is not free for the next guest whatever the schedule says.
+     */
+    @org.springframework.data.jpa.repository.Query("SELECT b FROM Booking b WHERE b.workspaceId = :workspaceId AND b.status = com.cospace.app.entity.BookingStatus.CHECKED_IN AND b.endAt <= :now")
+    List<Booking> findOverstayingGuests(@org.springframework.data.repository.query.Param("workspaceId") UUID workspaceId,
+                                        @org.springframework.data.repository.query.Param("now") OffsetDateTime now);
+
+    /** Other bookings of the workspace whose guest is inside right now (checked in, not checked out). */
+    @org.springframework.data.jpa.repository.Query("SELECT b FROM Booking b WHERE b.workspaceId = :workspaceId AND b.id <> :bookingId AND b.status = com.cospace.app.entity.BookingStatus.CHECKED_IN AND EXISTS (SELECT c FROM CheckinLog c WHERE c.bookingId = b.id AND c.checkoutAt IS NULL)")
+    List<Booking> findOtherGuestsInside(@org.springframework.data.repository.query.Param("workspaceId") UUID workspaceId,
+                                        @org.springframework.data.repository.query.Param("bookingId") UUID bookingId);
+
+    /** {@link #findOverstayingGuests} for every workspace of a branch. */
+    @org.springframework.data.jpa.repository.Query("SELECT b FROM Booking b WHERE b.branchId = :branchId AND b.status = com.cospace.app.entity.BookingStatus.CHECKED_IN AND b.endAt <= :now")
+    List<Booking> findOverstayingGuestsInBranch(@org.springframework.data.repository.query.Param("branchId") UUID branchId,
+                                                @org.springframework.data.repository.query.Param("now") OffsetDateTime now);
+
     @org.springframework.data.jpa.repository.Query("SELECT b FROM Booking b WHERE b.workspaceId = :workspaceId AND b.startAt < :endAt AND b.endAt > :startAt AND b.status IN :statuses")
     List<Booking> findOverlappingBookings(@org.springframework.data.repository.query.Param("workspaceId") UUID workspaceId, 
                                           @org.springframework.data.repository.query.Param("startAt") OffsetDateTime startAt, 

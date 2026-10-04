@@ -18,6 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -80,6 +81,21 @@ class CheckinServiceTest {
 
     @Nested
     class Checkin {
+
+        @Test
+        void seatStillHeldByAnOverstayingGuestRefusesTheNextCheckin() {
+            Booking booking = booking(BookingStatus.CONFIRMED, DurationUnit.hour, 2, now().minusMinutes(10), now().plusHours(2));
+            Booking previous = booking(BookingStatus.CHECKED_IN, DurationUnit.hour, 2, now().minusHours(3), now().minusHours(1));
+            previous.setBookingCode("WH-OLD001");
+            when(bookingRepository.findByIdWithLock(booking.getId())).thenReturn(Optional.of(booking));
+            givenStaffOfBranch(branchId);
+            when(bookingRepository.findOtherGuestsInside(booking.getWorkspaceId(), booking.getId())).thenReturn(List.of(previous));
+
+            assertThatThrownBy(() -> checkinService.checkin(staffId, booking.getId(), null))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("WH-OLD001");
+            verify(checkinLogRepository, never()).save(any());
+        }
 
         @Test
         void confirmedBookingInWindowIsCheckedIn() {

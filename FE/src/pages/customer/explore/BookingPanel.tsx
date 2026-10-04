@@ -45,6 +45,12 @@ export const toMidnight = (d: Date): Date => {
   return r;
 };
 
+const addDays = (d: Date, days: number): Date => {
+  const r = new Date(d);
+  r.setDate(r.getDate() + days);
+  return r;
+};
+
 /** Count calendar days between two midnight-dates (inclusive start, exclusive end) */
 export const daysDiff = (from: Date, to: Date): number =>
   Math.max(1, Math.round((to.getTime() - from.getTime()) / 86_400_000));
@@ -420,16 +426,18 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
                   htmlFor={`end-date-${selectedWs}`}
                   className="text-xs text-[var(--text-secondary)]"
                 >
-                  Ngày kết thúc
+                  {durationUnit === 'day' ? 'Đến hết ngày' : 'Ngày kết thúc'}
                 </label>
+                {/* endDate is exclusive (the day after the last one). A day pass shows the last day
+                    it can be used instead, so a one-day pass reads "5/10 → 5/10", not "→ 6/10". */}
                 <input
                   id={`end-date-${selectedWs}`}
                   type="date"
-                  value={toDateInputValue(endDate)}
-                  min={toDateInputValue(minEndDate)}
+                  value={toDateInputValue(durationUnit === 'day' ? addDays(endDate, -1) : endDate)}
+                  min={toDateInputValue(durationUnit === 'day' ? addDays(minEndDate, -1) : minEndDate)}
                   onChange={e => {
                     const d = new Date(e.target.value + 'T00:00:00');
-                    if (!isNaN(d.getTime())) setEndDate(d);
+                    if (!isNaN(d.getTime())) setEndDate(durationUnit === 'day' ? addDays(d, 1) : d);
                   }}
                   className="input-field mt-1 text-sm w-full"
                 />
@@ -442,7 +450,7 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
             {durationUnit === 'hour'
               ? `${Math.max(1, endHour - selectedHour)} giờ`
               : durationUnit === 'day'
-              ? `${unitCount} ngày`
+              ? `${unitCount} ngày · ${String(openHour).padStart(2, '0')}:00 – ${String(closeHour).padStart(2, '0')}:00 mỗi ngày`
               : `${unitCount} tuần (≈ ${unitCount * 7} ngày)`}
           </p>
         </div>

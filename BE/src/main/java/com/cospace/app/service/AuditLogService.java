@@ -32,6 +32,7 @@ public class AuditLogService {
 
     private final AuditLogRepository auditLogRepository;
     private final UserRepository userRepository;
+    private final org.springframework.beans.factory.ObjectProvider<AuditLogService> selfProvider;
 
     /**
      * Convenience overload for controllers: pulls the IP/user-agent straight off the current
@@ -42,6 +43,52 @@ public class AuditLogService {
         String ipAddress = request != null ? request.getRemoteAddr() : null;
         String userAgent = request != null ? request.getHeader("User-Agent") : null;
         log(userId, action, entityName, entityId, oldValues, newValues, ipAddress, userAgent);
+    }
+
+    /**
+     * For services: records an action once the surrounding transaction has committed, so a booking
+     * or payment that ends up rolled back never appears in the log as if it had happened. Outside a
+     * transaction it is written straight away. IP and user agent come from the current request when
+     * there is one (a scheduler or webhook has none).
+     */
+    public void record(UUID userId, String action, String entityName, UUID entityId, Map<String, Object> newValues) {
+        String ipAddress = null;
+        String userAgent = null;
+        if (org.springframework.web.context.request.RequestContextHolder.getRequestAttributes()
+                instanceof org.springframework.web.context.request.ServletRequestAttributes attrs) {
+            ipAddress = attrs.getRequest().getRemoteAddr();
+            userAgent = attrs.getRequest().getHeader("User-Agent");
+        }
+        String ip = ipAddress;
+        String ua = userAgent;
+        if (org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive()) {
+            org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                    new org.springframework.transaction.support.TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            self().log(userId, action, entityName, entityId, null, newValues, ip, ua);
+                        }
+                    });
+        } else {
+            self().log(userId, action, entityName, entityId, null, newValues, ip, ua);
+        }
+    }
+
+    /** Key/value pairs for an entry's details, skipping nulls (Map.of refuses them). */
+    public static Map<String, Object> values(Object... keyValues) {
+        Map<String, Object> map = new java.util.LinkedHashMap<>();
+        for (int i = 0; i + 1 < keyValues.length; i += 2) {
+            if (keyValues[i + 1] != null) {
+                map.put(String.valueOf(keyValues[i]), keyValues[i + 1] instanceof UUID || keyValues[i + 1] instanceof Enum<?>
+                        || keyValues[i + 1] instanceof java.time.temporal.Temporal ? keyValues[i + 1].toString() : keyValues[i + 1]);
+            }
+        }
+        return map;
+    }
+
+    /** Through the proxy, so log() really runs in its own (REQUIRES_NEW) transaction after commit. */
+    private AuditLogService self() {
+        return selfProvider != null && selfProvider.getIfAvailable() != null ? selfProvider.getIfAvailable() : this;
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)

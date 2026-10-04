@@ -32,6 +32,17 @@ const actionLabel: Record<string, string> = {
   CREATE_BRANCH: 'Tạo chi nhánh',
   UPDATE_WORKSPACE: 'Cập nhật phòng',
   TOGGLE_SERVICE: 'Bật/Tắt dịch vụ',
+  UPDATE_STATUS: 'Khóa / mở tài khoản',
+  UPDATE_ROLE: 'Đổi vai trò',
+  COMPLETE: 'Hoàn tất bảo trì',
+  PROCESS: 'Xử lý hoàn tiền',
+  SETTLE_TAB: 'Thu tiền dịch vụ',
+  EXTEND: 'Gia hạn',
+  LATE_FEE: 'Phí trả muộn',
+  VOID: 'Hủy món',
+  CANCEL_FOR_CUSTOMER: 'Hủy thay khách',
+  END_EARLY_FOR_CUSTOMER: 'Kết thúc sớm',
+  REPUTATION_PENALTY_REVERTED: 'Hoàn điểm uy tín',
 };
 
 const actionColor: Record<string, string> = {
@@ -48,6 +59,17 @@ const actionColor: Record<string, string> = {
   CREATE_BRANCH: 'badge-info',
   UPDATE_WORKSPACE: 'badge-warning',
   TOGGLE_SERVICE: 'badge-neutral',
+  UPDATE_STATUS: 'badge-error',
+  UPDATE_ROLE: 'badge-warning',
+  COMPLETE: 'badge-success',
+  PROCESS: 'badge-warning',
+  SETTLE_TAB: 'badge-warning',
+  EXTEND: 'badge-info',
+  LATE_FEE: 'badge-warning',
+  VOID: 'badge-neutral',
+  CANCEL_FOR_CUSTOMER: 'badge-error',
+  END_EARLY_FOR_CUSTOMER: 'badge-error',
+  REPUTATION_PENALTY_REVERTED: 'badge-neutral',
 };
 
 const entityLabel: Record<string, string> = {
@@ -60,6 +82,12 @@ const entityLabel: Record<string, string> = {
   payments: 'Thanh toán',
   cancellation_policies: 'Chính sách hủy',
   price_policies: 'Chính sách giá',
+  workspace_maintenance: 'Bảo trì',
+  booking_services: 'Dịch vụ gọi thêm',
+  refunds: 'Hoàn tiền',
+  promotions: 'Khuyến mãi',
+  branch_service_limits: 'Giới hạn thiết bị',
+  membership_tiers: 'Hạng thành viên',
 };
 
 const roleLabel: Record<string, string> = {

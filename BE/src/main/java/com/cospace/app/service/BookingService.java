@@ -32,6 +32,19 @@ import com.cospace.app.entity.BookingSource;
 @Service
 public class BookingService {
 
+    /**
+     * Optional so unit tests that build this service by hand need not supply it; always present in
+     * the running application.
+     */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private AuditLogService auditLogService;
+
+    private void audit(UUID actorId, String action, String entityName, UUID entityId, java.util.Map<String, Object> values) {
+        if (auditLogService != null) {
+            auditLogService.record(actorId, action, entityName, entityId, values);
+        }
+    }
+
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final String CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
@@ -86,14 +99,25 @@ public class BookingService {
 
     @Transactional
     public BookingDto createBooking(UUID userId, BookingCreateRequest req) {
-        return createBookingInternal(userId, req, BookingSource.web, null, true);
+        BookingDto created = createBookingInternal(userId, req, BookingSource.web, null, true);
+        auditBookingCreated(userId, created, BookingSource.web);
+        return created;
     }
 
     @Transactional
     public BookingDto createWalkinBooking(UUID staffId, UUID customerId, BookingCreateRequest req) {
         // Staff should check branch matching etc.
         // For now, assuming staff has permission.
-        return createBookingInternal(customerId, req, BookingSource.counter, null, true);
+        BookingDto created = createBookingInternal(customerId, req, BookingSource.counter, null, true);
+        auditBookingCreated(staffId, created, BookingSource.counter);
+        return created;
+    }
+
+    private void auditBookingCreated(UUID actorId, BookingDto b, BookingSource source) {
+        audit(actorId, "CREATE_BOOKING", "bookings", b.getId(), AuditLogService.values(
+                "bookingCode", b.getBookingCode(), "customerId", b.getUserId(), "workspace", b.getWorkspaceName(),
+                "startAt", b.getStartAt(), "endAt", b.getEndAt(), "unit", b.getUnit(),
+                "totalAmount", b.getTotalAmount(), "source", source));
     }
 
     /**
@@ -186,6 +210,8 @@ public class BookingService {
         if (!overlappingMaintenances.isEmpty()) {
             throw new IllegalArgumentException("Vị trí đang được bảo trì trong khoảng thời gian này.");
         }
+
+        requireNotOccupiedByOverstayingGuest(req.getWorkspaceId(), startOffset, checkedAt, source);
 
         DurationUnit unit = req.getUnit();
         if (unit == null) {
@@ -334,7 +360,8 @@ public class BookingService {
             // Add-ons are served once for the group, so they ride on the first seat chosen.
             seatReq.setAddons(seatId.equals(seatIds.get(0)) ? req.getAddons() : null);
             try {
-                createBookingInternal(userId, seatReq, BookingSource.web, group.getId(), false);
+                auditBookingCreated(userId, createBookingInternal(userId, seatReq, BookingSource.web, group.getId(), false),
+                        BookingSource.web);
             } catch (IllegalArgumentException | IllegalStateException e) {
                 // Name the seat, then let the exception roll the whole group back.
                 throw new IllegalArgumentException("Chỗ \"" + seats.get(seatId).getName() + "\": " + e.getMessage(), e);
@@ -555,6 +582,40 @@ public class BookingService {
                 && (!end.toLocalDate().equals(start.toLocalDate()) || end.toLocalTime().isAfter(close))) {
             throw new IllegalArgumentException(hours + " Đặt theo giờ phải kết thúc trước giờ đóng cửa trong cùng ngày.");
         }
+        // A day pass is used during opening hours, open to close on each day. Ending at the start hour
+        // of the next day (18:00 → 18:00) would hold the seat overnight, when the branch is shut and
+        // nobody can be checked in or out.
+        if (unit == DurationUnit.day
+                && (end.toLocalTime().isAfter(close) || !end.toLocalTime().isAfter(start.toLocalTime()))) {
+            throw new IllegalArgumentException(hours + " Đặt theo ngày dùng trong giờ mở cửa: "
+                    + "kết thúc muộn nhất lúc " + close + " của ngày cuối, không kéo qua đêm.");
+        }
+    }
+
+    /** A booking starting this soon would put the new guest next to one who has not left yet. */
+    static final long OVERSTAY_GUARD_MINUTES = 15;
+
+    /**
+     * A guest who is still checked in after their booked end keeps the seat until checked out, so a
+     * booking that starts now (a walk-in, or someone booking the current hour) cannot take it. The
+     * schedule alone does not show this: the old booking's time is over.
+     */
+    void requireNotOccupiedByOverstayingGuest(UUID workspaceId, OffsetDateTime startAt, OffsetDateTime now,
+                                              BookingSource source) {
+        if (!startAt.isBefore(now.plusMinutes(OVERSTAY_GUARD_MINUTES))) {
+            return;
+        }
+        List<Booking> seated = bookingRepository.findOverstayingGuests(workspaceId, now);
+        if (seated.isEmpty()) {
+            return;
+        }
+        if (source == BookingSource.web) {
+            throw new IllegalArgumentException(
+                    "Vị trí này vẫn đang có khách sử dụng. Vui lòng chọn chỗ khác hoặc khung giờ muộn hơn.");
+        }
+        throw new IllegalArgumentException("Khách của đơn " + seated.get(0).getBookingCode()
+                + " vẫn đang ngồi tại vị trí này (đã quá giờ nhưng chưa check-out). "
+                + "Hãy check-out khách đó trước hoặc chọn chỗ khác.");
     }
 
     /** Branch a workspace belongs to (workspace → floor → branch), for access checks. */
@@ -779,6 +840,14 @@ public class BookingService {
                 .filter(b -> !BookingExpiryService.isExpiredHold(b, OffsetDateTime.now(ZoneOffset.UTC)))
                 .collect(Collectors.toList());
 
+        // Guests still inside past their booked end hold the seat until checked out; shown as busy
+        // until the same horizon createBooking refuses (see requireNotOccupiedByOverstayingGuest).
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        OffsetDateTime overstayUntil = now.plusMinutes(OVERSTAY_GUARD_MINUTES);
+        List<Booking> overstaying = from.isBefore(overstayUntil) && to.isAfter(now)
+                ? bookingRepository.findOverstayingGuestsInBranch(branchId, now)
+                : List.of();
+
         return workspaces.stream().map(ws -> {
             List<com.cospace.app.dto.api.PublicWorkspaceAvailabilityDto.BusySlot> slots = new java.util.ArrayList<>();
 
@@ -787,6 +856,14 @@ public class BookingService {
                     .forEach(b -> slots.add(com.cospace.app.dto.api.PublicWorkspaceAvailabilityDto.BusySlot.builder()
                             .startAt(b.getStartAt())
                             .endAt(b.getEndAt())
+                            .reason("booking")
+                            .build()));
+
+            overstaying.stream()
+                    .filter(b -> b.getWorkspaceId().equals(ws.getId()))
+                    .forEach(b -> slots.add(com.cospace.app.dto.api.PublicWorkspaceAvailabilityDto.BusySlot.builder()
+                            .startAt(b.getStartAt())
+                            .endAt(overstayUntil)
                             .reason("booking")
                             .build()));
 

@@ -23,6 +23,19 @@ import java.util.*;
 @Slf4j
 public class CancellationService {
 
+    /**
+     * Optional so unit tests that build this service by hand need not supply it; always present in
+     * the running application.
+     */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private AuditLogService auditLogService;
+
+    private void audit(UUID actorId, String action, String entityName, UUID entityId, java.util.Map<String, Object> values) {
+        if (auditLogService != null) {
+            auditLogService.record(actorId, action, entityName, entityId, values);
+        }
+    }
+
     private final BookingRepository bookingRepository;
     private final BookingCancellationRepository cancellationRepository;
     private final CancellationPolicyRepository policyRepository;
@@ -356,6 +369,11 @@ public class CancellationService {
                 "BOOKING"
         );
 
+        if (actorId != null && actorId.equals(booking.getUserId())) {
+            audit(actorId, "CANCEL_BOOKING", "bookings", booking.getId(), AuditLogService.values(
+                    "bookingCode", booking.getBookingCode(), "reason", cancelReason,
+                    "refundPercent", refundPercent, "refundAmount", refundAmount));
+        }
         return cancellation;
     }
 

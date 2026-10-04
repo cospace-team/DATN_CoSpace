@@ -5,7 +5,8 @@ import {
   FiChevronDown, FiAlertCircle, FiInfo
 } from 'react-icons/fi';
 import { formatDateTime } from '../../utils/formatters';
-import { staffApi, WorkspaceMaintenanceStatusDto } from '../../api/staffApi';
+import { staffApi, WorkspaceMaintenanceStatusDto, MaintenanceImpactError, type MaintenanceImpact } from '../../api/staffApi';
+import AffectedBookingsDialog from '../../components/AffectedBookingsDialog';
 import { customerSpaceApi, BranchResponse, FloorResponse } from '../../lib/spaceApi';
 import FloorPlanViewer, { WorkspaceMapInfo } from '../../components/floor-plan/FloorPlanViewer';
 import type { FloorLayout, LayoutElement } from '../../types/floorPlan';
@@ -32,6 +33,8 @@ const MaintenancePage: React.FC = () => {
   const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Bookings the lock would cancel or cut short, listed by the server before it does anything.
+  const [impact, setImpact] = useState<MaintenanceImpact[] | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Filters
@@ -172,8 +175,12 @@ const MaintenancePage: React.FC = () => {
   };
 
   // Submit Lock / Maintenance Report
-  const handleCreate = async (e: React.FormEvent) => {
+  const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
+    void submitLock(false);
+  };
+
+  const submitLock = async (confirmAffectedBookings: boolean) => {
     if (!selectedWs || !reason.trim()) return;
 
     const now = new Date();
@@ -185,13 +192,19 @@ const MaintenancePage: React.FC = () => {
         startAt: now.toISOString(),
         endAt: end.toISOString(),
         reason: reason.trim(),
+        confirmAffectedBookings,
       });
+      setImpact(null);
       setIsModalOpen(false);
       setSelectedWs(null);
       setReason('');
       showToast(`Đã khóa và tạo lịch bảo trì cho "${selectedWs.name}"!`, 'success');
       fetchData();
     } catch (error: any) {
+      if (error instanceof MaintenanceImpactError) {
+        setImpact(error.bookings);
+        return;
+      }
       showToast('Lỗi tạo bảo trì: ' + (error.message || 'Không thể tạo bảo trì'), 'error');
     } finally {
       setIsSubmitting(false);
@@ -657,7 +670,17 @@ const MaintenancePage: React.FC = () => {
       )}
 
       {/* ─── Modal Báo Hỏng & Khóa Bàn ─── */}
-      {isModalOpen && selectedWs && (
+      {impact && selectedWs && (
+        <AffectedBookingsDialog
+          workspaceName={selectedWs.name}
+          bookings={impact}
+          submitting={isSubmitting}
+          onConfirm={() => void submitLock(true)}
+          onCancel={() => { setImpact(null); setIsModalOpen(false); setSelectedWs(null); setReason(''); }}
+        />
+      )}
+
+      {isModalOpen && selectedWs && !impact && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-fade-in">
           <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-slide-in-up">
             <div className="flex items-center gap-3 p-5 border-b border-border bg-destructive/10 text-destructive">

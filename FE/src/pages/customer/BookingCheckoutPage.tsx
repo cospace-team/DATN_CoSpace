@@ -19,6 +19,8 @@ import { HoldCountdown } from '../../components/HoldCountdown';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+const hh = (h: number) => `${String(h).padStart(2, '0')}:00`;
+
 const BookingCheckoutPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -55,14 +57,27 @@ const BookingCheckoutPage: React.FC = () => {
   const addonTotal = addons.reduce((sum, a) => sum + a.price * a.quantity, 0);
   const total = subtotal + addonTotal;
 
-  // Booked time span. Day/week bookings run from the start hour on the first date to the same
-  // hour on the end date, so "15 → 16" is exactly one day. The backend prices this span itself
-  // (a started unit counts in full); the unit count below only mirrors that for display.
+  // Booked time span. A day pass is used during opening hours: from opening time on the first day
+  // (or the current hour when that day is today) to closing time on the last day. endDate is the
+  // day after the last one, so "5 → 6" is a one-day pass for the 5th. Week bookings run from the
+  // start hour on the first date to the same hour on the end date. The backend prices this span
+  // itself (a started unit counts in full); the unit count below only mirrors that for display.
   const isMultiDay = bookingDurationUnit !== 'hour';
+  const dayHours: { open: number; close: number } | null =
+    bookingDurationUnit === 'day' && typeof state?.openHour === 'number' && typeof state?.closeHour === 'number'
+      ? { open: state.openHour, close: state.closeHour }
+      : null;
+  const isDayPass = dayHours !== null;
+  const isStartToday = date.toDateString() === new Date().toDateString();
+  const effectiveStartHour = dayHours
+    ? (isStartToday ? Math.max(dayHours.open, new Date().getHours()) : dayHours.open)
+    : startHour;
+  const lastDay = new Date(endDate);
+  if (isDayPass) lastDay.setDate(lastDay.getDate() - 1);
   const startAtDate = new Date(date);
-  startAtDate.setHours(startHour, 0, 0, 0);
-  const endAtDate = new Date(isMultiDay ? endDate : date);
-  endAtDate.setHours(isMultiDay ? startHour : endHour, 0, 0, 0);
+  startAtDate.setHours(effectiveStartHour, 0, 0, 0);
+  const endAtDate = new Date(isMultiDay ? lastDay : date);
+  endAtDate.setHours(dayHours ? dayHours.close : isMultiDay ? startHour : endHour, 0, 0, 0);
   const unitMs = bookingDurationUnit === 'week' ? 7 * 86_400_000 : bookingDurationUnit === 'day' ? 86_400_000 : 3_600_000;
   const estimatedUnitCount = Math.max(1, Math.ceil((endAtDate.getTime() - startAtDate.getTime()) / unitMs));
 
@@ -510,13 +525,14 @@ const BookingCheckoutPage: React.FC = () => {
               <div className="space-y-2 p-4 bg-muted/50 rounded-3xl border border-border shadow-inner">
                 {isMultiDay ? (
                   <>
-                    <p className="text-[10px] text-foreground tracking-tight font-semibold">Đến ngày</p>
+                    <p className="text-[10px] text-foreground tracking-tight font-semibold">{isDayPass ? 'Đến hết ngày' : 'Đến ngày'}</p>
                     <p className="flex items-center gap-3 font-semibold text-lg text-foreground">
                       <div className="p-2 bg-card border border-border rounded-lg shadow-sm"><FiCalendar className="text-foreground h-5 w-5" /></div>
-                      {endDate.toLocaleDateString('vi-VN')}
+                      {lastDay.toLocaleDateString('vi-VN')}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
                       {unitCount} {bookingDurationUnit === 'week' ? 'tuần' : 'ngày'}
+                      {dayHours && ` · ${hh(effectiveStartHour)} – ${hh(dayHours.close)}${unitCount > 1 && effectiveStartHour !== dayHours.open ? ` (các ngày sau từ ${hh(dayHours.open)})` : ''}`}
                     </p>
                   </>
                 ) : (

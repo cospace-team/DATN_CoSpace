@@ -34,6 +34,19 @@ import java.util.stream.Collectors;
 @Slf4j
 public class PaymentService {
 
+    /**
+     * Optional so unit tests that build this service by hand need not supply it; always present in
+     * the running application.
+     */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private AuditLogService auditLogService;
+
+    private void audit(UUID actorId, String action, String entityName, UUID entityId, java.util.Map<String, Object> values) {
+        if (auditLogService != null) {
+            auditLogService.record(actorId, action, entityName, entityId, values);
+        }
+    }
+
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final String CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
@@ -349,7 +362,7 @@ public class PaymentService {
                 .build();
         paymentRepository.save(payment);
 
-        confirmBooking(payment);
+        confirmBooking(payment, staffId);
 
         return toCashCreateResponse(payment);
     }
@@ -627,6 +640,11 @@ public class PaymentService {
      * is never kept silently: it is queued as a refund for staff to return.
      */
     private void confirmBooking(Payment payment) {
+        confirmBooking(payment, payment.getUserId());
+    }
+
+    /** @param actorId who is recorded as taking the payment: the customer online, staff at the counter */
+    private void confirmBooking(Payment payment, UUID actorId) {
         Booking booking = bookingRepository.findByIdWithLock(payment.getBookingId())
                 .orElseThrow(() -> new IllegalStateException("Booking not found for payment confirmation"));
 
@@ -635,6 +653,9 @@ public class PaymentService {
             bookingRepository.save(booking);
             // Add-ons ordered at checkout were part of this payment's amount.
             bookingAddonService.markPreordersPaid(booking.getId(), payment.getId());
+            audit(actorId, "PAYMENT", "payments", payment.getId(), AuditLogService.values(
+                    "bookingCode", booking.getBookingCode(), "amount", payment.getAmount(),
+                    "provider", payment.getProvider(), "method", payment.getMethod()));
             return;
         }
 
