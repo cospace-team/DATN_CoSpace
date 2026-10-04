@@ -153,7 +153,10 @@ public class PartnerMatchingService {
         profile.setProfession(req.getProfession());
         profile.setCompany(req.getCompany());
         profile.setContactEmail(req.getContactEmail() != null ? req.getContactEmail() : user.getEmail());
-        profile.setContactPhone(req.getContactPhone() != null ? req.getContactPhone() : user.getPhone());
+        // Shown to other members on the profile card, so it gets the same check as the account phone.
+        profile.setContactPhone(req.getContactPhone() != null && !req.getContactPhone().isBlank()
+                ? com.cospace.app.util.CredentialRules.normalizePhone(req.getContactPhone())
+                : user.getPhone());
         profile.setContactLink(req.getContactLink());
         profile.setContactPublic(req.isContactPublic());
         if (req.getPrimaryBranchId() != null) {

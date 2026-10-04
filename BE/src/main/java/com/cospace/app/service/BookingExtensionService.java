@@ -54,6 +54,7 @@ public class BookingExtensionService {
     private final PricingService pricingService;
     private final BookingAddonService bookingAddonService;
     private final EntityManager entityManager;
+    private final com.cospace.app.repository.WorkspaceEntityRepository workspaceEntityRepository;
 
     /** Minutes after the booked end during which checking out is still free. */
     @Value("${app.booking.late-fee-grace-minutes:15}")
@@ -246,12 +247,40 @@ public class BookingExtensionService {
                 .build();
     }
 
-    /** The workspace's hourly rate, or the booking's own rate when it was booked by the hour and no rate is listed any more. */
-    private long hourlyRateForLateFee(Booking booking) {
+    /**
+     * The hourly rate an overstay is billed at. A day pass has to be billable too: it used to fall
+     * through to 0, so a guest who overstayed a day ticket was never charged while the counter was
+     * told to collect a fee. In order: the hourly price of the booking's workspace type, of the
+     * workspace's current type (older rows hold a type code instead of an id), the booking's own
+     * hourly rate, and for a day pass its day price spread over the hours it covers each day.
+     */
+    long hourlyRateForLateFee(Booking booking) {
+        long rate = hourlyPrice(booking.getBranchId(), booking.getWorkspaceTypeId());
+        if (rate <= 0 && booking.getWorkspaceId() != null) {
+            rate = workspaceEntityRepository.findById(booking.getWorkspaceId())
+                    .filter(ws -> ws.getWorkspaceTypeId() != null)
+                    .map(ws -> hourlyPrice(booking.getBranchId(), ws.getWorkspaceTypeId().toString()))
+                    .orElse(0L);
+        }
+        if (rate <= 0 && booking.getUnit() == DurationUnit.hour) {
+            rate = booking.getPricePerUnit();
+        }
+        if (rate <= 0 && booking.getUnit() == DurationUnit.day && booking.getPricePerUnit() > 0) {
+            long hoursPerDay = Math.max(1, Duration.between(booking.getStartAt(), booking.getEndAt()).toHours()
+                    / Math.max(1, booking.getUnitCount()));
+            rate = (booking.getPricePerUnit() + hoursPerDay - 1) / hoursPerDay;
+        }
+        return Math.max(0, rate);
+    }
+
+    private long hourlyPrice(UUID branchId, String workspaceTypeId) {
+        if (workspaceTypeId == null) {
+            return 0;
+        }
         try {
-            return pricingService.getUnitPriceVnd(booking.getBranchId(), booking.getWorkspaceTypeId(), DurationUnit.hour.name());
+            return pricingService.getUnitPriceVnd(branchId, workspaceTypeId, DurationUnit.hour.name());
         } catch (IllegalArgumentException noHourlyPrice) {
-            return booking.getUnit() == DurationUnit.hour ? booking.getPricePerUnit() : 0;
+            return 0;
         }
     }
 

@@ -51,6 +51,10 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
     List<Booking> findOtherGuestsInside(@org.springframework.data.repository.query.Param("workspaceId") UUID workspaceId,
                                         @org.springframework.data.repository.query.Param("bookingId") UUID bookingId);
 
+    /** Bookings of a branch whose guest is inside right now: checked in, check-in not closed yet. */
+    @org.springframework.data.jpa.repository.Query("SELECT b FROM Booking b WHERE b.branchId = :branchId AND b.status = com.cospace.app.entity.BookingStatus.CHECKED_IN AND EXISTS (SELECT c FROM CheckinLog c WHERE c.bookingId = b.id AND c.checkoutAt IS NULL)")
+    List<Booking> findGuestsInsideBranch(@org.springframework.data.repository.query.Param("branchId") UUID branchId);
+
     /** {@link #findOverstayingGuests} for every workspace of a branch. */
     @org.springframework.data.jpa.repository.Query("SELECT b FROM Booking b WHERE b.branchId = :branchId AND b.status = com.cospace.app.entity.BookingStatus.CHECKED_IN AND b.endAt <= :now")
     List<Booking> findOverstayingGuestsInBranch(@org.springframework.data.repository.query.Param("branchId") UUID branchId,

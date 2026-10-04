@@ -142,6 +142,17 @@ function invalidateBookingCache() {
   }
 }
 
+export interface CancelPreview {
+  bookingCode: string;
+  cancellable: boolean;
+  message: string | null;
+  paid: number;
+  refundPercent: number;
+  policyName: string | null;
+  refundAmount: number;
+  penaltyAmount: number;
+}
+
 export const bookingApi = {
   /**
    * Create a new workspace booking
@@ -209,6 +220,17 @@ export const bookingApi = {
         ? err.message
         : 'Không kết nối được máy chủ để tải danh sách đơn đặt chỗ.');
     }
+  },
+
+  /** What cancelling now would refund, under the same rules the cancellation itself applies. */
+  async previewCancellation(bookingId: string): Promise<CancelPreview> {
+    const token = localStorage.getItem("workhub_access_token");
+    const response = await fetch(`${API_BASE_URL}/api/bookings/${bookingId}/cancel-preview`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.message || 'Không tính được số tiền hoàn lại.');
+    return data as CancelPreview;
   },
 
   /**

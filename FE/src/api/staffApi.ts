@@ -44,6 +44,7 @@ export interface StaffDashboardStatsDto {
   occupancyRate: number;
   totalCapacity: number;
   activeGuests: number;
+  occupiedSeats?: number;
   totalWs: number;
   chartData: {
     label: string;

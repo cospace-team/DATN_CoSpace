@@ -3,6 +3,7 @@ package com.cospace.app.service;
 import com.cospace.app.dto.api.MembershipDto.TierResponse;
 import com.cospace.app.dto.api.PromotionDto.PromotionRequest;
 import com.cospace.app.dto.api.PromotionDto.PromotionResponse;
+import com.cospace.app.entity.BookingStatus;
 import com.cospace.app.entity.BranchEntity;
 import com.cospace.app.entity.Promotion;
 import com.cospace.app.entity.WorkspaceType;
@@ -19,11 +20,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -145,6 +148,7 @@ public class PromotionService {
                 .filter(p -> p.getBranchId() == null || p.getBranchId().equals(branchId))
                 .filter(p -> p.getWorkspaceTypeId() == null || workspaceTypeId == null || p.getWorkspaceTypeId().equals(workspaceTypeId))
                 .filter(p -> tierAllows(p, userTierCode))
+                .filter(p -> !p.isNewCustomersOnly() || isNewCustomer(userId))
                 .filter(p -> p.getUsageLimit() == null
                         || bookingRepository.countPromotionUsage(p.getId()) < p.getUsageLimit())
                 .filter(p -> p.getPerUserLimit() == null
@@ -206,6 +210,9 @@ public class PromotionService {
             String tierName = tierCatalog.findActive(p.getMinTierCode()).map(TierResponse::getName).orElse(p.getMinTierCode());
             throw new IllegalArgumentException("Mã khuyến mãi chỉ dành cho thành viên hạng " + tierName + " trở lên.");
         }
+        if (p.isNewCustomersOnly() && !isNewCustomer(userId)) {
+            throw new IllegalArgumentException("Mã khuyến mãi chỉ dành cho khách đặt chỗ lần đầu.");
+        }
         if (p.getUsageLimit() != null
                 && bookingRepository.countPromotionUsage(p.getId()) >= p.getUsageLimit()) {
             throw new IllegalArgumentException("Mã khuyến mãi đã hết lượt sử dụng.");
@@ -216,6 +223,16 @@ public class PromotionService {
         }
 
         return new AppliedPromotion(p, computeDiscount(p, discountBase));
+    }
+
+    /** Statuses that mean the customer has already paid for (and so used) a booking. */
+    private static final Set<BookingStatus> PAID_STATUSES = EnumSet.of(
+            BookingStatus.CONFIRMED, BookingStatus.CHECKED_IN,
+            BookingStatus.COMPLETED, BookingStatus.NO_SHOW);
+
+    /** A customer with no paid booking yet; unpaid or cancelled attempts don't count. */
+    private boolean isNewCustomer(UUID userId) {
+        return userId != null && bookingRepository.countByUserIdAndStatusIn(userId, PAID_STATUSES) == 0;
     }
 
     /* ─────────────── Personal vouchers ─────────────── */
@@ -345,6 +362,7 @@ public class PromotionService {
         p.setBranchId(req.getBranchId());
         p.setWorkspaceTypeId(req.getWorkspaceTypeId());
         p.setMinTierCode(minTier);
+        if (req.getNewCustomersOnly() != null) p.setNewCustomersOnly(req.getNewCustomersOnly());
         if (req.getIsPublic() != null) p.setPublic(req.getIsPublic());
         if (req.getIsActive() != null) p.setActive(req.getIsActive());
     }
@@ -407,6 +425,7 @@ public class PromotionService {
                 .workspaceTypeName(p.getWorkspaceTypeId() == null ? null : typeNames.get(p.getWorkspaceTypeId()))
                 .minTierCode(p.getMinTierCode())
                 .minTierName(p.getMinTierCode() == null ? null : tierNames.getOrDefault(p.getMinTierCode(), p.getMinTierCode()))
+                .newCustomersOnly(p.isNewCustomersOnly())
                 .isPublic(p.isPublic())
                 .isActive(p.isActive())
                 .usedCount(usedCount)

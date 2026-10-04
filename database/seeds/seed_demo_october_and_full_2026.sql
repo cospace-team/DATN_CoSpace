@@ -139,6 +139,9 @@ ON CONFLICT (id) DO UPDATE SET
   discount_value = EXCLUDED.discount_value, 
   is_active = true;
 
+-- WELCOME2026 chỉ dành cho khách đặt chỗ lần đầu (cột từ migration V10).
+UPDATE promotions SET new_customers_only = true WHERE code = 'WELCOME2026';
+
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 4. CHÍNH SÁCH HỦY & HOÀN TIỀN (CANCELLATION POLICIES)

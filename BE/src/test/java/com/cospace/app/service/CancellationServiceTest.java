@@ -253,6 +253,45 @@ class CancellationServiceTest {
     }
 
     @Test
+    void previewShowsTheSameRefundTheCancellationThenGives() {
+        Booking booking = booking(BookingStatus.CONFIRMED, 480_000L, hoursFromNow(10)); // 400k rental + 50k paid + 30k unpaid
+        booking.setAddonAmount(80_000L);
+        when(bookingRepository.findById(booking.getId())).thenReturn(Optional.of(booking));
+        when(bookingAddonService.unpaidAmount(booking.getId())).thenReturn(30_000L);
+        when(refundService.refundableAmount(booking.getId())).thenReturn(450_000L);
+        when(policyRepository.findByBranchIdIsNullAndIsActiveTrueOrderByPriorityDesc())
+                .thenReturn(List.of(policy(null, 0, 100_000, 50)));
+
+        CancellationService.CustomerCancelPreview preview = cancellationService.previewCustomerCancellation(userId, booking.getId());
+
+        assertThat(preview.cancellable()).isTrue();
+        assertThat(preview.refundPercent()).isEqualTo(50);
+        assertThat(preview.refundAmount()).isEqualTo(250_000L); // 50% of 400k + the 50k paid add-ons
+        assertThat(preview.penaltyAmount()).isEqualTo(200_000L);
+        assertThat(booking.getStatus()).isEqualTo(BookingStatus.CONFIRMED); // nothing changed
+    }
+
+    @Test
+    void previewOfAStartedBookingSaysItCannotBeCancelledOnline() {
+        Booking booking = booking(BookingStatus.CONFIRMED, 100_000L, hoursFromNow(-1));
+        when(bookingRepository.findById(booking.getId())).thenReturn(Optional.of(booking));
+
+        CancellationService.CustomerCancelPreview preview = cancellationService.previewCustomerCancellation(userId, booking.getId());
+
+        assertThat(preview.cancellable()).isFalse();
+        assertThat(preview.message()).contains("quầy");
+    }
+
+    @Test
+    void previewIsOnlyForTheBookingsOwner() {
+        Booking booking = booking(BookingStatus.CONFIRMED, 100_000L, hoursFromNow(10));
+        when(bookingRepository.findById(booking.getId())).thenReturn(Optional.of(booking));
+
+        assertThatThrownBy(() -> cancellationService.previewCustomerCancellation(UUID.randomUUID(), booking.getId()))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     void maintenanceCutDoesNotRefundConsumedAddons() {
         OffsetDateTime start = hoursFromNow(-1);
         Booking booking = booking(BookingStatus.CHECKED_IN, 460_000L, start); // 400k rental + 60k add-ons

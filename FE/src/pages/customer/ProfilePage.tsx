@@ -51,6 +51,7 @@ import MemberProfileModal, { type MemberPreview } from '../../components/network
 import { AvatarModal } from './profile/AvatarModal';
 import { ProfileSecurityTab } from './profile/ProfileSecurityTab';
 import { ProfileNetworkTab } from './profile/ProfileNetworkTab';
+import { passwordProblem, phoneProblem } from '../../utils/passwordRules';
 
 // ── BANNER THEMES ──
 // Flat cover colours; each swatch in the picker shows its cover colour as-is. Fixed shades, not
@@ -507,6 +508,11 @@ const ProfilePage: React.FC = () => {
       showToast('Họ và tên không được để trống', 'error');
       return;
     }
+    const badPhone = phoneProblem(profileForm.phone);
+    if (badPhone) {
+      showToast(badPhone, 'error');
+      return;
+    }
     setIsSavingPersonal(true);
     try {
       const contactLinkJson = JSON.stringify({
@@ -675,8 +681,9 @@ const ProfilePage: React.FC = () => {
   // ── Save Password Handler ──
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (passwordForm.newPassword.length < 6) {
-      showToast('Mật khẩu mới phải có ít nhất 6 ký tự', 'error');
+    const weak = passwordProblem(passwordForm.newPassword);
+    if (weak) {
+      showToast(weak, 'error');
       return;
     }
     if (passwordForm.newPassword !== passwordForm.confirmNewPassword) {

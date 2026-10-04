@@ -42,6 +42,7 @@ public class PromotionDto {
         private String workspaceTypeName;
         private String minTierCode;
         private String minTierName;
+        private Boolean newCustomersOnly;
         private Boolean isPublic;
         private Boolean isActive;
         /** Redemptions still held by bookings (admin list only). */
@@ -92,6 +93,8 @@ public class PromotionDto {
         private UUID branchId;
         private UUID workspaceTypeId;
         private String minTierCode;
+        /** Only for customers with no paid booking yet. */
+        private Boolean newCustomersOnly;
         private Boolean isPublic;
         private Boolean isActive;
     }

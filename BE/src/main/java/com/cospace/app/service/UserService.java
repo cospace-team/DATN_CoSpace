@@ -73,7 +73,7 @@ public class UserService {
             user.setFullName(dto.getFullName());
         }
         
-        user.setPhone(dto.getPhone());
+        user.setPhone(com.cospace.app.util.CredentialRules.normalizePhone(dto.getPhone()));
         user.setAvatarUrl(dto.getAvatarUrl());
         userRepository.save(user);
 
@@ -86,7 +86,7 @@ public class UserService {
         profile.setContactPublic(dto.isContactPublic());
         profile.setContactLink(dto.getContactLink());
         profile.setContactEmail(dto.getEmail());
-        profile.setContactPhone(dto.getPhone());
+        profile.setContactPhone(user.getPhone());
         profileRepository.save(profile);
 
         return convertToDto(user, profile);
@@ -111,6 +111,7 @@ public class UserService {
             }
         }
 
+        com.cospace.app.util.CredentialRules.requireStrongPassword(req.getNewPassword());
         user.setPassword(passwordEncoder.encode(req.getNewPassword()));
         userRepository.save(user);
     }

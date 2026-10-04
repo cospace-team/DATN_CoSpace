@@ -131,6 +131,14 @@ public class CancellationPolicyController {
         }
     }
 
+    /** What cancelling now would refund, so the customer sees the amount before confirming. */
+    @GetMapping("/bookings/{bookingId}/cancel-preview")
+    public ResponseEntity<CancellationService.CustomerCancelPreview> previewCancellation(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID bookingId) {
+        return ResponseEntity.ok(cancellationService.previewCustomerCancellation(UUID.fromString(jwt.getSubject()), bookingId));
+    }
+
     @PostMapping("/bookings/{bookingId}/cancel-v2")
     public ResponseEntity<BookingCancellation> cancelBookingWithRefund(
             @AuthenticationPrincipal Jwt jwt,

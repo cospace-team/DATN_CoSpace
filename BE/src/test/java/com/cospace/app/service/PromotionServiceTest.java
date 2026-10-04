@@ -17,12 +17,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -97,5 +99,47 @@ class PromotionServiceTest {
         assertThat(p.getUsageLimit()).isEqualTo(1);
         assertThat(p.getDiscountType()).isEqualTo(Promotion.TYPE_FIXED);
         assertThat(p.getDiscountValue()).isEqualTo(120_000L);
+    }
+    private Promotion welcomeCode() {
+        Promotion p = Promotion.builder().id(UUID.randomUUID()).code("WELCOME2026").name("Chào mừng")
+                .discountType(Promotion.TYPE_PERCENT).discountValue(20L).maxDiscountAmount(100_000L).minOrderAmount(0)
+                .startAt(now.minusDays(1)).endAt(now.plusDays(30)).newCustomersOnly(true)
+                .isPublic(true).isActive(true).build();
+        org.mockito.Mockito.lenient().when(promotionRepository.findByCodeIgnoreCase("WELCOME2026")).thenReturn(Optional.of(p));
+        return p;
+    }
+
+    @Test
+    void newCustomerOnlyCodeIsRefusedToACustomerWhoAlreadyPaidForABooking() {
+        UUID user = UUID.randomUUID();
+        welcomeCode();
+        when(bookingRepository.countByUserIdAndStatusIn(eq(user), any())).thenReturn(3L);
+
+        assertThatThrownBy(() -> promotionService.apply("WELCOME2026", user, null, UUID.randomUUID(), null,
+                200_000L, 200_000L, false))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("lần đầu");
+    }
+
+    @Test
+    void newCustomerOnlyCodeWorksForAFirstBooking() {
+        UUID user = UUID.randomUUID();
+        welcomeCode();
+        when(bookingRepository.countByUserIdAndStatusIn(eq(user), any())).thenReturn(0L);
+
+        PromotionService.AppliedPromotion applied = promotionService.apply("WELCOME2026", user, null, UUID.randomUUID(), null,
+                200_000L, 200_000L, false);
+
+        assertThat(applied.discountAmount()).isEqualTo(40_000L);
+    }
+
+    @Test
+    void newCustomerOnlyCodeIsNotOfferedToReturningCustomers() {
+        UUID user = UUID.randomUUID();
+        Promotion p = welcomeCode();
+        when(promotionRepository.findPublicRunning(any())).thenReturn(List.of(p));
+        when(bookingRepository.countByUserIdAndStatusIn(eq(user), any())).thenReturn(1L);
+
+        assertThat(promotionService.listAvailable(user, null, UUID.randomUUID(), null)).isEmpty();
     }
 }

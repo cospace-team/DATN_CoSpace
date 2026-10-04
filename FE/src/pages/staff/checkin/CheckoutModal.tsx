@@ -116,8 +116,14 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               </p>
               <p className="text-xs text-red-700 dark:text-red-400 mt-0.5 leading-relaxed">
                 Khách đã sử dụng quá thời gian đăng ký{' '}
-                <strong>{formatMinutes(selectedCheckoutItem.meta.overdueMinutes)}</strong>. Vui lòng
-                tính và thu phụ phí check-out muộn trước khi giải phóng bàn.
+                <strong>{formatMinutes(selectedCheckoutItem.meta.overdueMinutes)}</strong>.{' '}
+                {lateFeePending
+                  ? 'Vui lòng tính và thu phụ phí check-out muộn bên dưới trước khi giải phóng bàn.'
+                  : lateFee?.alreadyCharged
+                    ? 'Phụ phí trả muộn đã được tính vào đơn.'
+                    : lateFee && lateFee.lateMinutes <= lateFee.graceMinutes
+                      ? `Vẫn trong ${lateFee.graceMinutes} phút miễn phí, không phát sinh phụ phí.`
+                      : 'Chi nhánh chưa có giá theo giờ cho loại chỗ này nên không tính được phụ phí.'}
               </p>
             </div>
           </div>

@@ -33,7 +33,7 @@ const buildEmptyForm = () => {
     discountType: 'percent' as 'percent' | 'fixed', discountValue: '10', maxDiscountAmount: '', minOrderAmount: '0',
     startAt: formatDateTimeLocal(start), endAt: formatDateTimeLocal(end),
     usageLimit: '', perUserLimit: '1', branchId: '', workspaceTypeId: '', minTierCode: '',
-    isPublic: true, isActive: true,
+    newCustomersOnly: false, isPublic: true, isActive: true,
   };
 };
 
@@ -113,7 +113,7 @@ const PromotionsPage: React.FC = () => {
       startAt: formatDateTimeLocal(new Date(p.startAt)), endAt: formatDateTimeLocal(new Date(p.endAt)),
       usageLimit: p.usageLimit ? String(p.usageLimit) : '', perUserLimit: p.perUserLimit ? String(p.perUserLimit) : '',
       branchId: p.branchId || '', workspaceTypeId: p.workspaceTypeId || '', minTierCode: p.minTierCode || '',
-      isPublic: p.isPublic, isActive: p.isActive,
+      newCustomersOnly: !!p.newCustomersOnly, isPublic: p.isPublic, isActive: p.isActive,
     });
     setFormError('');
     setModal({ type: 'edit', promotion: p });
@@ -152,6 +152,7 @@ const PromotionsPage: React.FC = () => {
       branchId: form.branchId || null,
       workspaceTypeId: form.workspaceTypeId || null,
       minTierCode: form.minTierCode || null,
+      newCustomersOnly: form.newCustomersOnly,
       isPublic: form.isPublic,
       isActive: form.isActive,
     };
@@ -278,6 +279,7 @@ const PromotionsPage: React.FC = () => {
                       <p className="font-semibold">{describePromotion(p, formatVND)}</p>
                       {p.minOrderAmount > 0 && <p className="text-xs text-muted-foreground">Đơn từ {formatVND(p.minOrderAmount)}</p>}
                       {p.minTierName && <p className="text-xs text-muted-foreground">Hạng {p.minTierName} trở lên</p>}
+                      {p.newCustomersOnly && <p className="text-xs text-muted-foreground">Chỉ cho khách đặt chỗ lần đầu</p>}
                     </td>
                     <td className="text-sm text-muted-foreground">{scopeLabel(p)}</td>
                     <td className="text-xs whitespace-nowrap">
@@ -416,6 +418,11 @@ const PromotionsPage: React.FC = () => {
             </fieldset>
 
             <div className="flex flex-wrap gap-x-6 gap-y-3">
+              <label className="flex items-center gap-2 text-sm font-medium">
+                <input type="checkbox" className="h-4 w-4 rounded" checked={form.newCustomersOnly}
+                  onChange={(e) => setForm((p) => ({ ...p, newCustomersOnly: e.target.checked }))} />
+                Chỉ cho khách đặt chỗ lần đầu
+              </label>
               <label className="flex items-center gap-2 text-sm font-medium">
                 <input type="checkbox" className="h-4 w-4 rounded" checked={form.isPublic}
                   onChange={(e) => setForm((p) => ({ ...p, isPublic: e.target.checked }))} />

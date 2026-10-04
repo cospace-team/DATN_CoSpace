@@ -127,6 +127,8 @@ export interface PromotionDto {
   workspaceTypeName: string | null;
   minTierCode: string | null;
   minTierName: string | null;
+  /** Only for customers with no paid booking yet. */
+  newCustomersOnly?: boolean;
   isPublic: boolean;
   isActive: boolean;
   usedCount: number | null;
@@ -152,6 +154,7 @@ export interface PromotionPayload {
   branchId?: string | null;
   workspaceTypeId?: string | null;
   minTierCode?: string | null;
+  newCustomersOnly?: boolean;
   isPublic: boolean;
   isActive: boolean;
 }

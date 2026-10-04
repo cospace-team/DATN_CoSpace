@@ -10,4 +10,11 @@ export const passwordProblem = (password: string): string | null => {
   return null;
 };
 
+/** Vietnamese mobile number as the server accepts it (CredentialRules.normalizePhone). */
+export const phoneProblem = (phone: string): string | null => {
+  const digits = phone.trim().replace(/[\s.\-()]/g, '').replace(/^\+84/, '0');
+  if (!digits) return null;
+  return /^0[35789]\d{8}$/.test(digits) ? null : 'Số điện thoại không hợp lệ (10 số, bắt đầu bằng 03, 05, 07, 08 hoặc 09).';
+};
+
 export const isEmailLike = (email: string): boolean => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);

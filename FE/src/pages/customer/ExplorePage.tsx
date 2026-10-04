@@ -241,6 +241,10 @@ const ExplorePage: React.FC = () => {
 
   // Database-loaded floors, workspaces and user bookings
   const [dbFloors, setDbFloors] = useState<FloorResponse[]>([]);
+  // Branch the floors in dbFloors belong to. Switching branch renders once with the old floors and
+  // the new branch id; without this the workspaces of the old floors were requested under the new
+  // branch and every request came back 400 ("Tầng không thuộc chi nhánh").
+  const [floorsBranchId, setFloorsBranchId] = useState<string | null>(null);
   // Workspaces of every floor of the branch, so results can span floors.
   const [allWorkspaces, setAllWorkspaces] = useState<Record<string, WorkspaceResponse[]>>({});
   const [branchAvailability, setBranchAvailability] = useState<PublicWorkspaceAvailability[]>([]);
@@ -344,6 +348,7 @@ const ExplorePage: React.FC = () => {
         const data = await customerSpaceApi.listFloors(resolvedId);
         if (active) {
           setDbFloors(data);
+          setFloorsBranchId(resolvedId);
           const savedFloorId = sessionStorage.getItem("selectedFloorId");
           const hasSaved = savedFloorId && data.some((f) => f.id === savedFloorId);
           setSelectedFloor(hasSaved ? savedFloorId : (data.length > 0 ? data[0].id : ""));
@@ -353,6 +358,7 @@ const ExplorePage: React.FC = () => {
         if (active) {
           setErrorMsg("Không thể tải sơ đồ tầng. Vui lòng thử lại sau.");
           setDbFloors([]);
+          setFloorsBranchId(resolvedId);
           setSelectedFloor("");
         }
       } finally {
@@ -368,6 +374,7 @@ const ExplorePage: React.FC = () => {
   // Load the workspaces of every floor once the branch's floors are known.
   useEffect(() => {
     const resolvedBranchId = resolveBranchId(selectedBranch);
+    if (resolvedBranchId && floorsBranchId !== resolvedBranchId) return; // the new branch's floors are still loading
     if (!resolvedBranchId || dbFloors.length === 0) {
       setAllWorkspaces({});
       setWorkspacesLoading(false);
@@ -394,7 +401,7 @@ const ExplorePage: React.FC = () => {
     return () => {
       active = false;
     };
-  }, [dbFloors, selectedBranch]);
+  }, [dbFloors, floorsBranchId, selectedBranch]);
 
   const branchFloors = dbFloors;
   const currentFloor = selectedFloor || branchFloors[0]?.id || "";

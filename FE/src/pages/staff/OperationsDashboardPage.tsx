@@ -175,7 +175,7 @@ const OperationsDashboardPage: React.FC = () => {
         <StatCard
           icon={FiUsers}
           label="Khách đang ngồi"
-          value={<>{stats?.activeGuests || 0} <span className="text-sm font-normal text-muted-foreground">/ {stats?.totalCapacity || 0} chỗ</span></>}
+          value={<>{stats?.activeGuests || 0} <span className="text-sm font-normal text-muted-foreground">lượt · {stats?.occupiedSeats ?? 0}/{stats?.totalCapacity || 0} chỗ</span></>}
         />
         <StatCard
           icon={FiLayers}

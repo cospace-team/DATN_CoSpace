@@ -275,6 +275,54 @@ public class CancellationService {
     private record RefundOutcome(int refundPercent, Map<String, Object> appliedRule) {
     }
 
+    /**
+     * The policy share of the rental plus the add-ons already paid (never consumed, so returned in
+     * full), never more than the customer actually paid. Amounts are after unpaid add-ons are dropped.
+     */
+    static long refundAmountFor(BookingStatus status, long totalAmount, long addonAmount, int refundPercent, long refundable) {
+        long paidAddons = status == BookingStatus.CONFIRMED ? addonAmount : 0;
+        long rentalAmount = Math.max(0, totalAmount - addonAmount);
+        return Math.min((rentalAmount * refundPercent) / 100L + paidAddons, refundable);
+    }
+
+    /** What cancelling now would give back, shown to the customer before they confirm. */
+    public record CustomerCancelPreview(String bookingCode, boolean cancellable, String message, long paid,
+                                        int refundPercent, String policyName, long refundAmount, long penaltyAmount) {
+    }
+
+    @Transactional(readOnly = true)
+    public CustomerCancelPreview previewCustomerCancellation(UUID userId, UUID bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thông tin đặt chỗ."));
+        if (!booking.getUserId().equals(userId)) {
+            throw new IllegalArgumentException("Bạn không có quyền hủy đặt chỗ này.");
+        }
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        if (booking.getStatus() == BookingStatus.PENDING_PAYMENT) {
+            return new CustomerCancelPreview(booking.getBookingCode(), true,
+                    "Đơn chưa được thanh toán nên bạn không mất phí. Chỗ được trả lại ngay khi bạn xác nhận.",
+                    0, 0, null, 0, 0);
+        }
+        if (booking.getStatus() != BookingStatus.CONFIRMED) {
+            return new CustomerCancelPreview(booking.getBookingCode(), false,
+                    "Đơn ở trạng thái " + BookingStateMachine.label(booking.getStatus()) + " không thể hủy.", 0, 0, null, 0, 0);
+        }
+        if (!now.isBefore(booking.getStartAt())) {
+            return new CustomerCancelPreview(booking.getBookingCode(), false,
+                    "Đơn đã đến giờ sử dụng nên không thể hủy trực tuyến. Vui lòng liên hệ quầy lễ tân.", 0, 0, null, 0, 0);
+        }
+        RefundOutcome outcome = resolveRefundPercent(booking, now);
+        long unpaid = bookingAddonService.unpaidAmount(bookingId);
+        long total = Math.max(0, booking.getTotalAmount() - unpaid);
+        long addons = Math.max(0, booking.getAddonAmount() - unpaid);
+        long refundable = refundService.refundableAmount(bookingId);
+        long refund = refundAmountFor(booking.getStatus(), total, addons, outcome.refundPercent(), refundable);
+        Object policy = outcome.appliedRule().get("policy_name");
+        return new CustomerCancelPreview(booking.getBookingCode(), true, null, refundable, outcome.refundPercent(),
+                "DEFAULT_NO_REFUND".equals(policy) ? "Không có chính sách hoàn tiền phù hợp" : (String) policy,
+                refund, Math.max(0, total - refund));
+    }
+
     private RefundOutcome resolveRefundPercent(Booking booking, OffsetDateTime now) {
         int refundPercent = 0;
         Map<String, Object> appliedRule = new HashMap<>();
@@ -329,10 +377,8 @@ public class CancellationService {
         // rental only: add-ons already paid for were never consumed, so they are returned in full.
         bookingAddonService.voidUnpaid(booking, actorId);
         long totalAmount = booking.getTotalAmount();
-        long paidAddons = booking.getStatus() == BookingStatus.CONFIRMED ? booking.getAddonAmount() : 0;
-        long rentalAmount = Math.max(0, totalAmount - booking.getAddonAmount());
-        // Never promise back more than the customer actually paid.
-        long refundAmount = Math.min((rentalAmount * refundPercent) / 100L + paidAddons, refundService.refundableAmount(bookingId));
+        long refundAmount = refundAmountFor(booking.getStatus(), totalAmount, booking.getAddonAmount(), refundPercent,
+                refundService.refundableAmount(bookingId));
         // Rule #40: Cancellation Amount Invariant: refund_amount + penalty_amount == booking.total_amount
         long penaltyAmount = totalAmount - refundAmount;
 
