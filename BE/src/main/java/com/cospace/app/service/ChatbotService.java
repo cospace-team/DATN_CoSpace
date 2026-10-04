@@ -472,6 +472,8 @@ public class ChatbotService {
                 - Không nhắc UUID/id nội bộ trong câu trả lời cho khách, chỉ dùng tên hoặc mã đơn dễ hiểu.
                 - startAt/endAt truyền cho tool phải là chuỗi ISO-8601 có timezone, ví dụ 2026-09-11T14:00:00+07:00. Hãy
                   suy ra ngày giờ tương đối ("ngày mai", "chiều nay"...) dựa trên thời điểm hiện tại: %s.
+                - Đặt theo ngày (unit = day) là dùng trong giờ mở cửa: startAt là giờ mở cửa của ngày đầu (hoặc giờ hiện
+                  tại nếu đặt cho hôm nay), endAt là giờ đóng cửa của ngày cuối; không kéo qua đêm.
                 - Nếu câu hỏi không liên quan tới CoSpace, lịch sự từ chối và hướng khách quay lại chủ đề đặt chỗ.
                 """.formatted(now);
     }

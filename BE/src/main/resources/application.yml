@@ -81,6 +81,15 @@ spring:
       mode: always
       encoding: UTF-8
       continue-on-error: true
+  # SMTP for system emails (password reset). Leave MAIL_HOST empty to run without email.
+  mail:
+    host: ${MAIL_HOST:}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail.smtp.auth: ${MAIL_SMTP_AUTH:true}
+      mail.smtp.starttls.enable: ${MAIL_SMTP_STARTTLS:true}
   security:
     oauth2:
       resourceserver:
@@ -126,6 +135,12 @@ app:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173}
   frontend:
     base-url: ${APP_FRONTEND_BASE_URL:http://localhost:5173}
+  mail:
+    # Sender of system emails (password reset). The SMTP server itself is spring.mail.* below.
+    from: ${APP_MAIL_FROM:${MAIL_USERNAME:}}
+  password-reset:
+    # With no SMTP server configured, the reset link is written to the log instead (local dev only).
+    log-links: ${APP_PASSWORD_RESET_LOG_LINKS:true}
   backend:
     # Public address of this API, used for payment gateway callbacks (MoMo return/IPN).
     base-url: ${APP_BACKEND_BASE_URL:http://localhost:8080}

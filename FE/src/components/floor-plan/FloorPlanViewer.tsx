@@ -3,7 +3,7 @@
  * Renders elements from a FloorLayout JSON with availability status colors.
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { FiPlus, FiMinus, FiMaximize2 } from 'react-icons/fi';
 import type { FloorLayout, LayoutElement } from '../../types/floorPlan';
 import ElementRenderer from './ElementRenderer';
@@ -95,21 +95,58 @@ const FloorPlanViewer: React.FC<Props> = ({
 
   const { width, height, gridSize } = layout.canvas;
 
+  // On a phone the whole floor squeezed into ~360px leaves desks unreadable: start zoomed in
+  // (drag to see the rest, pinch or the buttons to zoom) and let "reset" come back to that view.
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [baseZoom, setBaseZoom] = useState(1);
+  useEffect(() => {
+    const w = containerRef.current?.clientWidth ?? 0;
+    const z = w > 0 && w < 640 ? Math.min(2.5, Math.max(1, Math.round((640 / w) * 10) / 10)) : 1;
+    setBaseZoom(z);
+    setZoom(z);
+    setPan({ x: 0, y: 0 });
+  }, [layout]);
+
   const handleZoomIn = () => setZoom((z) => Math.min(z + 0.2, 2.5));
   const handleZoomOut = () => setZoom((z) => Math.max(z - 0.2, 0.5));
   const handleReset = () => {
-    setZoom(1);
+    setZoom(baseZoom);
     setPan({ x: 0, y: 0 });
   };
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.button !== 0 && e.button !== 1) return;
+  // Pointer events cover mouse, pen and touch; two fingers pinch-zoom.
+  const pointers = useRef(new Map<number, { x: number; y: number }>());
+  const pinch = useRef<{ dist: number; zoom: number } | null>(null);
+  const pointerDistance = () => {
+    const [a, b] = Array.from(pointers.current.values());
+    return Math.hypot(a.x - b.x, a.y - b.y);
+  };
+
+  const handleMouseDown = (e: React.PointerEvent) => {
+    if (e.pointerType === 'mouse' && e.button !== 0 && e.button !== 1) return;
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.current.size === 2) {
+      pinch.current = { dist: pointerDistance(), zoom };
+      setIsPanning(false);
+      setHasMoved(true);
+      return;
+    }
     setIsPanning(true);
     setHasMoved(false);
     setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
+  const handleMouseMove = (e: React.PointerEvent) => {
+    if (pointers.current.has(e.pointerId)) {
+      pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    }
+    if (pointers.current.size === 2 && pinch.current) {
+      const dist = pointerDistance();
+      if (pinch.current.dist > 0) {
+        setZoom(Math.min(Math.max(pinch.current.zoom * (dist / pinch.current.dist), 0.5), 2.5));
+      }
+      return;
+    }
     if (!isPanning) return;
     const newX = e.clientX - dragStart.x;
     const newY = e.clientY - dragStart.y;
@@ -119,8 +156,11 @@ const FloorPlanViewer: React.FC<Props> = ({
     setPan({ x: newX, y: newY });
   };
 
-  const handleMouseUp = () => {
-    setIsPanning(false);
+  const handleMouseUp = (e?: React.PointerEvent) => {
+    if (e) pointers.current.delete(e.pointerId);
+    else pointers.current.clear();
+    if (pointers.current.size < 2) pinch.current = null;
+    if (pointers.current.size === 0) setIsPanning(false);
   };
 
   const handleWheel = (e: React.WheelEvent) => {
@@ -292,26 +332,26 @@ const FloorPlanViewer: React.FC<Props> = ({
 
   return (
     <div className="relative w-full h-full">
-      {/* Zoom controls */}
-      <div className="absolute top-3 left-3 z-10 flex flex-col gap-1">
+      {/* Zoom controls (bottom-left on phones, where the legend does not cover them) */}
+      <div className="absolute bottom-3 left-3 sm:bottom-auto sm:top-3 z-20 flex flex-col gap-1">
         <button
           onClick={handleZoomIn}
-          className="btn btn-ghost btn-sm p-2 bg-card/80 backdrop-blur-sm border border-border shadow-sm"
+          className="btn btn-ghost btn-sm p-2 bg-card backdrop-blur-sm border border-border shadow-sm"
           aria-label="Phóng to"
         >
           <FiPlus className="h-4 w-4" />
         </button>
         <button
           onClick={handleZoomOut}
-          className="btn btn-ghost btn-sm p-2 bg-card/80 backdrop-blur-sm border border-border shadow-sm"
+          className="btn btn-ghost btn-sm p-2 bg-card backdrop-blur-sm border border-border shadow-sm"
           aria-label="Thu nhỏ"
         >
           <FiMinus className="h-4 w-4" />
         </button>
         <button
           onClick={handleReset}
-          className="btn btn-ghost btn-sm p-2 bg-card/80 backdrop-blur-sm border border-border shadow-sm"
-          aria-label="Reset zoom"
+          className="btn btn-ghost btn-sm p-2 bg-card backdrop-blur-sm border border-border shadow-sm"
+          aria-label="Về khung nhìn ban đầu"
         >
           <FiMaximize2 className="h-4 w-4" />
         </button>
@@ -394,10 +434,13 @@ const FloorPlanViewer: React.FC<Props> = ({
         className={`w-full h-full overflow-hidden flex items-center justify-center p-4 select-none ${
           isPanning ? 'cursor-grabbing' : 'cursor-grab'
         }`}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
+        ref={containerRef}
+        style={{ touchAction: 'none' }}
+        onPointerDown={handleMouseDown}
+        onPointerMove={handleMouseMove}
+        onPointerUp={handleMouseUp}
+        onPointerCancel={handleMouseUp}
+        onPointerLeave={handleMouseUp}
         onWheel={handleWheel}
       >
         <svg

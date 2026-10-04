@@ -253,10 +253,14 @@ public class BranchAdminSpaceController {
             if (userRepository.existsByEmail(email)) {
                 return ResponseEntity.badRequest().body(Map.of("error", "conflict", "message", "Email này đã được sử dụng."));
             }
+            // Staff accounts reach booking, payment and refund screens: the same password rule as
+            // every customer account, not "123".
+            com.cospace.app.util.CredentialRules.requireStrongPassword(password);
+            String phone = com.cospace.app.util.CredentialRules.normalizePhone(req.get("phone"));
             User staff = User.builder()
                 .email(email)
                 .fullName(fullName)
-                .phone(req.getOrDefault("phone", ""))
+                .phone(phone)
                 .password(passwordEncoder.encode(password))
                 .role(User.Role.staff)
                 .status(User.Status.active)
@@ -302,7 +306,10 @@ public class BranchAdminSpaceController {
                 staff.setFullName(req.get("fullName"));
             }
             if (req.containsKey("phone")) {
-                staff.setPhone(req.get("phone"));
+                staff.setPhone(com.cospace.app.util.CredentialRules.normalizePhone(req.get("phone")));
+            }
+            if (passwordChanged) {
+                com.cospace.app.util.CredentialRules.requireStrongPassword(req.get("password"));
             }
             if (req.containsKey("email") && !req.get("email").isBlank()) {
                 String newEmail = req.get("email");

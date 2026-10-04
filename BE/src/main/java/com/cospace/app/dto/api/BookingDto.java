@@ -42,6 +42,13 @@ public class BookingDto {
     private long taxAmount;
     private long serviceFeeAmount;
     private long totalAmount;
+    /** Still owed on the tab (extra services, extra hours, late fee) after the booking was paid. */
+    private long unpaidAmount;
+    /** Part of addonAmount that is extra hours bought after booking, and how many hours. */
+    private long extensionAmount;
+    private int extensionHours;
+    /** Part of addonAmount that is a late check-out fee. */
+    private long lateFeeAmount;
 
     // Payment Info
     private String paymentDeadlineAt;
@@ -54,6 +61,14 @@ public class BookingDto {
     private Long refundAmount;
     private Long penaltyAmount;
     private String refundStatus;
+    /** cash | bank_transfer | voucher once the refund was paid; the voucher's code when it is one. */
+    private String refundMethod;
+    private String refundProcessedAt;
+    private String refundVoucherCode;
+    /** Where the customer asked a transfer refund to go. */
+    private String refundBankName;
+    private String refundAccountNumber;
+    private String refundAccountName;
     private String policyName;
     private String cancelledAt;
 
@@ -74,6 +89,8 @@ public class BookingDto {
     private String firstCheckinAt;
     private String lastCheckoutAt;
     private Integer checkinCount;
+    /** Minutes actually spent on site (check-in to check-out of each visit, an open visit up to now). */
+    private Long visitMinutes;
     /** Booking group (several seats booked together) this seat belongs to, with its size. */
     private UUID groupId;
     private String groupCode;

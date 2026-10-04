@@ -16,8 +16,8 @@ Phần đặc tả bên dưới là thiết kế ban đầu. Đường dẫn và
 | Đồng bộ Google | `POST /api/auth/sync` | `POST /api/auth/sync` | ✅ Có |
 | Lấy user hiện tại | `GET /api/auth/me` | `GET /api/users/profile` | ✅ Có (khác đường dẫn) |
 | Đăng xuất | `POST /api/auth/logout` | — | ❌ Chưa có (FE chỉ xóa token ở localStorage) |
-| Quên mật khẩu | `POST /api/local-auth/forgot-password` | — | ❌ **Chưa triển khai** (cần hạ tầng gửi email) |
-| Đặt lại mật khẩu | `POST /api/local-auth/reset-password` | — | ❌ **Chưa triển khai** |
+| Quên mật khẩu | `POST /api/local-auth/forgot-password` | `POST /api/auth/forgot-password` | ✅ Có (gửi email qua SMTP `MAIL_*`; không cấu hình SMTP thì link được ghi vào log backend, trừ profile `prod`) |
+| Đặt lại mật khẩu | `POST /api/local-auth/reset-password` | `POST /api/auth/reset-password` | ✅ Có (trang FE `/reset-password?token=…`) |
 | Đổi mật khẩu (đã đăng nhập) | — | `PUT /api/users/change-password` | ✅ Có |
 
 **Hai loại token.** Access token (`token_use = "access"`, sống 1 giờ) dùng cho header `Authorization`. Refresh token (`token_use = "refresh"`, sống 30 ngày) **chỉ** dùng cho `POST /api/auth/refresh` — nó bị từ chối nếu đem gọi API thường, và ngược lại access token không đổi được thành token mới.
@@ -289,7 +289,8 @@ Phần đặc tả bên dưới là thiết kế ban đầu. Đường dẫn và
 }
 ```
 
-- *Note cho FE:* Link trong email có dạng: `http://localhost:5173/reset-password?token={uuid}`. Token có hiệu lực 30 phút.
+- *Note cho FE:* Link trong email có dạng: `{APP_FRONTEND_BASE_URL}/reset-password?token={token}` (token ngẫu nhiên 32 byte, base64url). Token có hiệu lực 30 phút, dùng một lần; yêu cầu link mới sẽ vô hiệu link cũ. Yêu cầu lặp lại trong vòng 60 giây không gửi thêm email.
+- *Thực tế:* response là `{ "message": "..." }`; email sai định dạng trả 400 `validation_failed`. DB chỉ lưu SHA-256 của token (bảng `password_reset_tokens`, migration V9).
 
 ---
 
@@ -322,9 +323,11 @@ Phần đặc tả bên dưới là thiết kế ban đầu. Đường dẫn và
 // 400 Bad Request — Token hết hạn hoặc đã dùng
 {
   "error": "bad_request",
-  "message": "Token không hợp lệ hoặc đã hết hạn."
+  "message": "Link đặt lại mật khẩu không hợp lệ hoặc đã hết hạn. Vui lòng yêu cầu link mới."
 }
 ```
+
+- *Thực tế:* `newPassword` theo cùng quy tắc với đăng ký (≥ 8 ký tự, có chữ hoa, chữ thường và số), sai thì 400 `validation_failed`. Tài khoản bị khóa trả 403. Tài khoản Google cũng đặt được mật khẩu qua luồng này (sau đó đăng nhập được bằng email/mật khẩu).
 
 ---
 
@@ -407,7 +410,7 @@ Phần đặc tả bên dưới là thiết kế ban đầu. Đường dẫn và
 | 3 | POST | `/api/auth/sync` | 🔒 JWT | Đồng bộ user Google |
 | 4 | GET | `/api/auth/me` | 🔒 JWT | Lấy profile |
 | 5 | POST | `/api/local-auth/refresh` | 🔓 Public | Refresh token |
-| 6 | POST | `/api/local-auth/forgot-password` | 🔓 Public | Quên mật khẩu |
-| 7 | POST | `/api/local-auth/reset-password` | 🔓 Public | Đặt lại mật khẩu |
+| 6 | POST | `/api/auth/forgot-password` | 🔓 Public | Quên mật khẩu |
+| 7 | POST | `/api/auth/reset-password` | 🔓 Public | Đặt lại mật khẩu |
 | 8 | POST | `/api/auth/logout` | 🔒 JWT | Đăng xuất |
 | 9 | PUT | `/api/auth/update-profile` | 🔒 JWT | Cập nhật profile |

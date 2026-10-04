@@ -7,6 +7,7 @@ import { QuantityStepper } from '../../../components/ui/QuantityStepper';
 import WorkspaceGallery from '../../../components/workspace/WorkspaceGallery';
 import { ServiceIcon } from '../../../components/ui/ServiceIcon';
 import type { ExtraServiceResponse } from '../../../lib/spaceApi';
+import { firstBookableHour } from './ExploreFilters';
 
 export type DurationUnitMode = 'hour' | 'day' | 'week';
 
@@ -42,6 +43,12 @@ const UNIT_LABELS: Record<DurationUnitMode, string> = {
 export const toMidnight = (d: Date): Date => {
   const r = new Date(d);
   r.setHours(0, 0, 0, 0);
+  return r;
+};
+
+const addDays = (d: Date, days: number): Date => {
+  const r = new Date(d);
+  r.setDate(r.getDate() + days);
   return r;
 };
 
@@ -240,7 +247,7 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
     : wsAvail;
 
   return (
-    <div className="p-5">
+    <div className="p-5 bg-inherit">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-medium text-lg text-foreground">{ws.name}</h3>
         <button
@@ -372,7 +379,7 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
                   {Array.from(
                     { length: Math.max(0, closeHour - openHour) },
                     (_, i) => i + openHour
-                  ).map(h => (
+                  ).filter(h => h >= firstBookableHour(selectedDate, openHour, closeHour)).map(h => (
                     <option key={h} value={h}>
                       {String(h).padStart(2, '0')}:00
                     </option>
@@ -420,16 +427,18 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
                   htmlFor={`end-date-${selectedWs}`}
                   className="text-xs text-[var(--text-secondary)]"
                 >
-                  Ngày kết thúc
+                  {durationUnit === 'day' ? 'Đến hết ngày' : 'Ngày kết thúc'}
                 </label>
+                {/* endDate is exclusive (the day after the last one). A day pass shows the last day
+                    it can be used instead, so a one-day pass reads "5/10 → 5/10", not "→ 6/10". */}
                 <input
                   id={`end-date-${selectedWs}`}
                   type="date"
-                  value={toDateInputValue(endDate)}
-                  min={toDateInputValue(minEndDate)}
+                  value={toDateInputValue(durationUnit === 'day' ? addDays(endDate, -1) : endDate)}
+                  min={toDateInputValue(durationUnit === 'day' ? addDays(minEndDate, -1) : minEndDate)}
                   onChange={e => {
                     const d = new Date(e.target.value + 'T00:00:00');
-                    if (!isNaN(d.getTime())) setEndDate(d);
+                    if (!isNaN(d.getTime())) setEndDate(durationUnit === 'day' ? addDays(d, 1) : d);
                   }}
                   className="input-field mt-1 text-sm w-full"
                 />
@@ -442,7 +451,7 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
             {durationUnit === 'hour'
               ? `${Math.max(1, endHour - selectedHour)} giờ`
               : durationUnit === 'day'
-              ? `${unitCount} ngày`
+              ? `${unitCount} ngày · ${String(openHour).padStart(2, '0')}:00 – ${String(closeHour).padStart(2, '0')}:00 mỗi ngày`
               : `${unitCount} tuần (≈ ${unitCount * 7} ngày)`}
           </p>
         </div>
@@ -523,14 +532,22 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
                   aria-label="Thêm chỗ"
                 >
                   <option value="">+ Thêm chỗ trống ({addable.length})</option>
-                  {addable.map((c) => {
-                    const p = getSeatPrice?.(c.workspace_type_id, durationUnit);
-                    return (
-                      <option key={c.id} value={c.id}>
-                        {c.name}{floorNameOf && c.floor_id !== ws.floor_id ? ` (${floorNameOf(c.floor_id)})` : ''} · {c.capacity} chỗ{p ? ` · ${formatVND(p.price)}/${durationUnitLabel[p.duration_unit]?.toLowerCase()}` : ''}
-                      </option>
-                    );
-                  })}
+                  {/* Same kind of space first (another desk for a desk), other kinds apart, smallest first. */}
+                  {[
+                    { label: 'Cùng loại chỗ', items: addable.filter((c) => c.workspace_type_id === ws.workspace_type_id) },
+                    { label: 'Loại khác', items: addable.filter((c) => c.workspace_type_id !== ws.workspace_type_id) },
+                  ].filter((g) => g.items.length > 0).map((g) => (
+                    <optgroup key={g.label} label={g.label}>
+                      {[...g.items].sort((a, b) => a.capacity - b.capacity).map((c) => {
+                        const p = getSeatPrice?.(c.workspace_type_id, durationUnit);
+                        return (
+                          <option key={c.id} value={c.id}>
+                            {c.name}{floorNameOf && c.floor_id !== ws.floor_id ? ` (${floorNameOf(c.floor_id)})` : ''} · {c.capacity} chỗ{p ? ` · ${formatVND(p.price)}/${durationUnitLabel[p.duration_unit]?.toLowerCase()}` : ''}
+                          </option>
+                        );
+                      })}
+                    </optgroup>
+                  ))}
                 </select>
               );
             })()}
@@ -600,8 +617,12 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
           </div>
         </div>
 
-        {/* Total Price summary */}
-        <div className="flex justify-between items-center pt-2 border-t border-[var(--border-subtle)]">
+      </div>
+
+      {/* Total + book button stay pinned to the bottom of the panel, so on a phone the customer
+          does not have to scroll past the photos and every add-on to find them. */}
+      <div className="sticky bottom-0 z-10 -mx-5 -mb-5 mt-4 px-5 pt-3 pb-5 bg-inherit border-t border-[var(--border-subtle)]">
+        <div className="flex justify-between items-center">
           <span className="text-sm font-semibold">
             Tổng cộng{seatCount > 1 && <span className="font-normal text-[var(--text-tertiary)]"> · {seatCount} chỗ</span>}
           </span>
@@ -609,18 +630,17 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
             {formatVND(total)}
           </span>
         </div>
-      </div>
 
       {/* Book button */}
       {currentAvail === 'available' && price && (
         <>
           {blockedExtras.length > 0 && (
-            <p className="mt-4 text-xs text-[var(--state-danger)]">
+            <p className="mt-3 text-xs text-[var(--state-danger)]">
               Bỏ {blockedExtras.length === 1 ? 'chỗ' : `${blockedExtras.length} chỗ`} không đặt được ở trên để tiếp tục.
             </p>
           )}
           <button
-            className="btn btn-primary w-full mt-5 cursor-pointer disabled:opacity-50"
+            className="btn btn-primary w-full mt-3 cursor-pointer disabled:opacity-50"
             disabled={blockedExtras.length > 0}
             onClick={() => onBookNow(endHour, services, subtotal, addonTotal, endDate, durationUnit, extraSeats.map((e) => e.seat.id))}
           >
@@ -630,7 +650,7 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
         </>
       )}
       {currentAvail?.startsWith('booked') && (
-        <div className="mt-5 rounded-2xl bg-[var(--state-danger-bg)] border border-[var(--state-danger-border)] p-3 text-center">
+        <div className="mt-3 rounded-2xl bg-[var(--state-danger-bg)] border border-[var(--state-danger-border)] p-3 text-center">
           <p className="text-sm font-semibold text-[var(--state-danger)]">
             Đã được đặt{' '}
             {currentAvail.split('|').length === 3
@@ -642,6 +662,7 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
           </p>
         </div>
       )}
+      </div>
     </div>
   );
 };

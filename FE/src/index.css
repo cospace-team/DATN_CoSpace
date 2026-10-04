@@ -517,6 +517,11 @@ a, button, input, select, textarea, label, summary, [role="button"], [role="tab"
 .btn-primary:hover:not(:disabled) { filter: brightness(1.1); }
 .btn-secondary { background: hsl(var(--card)); color: hsl(var(--foreground)); border: 1px solid hsl(var(--border)); }
 .btn-secondary:hover:not(:disabled) { background: hsl(var(--muted)); border-color: hsl(var(--primary)); }
+/* Used across the app (extend, export, filters…) but was never defined, so those buttons rendered as bare text.
+   Only the frame is set (it has to beat .btn's border:none); text colour and the hover background are left
+   to the utilities on each button. */
+.btn-outline { border: 1px solid hsl(var(--border)); }
+:where(.btn-outline:hover:not(:disabled)) { background: hsl(var(--muted)); }
 .btn-danger { background: hsl(var(--destructive)); color: hsl(var(--destructive-foreground)); }
 .btn-danger:hover:not(:disabled) { opacity: 0.9; }
 .btn-ghost { background: transparent; color: hsl(var(--muted-foreground)); }
@@ -587,4 +592,22 @@ a, button, input, select, textarea, label, summary, [role="button"], [role="tab"
   .mobile-bottom-nav { display: flex; }
   .mobile-main-content { padding-bottom: 64px; }
   .data-table th, .data-table td { padding: 8px 10px; font-size: 13px; }
+}
+/* Checkout's pay bar sticks to the bottom below lg (above the mobile nav), with the chat button above it. */
+.checkout-paybar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 39; }
+@media (max-width: 768px) {
+  .checkout-paybar { bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
+  body[data-pay-bar="open"] .chat-fab { bottom: calc(64px + 76px + 12px); }
+}
+@media (min-width: 769px) and (max-width: 1023px) {
+  body[data-pay-bar="open"] .chat-fab { bottom: calc(76px + 12px); }
+}
+@media (min-width: 1024px) {
+  .checkout-paybar { display: none; }
+}
+/* Explore's booking panel is 20rem wide on the right; keep the chat button clear of it. */
+@media (min-width: 1024px) {
+  body[data-side-panel="open"] .chat-fab {
+    right: calc(20rem + 1.25rem);
+  }
 }

@@ -45,6 +45,8 @@ class BookingExtensionServiceTest {
     private BookingAddonService bookingAddonService;
     @Mock
     private EntityManager entityManager;
+    @Mock
+    private com.cospace.app.repository.WorkspaceEntityRepository workspaceEntityRepository;
 
     @InjectMocks
     private BookingExtensionService service;
@@ -130,6 +132,34 @@ class BookingExtensionServiceTest {
         assertThat(fee.isDue()).isTrue();
         assertThat(fee.getBillableHours()).isEqualTo(2);
         assertThat(fee.getAmount()).isEqualTo(150_000L);
+    }
+
+    @Test
+    void overstayedDayPassWhoseRowHoldsATypeCodeIsBilledAtTheWorkspacesHourlyRate() {
+        UUID realType = UUID.randomUUID();
+        Booking b = Booking.builder().id(UUID.randomUUID()).branchId(branchId).workspaceId(workspaceId)
+                .workspaceTypeId("desk").status(BookingStatus.CHECKED_IN).unit(DurationUnit.day).unitCount(1)
+                .pricePerUnit(200_000L).startAt(now.minusHours(11)).endAt(now.minusMinutes(58)).build();
+        when(pricingService.getUnitPriceVnd(branchId, "desk", "hour")).thenThrow(new IllegalArgumentException("no price"));
+        when(workspaceEntityRepository.findById(workspaceId)).thenReturn(Optional.of(
+                com.cospace.app.entity.WorkspaceEntity.builder().id(workspaceId).workspaceTypeId(realType).build()));
+        when(pricingService.getUnitPriceVnd(branchId, realType.toString(), "hour")).thenReturn(30_000L);
+
+        BookingExtensionDto.LateFeeResponse fee = service.computeLateFee(b, now);
+
+        assertThat(fee.isDue()).isTrue();
+        assertThat(fee.getAmount()).isEqualTo(45_000L); // 1 started hour x 30k x 1.5
+    }
+
+    @Test
+    void dayPassWithNoHourlyPriceAnywhereFallsBackToItsDayPrice() {
+        Booking b = Booking.builder().id(UUID.randomUUID()).branchId(branchId).workspaceId(workspaceId)
+                .workspaceTypeId(typeId).status(BookingStatus.CHECKED_IN).unit(DurationUnit.day).unitCount(1)
+                .pricePerUnit(200_000L).startAt(now.minusHours(11)).endAt(now.minusMinutes(1)).build();
+        when(pricingService.getUnitPriceVnd(branchId, typeId, "hour")).thenThrow(new IllegalArgumentException("no price"));
+        when(workspaceEntityRepository.findById(workspaceId)).thenReturn(Optional.empty());
+
+        assertThat(service.hourlyRateForLateFee(b)).isEqualTo(20_000L); // 200k over the 10 hours it covers
     }
 
     @Test

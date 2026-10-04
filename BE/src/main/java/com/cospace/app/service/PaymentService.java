@@ -34,6 +34,76 @@ import java.util.stream.Collectors;
 @Slf4j
 public class PaymentService {
 
+    /**
+     * Optional so unit tests that build this service by hand need not supply it; always present in
+     * the running application.
+     */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private AuditLogService auditLogService;
+
+    private void audit(UUID actorId, String action, String entityName, UUID entityId, java.util.Map<String, Object> values) {
+        if (auditLogService != null) {
+            auditLogService.record(actorId, action, entityName, entityId, values);
+        }
+    }
+
+    /** Optional for the same reason as the audit log: tests build this service by hand. */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private NotificationService notificationService;
+
+    public static final String NOTIFY_BOOKING_CONFIRMED = "BOOKING_CONFIRMED";
+    private static final java.time.format.DateTimeFormatter NOTIFY_TIME =
+            java.time.format.DateTimeFormatter.ofPattern("HH:mm 'ngày' dd/MM/yyyy");
+
+    /**
+     * Tells the customer their booking is paid and confirmed, so the bell shows it right away. Sent
+     * after the payment commits (a notification must never undo a payment), once per group order.
+     */
+    private void notifyConfirmed(Booking booking, Payment payment) {
+        if (notificationService == null) return;
+        boolean group = booking.getGroupId() != null;
+        String content = (group
+                ? "Đơn " + booking.getBookingCode() + " và các chỗ cùng nhóm đã được thanh toán và xác nhận. "
+                : "Đơn " + booking.getBookingCode() + " đã được thanh toán "
+                        + String.format(java.util.Locale.US, "%,d", payment.getAmount()).replace(',', '.') + "đ và xác nhận. ")
+                + (booking.getStartAt() != null
+                        ? "Bắt đầu lúc " + booking.getStartAt().atZoneSameInstant(BookingService.BUSINESS_ZONE).format(NOTIFY_TIME) + ". "
+                        : "")
+                + "Mở Lịch sử để xem mã QR check-in.";
+        UUID userId = booking.getUserId();
+        UUID bookingId = booking.getId();
+        Runnable send = () -> {
+            try {
+                notificationService.createNotificationInNewTransaction(userId, "Đặt chỗ thành công", content, NOTIFY_BOOKING_CONFIRMED, bookingId, "BOOKING");
+            } catch (RuntimeException e) {
+                log.warn("Could not notify booking {} confirmation: {}", booking.getBookingCode(), e.getMessage());
+            }
+        };
+        if (!org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive()) {
+            send.run();
+            return;
+        }
+        String groupKey = group ? "booking-confirmed-notice:" + booking.getGroupId() : null;
+        if (groupKey != null) {
+            if (org.springframework.transaction.support.TransactionSynchronizationManager.hasResource(groupKey)) return;
+            org.springframework.transaction.support.TransactionSynchronizationManager.bindResource(groupKey, Boolean.TRUE);
+        }
+        org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                new org.springframework.transaction.support.TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        send.run();
+                    }
+
+                    @Override
+                    public void afterCompletion(int status) {
+                        if (groupKey != null) {
+                            org.springframework.transaction.support.TransactionSynchronizationManager.unbindResourceIfPossible(groupKey);
+                        }
+                    }
+                });
+    }
+
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final String CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
@@ -349,7 +419,7 @@ public class PaymentService {
                 .build();
         paymentRepository.save(payment);
 
-        confirmBooking(payment);
+        confirmBooking(payment, staffId);
 
         return toCashCreateResponse(payment);
     }
@@ -550,6 +620,52 @@ public class PaymentService {
         markOrderPaid(rows, null, null);
     }
 
+    /** A QR order the customer walked away from: whether it paid a tab, and the bookings still waiting on it. */
+    public record AbandonedOrder(boolean tabPayment, List<UUID> pendingBookingIds) {
+    }
+
+    /**
+     * The customer gave up on a VietQR order ("Hủy" on the QR page): its unpaid rows are cancelled,
+     * and for a booking order the bookings still awaiting payment are returned so the caller can
+     * cancel them and free the seats. A payment that arrives afterwards is refunded like any late
+     * payment. Paid orders cannot be abandoned.
+     */
+    @Transactional
+    public AbandonedOrder abandonPayosOrder(UUID userId, String orderCode) {
+        String orderId = orderCode.startsWith("PAYOS-") ? orderCode : "PAYOS-" + orderCode;
+        Payment payment = paymentRepository.findByOrderId(orderId)
+                .filter(p -> userId.equals(p.getUserId()))
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy giao dịch thanh toán."));
+        if (payment.getStatus() == PaymentStatus.PAID) {
+            throw new IllegalStateException("Giao dịch đã được thanh toán. Bạn có thể hủy đơn trong Lịch sử để được hoàn tiền theo chính sách.");
+        }
+        boolean tab = Payment.PURPOSE_ADDON.equals(payment.getPurpose());
+        List<UUID> pending = new java.util.ArrayList<>();
+        for (Payment row : rowsOfOrder(payment)) {
+            if (row.getStatus() == PaymentStatus.INITIATED || row.getStatus() == PaymentStatus.PENDING) {
+                row.setStatus(PaymentStatus.CANCELLED);
+                paymentRepository.save(row);
+                if (tab) bookingAddonService.unlinkPayment(row.getBookingId(), row.getId());
+            }
+            if (!tab) {
+                bookingRepository.findById(row.getBookingId())
+                        .filter(b -> b.getStatus() == BookingStatus.PENDING_PAYMENT)
+                        .ifPresent(b -> pending.add(b.getId()));
+            }
+        }
+        return new AbandonedOrder(tab, pending);
+    }
+
+    /** Whether a QR order pays a booking or a running tab, so the QR page can word its buttons. */
+    @Transactional(readOnly = true)
+    public String getPaymentPurposeByOrderCode(String orderCode) {
+        String orderId = orderCode.startsWith("PAYOS-") ? orderCode : "PAYOS-" + orderCode;
+        return paymentRepository.findByOrderId(orderId)
+                .or(() -> paymentRepository.findByOrderId(orderCode))
+                .map(p -> p.getPurpose() == null ? Payment.PURPOSE_BOOKING : p.getPurpose())
+                .orElse(null);
+    }
+
     @Transactional(readOnly = true)
     public PaymentStatus getPaymentStatusByOrderCode(String orderCode) {
         String orderId = orderCode.startsWith("PAYOS-") ? orderCode : "PAYOS-" + orderCode;
@@ -627,6 +743,11 @@ public class PaymentService {
      * is never kept silently: it is queued as a refund for staff to return.
      */
     private void confirmBooking(Payment payment) {
+        confirmBooking(payment, payment.getUserId());
+    }
+
+    /** @param actorId who is recorded as taking the payment: the customer online, staff at the counter */
+    private void confirmBooking(Payment payment, UUID actorId) {
         Booking booking = bookingRepository.findByIdWithLock(payment.getBookingId())
                 .orElseThrow(() -> new IllegalStateException("Booking not found for payment confirmation"));
 
@@ -635,6 +756,10 @@ public class PaymentService {
             bookingRepository.save(booking);
             // Add-ons ordered at checkout were part of this payment's amount.
             bookingAddonService.markPreordersPaid(booking.getId(), payment.getId());
+            audit(actorId, "PAYMENT", "payments", payment.getId(), AuditLogService.values(
+                    "bookingCode", booking.getBookingCode(), "amount", payment.getAmount(),
+                    "provider", payment.getProvider(), "method", payment.getMethod()));
+            notifyConfirmed(booking, payment);
             return;
         }
 

@@ -81,6 +81,11 @@ public class Promotion {
     @Column(name = "min_tier_code", length = 32)
     private String minTierCode;
 
+    /** Only for customers who have never had a paid booking (welcome offers). */
+    @Column(name = "new_customers_only", nullable = false)
+    @Builder.Default
+    private boolean newCustomersOnly = false;
+
     /** Listed to customers at checkout; a non-public code works only when typed in. */
     @Column(name = "is_public", nullable = false)
     @Builder.Default

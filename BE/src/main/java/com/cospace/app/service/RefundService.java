@@ -166,8 +166,59 @@ public class RefundService {
                     .processedByName(processor != null ? processor.getFullName() : null)
                     .processedAt(r.getProcessedAt())
                     .createdAt(r.getCreatedAt())
+                    .receivingBankName(r.getReceivingBankName())
+                    .receivingAccountNumber(r.getReceivingAccountNumber())
+                    .receivingAccountName(r.getReceivingAccountName())
                     .build();
         }).toList();
+    }
+
+    /** What the customer sees of a booking's refund: how and when it was paid, or where it will go. */
+    public record CustomerRefundInfo(String method, OffsetDateTime processedAt, String voucherCode,
+                                     String bankName, String accountNumber, String accountName) {
+    }
+
+    /** The latest refund of each booking, for the booking history; bookings without one are absent. */
+    @Transactional(readOnly = true)
+    public Map<UUID, CustomerRefundInfo> customerRefundInfo(java.util.Collection<UUID> bookingIds) {
+        if (bookingIds == null || bookingIds.isEmpty()) return Map.of();
+        List<Refund> refunds = refundRepository.findByBookingIdInOrderByCreatedAtAsc(bookingIds).stream()
+                .filter(r -> !Refund.STATUS_REJECTED.equals(r.getStatus())).toList();
+        Map<UUID, String> voucherCodes = promotionRepository.findAllById(refunds.stream().map(Refund::getVoucherPromotionId)
+                        .filter(java.util.Objects::nonNull).distinct().toList())
+                .stream().collect(Collectors.toMap(Promotion::getId, Promotion::getCode));
+        Map<UUID, CustomerRefundInfo> out = new java.util.HashMap<>();
+        for (Refund r : refunds) { // oldest first, so the latest one wins
+            out.put(r.getBookingId(), new CustomerRefundInfo(r.getRefundMethod(), r.getProcessedAt(),
+                    r.getVoucherPromotionId() != null ? voucherCodes.get(r.getVoucherPromotionId()) : null,
+                    r.getReceivingBankName(), r.getReceivingAccountNumber(), r.getReceivingAccountName()));
+        }
+        return out;
+    }
+
+    /**
+     * The customer tells us where to send the money for a refund still waiting on the branch. Only
+     * the customer's own pending refunds of that booking are updated.
+     */
+    @Transactional
+    public int setReceivingAccount(UUID userId, UUID bookingId, String bankName, String accountNumber, String accountName) {
+        List<Refund> pending = refundRepository.findByBookingIdOrderByCreatedAtAsc(bookingId).stream()
+                .filter(r -> userId.equals(r.getUserId()) && Refund.STATUS_PENDING.equals(r.getStatus()))
+                .toList();
+        if (pending.isEmpty()) {
+            throw new IllegalStateException("Đơn này không có khoản hoàn tiền nào đang chờ xử lý.");
+        }
+        String number = accountNumber.replace(" ", "");
+        if (!number.matches("\\d{6,20}")) {
+            throw new IllegalArgumentException("Số tài khoản chỉ gồm 6–20 chữ số.");
+        }
+        for (Refund r : pending) {
+            r.setReceivingBankName(bankName.trim());
+            r.setReceivingAccountNumber(number);
+            r.setReceivingAccountName(accountName.trim().toUpperCase(Locale.ROOT));
+        }
+        refundRepository.saveAll(pending);
+        return pending.size();
     }
 
     @Transactional(readOnly = true)

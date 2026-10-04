@@ -8,9 +8,11 @@ import {
   FiShield, 
   FiCheckCircle, 
   FiInfo,
+  FiDownload,
 } from 'react-icons/fi';
 import { useToast } from '../../components/Toast';
-import VietQrImage from '../../components/VietQrImage';
+import QRCode from 'qrcode';
+import VietQrImage, { buildVietQrPayload } from '../../components/VietQrImage';
 import { HoldCountdown } from '../../components/HoldCountdown';
 import { API_BASE_URL } from '../../config/api';
 import { formatVND } from '../../utils/formatters';
@@ -34,8 +36,18 @@ const VietQrCheckoutPage: React.FC = () => {
   // VietQR standard dynamic image URL
   const qrImageUrl = `https://img.vietqr.io/image/${bankBin}-${accountNumber}-compact2.png?amount=${amount}&addInfo=${encodeURIComponent(description)}&accountName=${encodeURIComponent(accountName)}`;
 
-  // 15-minute hold, counted from when this page opened (ticks inside <HoldCountdown>).
-  const [holdDeadlineMs] = useState(() => Date.now() + 15 * 60_000);
+  // The hold the backend enforces (paymentDeadlineAt from the order); only without it does the page
+  // fall back to 15 minutes from opening. Counting from the page opening restarted the clock every
+  // time the customer came back to this page.
+  const [holdDeadlineMs] = useState(() => {
+    const deadline = Date.parse(searchParams.get('paymentDeadlineAt') || '');
+    return Number.isFinite(deadline) ? deadline : Date.now() + 15 * 60_000;
+  });
+  // 'addon' when this QR pays services or extra hours on an existing booking, not a new booking.
+  const [purpose, setPurpose] = useState<string | null>(null);
+  const isTabPayment = purpose === 'addon';
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [isPaidSuccess, setIsPaidSuccess] = useState(false);
   const [paymentStep, setPaymentStep] = useState<'WAITING' | 'DETECTING' | 'CONFIRMED'>('WAITING');
@@ -116,6 +128,7 @@ const VietQrCheckoutPage: React.FC = () => {
         const res = await fetch(`${API_BASE_URL}/api/payments/payos/status/${orderCode}`);
         if (res.ok) {
           const data = await res.json();
+          if (data.purpose) setPurpose(data.purpose);
           if (data.status === 'PAID') {
             clearInterval(pollInterval);
             handlePaymentConfirmed();
@@ -148,8 +161,55 @@ const VietQrCheckoutPage: React.FC = () => {
     setTimeout(() => setCopiedField(null), 2000);
   };
 
-  const handleCancel = () => {
-    navigate(`/customer/history?orderId=PAYOS-${orderCode}&status=CANCELLED&message=${encodeURIComponent('Đã hủy giao dịch thanh toán VietQR')}`);
+  // Know up front whether this QR is for a new booking or a tab, to word the cancel button.
+  useEffect(() => {
+    if (!orderCode) return;
+    fetch(`${API_BASE_URL}/api/payments/payos/status/${orderCode}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => { if (data?.purpose) setPurpose(data.purpose); })
+      .catch(() => {});
+  }, [orderCode]);
+
+  // Cancels the QR order on the server; for a new booking that also cancels the booking, so the
+  // seat is released now instead of staying held until the timeout.
+  const handleCancel = async () => {
+    setCancelling(true);
+    try {
+      const token = localStorage.getItem('workhub_access_token');
+      const res = await fetch(`${API_BASE_URL}/api/payments/payos/${orderCode}/cancel`, {
+        method: 'POST',
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || 'Không thể hủy giao dịch.');
+      const message = data.tabPayment
+        ? 'Đã hủy thanh toán. Khoản dịch vụ vẫn chờ bạn thanh toán.'
+        : data.cancelledBookings > 0
+          ? 'Đã hủy đơn đặt chỗ và trả lại chỗ. Bạn không mất phí.'
+          : 'Đã hủy giao dịch thanh toán VietQR.';
+      navigate(`/customer/history?orderId=PAYOS-${orderCode}&status=CANCELLED&message=${encodeURIComponent(message)}`);
+    } catch (err: any) {
+      showToast(err.message || 'Không thể hủy giao dịch.', 'error');
+      setCancelling(false);
+      setConfirmCancel(false);
+    }
+  };
+
+  // Paying from the phone that shows the QR: save the image and pick it from the gallery in the
+  // banking app. Drawn locally so it works even when img.vietqr.io cannot be downloaded.
+  const handleSaveQr = async () => {
+    try {
+      const dataUrl = await QRCode.toDataURL(buildVietQrPayload(bankBin, accountNumber, amount, description), { width: 640, margin: 2 });
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = `CoSpace-VietQR-${orderCode}.png`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      showToast('Đã lưu ảnh QR. Mở app ngân hàng và chọn quét ảnh từ thư viện.', 'success');
+    } catch {
+      showToast('Không lưu được ảnh QR, vui lòng chuyển khoản thủ công bên dưới.', 'error');
+    }
   };
 
   return (
@@ -171,6 +231,27 @@ const VietQrCheckoutPage: React.FC = () => {
             <div className="p-4 bg-muted/50 rounded-2xl border border-border text-xs text-muted-foreground flex items-center justify-center gap-2">
               <span className="w-3 h-3 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin"></span>
               <span>Đang tự động chuyển đến trang Lịch sử đặt chỗ…</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmCancel && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" role="dialog" aria-modal="true">
+          <div className="bg-card border border-border p-6 rounded-3xl max-w-sm w-full shadow-2xl space-y-4">
+            <h2 className="text-lg font-bold text-foreground">{isTabPayment ? 'Hủy thanh toán này?' : 'Hủy đơn đặt chỗ?'}</h2>
+            <p className="text-sm text-muted-foreground">
+              {isTabPayment
+                ? 'Mã QR này sẽ không dùng được nữa. Khoản dịch vụ vẫn còn trong đơn, bạn có thể thanh toán lại sau hoặc trả tại quầy.'
+                : 'Đơn chưa thanh toán sẽ bị hủy và chỗ được trả lại ngay. Bạn không mất phí. Nếu đã chuyển khoản, đừng hủy: hệ thống sẽ tự xác nhận trong vài giây.'}
+            </p>
+            <div className="flex gap-3">
+              <button type="button" onClick={() => setConfirmCancel(false)} disabled={cancelling} className="btn btn-secondary flex-1">
+                Tiếp tục thanh toán
+              </button>
+              <button type="button" onClick={() => void handleCancel()} disabled={cancelling} className="btn btn-danger flex-1">
+                {cancelling ? 'Đang hủy…' : isTabPayment ? 'Hủy thanh toán' : 'Hủy đơn'}
+              </button>
             </div>
           </div>
         </div>
@@ -200,10 +281,10 @@ const VietQrCheckoutPage: React.FC = () => {
           </HoldCountdown>
 
           <button
-            onClick={handleCancel}
+            onClick={() => setConfirmCancel(true)}
             className="px-3.5 py-2 text-xs font-semibold text-muted-foreground hover:text-rose-500 border border-transparent hover:border-border rounded-2xl transition"
           >
-            Hủy đơn
+            {isTabPayment ? 'Hủy thanh toán' : 'Hủy đơn'}
           </button>
         </div>
       </div>
@@ -230,6 +311,12 @@ const VietQrCheckoutPage: React.FC = () => {
             </div>
           </div>
 
+          {/* On a phone the amount card sits below the QR, out of sight: repeat the amount here. */}
+          <div className="lg:hidden w-full flex items-center justify-between rounded-xl bg-slate-900 text-white px-4 py-3">
+            <span className="text-xs text-blue-200/80 uppercase tracking-wider font-medium">Số tiền</span>
+            <span className="text-xl font-bold font-mono text-emerald-400">{formatVND(amount)}</span>
+          </div>
+
           {/* QR Code Canvas Frame */}
           <div className="p-3.5 bg-white rounded-2xl shadow-sm border border-slate-200 inline-block transition-transform ">
             <VietQrImage
@@ -242,6 +329,13 @@ const VietQrCheckoutPage: React.FC = () => {
               className="w-64 h-64 md:w-72 md:h-72 object-contain rounded-lg"
             />
           </div>
+
+          <button type="button" onClick={() => void handleSaveQr()} className="btn btn-secondary btn-sm gap-2">
+            <FiDownload className="h-4 w-4" /> Lưu ảnh QR
+          </button>
+          <p className="text-[11px] text-muted-foreground -mt-2">
+            Đang dùng điện thoại? Lưu ảnh rồi mở app ngân hàng, chọn quét mã từ ảnh.
+          </p>
 
           {/* Payment status */}
           <div className="space-y-2 w-full pt-1">

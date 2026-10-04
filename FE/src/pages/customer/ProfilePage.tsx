@@ -51,6 +51,7 @@ import MemberProfileModal, { type MemberPreview } from '../../components/network
 import { AvatarModal } from './profile/AvatarModal';
 import { ProfileSecurityTab } from './profile/ProfileSecurityTab';
 import { ProfileNetworkTab } from './profile/ProfileNetworkTab';
+import { passwordProblem, phoneProblem } from '../../utils/passwordRules';
 
 // ── BANNER THEMES ──
 // Flat cover colours; each swatch in the picker shows its cover colour as-is. Fixed shades, not
@@ -205,8 +206,12 @@ const ProfilePage: React.FC = () => {
     totalBookings: 0,
     totalHours: 0,
     tier: 'Hạng Bronze',
-    memberSince: 'Năm 2026',
   });
+  // Account creation time, from the profile endpoint (falls back to the login payload).
+  const [joinedAt, setJoinedAt] = useState<string | null>(user?.createdAt ?? null);
+  const memberSince = joinedAt
+    ? (() => { const d = new Date(joinedAt); return `Tháng ${d.getMonth() + 1}/${d.getFullYear()}`; })()
+    : null;
   // Server-side membership tier; realStats.tier stays as the offline fallback.
   const [membership, setMembership] = useState<MyMembershipDto | null>(null);
   const [reputation, setReputation] = useState<MyReputationDto | null>(null);
@@ -270,12 +275,8 @@ const ProfilePage: React.FC = () => {
               }))
             );
           } else {
-            // Default initial suggestions if empty
-            setSkills([
-              { tagName: 'UI/UX Design' },
-              { tagName: 'Frontend Dev' },
-              { tagName: 'Khởi nghiệp' },
-            ]);
+            // No skills yet: start empty (the popular tags are offered as suggestions instead).
+            setSkills([]);
           }
 
           if (data.contactLink) {
@@ -325,12 +326,11 @@ const ProfilePage: React.FC = () => {
           setProfileForm(prev => {
             const next = {
               ...prev,
-              profession: data.profession || prev.profession || 'Frontend Developer & Co-worker',
-              company: data.company || prev.company || 'CoSpace Community',
-              bio:
-                data.bio ||
-                prev.bio ||
-                'Thành viên năng động tại CoSpace. Đam mê công nghệ, chia sẻ kinh nghiệm và tìm kiếm cơ hội hợp tác kết nối.',
+              // No made-up defaults: whatever is shown here is saved back with the next edit and
+              // shown to other members as if the customer had written it.
+              profession: data.profession || prev.profession || '',
+              company: data.company || prev.company || '',
+              bio: data.bio || prev.bio || '',
               contactPublic: data.contactPublic !== undefined ? data.contactPublic : true,
             };
             initialProfileRef.current = next;
@@ -338,6 +338,9 @@ const ProfilePage: React.FC = () => {
           });
           if (data.avatarUrl) {
             setCustomAvatarUrl(data.avatarUrl);
+          }
+          if (data.createdAt) {
+            setJoinedAt(data.createdAt);
           }
         }
       } catch (error) {
@@ -356,37 +359,17 @@ const ProfilePage: React.FC = () => {
             return ['confirmed', 'checked_in', 'checked_out', 'completed'].includes(s);
           });
           const totalBookings = valid.length;
-          let totalHours = 0;
-          valid.forEach(b => {
-            const u = (b.unit || '').toLowerCase();
-            const count = Number(b.unitCount) || 0;
-            if (u === 'hour' && count > 0) totalHours += count;
-            else if (u === 'day' && count > 0) totalHours += count * 8;
-            else if (u === 'week' && count > 0) totalHours += count * 40;
-            else if (u === 'month' && count > 0) totalHours += count * 160;
-            else if (b.startAt && b.endAt) {
-              const diff = new Date(b.endAt).getTime() - new Date(b.startAt).getTime();
-              totalHours += Math.max(1, Math.round(diff / 3600000));
-            } else {
-              totalHours += Math.max(1, count || 1);
-            }
-          });
+          // Hours actually spent at CoSpace (check-in to check-out), not hours booked: an upcoming
+          // weekly booking used to add 40 hours before the customer had set foot in the space.
+          const totalMinutes = valid.reduce((sum, b) => sum + (Number(b.visitMinutes) || 0), 0);
+          const totalHours = Math.round(totalMinutes / 60);
 
           let tier = 'Hạng Bronze';
           if (totalBookings >= 20 || totalHours >= 80) tier = 'Hạng Platinum';
           else if (totalBookings >= 10 || totalHours >= 40) tier = 'Hạng Gold';
           else if (totalBookings >= 3 || totalHours >= 10) tier = 'Hạng Silver';
 
-          let memberSince = 'Năm 2026';
-          if (user?.createdAt) {
-            const d = new Date(user.createdAt);
-            memberSince = `Tháng ${d.getMonth() + 1}/${d.getFullYear()}`;
-          } else if (valid.length > 0 && valid[0].createdAt) {
-            const d = new Date(valid[0].createdAt);
-            memberSince = `Tháng ${d.getMonth() + 1}/${d.getFullYear()}`;
-          }
-
-          setRealStats({ totalBookings, totalHours, tier, memberSince });
+          setRealStats({ totalBookings, totalHours, tier });
         }
       } catch (e) {
         console.warn('Failed to calculate real booking stats:', e);
@@ -508,6 +491,11 @@ const ProfilePage: React.FC = () => {
   const handleSavePersonalInfo = async () => {
     if (!profileForm.fullName.trim()) {
       showToast('Họ và tên không được để trống', 'error');
+      return;
+    }
+    const badPhone = phoneProblem(profileForm.phone);
+    if (badPhone) {
+      showToast(badPhone, 'error');
       return;
     }
     setIsSavingPersonal(true);
@@ -678,8 +666,9 @@ const ProfilePage: React.FC = () => {
   // ── Save Password Handler ──
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (passwordForm.newPassword.length < 6) {
-      showToast('Mật khẩu mới phải có ít nhất 6 ký tự', 'error');
+    const weak = passwordProblem(passwordForm.newPassword);
+    if (weak) {
+      showToast(weak, 'error');
       return;
     }
     if (passwordForm.newPassword !== passwordForm.confirmNewPassword) {
@@ -885,6 +874,7 @@ const ProfilePage: React.FC = () => {
   };
 
   // ── Filtered & Sorted Partners ──
+  const bestMatchCount = partnersList.filter((partner) => partner.matchScore >= 50).length;
   const sortedAndFilteredPartners = partnersList
     .filter(partner => {
       const matchesSearch =
@@ -1055,10 +1045,14 @@ const ProfilePage: React.FC = () => {
                 <p className="text-sm font-medium text-muted-foreground flex items-center justify-center sm:justify-start gap-2">
                   <FiBriefcase className="h-4 w-4 text-primary shrink-0" />
                   <span>
-                    <span className="text-foreground font-semibold">
-                      {profileForm.profession || 'Chuyên viên'}
-                    </span>
-                    {profileForm.company ? ` @ ${profileForm.company}` : ''}
+                    {profileForm.profession || profileForm.company ? (
+                      <>
+                        <span className="text-foreground font-semibold">{profileForm.profession}</span>
+                        {profileForm.company ? `${profileForm.profession ? ' @ ' : ''}${profileForm.company}` : ''}
+                      </>
+                    ) : (
+                      <span className="italic">Chưa cập nhật chức danh</span>
+                    )}
                   </span>
                 </p>
 
@@ -1066,9 +1060,11 @@ const ProfilePage: React.FC = () => {
                   <span className="flex items-center gap-1.5">
                     <FiMail className="h-3.5 w-3.5" /> {profileForm.email || user?.email}
                   </span>
-                  <span className="flex items-center gap-1.5">
-                    <FiCalendar className="h-3.5 w-3.5" /> Tham gia: {realStats.memberSince}
-                  </span>
+                  {memberSince && (
+                    <span className="flex items-center gap-1.5">
+                      <FiCalendar className="h-3.5 w-3.5" /> Tham gia: {memberSince}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -1101,6 +1097,7 @@ const ProfilePage: React.FC = () => {
               <div>
                 <p className="text-[11px] font-medium text-muted-foreground">Lượt đặt chỗ</p>
                 <p className="text-lg font-bold text-foreground">{realStats.totalBookings} lượt</p>
+                <p className="text-[11px] text-muted-foreground">Đã xác nhận &amp; hoàn thành</p>
               </div>
             </div>
 
@@ -1112,6 +1109,7 @@ const ProfilePage: React.FC = () => {
               <div>
                 <p className="text-[11px] font-medium text-muted-foreground">Giờ làm việc</p>
                 <p className="text-lg font-bold text-foreground">{realStats.totalHours} giờ</p>
+                <p className="text-[11px] text-muted-foreground">Tính từ các lượt check-in</p>
               </div>
             </div>
 
@@ -1133,12 +1131,14 @@ const ProfilePage: React.FC = () => {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-[11px] font-medium text-muted-foreground">Hạng thành viên</p>
-                <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                <p className="text-lg font-bold leading-tight text-emerald-600 dark:text-emerald-400 break-words">
                   {tierLabel}
-                  {!!membership?.currentTier?.discountPercent && (
-                    <span className="ml-1.5 text-xs font-semibold">(-{membership.currentTier.discountPercent}%)</span>
-                  )}
                 </p>
+                {!!membership?.currentTier?.discountPercent && (
+                  <p className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                    Giảm {membership.currentTier.discountPercent}% mỗi đơn
+                  </p>
+                )}
                 {membership?.nextTier && (
                   <div className="mt-1 space-y-1">
                     <div className="h-1.5 w-full rounded-full bg-border overflow-hidden">
@@ -1174,12 +1174,12 @@ const ProfilePage: React.FC = () => {
                     {reputation.score}<span className="text-xs font-semibold text-muted-foreground">/{reputation.maxScore}</span>
                   </p>
                   <p
-                    className="text-[11px] text-muted-foreground truncate"
+                    className="text-[11px] text-muted-foreground leading-snug"
                     title={reputation.recentEvents[0]?.note ?? undefined}
                   >
                     {reputation.recentEvents[0]
                       ? `Gần nhất: ${reputation.recentEvents[0].delta} điểm (${new Date(reputation.recentEvents[0].createdAt).toLocaleDateString('vi-VN')})`
-                      : `Check-in trễ quá ${reputation.checkinDeadlineMinutes} phút: -${reputation.missedCheckinPenalty} điểm`}
+                      : `Trễ check-in >${reputation.checkinDeadlineMinutes}p: -${reputation.missedCheckinPenalty} điểm`}
                   </p>
                 </div>
               </div>
@@ -1214,9 +1214,12 @@ const ProfilePage: React.FC = () => {
         >
           <FiUsers className="h-4 w-4 text-primary" />
           <span>Mạng lưới kết nối</span>
-          <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-primary/10 text-primary">
-            {partnersList.length}
-          </span>
+          {/* Same count as the tab opens on ("Phù hợp nhất"), so the badge never promises more. */}
+          {bestMatchCount > 0 && (
+            <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-primary/10 text-primary">
+              {bestMatchCount}
+            </span>
+          )}
         </button>
 
         <button

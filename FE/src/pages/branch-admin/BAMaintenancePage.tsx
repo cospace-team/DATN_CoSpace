@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { FiTool, FiPlus, FiX, FiCheck, FiAlertCircle } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
-import { staffApi, type MaintenanceResponseDto, type WorkspaceMaintenanceStatusDto } from '../../api/staffApi';
+import { staffApi, MaintenanceImpactError, type MaintenanceImpact, type MaintenanceResponseDto, type WorkspaceMaintenanceStatusDto } from '../../api/staffApi';
+import AffectedBookingsDialog from '../../components/AffectedBookingsDialog';
 import { Modal } from '../../components/ui/Modal';
 
 // ─── Modal Wrapper ────────────────────────────────────────────────────────────
@@ -34,6 +35,8 @@ const BAMaintenancePage: React.FC = () => {
   const [workspaces, setWorkspaces] = useState<WorkspaceMaintenanceStatusDto[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Bookings the window would cancel or cut short, listed by the server before it does anything.
+  const [impact, setImpact] = useState<MaintenanceImpact[] | null>(null);
   
   const [form, setForm] = useState({
     workspaceId: '',
@@ -79,7 +82,7 @@ const BAMaintenancePage: React.FC = () => {
   };
 
   // ─── Actions ────────────────────────────────────────────────────────────────
-  const saveMaintenance = async () => {
+  const saveMaintenance = async (confirmAffectedBookings = false) => {
     setFormError('');
     if (!form.workspaceId || !form.startAt || !form.endAt) {
       setFormError('Vui lòng điền đầy đủ thông tin bắt buộc.');
@@ -96,11 +99,17 @@ const BAMaintenancePage: React.FC = () => {
         startAt: new Date(form.startAt).toISOString(),
         endAt: new Date(form.endAt).toISOString(),
         reason: form.reason,
+        confirmAffectedBookings,
       });
+      setImpact(null);
       setMaintenances((prev) => [created, ...prev]);
       showSuccess('Tạo lịch bảo trì thành công');
       setModalOpen(false);
     } catch (e: any) {
+      if (e instanceof MaintenanceImpactError) {
+        setImpact(e.bookings);
+        return;
+      }
       setFormError(e.message || 'Lỗi khi tạo lịch bảo trì');
     } finally {
       setIsSubmitting(false);
@@ -262,7 +271,17 @@ const BAMaintenancePage: React.FC = () => {
       )}
 
       {/* Create Modal */}
-      {modalOpen && (
+      {impact && (
+        <AffectedBookingsDialog
+          workspaceName={getWsName(form.workspaceId)}
+          bookings={impact}
+          submitting={isSubmitting}
+          onConfirm={() => void saveMaintenance(true)}
+          onCancel={() => { setImpact(null); setModalOpen(false); }}
+        />
+      )}
+
+      {modalOpen && !impact && (
         <Modal title="Tạo lịch bảo trì" onClose={() => setModalOpen(false)}>
           <div className="space-y-5">
             {formError && (
@@ -325,7 +344,7 @@ const BAMaintenancePage: React.FC = () => {
               <button className="btn btn-secondary btn-sm" onClick={() => setModalOpen(false)} disabled={isSubmitting}>
                 Hủy
               </button>
-              <button className="btn btn-primary btn-sm" onClick={saveMaintenance} disabled={isSubmitting}>
+              <button className="btn btn-primary btn-sm" onClick={() => void saveMaintenance()} disabled={isSubmitting}>
                 {isSubmitting ? (
                   <span className="animate-spin h-4 w-4 mr-2 border-2 border-primary-foreground border-t-transparent rounded-full" />
                 ) : (

@@ -71,6 +71,19 @@ class ReputationServiceTest {
     }
 
     @Test
+    void penaltyAtNoShowCloseIsOneMissedBookingNotification() {
+        User u = customer(100);
+        Booking b = bookingOf(u);
+
+        assertThat(reputationService.penalizeMissedCheckin(b, true)).isTrue();
+
+        ArgumentCaptor<String> body = ArgumentCaptor.forClass(String.class);
+        verify(notificationService).createNotification(eq(u.getId()), eq("Bạn đã bỏ lỡ lượt đặt chỗ"), body.capture(),
+                any(), eq(b.getId()), any());
+        assertThat(body.getValue()).contains("trừ 10 điểm uy tín").contains("không được hoàn tiền");
+    }
+
+    @Test
     void scoreNeverDropsBelowZero() {
         User u = customer(4);
 

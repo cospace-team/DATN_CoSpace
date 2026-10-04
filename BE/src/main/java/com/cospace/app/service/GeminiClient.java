@@ -1,5 +1,6 @@
 package com.cospace.app.service;
 
+import com.cospace.app.exception.AssistantUnavailableException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -59,14 +60,16 @@ public class GeminiClient {
     public JsonNode generateContent(String systemInstruction, List<Map<String, Object>> contents,
             List<Map<String, Object>> functionDeclarations) {
         if (!isConfigured()) {
-            throw new IllegalStateException("GEMINI_API_KEY chưa được cấu hình trên server.");
+            log.error("GEMINI_API_KEY is not set; the chatbot cannot answer.");
+            throw new AssistantUnavailableException(
+                    "Trợ lý AI tạm thời chưa sẵn sàng. Bạn vẫn có thể tìm và đặt chỗ ở trang Khám phá Không gian nhé.");
         }
 
         String requestJson;
         try {
             requestJson = objectMapper.writeValueAsString(buildBody(systemInstruction, contents, functionDeclarations));
         } catch (Exception e) {
-            throw new IllegalStateException("Không dựng được yêu cầu gửi tới trợ lý AI.", e);
+            throw new AssistantUnavailableException("Trợ lý AI đang gặp sự cố, bạn vui lòng thử lại sau nhé.", e);
         }
 
         // An overload is transient and usually affects one model at a time, so the second attempt
@@ -98,7 +101,7 @@ public class GeminiClient {
                 if (!RETRYABLE_STATUSES.contains(status)) {
                     log.warn("Gemini API error " + status + " on " + attemptModel + ": {}",
                             e.getResponseBodyAsString());
-                    throw new IllegalStateException(messageFor(status), e);
+                    throw new AssistantUnavailableException(messageFor(status), e);
                 }
                 lastStatus = status;
                 if (status == 429) {
@@ -108,11 +111,11 @@ public class GeminiClient {
                         + (i + 1) + "/" + attempts.size() + ")");
             } catch (Exception e) {
                 log.error("Gemini API call failed on {}", attemptModel, e);
-                throw new IllegalStateException("Không thể kết nối tới trợ lý AI lúc này.", e);
+                throw new AssistantUnavailableException("Không thể kết nối tới trợ lý AI lúc này.", e);
             }
         }
 
-        throw new IllegalStateException(lastStatus == 429
+        throw new AssistantUnavailableException(lastStatus == 429
                 ? "Đã chạm giới hạn miễn phí của Gemini (khoảng 20 lượt/phút cho mỗi model). "
                         + "Bạn đợi khoảng một phút rồi thử lại giúp mình nhé."
                 : "Trợ lý AI đang quá tải, bạn vui lòng thử lại sau ít phút nhé.");
@@ -143,14 +146,12 @@ public class GeminiClient {
         return objectMapper.readTree(response.getBody());
     }
 
+    /** What the customer sees; the status and response body are already in the log for whoever fixes it. */
     private String messageFor(int status) {
-        if (status == 401 || status == 403) {
-            return "Khóa API của trợ lý AI không hợp lệ hoặc đã hết hạn.";
+        if (status == 401 || status == 403 || status == 404) {
+            return "Trợ lý AI tạm thời chưa sẵn sàng. Bạn vẫn có thể tìm và đặt chỗ ở trang Khám phá Không gian nhé.";
         }
-        if (status == 404) {
-            return "Model AI đang cấu hình không khả dụng. Vui lòng kiểm tra lại GEMINI_MODEL.";
-        }
-        return "Không thể kết nối tới trợ lý AI lúc này (lỗi " + status + ").";
+        return "Không thể kết nối tới trợ lý AI lúc này, bạn vui lòng thử lại sau nhé.";
     }
 
     private void sleep(long millis) {

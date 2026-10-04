@@ -23,6 +23,7 @@ import {
   type PostType,
 } from "../../lib/communityApi";
 import MemberProfileModal, { type MemberPreview } from "../../components/network/MemberProfileModal";
+import PostComments from "./community/PostComments";
 
 const POST_TYPES: Array<{ id: PostType; label: string; hint: string; color: string }> = [
   { id: "sharing", label: "Chia sẻ", hint: "Chia sẻ điều bạn đang làm", color: "bg-blue-500" },
@@ -360,7 +361,18 @@ const CommunityPage: React.FC = () => {
                     className="bg-card border border-border rounded-3xl p-6 shadow-sm hover:shadow-md hover:border-primary/30 transition"
                   >
                     <div className="flex items-start justify-between gap-3 mb-4">
-                      <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => !post.mine && setSelectedMember({
+                          userId: post.authorId,
+                          name: post.authorName,
+                          avatar: post.authorAvatar,
+                          profession: post.authorProfession,
+                          company: post.authorCompany,
+                        })}
+                        className={`flex items-center gap-3 text-left ${post.mine ? "cursor-default" : "cursor-pointer group/author"}`}
+                        aria-label={post.mine ? undefined : `Xem hồ sơ ${post.authorName}`}
+                      >
                         <div className="h-11 w-11 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-bold shrink-0 overflow-hidden">
                           {post.authorAvatar ? (
                             <img src={post.authorAvatar} alt="" loading="lazy" className="h-full w-full object-cover" />
@@ -369,7 +381,7 @@ const CommunityPage: React.FC = () => {
                           )}
                         </div>
                         <div>
-                          <p className="text-sm font-bold text-foreground">{post.authorName}</p>
+                          <p className="text-sm font-bold text-foreground group-hover/author:text-primary">{post.authorName}</p>
                           <p className="text-[11px] text-muted-foreground">
                             {[post.authorProfession, post.authorCompany].filter(Boolean).join(" @ ") ||
                               "Thành viên CoSpace"}
@@ -377,7 +389,7 @@ const CommunityPage: React.FC = () => {
                             {timeAgo(post.createdAt)}
                           </p>
                         </div>
-                      </div>
+                      </button>
 
                       <div className="flex items-center gap-2 shrink-0">
                         <span
@@ -433,6 +445,15 @@ const CommunityPage: React.FC = () => {
                         </span>
                       </div>
                     )}
+
+                    <PostComments
+                      postId={post.id}
+                      initialCount={post.commentCount ?? 0}
+                      replyLabel={post.postType === "seeking_partner" ? "Trả lời / ứng tuyển" : post.postType === "question" ? "Trả lời" : "Bình luận"}
+                      timeAgo={timeAgo}
+                      onOpenMember={(m) => setSelectedMember(m)}
+                      onError={(m) => showToast(m, "error")}
+                    />
                   </article>
                 );
               })}
@@ -481,9 +502,11 @@ const CommunityPage: React.FC = () => {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2">
                           <p className="text-xs font-bold text-foreground truncate">{p.name}</p>
-                          <span className="text-[10px] font-bold text-primary shrink-0">
-                            {p.matchScore}%
-                          </span>
+                          {p.matchScore > 0 && (
+                            <span className="text-[10px] font-bold text-primary shrink-0">
+                              {p.matchScore}%
+                            </span>
+                          )}
                         </div>
                         <p className="text-[11px] text-muted-foreground truncate">{p.profession}</p>
 

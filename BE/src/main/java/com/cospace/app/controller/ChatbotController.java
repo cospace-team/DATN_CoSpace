@@ -4,6 +4,7 @@ import com.cospace.app.dto.api.ChatDto.ChatActionConfirmRequest;
 import com.cospace.app.dto.api.ChatDto.ChatActionResult;
 import com.cospace.app.dto.api.ChatDto.ChatMessageRequest;
 import com.cospace.app.dto.api.ChatDto.ChatMessageResponse;
+import com.cospace.app.exception.AssistantUnavailableException;
 import com.cospace.app.service.ChatbotService;
 import jakarta.annotation.PreDestroy;
 import jakarta.validation.Valid;
@@ -31,6 +32,8 @@ public class ChatbotController {
     /** A turn runs several Gemini round trips, so allow well past a single call's latency. */
     private static final long STREAM_TIMEOUT_MS = 180_000L;
 
+    private static final String GENERIC_ERROR_MESSAGE = "Trợ lý AI đang gặp sự cố, bạn vui lòng thử lại sau nhé.";
+
     private final ChatbotService chatbotService;
     private final ExecutorService executor = Executors.newFixedThreadPool(8);
 
@@ -54,10 +57,15 @@ public class ChatbotController {
                         label -> emit(emitter, "progress", Map.of("label", label)));
                 emit(emitter, "result", res);
                 emitter.complete();
-            } catch (Exception e) {
+            } catch (AssistantUnavailableException e) {
                 log.warn("Chatbot turn failed: " + e.getMessage());
-                String message = e.getMessage() != null ? e.getMessage() : "Trợ lý AI đang gặp sự cố.";
-                emit(emitter, "error", Map.of("message", message));
+                emit(emitter, "error", Map.of("message", e.getMessage()));
+                emitter.complete();
+            } catch (Exception e) {
+                // Anything else is a bug or an internal detail (SQL, stack messages) the customer
+                // should never read, so only the log gets the real message.
+                log.error("Chatbot turn failed", e);
+                emit(emitter, "error", Map.of("message", GENERIC_ERROR_MESSAGE));
                 emitter.complete();
             }
         });

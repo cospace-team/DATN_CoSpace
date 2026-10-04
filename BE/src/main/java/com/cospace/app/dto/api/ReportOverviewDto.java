@@ -18,6 +18,8 @@ public class ReportOverviewDto {
     private int totalBookings;
     private int completedBookings;
     private int canceledBookings;
+    /** Confirmed bookings that ended without a check-in. */
+    private int noShowBookings;
 
     private List<String> months;
     private List<Long> monthlyRevenue;

@@ -193,7 +193,7 @@ export const ProfileNetworkTab: React.FC<ProfileNetworkTabProps> = ({
                   <div
                     className={`px-3 py-1 rounded-full text-xs font-bold border shadow-2xs shrink-0 ${badgeColor}`}
                   >
-                    {partner.matchScore}% Match
+                    {partner.matchScore > 0 ? `${partner.matchScore}% Match` : 'Chưa có điểm chung'}
                   </div>
                 </div>
 
@@ -202,10 +202,11 @@ export const ProfileNetworkTab: React.FC<ProfileNetworkTabProps> = ({
                   "{partner.bio}"
                 </p>
 
-                {/* Common Tags */}
+                {/* Common Tags (or, with nothing in common yet, the member's own skills) */}
+                {partner.commonTags.length > 0 && (
                 <div className="mb-5">
                   <p className="text-[10px] font-semibold text-muted-foreground mb-1.5">
-                    Kỹ năng tương đồng:
+                    {partner.commonTagsShared === false ? 'Kỹ năng của thành viên:' : 'Kỹ năng tương đồng:'}
                   </p>
                   <div className="flex flex-wrap gap-1.5">
                     {partner.commonTags.map(tag => (
@@ -224,6 +225,7 @@ export const ProfileNetworkTab: React.FC<ProfileNetworkTabProps> = ({
                     ))}
                   </div>
                 </div>
+                )}
 
                 {/* Actions */}
                 <div className="flex items-center gap-2 pt-2 border-t border-border/60">

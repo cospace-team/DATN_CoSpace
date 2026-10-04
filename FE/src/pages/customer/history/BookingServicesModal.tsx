@@ -38,6 +38,13 @@ const BookingServicesModal: React.FC<Props> = ({ bookingId, bookingCode, branchI
   const [error, setError] = useState('');
   const [cashChosen, setCashChosen] = useState(false);
 
+  // Esc closes the dialog, like the other dialogs on this page.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
   useEffect(() => {
     let active = true;
     addonApi.getTab(bookingId)

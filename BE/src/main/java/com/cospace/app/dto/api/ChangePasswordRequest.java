@@ -16,6 +16,9 @@ public class ChangePasswordRequest {
 
     @NotBlank(message = "Mật khẩu mới không được để trống")
     @Size(min = 8, message = "Mật khẩu mới phải có ít nhất 8 ký tự")
+    // Same rule as registration and password reset (CredentialRules).
+    @jakarta.validation.constraints.Pattern(regexp = com.cospace.app.util.CredentialRules.PASSWORD_REGEX,
+            message = com.cospace.app.util.CredentialRules.PASSWORD_MESSAGE)
     private String newPassword;
 
     @NotBlank(message = "Mật khẩu xác nhận không được để trống")

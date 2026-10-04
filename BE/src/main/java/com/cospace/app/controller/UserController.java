@@ -28,6 +28,7 @@ import java.util.UUID;
 public class UserController {
 
     private final UserService userService;
+    private final com.cospace.app.service.AuditLogService auditLogService;
 
     @GetMapping("/profile")
     public ResponseEntity<?> getProfile(@AuthenticationPrincipal Jwt jwt) {
@@ -111,6 +112,9 @@ public class UserController {
                 return ResponseEntity.badRequest().body(Map.of("error", "bad_request", "message", "Trạng thái không được để trống"));
             }
             UserProfileDto updated = userService.updateUserStatus(id, status, currentAdminUserId);
+            // Locking or unlocking an account is exactly what an audit trail is for.
+            auditLogService.record(currentAdminUserId, "UPDATE_STATUS", "users", id,
+                    com.cospace.app.service.AuditLogService.values("email", updated.getEmail(), "status", updated.getStatus()));
             return ResponseEntity.ok(updated);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", "bad_request", "message", e.getMessage()));
@@ -129,6 +133,9 @@ public class UserController {
             String branchIdStr = (String) body.get("branchId");
             UUID branchId = (branchIdStr != null && !branchIdStr.isBlank()) ? UUID.fromString(branchIdStr) : null;
             UserProfileDto updated = userService.updateUserRoleAndBranch(id, role, branchId, currentAdminUserId);
+            auditLogService.record(currentAdminUserId, "UPDATE_ROLE", "users", id,
+                    com.cospace.app.service.AuditLogService.values("email", updated.getEmail(), "role", updated.getRole(),
+                            "branchId", updated.getBranchId()));
             return ResponseEntity.ok(updated);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", "bad_request", "message", e.getMessage()));

@@ -53,8 +53,13 @@ public class CancellationPolicy {
     @Column(name = "workspace_type_id")
     private UUID workspaceTypeId;
 
+    // Lombok names the accessors isActive()/setActive(), which Jackson would publish as "active";
+    // every screen reads and sends "isActive", so the field carries that name explicitly. Without it
+    // the admin list showed every policy as off and the branch admin page listed none at all.
     @Column(name = "is_active", nullable = false)
     @Builder.Default
+    @com.fasterxml.jackson.annotation.JsonProperty("isActive")
+    @com.fasterxml.jackson.annotation.JsonAlias("active")
     private boolean isActive = true;
 
     @Column(name = "effective_from", nullable = false)

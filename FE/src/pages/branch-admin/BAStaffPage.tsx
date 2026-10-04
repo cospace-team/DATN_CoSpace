@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FiUsers, FiEdit2, FiLock, FiUnlock, FiPlus, FiSave, FiX, FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import { staffApi, type BranchStaffDto } from '../../api/staffApi';
+import { PASSWORD_HINT, passwordProblem } from '../../utils/passwordRules';
 
 const BAStaffPage: React.FC = () => {
   const { user } = useAuth();
@@ -58,6 +59,13 @@ const BAStaffPage: React.FC = () => {
     if (!formData.full_name || !formData.email || (!editingStaff && !formData.password)) {
       setFormError('Vui lòng điền đầy đủ thông tin bắt buộc.');
       return;
+    }
+    if (formData.password) {
+      const weak = passwordProblem(formData.password);
+      if (weak) {
+        setFormError(weak);
+        return;
+      }
     }
     try {
       if (editingStaff) {
@@ -271,6 +279,7 @@ const BAStaffPage: React.FC = () => {
                     className="input-field" 
                     required={!editingStaff} 
                   />
+                  <p className="text-xs text-muted-foreground">{PASSWORD_HINT}</p>
                 </div>
               </form>
             </div>

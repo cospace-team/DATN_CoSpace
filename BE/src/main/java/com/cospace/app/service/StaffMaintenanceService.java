@@ -25,6 +25,19 @@ import java.util.stream.Collectors;
 @Service
 public class StaffMaintenanceService {
 
+    /**
+     * Optional so unit tests that build this service by hand need not supply it; always present in
+     * the running application.
+     */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private AuditLogService auditLogService;
+
+    private void audit(UUID actorId, String action, String entityName, UUID entityId, java.util.Map<String, Object> values) {
+        if (auditLogService != null) {
+            auditLogService.record(actorId, action, entityName, entityId, values);
+        }
+    }
+
     private final WorkspaceMaintenanceRepository maintenanceRepository;
     private final BookingRepository bookingRepository;
     private final EntityManager entityManager;
@@ -32,6 +45,7 @@ public class StaffMaintenanceService {
     private final com.cospace.app.repository.CheckinLogRepository checkinLogRepository;
     private final CancellationService cancellationService;
     private final NotificationService notificationService;
+    private final com.cospace.app.repository.UserRepository userRepository;
 
     public StaffMaintenanceService(WorkspaceMaintenanceRepository maintenanceRepository,
                                    BookingRepository bookingRepository,
@@ -39,7 +53,8 @@ public class StaffMaintenanceService {
                                    WorkspaceEntityRepository workspaceEntityRepository,
                                    com.cospace.app.repository.CheckinLogRepository checkinLogRepository,
                                    CancellationService cancellationService,
-                                   NotificationService notificationService) {
+                                   NotificationService notificationService,
+                                   com.cospace.app.repository.UserRepository userRepository) {
         this.maintenanceRepository = maintenanceRepository;
         this.bookingRepository = bookingRepository;
         this.entityManager = entityManager;
@@ -47,6 +62,7 @@ public class StaffMaintenanceService {
         this.checkinLogRepository = checkinLogRepository;
         this.cancellationService = cancellationService;
         this.notificationService = notificationService;
+        this.userRepository = userRepository;
     }
 
 
@@ -98,6 +114,16 @@ public class StaffMaintenanceService {
         List<Booking> overlappingBookings = bookingRepository.findOverlappingBookings(
                 request.getWorkspaceId(), startOffset, endOffset, activeStatuses);
 
+        // Show the person what this does to customers before doing it. A guest who overstayed is
+        // listed too: maintenance does not move them, someone has to check them out first.
+        List<Booking> seatedPastEnd = startOffset.isBefore(nowUtc.plusMinutes(BookingService.OVERSTAY_GUARD_MINUTES))
+                ? bookingRepository.findOverstayingGuests(request.getWorkspaceId(), nowUtc)
+                : List.of();
+        if (!request.isConfirmAffectedBookings() && (!overlappingBookings.isEmpty() || !seatedPastEnd.isEmpty())) {
+            throw new com.cospace.app.exception.MaintenanceImpactException(
+                    describeImpact(overlappingBookings, seatedPastEnd, startOffset, endOffset));
+        }
+
         for (Booking candidate : overlappingBookings) {
             // Lock and re-read: a payment or check-in may have changed the booking meanwhile.
             Booking b = bookingRepository.findByIdWithLock(candidate.getId()).orElse(candidate);
@@ -130,8 +156,44 @@ public class StaffMaintenanceService {
         maintenance.setCreatedBy(staffId);
         
         maintenanceRepository.save(maintenance);
+        audit(staffId, "CREATE", "workspace_maintenance", maintenance.getId(), AuditLogService.values(
+                "workspaceId", maintenance.getWorkspaceId(), "reason", maintenance.getReason(),
+                "startAt", startOffset, "endAt", endOffset,
+                "affectedBookings", overlappingBookings.stream().map(Booking::getBookingCode).collect(Collectors.toList())));
 
         return mapToDto(maintenance, overlappingBookings.size());
+    }
+
+    /** Mirrors the loop in createMaintenance: what each booking would go through. */
+    private List<com.cospace.app.dto.api.MaintenanceImpactDto> describeImpact(List<Booking> overlapping, List<Booking> seatedPastEnd,
+                                                                        OffsetDateTime start, OffsetDateTime end) {
+        List<com.cospace.app.dto.api.MaintenanceImpactDto> impact = new java.util.ArrayList<>();
+        for (Booking b : overlapping) {
+            boolean coversWholeBooking = !start.isAfter(b.getStartAt()) && !end.isBefore(b.getEndAt());
+            String outcome = !coversWholeBooking
+                    ? "Giữ đơn, hoàn tiền phần thời gian trùng bảo trì"
+                    : b.getStatus() == BookingStatus.CHECKED_IN
+                            ? "Khách đang ngồi: check-out ngay và hoàn phần thời gian còn lại"
+                            : "Hủy đơn và hoàn toàn bộ tiền đã trả";
+            impact.add(impactRow(b, outcome));
+        }
+        for (Booking b : seatedPastEnd) {
+            impact.add(impactRow(b, "Khách vẫn đang ngồi dù đã quá giờ: hãy check-out khách trước khi sửa chữa"));
+        }
+        return impact;
+    }
+
+    private com.cospace.app.dto.api.MaintenanceImpactDto impactRow(Booking b, String outcome) {
+        String customer = b.getUserId() == null ? null
+                : userRepository.findById(b.getUserId()).map(com.cospace.app.entity.User::getFullName).orElse(null);
+        return com.cospace.app.dto.api.MaintenanceImpactDto.builder()
+                .bookingCode(b.getBookingCode())
+                .customerName(customer)
+                .startAt(b.getStartAt())
+                .endAt(b.getEndAt())
+                .status(b.getStatus() != null ? b.getStatus().name() : null)
+                .outcome(outcome)
+                .build();
     }
 
     /**

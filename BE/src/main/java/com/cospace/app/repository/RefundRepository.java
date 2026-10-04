@@ -13,6 +13,8 @@ public interface RefundRepository extends JpaRepository<Refund, UUID> {
 
     List<Refund> findByBookingIdOrderByCreatedAtAsc(UUID bookingId);
 
+    List<Refund> findByBookingIdInOrderByCreatedAtAsc(java.util.Collection<UUID> bookingIds);
+
     boolean existsByPaymentIdAndReasonType(UUID paymentId, String reasonType);
 
     /** Refunds for a branch (or every branch when null), optionally filtered by status, newest first. */

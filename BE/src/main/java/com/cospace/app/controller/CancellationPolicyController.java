@@ -29,6 +29,7 @@ public class CancellationPolicyController {
 
     private final CancellationPolicyRepository policyRepository;
     private final CancellationService cancellationService;
+    private final com.cospace.app.service.RefundService refundService;
     private final BranchAccessGuard branchAccessGuard;
     private final AuditLogService auditLogService;
     private final HttpServletRequest httpServletRequest;
@@ -129,6 +130,23 @@ public class CancellationPolicyController {
         if (percent == null || percent.signum() < 0 || percent.compareTo(java.math.BigDecimal.valueOf(100)) > 0) {
             throw new IllegalArgumentException("Tỷ lệ hoàn tiền phải từ 0 đến 100%.");
         }
+    }
+
+    /** What cancelling now would refund, so the customer sees the amount before confirming. */
+    /** The customer's bank account for the refund of a cancelled booking still waiting on the branch. */
+    @PutMapping("/bookings/{bookingId}/refund-account")
+    public Map<String, Object> setRefundAccount(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID bookingId,
+                                                @jakarta.validation.Valid @RequestBody com.cospace.app.dto.api.RefundDto.ReceivingAccountRequest req) {
+        UUID userId = UUID.fromString(jwt.getSubject());
+        int updated = refundService.setReceivingAccount(userId, bookingId, req.getBankName(), req.getAccountNumber(), req.getAccountName());
+        return Map.of("updated", updated);
+    }
+
+    @GetMapping("/bookings/{bookingId}/cancel-preview")
+    public ResponseEntity<CancellationService.CustomerCancelPreview> previewCancellation(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID bookingId) {
+        return ResponseEntity.ok(cancellationService.previewCustomerCancellation(UUID.fromString(jwt.getSubject()), bookingId));
     }
 
     @PostMapping("/bookings/{bookingId}/cancel-v2")

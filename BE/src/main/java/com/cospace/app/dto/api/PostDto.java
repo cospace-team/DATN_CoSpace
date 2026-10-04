@@ -37,4 +37,7 @@ public class PostDto {
     private List<String> matchedTags;
 
     private boolean mine;
+
+    /** Replies under the post, counted fresh on every request (the feed itself is cached). */
+    private long commentCount;
 }

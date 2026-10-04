@@ -359,6 +359,36 @@ public class BookingAddonService {
         return removed;
     }
 
+    /**
+     * What a booking's tab holds, for showing it to the customer: what is still owed, and how much
+     * of the add-on amount is extra hours or a late check-out fee rather than ordered services.
+     */
+    public record LineTotals(long unpaidAmount, long extensionAmount, int extensionHours, long lateFeeAmount) {
+        public static final LineTotals NONE = new LineTotals(0, 0, 0, 0);
+    }
+
+    /** {@link LineTotals} of several bookings in one query; bookings without lines are absent. */
+    @Transactional(readOnly = true)
+    public Map<UUID, LineTotals> lineTotals(java.util.Collection<UUID> bookingIds) {
+        if (bookingIds == null || bookingIds.isEmpty()) return Map.of();
+        Map<UUID, long[]> acc = new java.util.HashMap<>(); // unpaid, extension, extension hours, late fee
+        for (Object[] row : bookingServiceItemRepository.sumLiveLinesByBookings(bookingIds)) {
+            long[] t = acc.computeIfAbsent((UUID) row[0], id -> new long[4]);
+            String lineType = (String) row[1];
+            long quantity = ((Number) row[3]).longValue();
+            long amount = ((Number) row[4]).longValue();
+            if (BookingServiceItem.STATUS_UNPAID.equals(row[2])) t[0] += amount;
+            if (BookingServiceItem.LINE_EXTENSION.equals(lineType)) {
+                t[1] += amount;
+                t[2] += quantity;
+            } else if (BookingServiceItem.LINE_LATE_FEE.equals(lineType)) {
+                t[3] += amount;
+            }
+        }
+        return acc.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey,
+                e -> new LineTotals(e.getValue()[0], e.getValue()[1], (int) e.getValue()[2], e.getValue()[3])));
+    }
+
     @Transactional(readOnly = true)
     public long unpaidAmount(UUID bookingId) {
         return bookingServiceItemRepository.sumSubtotalByBookingIdAndStatus(bookingId, BookingServiceItem.STATUS_UNPAID);

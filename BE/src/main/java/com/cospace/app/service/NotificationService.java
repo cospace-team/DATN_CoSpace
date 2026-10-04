@@ -31,6 +31,16 @@ public class NotificationService {
         return notificationRepository.save(noti);
     }
 
+    /**
+     * Same as {@link #createNotification}, in a transaction of its own: for notices sent after the
+     * caller's transaction has committed, where joining it would never be written.
+     */
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
+    public NotificationEntity createNotificationInNewTransaction(UUID userId, String title, String content, String type,
+                                                                 UUID refId, String refType) {
+        return createNotification(userId, title, content, type, refId, refType);
+    }
+
     @Transactional(readOnly = true)
     public List<NotificationEntity> getUserNotifications(UUID userId) {
         return notificationRepository.findByUserIdOrderByCreatedAtDesc(userId);

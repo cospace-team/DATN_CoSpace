@@ -44,6 +44,7 @@ export interface StaffDashboardStatsDto {
   occupancyRate: number;
   totalCapacity: number;
   activeGuests: number;
+  occupiedSeats?: number;
   totalWs: number;
   chartData: {
     label: string;
@@ -136,6 +137,7 @@ export interface ReportOverviewDto {
   totalBookings: number;
   completedBookings: number;
   canceledBookings: number;
+  noShowBookings?: number;
   months: string[];
   monthlyRevenue: number[];
   monthlyBookings?: number[];
@@ -152,6 +154,23 @@ const getAuthHeaders = () => {
     ...(token ? { 'Authorization': `Bearer ${token}` } : {})
   };
 };
+
+/** A booking a maintenance window would affect, as listed by the server before it acts. */
+export interface MaintenanceImpact {
+  bookingCode: string;
+  customerName: string | null;
+  startAt: string;
+  endAt: string;
+  status: string;
+  outcome: string;
+}
+
+export class MaintenanceImpactError extends Error {
+  constructor(message: string, public readonly bookings: MaintenanceImpact[]) {
+    super(message);
+    this.name = 'MaintenanceImpactError';
+  }
+}
 
 export const staffApi = {
   getBookingByCode: async (code: string, branchId: string): Promise<BookingWithDetailsDto> => {
@@ -323,7 +342,15 @@ export const staffApi = {
     return res.json();
   },
 
-  createMaintenance: async (workspaceId: string, payload: { startAt: string; endAt: string; reason: string }): Promise<MaintenanceResponseDto> => {
+  /**
+   * Locks a workspace for maintenance. When the window would cancel or cut short customers'
+   * bookings the server refuses until confirmAffectedBookings is sent, and this throws a
+   * MaintenanceImpactError carrying those bookings so the page can show them first.
+   */
+  createMaintenance: async (
+    workspaceId: string,
+    payload: { startAt: string; endAt: string; reason: string; confirmAffectedBookings?: boolean },
+  ): Promise<MaintenanceResponseDto> => {
     const res = await fetch(`${API_BASE_URL}/api/staff/workspaces/${workspaceId}/maintenance`, {
       method: 'POST',
       headers: getAuthHeaders(),
@@ -331,6 +358,9 @@ export const staffApi = {
     });
     if (!res.ok) {
       const errorData = await res.json().catch(() => ({}));
+      if (res.status === 409 && errorData.error === 'affected_bookings') {
+        throw new MaintenanceImpactError(errorData.message, errorData.bookings ?? []);
+      }
       throw new Error(errorData.message || 'Failed to create maintenance');
     }
     return res.json();

@@ -38,13 +38,16 @@ public class PaymentController {
 
     private final PaymentService paymentService;
     private final com.cospace.app.security.BranchAccessGuard branchAccessGuard;
+    private final com.cospace.app.service.CancellationService cancellationService;
 
     @Value("${app.frontend.base-url:http://localhost:5173}")
     private String frontendBaseUrl;
 
-    public PaymentController(PaymentService paymentService, com.cospace.app.security.BranchAccessGuard branchAccessGuard) {
+    public PaymentController(PaymentService paymentService, com.cospace.app.security.BranchAccessGuard branchAccessGuard,
+                             com.cospace.app.service.CancellationService cancellationService) {
         this.paymentService = paymentService;
         this.branchAccessGuard = branchAccessGuard;
+        this.cancellationService = cancellationService;
     }
 
     @PostMapping("/momo/create")
@@ -162,7 +165,25 @@ public class PaymentController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("orderCode", orderCode, "status", "NOT_FOUND"));
         }
-        return ResponseEntity.ok(Map.of("orderCode", orderCode, "status", status.name()));
+        return ResponseEntity.ok(Map.of("orderCode", orderCode, "status", status.name(),
+                "purpose", paymentService.getPaymentPurposeByOrderCode(orderCode)));
+    }
+
+    /**
+     * "Hủy" on the QR page: drops the unpaid QR order and, for a new booking, cancels the booking
+     * itself so its seat is released right away instead of staying held until the timeout.
+     */
+    @PostMapping("/payos/{orderCode}/cancel")
+    public ResponseEntity<Map<String, Object>> cancelPayosOrder(@AuthenticationPrincipal Jwt jwt,
+                                                                @PathVariable("orderCode") String orderCode) {
+        UUID userId = requireSubject(jwt);
+        PaymentService.AbandonedOrder order = paymentService.abandonPayosOrder(userId, orderCode);
+        int cancelled = 0;
+        for (UUID bookingId : order.pendingBookingIds()) {
+            cancellationService.cancelBooking(userId, bookingId, "Khách hủy khi đang thanh toán");
+            cancelled++;
+        }
+        return ResponseEntity.ok(Map.of("tabPayment", order.tabPayment(), "cancelledBookings", cancelled));
     }
 
     private String url(String value) {

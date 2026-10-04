@@ -20,6 +20,9 @@ public class PartnerSuggestionDto {
     private String avatar;
     private int matchScore; // 0 to 100 percentage
     private List<String> commonTags;
+    /** False when nothing is shared and commonTags only lists the member's own skills. */
+    @lombok.Builder.Default
+    private boolean commonTagsShared = true;
     private boolean contactPublic;
     /** Contact details are included: public, or the viewer is connected with this member. */
     private boolean contactVisible;

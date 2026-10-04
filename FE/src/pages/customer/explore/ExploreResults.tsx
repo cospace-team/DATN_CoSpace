@@ -21,11 +21,15 @@ interface ExploreResultsProps {
   /** Equipment the customer asked for, with what is left of each for the slot. */
   equipment: { id: string; name: string; stock?: ServiceAvailabilityDto }[];
   slotLabel: string;
+  /** Length of the searched slot in hours, to show what an hourly price adds up to. */
+  slotHours: number;
   loading: boolean;
   selectedWs: string | null;
   onSelect: (ws: ExploreWorkspace) => void;
   onShowOnMap: (ws: ExploreWorkspace) => void;
   onEditFilters: () => void;
+  /** Search again for one person, so a group can book separate desks together. */
+  onSearchSeparateSeats?: () => void;
 }
 
 /**
@@ -33,10 +37,11 @@ interface ExploreResultsProps {
  * first. Taken spaces can be shown on request so the customer sees why a favourite is missing.
  */
 export const ExploreResults: React.FC<ExploreResultsProps> = ({
-  workspaces, floors, people, typeIds, statusOf, priceOf, equipment, slotLabel, loading, selectedWs,
-  onSelect, onShowOnMap, onEditFilters,
+  workspaces, floors, people, typeIds, statusOf, priceOf, equipment, slotLabel, slotHours, loading, selectedWs,
+  onSelect, onShowOnMap, onEditFilters, onSearchSeparateSeats,
 }) => {
   const [showTaken, setShowTaken] = useState(false);
+  const [showOversized, setShowOversized] = useState(false);
 
   const matching = useMemo(
     () => workspaces.filter((w) => w.capacity >= people && (typeIds.length === 0 || typeIds.includes(w.workspace_type_id))),
@@ -44,8 +49,17 @@ export const ExploreResults: React.FC<ExploreResultsProps> = ({
   );
   const withStatus = matching.map((w) => ({ ws: w, status: statusOf(w.id) }));
   const freeCount = withStatus.filter((r) => r.status === 'available').length;
+  // A 30-seat hall shown next to single desks for a solo search buries what the customer asked for.
+  // Much larger spaces are tucked behind a toggle, but only while something closer in size is free.
+  const isOversized = (capacity: number) => capacity >= people * 2 && capacity - people >= 8;
+  const hasFittingFree = withStatus.some((r) => r.status === 'available' && !isOversized(r.ws.capacity));
+  const hideOversized = hasFittingFree && !showOversized;
+  const oversizedCount = withStatus.filter(
+    (r) => isOversized(r.ws.capacity) && (showTaken || r.status === 'available'),
+  ).length;
   const visible = withStatus
     .filter((r) => showTaken || r.status === 'available')
+    .filter((r) => !hideOversized || !isOversized(r.ws.capacity))
     .sort((a, b) => Number(b.status === 'available') - Number(a.status === 'available') || a.ws.capacity - b.ws.capacity);
 
   const byFloor = floors
@@ -53,6 +67,14 @@ export const ExploreResults: React.FC<ExploreResultsProps> = ({
     .filter((g) => g.items.length > 0);
 
   const outOfStock = equipment.filter((e) => e.stock && e.stock.remaining <= 0);
+  // What the list actually shows; larger spaces tucked behind the toggle are counted apart.
+  const freeShown = visible.filter((r) => r.status === 'available').length;
+  const hiddenOversizedFree = hideOversized ? withStatus.filter((r) => r.status === 'available' && isOversized(r.ws.capacity)).length : 0;
+  // A group can also sit at separate desks: smaller free spaces of the wanted type, booked together.
+  const smallerFree = people > 1
+    ? workspaces.filter((w) => w.capacity < people && (typeIds.length === 0 || typeIds.includes(w.workspace_type_id))
+        && statusOf(w.id) === 'available').length
+    : 0;
 
   return (
     <div className="p-4 sm:p-6 space-y-5">
@@ -60,19 +82,40 @@ export const ExploreResults: React.FC<ExploreResultsProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>
           <h2 className="text-xl font-semibold text-foreground">
-            {loading ? 'Đang tìm chỗ phù hợp…' : freeCount > 0 ? `${freeCount} chỗ trống phù hợp` : 'Chưa có chỗ trống phù hợp'}
+            {loading ? 'Đang tìm chỗ phù hợp…' : freeShown > 0 ? `${freeShown} chỗ trống phù hợp` : 'Chưa có chỗ trống phù hợp'}
           </h2>
           <p className="text-sm text-muted-foreground">
-            {slotLabel} · từ {people} người{matching.length > freeCount && !loading ? ` · ${matching.length - freeCount} chỗ phù hợp đã kín` : ''}
+            {slotLabel} · từ {people} người
+            {hiddenOversizedFree > 0 && !loading ? ` · thêm ${hiddenOversizedFree} không gian lớn hơn` : ''}
+            {matching.length > freeCount && !loading ? ` · ${matching.length - freeCount} chỗ phù hợp đã kín` : ''}
           </p>
         </div>
-        {matching.length > freeCount && (
-          <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
-            <input type="checkbox" checked={showTaken} onChange={(e) => setShowTaken(e.target.checked)} className="rounded" />
-            Hiện cả chỗ đã kín
-          </label>
-        )}
+        <div className="flex flex-col gap-1.5 sm:items-end">
+          {matching.length > freeCount && (
+            <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+              <input type="checkbox" checked={showTaken} onChange={(e) => setShowTaken(e.target.checked)} className="rounded" />
+              Hiện cả chỗ đã kín
+            </label>
+          )}
+          {hasFittingFree && oversizedCount > 0 && (
+            <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+              <input type="checkbox" checked={showOversized} onChange={(e) => setShowOversized(e.target.checked)} className="rounded" />
+              Hiện cả không gian lớn hơn nhu cầu ({oversizedCount})
+            </label>
+          )}
+        </div>
       </div>
+
+      {!loading && smallerFree >= 2 && onSearchSeparateSeats && (
+        <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm flex flex-wrap items-center justify-between gap-2">
+          <span className="text-foreground">
+            Nhóm muốn ngồi bàn lẻ? Còn {smallerFree} chỗ nhỏ hơn đang trống trong khung giờ này, đặt chung một lần.
+          </span>
+          <button type="button" onClick={onSearchSeparateSeats} className="btn btn-outline btn-sm text-xs">
+            Xem bàn lẻ
+          </button>
+        </div>
+      )}
 
       {/* Equipment for the slot */}
       {equipment.length > 0 && (
@@ -100,7 +143,7 @@ export const ExploreResults: React.FC<ExploreResultsProps> = ({
       )}
 
       {loading ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(17rem,1fr))]">
           {[1, 2, 3, 4, 5, 6].map((i) => <div key={i} className="h-56 rounded-2xl bg-card border border-border animate-pulse" />)}
         </div>
       ) : byFloor.length === 0 ? (
@@ -122,7 +165,7 @@ export const ExploreResults: React.FC<ExploreResultsProps> = ({
               {/^tầng\b/i.test(floor.name.trim()) ? floor.name : `Tầng ${floor.floorNo} · ${floor.name}`}
               <span className="font-normal">({items.filter((r) => r.status === 'available').length} trống)</span>
             </h3>
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(17rem,1fr))]">
               {items.map(({ ws, status }) => {
                 const free = status === 'available';
                 const price = priceOf(ws.workspace_type_id);
@@ -162,16 +205,23 @@ export const ExploreResults: React.FC<ExploreResultsProps> = ({
                         <FiUsers className="h-4 w-4 text-muted-foreground" /> {ws.capacity} chỗ ngồi
                         <span className="text-muted-foreground font-mono text-xs ml-auto">{ws.code}</span>
                       </p>
-                      <div className="mt-auto pt-3 border-t border-border flex items-center justify-between gap-2">
-                        <p className="text-sm">
+                      <div className="mt-auto pt-3 border-t border-border flex flex-wrap items-center justify-between gap-2">
+                        <div className="text-sm">
                           {price ? (
                             <>
-                              <span className="font-semibold text-foreground">{formatVND(price.price)}</span>
-                              <span className="text-muted-foreground">/{durationUnitLabel[price.duration_unit]?.toLowerCase()}</span>
+                              <p>
+                                <span className="font-semibold text-foreground">{formatVND(price.price)}</span>
+                                <span className="text-muted-foreground">/{durationUnitLabel[price.duration_unit]?.toLowerCase()}</span>
+                              </p>
+                              {price.duration_unit === 'hour' && slotHours > 1 && (
+                                <p className="text-xs text-muted-foreground">
+                                  {formatVND(price.price * slotHours)} cho {slotHours} giờ
+                                </p>
+                              )}
                             </>
                           ) : <span className="text-muted-foreground">Chưa có giá</span>}
-                        </p>
-                        <div className="flex gap-1.5">
+                        </div>
+                        <div className="flex gap-1.5 ml-auto">
                           <button
                             type="button"
                             onClick={() => onShowOnMap(ws)}

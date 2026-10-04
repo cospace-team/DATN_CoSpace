@@ -23,6 +23,10 @@ export interface RefundDto {
   status: RefundStatus;
   resolutionNote: string | null;
   refundMethod: RefundMethod | null;
+  /** Bank account the customer asked a transfer refund to be sent to. */
+  receivingBankName?: string | null;
+  receivingAccountNumber?: string | null;
+  receivingAccountName?: string | null;
   voucherCode: string | null;
   voucherExpiresAt: string | null;
   processedByName: string | null;

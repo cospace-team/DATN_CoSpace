@@ -48,6 +48,7 @@ import {
 
 // ── Pages (lazy-loaded so route changes show the Suspense loader) ──
 const LoginPage = React.lazy(() => import("./pages/LoginPage"));
+const ResetPasswordPage = React.lazy(() => import("./pages/ResetPasswordPage"));
 const LandingPage = React.lazy(() => import("./pages/LandingPage"));
 const LocationsPage = React.lazy(() => import("./pages/LocationPage"));
 const NotFoundPage = React.lazy(() => import("./pages/NotFoundPage"));
@@ -298,6 +299,14 @@ const AppShell: React.FC = () => {
   }
 
   // ── Public Routes ──
+  // The reset link from the email works whether or not someone is signed in on this browser.
+  if (location.pathname === "/reset-password") {
+    return (
+      <Suspense fallback={<SuspenseLoader fullScreen label="Đang tải trang…" />}>
+        <ResetPasswordPage />
+      </Suspense>
+    );
+  }
   if (location.pathname === "/" || location.pathname === "/locations") {
     return (
       <Suspense fallback={<SuspenseLoader fullScreen label="Đang tải trang…" />}>

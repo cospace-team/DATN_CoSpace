@@ -46,6 +46,9 @@ interface QrModalState {
   qrCode?: string;
 }
 
+/** Mirrors BookingService.OVERSTAY_GUARD_MINUTES on the server. */
+const OVERSTAY_GUARD_MS = 15 * 60_000;
+
 const WalkinBookingPage: React.FC = () => {
   const { showToast } = useToast();
   const { user } = useAuth();
@@ -365,10 +368,17 @@ const WalkinBookingPage: React.FC = () => {
     if (!ws) return false;
     if (ws.workspaceStatus === 'maintenance' || ws.activeMaintenance) return true;
 
+    const now = Date.now();
     return ws.todayBookings.some((b) => {
-      if (['canceled', 'completed', 'expired'].includes(b.status?.toLowerCase())) return false;
+      const status = b.status?.toLowerCase();
+      if (['canceled', 'cancelled', 'completed', 'expired', 'no_show'].includes(status)) return false;
       const bStart = new Date(b.startAt);
-      const bEnd = new Date(b.endAt);
+      let bEnd = new Date(b.endAt);
+      // A guest still checked in past their end has not left: the seat stays taken until someone
+      // checks them out (the server refuses the booking for the same reason).
+      if (status === 'checked_in' && bEnd.getTime() <= now) {
+        bEnd = new Date(now + OVERSTAY_GUARD_MS);
+      }
       return checkStart < bEnd && bStart < checkEnd;
     });
   };

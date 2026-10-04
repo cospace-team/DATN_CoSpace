@@ -32,6 +32,19 @@ import com.cospace.app.entity.BookingSource;
 @Service
 public class BookingService {
 
+    /**
+     * Optional so unit tests that build this service by hand need not supply it; always present in
+     * the running application.
+     */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private AuditLogService auditLogService;
+
+    private void audit(UUID actorId, String action, String entityName, UUID entityId, java.util.Map<String, Object> values) {
+        if (auditLogService != null) {
+            auditLogService.record(actorId, action, entityName, entityId, values);
+        }
+    }
+
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final String CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
@@ -54,6 +67,9 @@ public class BookingService {
     private final com.cospace.app.repository.WorkspaceTypeRepository workspaceTypeRepository;
     private final com.cospace.app.repository.ReputationEventRepository reputationEventRepository;
     private final com.cospace.app.repository.BookingGroupRepository bookingGroupRepository;
+    /** Optional so hand-built test instances keep working; Spring always provides it. */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private RefundService refundService;
 
     /** Most seats one booking group may hold. */
     @org.springframework.beans.factory.annotation.Value("${app.booking.max-group-size:10}")
@@ -86,14 +102,25 @@ public class BookingService {
 
     @Transactional
     public BookingDto createBooking(UUID userId, BookingCreateRequest req) {
-        return createBookingInternal(userId, req, BookingSource.web, null, true);
+        BookingDto created = createBookingInternal(userId, req, BookingSource.web, null, true);
+        auditBookingCreated(userId, created, BookingSource.web);
+        return created;
     }
 
     @Transactional
     public BookingDto createWalkinBooking(UUID staffId, UUID customerId, BookingCreateRequest req) {
         // Staff should check branch matching etc.
         // For now, assuming staff has permission.
-        return createBookingInternal(customerId, req, BookingSource.counter, null, true);
+        BookingDto created = createBookingInternal(customerId, req, BookingSource.counter, null, true);
+        auditBookingCreated(staffId, created, BookingSource.counter);
+        return created;
+    }
+
+    private void auditBookingCreated(UUID actorId, BookingDto b, BookingSource source) {
+        audit(actorId, "CREATE_BOOKING", "bookings", b.getId(), AuditLogService.values(
+                "bookingCode", b.getBookingCode(), "customerId", b.getUserId(), "workspace", b.getWorkspaceName(),
+                "startAt", b.getStartAt(), "endAt", b.getEndAt(), "unit", b.getUnit(),
+                "totalAmount", b.getTotalAmount(), "source", source));
     }
 
     /**
@@ -186,6 +213,8 @@ public class BookingService {
         if (!overlappingMaintenances.isEmpty()) {
             throw new IllegalArgumentException("Vị trí đang được bảo trì trong khoảng thời gian này.");
         }
+
+        requireNotOccupiedByOverstayingGuest(req.getWorkspaceId(), startOffset, checkedAt, source);
 
         DurationUnit unit = req.getUnit();
         if (unit == null) {
@@ -334,7 +363,8 @@ public class BookingService {
             // Add-ons are served once for the group, so they ride on the first seat chosen.
             seatReq.setAddons(seatId.equals(seatIds.get(0)) ? req.getAddons() : null);
             try {
-                createBookingInternal(userId, seatReq, BookingSource.web, group.getId(), false);
+                auditBookingCreated(userId, createBookingInternal(userId, seatReq, BookingSource.web, group.getId(), false),
+                        BookingSource.web);
             } catch (IllegalArgumentException | IllegalStateException e) {
                 // Name the seat, then let the exception roll the whole group back.
                 throw new IllegalArgumentException("Chỗ \"" + seats.get(seatId).getName() + "\": " + e.getMessage(), e);
@@ -555,6 +585,40 @@ public class BookingService {
                 && (!end.toLocalDate().equals(start.toLocalDate()) || end.toLocalTime().isAfter(close))) {
             throw new IllegalArgumentException(hours + " Đặt theo giờ phải kết thúc trước giờ đóng cửa trong cùng ngày.");
         }
+        // A day pass is used during opening hours, open to close on each day. Ending at the start hour
+        // of the next day (18:00 → 18:00) would hold the seat overnight, when the branch is shut and
+        // nobody can be checked in or out.
+        if (unit == DurationUnit.day
+                && (end.toLocalTime().isAfter(close) || !end.toLocalTime().isAfter(start.toLocalTime()))) {
+            throw new IllegalArgumentException(hours + " Đặt theo ngày dùng trong giờ mở cửa: "
+                    + "kết thúc muộn nhất lúc " + close + " của ngày cuối, không kéo qua đêm.");
+        }
+    }
+
+    /** A booking starting this soon would put the new guest next to one who has not left yet. */
+    static final long OVERSTAY_GUARD_MINUTES = 15;
+
+    /**
+     * A guest who is still checked in after their booked end keeps the seat until checked out, so a
+     * booking that starts now (a walk-in, or someone booking the current hour) cannot take it. The
+     * schedule alone does not show this: the old booking's time is over.
+     */
+    void requireNotOccupiedByOverstayingGuest(UUID workspaceId, OffsetDateTime startAt, OffsetDateTime now,
+                                              BookingSource source) {
+        if (!startAt.isBefore(now.plusMinutes(OVERSTAY_GUARD_MINUTES))) {
+            return;
+        }
+        List<Booking> seated = bookingRepository.findOverstayingGuests(workspaceId, now);
+        if (seated.isEmpty()) {
+            return;
+        }
+        if (source == BookingSource.web) {
+            throw new IllegalArgumentException(
+                    "Vị trí này vẫn đang có khách sử dụng. Vui lòng chọn chỗ khác hoặc khung giờ muộn hơn.");
+        }
+        throw new IllegalArgumentException("Khách của đơn " + seated.get(0).getBookingCode()
+                + " vẫn đang ngồi tại vị trí này (đã quá giờ nhưng chưa check-out). "
+                + "Hãy check-out khách đó trước hoặc chọn chỗ khác.");
     }
 
     /** Branch a workspace belongs to (workspace → floor → branch), for access checks. */
@@ -779,6 +843,14 @@ public class BookingService {
                 .filter(b -> !BookingExpiryService.isExpiredHold(b, OffsetDateTime.now(ZoneOffset.UTC)))
                 .collect(Collectors.toList());
 
+        // Guests still inside past their booked end hold the seat until checked out; shown as busy
+        // until the same horizon createBooking refuses (see requireNotOccupiedByOverstayingGuest).
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        OffsetDateTime overstayUntil = now.plusMinutes(OVERSTAY_GUARD_MINUTES);
+        List<Booking> overstaying = from.isBefore(overstayUntil) && to.isAfter(now)
+                ? bookingRepository.findOverstayingGuestsInBranch(branchId, now)
+                : List.of();
+
         return workspaces.stream().map(ws -> {
             List<com.cospace.app.dto.api.PublicWorkspaceAvailabilityDto.BusySlot> slots = new java.util.ArrayList<>();
 
@@ -787,6 +859,14 @@ public class BookingService {
                     .forEach(b -> slots.add(com.cospace.app.dto.api.PublicWorkspaceAvailabilityDto.BusySlot.builder()
                             .startAt(b.getStartAt())
                             .endAt(b.getEndAt())
+                            .reason("booking")
+                            .build()));
+
+            overstaying.stream()
+                    .filter(b -> b.getWorkspaceId().equals(ws.getId()))
+                    .forEach(b -> slots.add(com.cospace.app.dto.api.PublicWorkspaceAvailabilityDto.BusySlot.builder()
+                            .startAt(b.getStartAt())
+                            .endAt(overstayUntil)
                             .reason("booking")
                             .build()));
 
@@ -932,7 +1012,11 @@ public class BookingService {
         String customerName = customer != null ? customer.getFullName() : null;
         String customerPhone = customer != null ? customer.getPhone() : null;
 
-        BookingDto dto = buildDto(b, workspaceName, branchName, customerName, customerPhone, latestPaymentOpt);
+        BookingDto dto = withLineTotals(buildDto(b, workspaceName, branchName, customerName, customerPhone, latestPaymentOpt),
+                bookingAddonService.lineTotals(List.of(b.getId())).get(b.getId()));
+        if (refundService != null) {
+            dto = withRefundInfo(dto, refundService.customerRefundInfo(List.of(b.getId())).get(b.getId()));
+        }
         if (b.getStatus() != BookingStatus.CANCELLED) {
             return dto;
         }
@@ -1019,6 +1103,11 @@ public class BookingService {
                 .stream().collect(java.util.stream.Collectors.groupingBy(com.cospace.app.entity.ReputationEvent::getBookingId,
                         java.util.stream.Collectors.summingInt(com.cospace.app.entity.ReputationEvent::getDelta)));
 
+        // What each tab still owes and how much of it is extra hours or a late fee, one query.
+        java.util.Map<UUID, BookingAddonService.LineTotals> lineTotals = bookingAddonService.lineTotals(bookingIds);
+        java.util.Map<UUID, RefundService.CustomerRefundInfo> refundInfo = refundService != null
+                ? refundService.customerRefundInfo(bookingIds) : java.util.Map.of();
+
         // Batch fetch cancellations for cancelled bookings (single query instead of N)
         java.util.Map<UUID, com.cospace.app.entity.BookingCancellation> cancellations = new java.util.HashMap<>();
         java.util.Set<UUID> cancelledBookingIds = bookings.stream()
@@ -1061,10 +1150,13 @@ public class BookingService {
                     .lastCheckoutAt(logs.stream().map(com.cospace.app.entity.CheckinLog::getCheckoutAt).filter(java.util.Objects::nonNull)
                             .max(java.util.Comparator.naturalOrder()).map(Object::toString).orElse(null))
                     .checkinCount(logs.size())
+                    .visitMinutes(visitMinutes(logs))
                     .reputationDelta(reputationDeltas.get(b.getId()))
                     .groupCode(b.getGroupId() != null ? groupCodes.get(b.getGroupId()) : null)
                     .groupSize(b.getGroupId() != null ? groupSizes.get(b.getGroupId()) : null)
                     .build();
+            dto = withLineTotals(dto, lineTotals.get(b.getId()));
+            dto = withRefundInfo(dto, refundInfo.get(b.getId()));
 
             // Attach cancellation info if present
             if (b.getStatus() == BookingStatus.CANCELLED) {
@@ -1085,6 +1177,40 @@ public class BookingService {
             result.add(dto);
         }
         return result;
+    }
+
+    /** Time on site over a booking's visits; a visit still open counts up to now. */
+    static long visitMinutes(List<com.cospace.app.entity.CheckinLog> logs) {
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        long minutes = 0;
+        for (com.cospace.app.entity.CheckinLog log : logs) {
+            if (log.getCheckinAt() == null) continue;
+            OffsetDateTime out = log.getCheckoutAt() != null ? log.getCheckoutAt() : now;
+            minutes += Math.max(0, java.time.Duration.between(log.getCheckinAt(), out).toMinutes());
+        }
+        return minutes;
+    }
+
+    private static BookingDto withRefundInfo(BookingDto dto, RefundService.CustomerRefundInfo info) {
+        if (info == null) return dto;
+        return dto.toBuilder()
+                .refundMethod(info.method())
+                .refundProcessedAt(info.processedAt() != null ? info.processedAt().toString() : null)
+                .refundVoucherCode(info.voucherCode())
+                .refundBankName(info.bankName())
+                .refundAccountNumber(info.accountNumber())
+                .refundAccountName(info.accountName())
+                .build();
+    }
+
+    private static BookingDto withLineTotals(BookingDto dto, BookingAddonService.LineTotals totals) {
+        if (totals == null) return dto;
+        return dto.toBuilder()
+                .unpaidAmount(totals.unpaidAmount())
+                .extensionAmount(totals.extensionAmount())
+                .extensionHours(totals.extensionHours())
+                .lateFeeAmount(totals.lateFeeAmount())
+                .build();
     }
 
     private BookingDto buildDto(Booking b, String workspaceName, String branchName,

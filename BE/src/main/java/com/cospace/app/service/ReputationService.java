@@ -83,8 +83,17 @@ public class ReputationService {
      */
     @Transactional
     public boolean penalizeMissedCheckin(Booking booking) {
-        if (missedCheckinPenalty <= 0
-                || reputationEventRepository.existsByBookingIdAndReason(booking.getId(), ReputationEvent.REASON_MISSED_CHECKIN)) {
+        return penalizeMissedCheckin(booking, false);
+    }
+
+    /**
+     * As {@link #penalizeMissedCheckin(Booking)}. With {@code bookingEnded}, the booking has just been
+     * closed as a no-show, and the one notification sent says so as well, instead of the customer
+     * getting a "missed booking" and a "points deducted" message for the same booking.
+     */
+    @Transactional
+    public boolean penalizeMissedCheckin(Booking booking, boolean bookingEnded) {
+        if (missedCheckinPenalty <= 0 || hasMissedCheckinPenalty(booking.getId())) {
             return false;
         }
         User user = lockCustomer(booking.getUserId());
@@ -96,17 +105,32 @@ public class ReputationService {
         int after = applyDelta(user, -missedCheckinPenalty, booking.getId(), ReputationEvent.REASON_MISSED_CHECKIN,
                 "Không check-in trong " + checkinDeadlineMinutes + " phút sau giờ bắt đầu đơn " + booking.getBookingCode());
 
-        notificationService.createNotification(user.getId(),
-                "Bạn bị trừ điểm uy tín",
-                "Đơn " + booking.getBookingCode() + " không được check-in trong vòng " + checkinDeadlineMinutes
-                        + " phút sau giờ bắt đầu nên bạn bị trừ " + (before - after) + " điểm uy tín. "
-                        + "Điểm uy tín hiện tại: " + after + "/" + MAX_SCORE + "."
-                        + restrictionHint(after)
-                        + " Nếu bạn đã đến nhưng chưa được check-in, vui lòng liên hệ quầy để được hoàn điểm.",
+        String penalty = "bạn bị trừ " + (before - after) + " điểm uy tín. "
+                + "Điểm uy tín hiện tại: " + after + "/" + MAX_SCORE + "."
+                + restrictionHint(after);
+        String title;
+        String body;
+        if (bookingEnded) {
+            title = "Bạn đã bỏ lỡ lượt đặt chỗ";
+            body = "Đơn " + booking.getBookingCode() + " đã kết thúc mà không có lượt check-in nào nên " + penalty
+                    + " Theo chính sách, đơn không đến sẽ không được hoàn tiền.";
+        } else {
+            title = "Bạn bị trừ điểm uy tín";
+            body = "Đơn " + booking.getBookingCode() + " không được check-in trong vòng " + checkinDeadlineMinutes
+                    + " phút sau giờ bắt đầu nên " + penalty
+                    + " Nếu đơn kết thúc mà bạn không đến, đơn sẽ không được hoàn tiền.";
+        }
+        notificationService.createNotification(user.getId(), title,
+                body + " Nếu bạn đã đến nhưng chưa được check-in, vui lòng liên hệ quầy để được hoàn điểm.",
                 "REPUTATION", booking.getId(), "BOOKING");
         log.info("Reputation of user {} lowered {} -> {} for missed check-in on {}",
                 user.getId(), before, after, booking.getBookingCode());
         return true;
+    }
+
+    /** Whether this booking has already cost its customer the missed check-in penalty (and its notification). */
+    public boolean hasMissedCheckinPenalty(UUID bookingId) {
+        return reputationEventRepository.existsByBookingIdAndReason(bookingId, ReputationEvent.REASON_MISSED_CHECKIN);
     }
 
     /**

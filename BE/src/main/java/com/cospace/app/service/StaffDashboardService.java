@@ -64,20 +64,20 @@ public class StaffDashboardService {
                 .mapToLong(Booking::getTotalAmount)
                 .sum();
 
-        int activeCheckinsCount = bookingRepository.countByBranchIdAndStatus(branchId, BookingStatus.CHECKED_IN);
-        
-        List<Booking> activeBookings = bookingRepository.findByBranchIdAndStatus(branchId, BookingStatus.CHECKED_IN);
+        // Guests actually inside: an open check-in, the same count the check-in counter shows. A
+        // CHECKED_IN multi-day pass whose guest left for the day is not someone sitting here, and the
+        // seats a guest's room holds are not guests (a 4-seat office counted as 4 people before).
+        List<Booking> activeBookings = bookingRepository.findGuestsInsideBranch(branchId);
         List<WorkspaceEntity> allWorkspaces = workspaceEntityRepository.findWorkspacesByBranchId(branchId);
-        
-        int activeGuests = activeBookings.stream()
-            .mapToInt(b -> {
-                return allWorkspaces.stream()
-                    .filter(w -> w.getId().equals(b.getWorkspaceId()))
-                    .findFirst()
-                    .map(WorkspaceEntity::getCapacity)
-                    .orElse(0);
-            })
-            .sum();
+        java.util.Set<java.util.UUID> occupiedWorkspaceIds = activeBookings.stream()
+                .map(Booking::getWorkspaceId).collect(java.util.stream.Collectors.toSet());
+
+        int activeGuests = activeBookings.size();
+        int activeCheckinsCount = occupiedWorkspaceIds.size();
+        int occupiedSeats = allWorkspaces.stream()
+                .filter(w -> occupiedWorkspaceIds.contains(w.getId()))
+                .mapToInt(WorkspaceEntity::getCapacity)
+                .sum();
 
         Integer totalCapacityObj = workspaceEntityRepository.sumCapacityByFloorBranchId(branchId);
         int totalCapacity = totalCapacityObj != null ? totalCapacityObj : 0;
@@ -152,6 +152,7 @@ public class StaffDashboardService {
                 .totalCapacity(totalCapacity)
                 .totalWs(totalWs)
                 .activeGuests(activeGuests)
+                .occupiedSeats(occupiedSeats)
                 .chartData(new java.util.ArrayList<>(chartMap.values()))
                 .build();
     }

@@ -15,7 +15,7 @@ import {
   FiSearch,
 } from "react-icons/fi";
 import { formatVND } from "../../utils/formatters";
-import { bookingApi, bookingGroupApi } from "../../lib/bookingApi";
+import { bookingApi, bookingGroupApi, type CancelPreview } from "../../lib/bookingApi";
 import { startPayment } from "../../lib/startPayment";
 import { useAuth } from "../../context/AuthContext";
 import BookingServicesModal from "./history/BookingServicesModal";
@@ -51,6 +51,19 @@ const BookingHistoryPage: React.FC = () => {
     "upcoming",
   );
   const [showCancelModal, setShowCancelModal] = useState<string | null>(null);
+  // The refund the customer would get, fetched when the cancel dialog opens so they decide knowing it.
+  const [cancelPreview, setCancelPreview] = useState<CancelPreview | null>(null);
+  const [cancelPreviewError, setCancelPreviewError] = useState<string | null>(null);
+  useEffect(() => {
+    setCancelPreview(null);
+    setCancelPreviewError(null);
+    if (!showCancelModal) return;
+    let active = true;
+    bookingApi.previewCancellation(showCancelModal)
+      .then((p) => { if (active) setCancelPreview(p); })
+      .catch((e: Error) => { if (active) setCancelPreviewError(e.message); });
+    return () => { active = false; };
+  }, [showCancelModal]);
   const [showQrModal, setShowQrModal] = useState<any | null>(null);
   const [copiedCode, setCopiedCode] = useState(false);
   // The check-in QR is drawn here rather than by a third-party QR service: the booking code never
@@ -395,7 +408,8 @@ const BookingHistoryPage: React.FC = () => {
           {([
             { id: "upcoming", label: "Sắp tới", icon: FiClock },
             { id: "past", label: "Hoàn thành", icon: FiCheckCircle },
-            { id: "canceled", label: "Đã hủy", icon: FiX },
+            // No-shows land here too, so the tab says so instead of reading as "cancelled by me".
+            { id: "canceled", label: "Hủy / Không đến", shortLabel: "Hủy/vắng", icon: FiX },
           ] as const).map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -411,7 +425,12 @@ const BookingHistoryPage: React.FC = () => {
                 }`}
               >
                 <Icon className="h-4 w-4 hidden sm:block" />
-                {tab.label}
+                {"shortLabel" in tab ? (
+                  <>
+                    <span className="sm:hidden">{tab.shortLabel}</span>
+                    <span className="hidden sm:inline">{tab.label}</span>
+                  </>
+                ) : tab.label}
                 <span className={`rounded-full px-1.5 text-[11px] ${isActive ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
                   {tabCount(tab.id)}
                 </span>
@@ -472,6 +491,7 @@ const BookingHistoryPage: React.FC = () => {
               onCancel={() => setShowCancelModal(booking.id)}
               onShowQr={() => setShowQrModal(booking)}
               onServices={() => setServicesBooking(booking)}
+              onRefundAccountSaved={() => setReloadKey((k) => k + 1)}
             />
           ))
         )}
@@ -604,9 +624,9 @@ const BookingHistoryPage: React.FC = () => {
                 Chính sách
               </div>
               <div className="flex justify-between text-sm font-medium text-foreground/80 pt-2">
-                <span>Tổng giá trị đơn:</span>
+                <span>{cancelPreview ? "Bạn đã thanh toán:" : "Tổng giá trị đơn:"}</span>
                 <span className="font-mono">
-                  {formatVND(selectedCancelBooking.totalAmount)}
+                  {formatVND(cancelPreview ? cancelPreview.paid : selectedCancelBooking.totalAmount)}
                 </span>
               </div>
               {selectedCancelBooking.status === "pending_payment" ? (
@@ -614,10 +634,32 @@ const BookingHistoryPage: React.FC = () => {
                   Đơn chưa được thanh toán nên bạn không mất phí. Đơn sẽ bị hủy và chỗ được trả lại
                   ngay khi bạn xác nhận, không cần chờ hết 15 phút giữ chỗ.
                 </p>
+              ) : cancelPreview && !cancelPreview.cancellable ? (
+                <p className="text-xs font-medium text-destructive leading-relaxed">{cancelPreview.message}</p>
+              ) : cancelPreview ? (
+                <>
+                  <div className="flex justify-between text-sm font-medium text-foreground/80">
+                    <span>Bạn được hoàn{cancelPreview.refundPercent ? ` (${cancelPreview.refundPercent}%)` : ''}:</span>
+                    <span className="font-mono font-semibold text-emerald-700 dark:text-emerald-400">
+                      {formatVND(cancelPreview.refundAmount)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm font-medium text-foreground/80">
+                    <span>Phí hủy:</span>
+                    <span className="font-mono">{formatVND(cancelPreview.penaltyAmount)}</span>
+                  </div>
+                  {cancelPreview.policyName && (
+                    <p className="text-xs text-muted-foreground">Theo: {cancelPreview.policyName}</p>
+                  )}
+                  {(selectedCancelBooking.raw?.unpaidAmount ?? 0) > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      Khoản chưa thanh toán ({formatVND(selectedCancelBooking.raw?.unpaidAmount ?? 0)}) sẽ được hủy, bạn không phải trả.
+                    </p>
+                  )}
+                </>
               ) : (
                 <p className="text-xs font-medium text-foreground/70 leading-relaxed">
-                  Số tiền hoàn lại sẽ được tính theo chính sách hủy đang áp dụng tại chi nhánh
-                  (phụ thuộc thời điểm hủy so với giờ nhận chỗ) và hiển thị ngay sau khi bạn xác nhận.
+                  {cancelPreviewError ?? "Đang tính số tiền được hoàn lại…"}
                 </p>
               )}
             </div>
@@ -636,7 +678,7 @@ const BookingHistoryPage: React.FC = () => {
                     : "bg-red-600 border-red-700 hover:shadow-md"
                 }`}
                 onClick={handleCancel}
-                disabled={isCanceling}
+                disabled={isCanceling || cancelPreview?.cancellable === false}
               >
                 {isCanceling ? "Đang hủy…" : "Đồng ý Hủy"}
               </button>

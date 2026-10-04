@@ -1,9 +1,12 @@
 package com.cospace.app.controller;
 
 import com.cospace.app.dto.api.AuthResponse;
+import com.cospace.app.dto.api.ForgotPasswordRequest;
 import com.cospace.app.dto.api.LoginRequest;
 import com.cospace.app.dto.api.RegisterRequest;
+import com.cospace.app.dto.api.ResetPasswordRequest;
 import com.cospace.app.service.AuthService;
+import com.cospace.app.service.PasswordResetService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -21,6 +24,34 @@ import java.util.Map;
 public class AuthController {
 
     private final AuthService authService;
+    private final PasswordResetService passwordResetService;
+
+    /** Always 200 with the same message, so the form doesn't reveal which emails have an account. */
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        passwordResetService.requestReset(request.getEmail());
+        return ResponseEntity.ok(Map.of("message",
+                "Nếu email này đã đăng ký tài khoản CoSpace, chúng tôi đã gửi link đặt lại mật khẩu. "
+                        + "Link có hiệu lực trong 30 phút."));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        try {
+            passwordResetService.resetPassword(request.getToken(), request.getNewPassword(), request.getConfirmPassword());
+            return ResponseEntity.ok(Map.of("message", "Đặt lại mật khẩu thành công. Bạn có thể đăng nhập bằng mật khẩu mới."));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                    "error", "bad_request",
+                    "message", e.getMessage()
+            ));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                    "error", "forbidden",
+                    "message", e.getMessage()
+            ));
+        }
+    }
 
     @PostMapping("/refresh")
     public ResponseEntity<?> refresh(@RequestBody Map<String, String> request) {

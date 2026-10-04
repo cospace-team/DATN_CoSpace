@@ -422,9 +422,11 @@ const CheckInPage: React.FC = () => {
         </div>
       )}
 
-      <div className="grid lg:grid-cols-12 gap-6">
-        {/* Khu vực Nhập mã Code (Col 5) */}
-        <div className="lg:col-span-5 space-y-6">
+      {/* Side by side only on very wide screens: at laptop widths the guest table needs the full
+          width, so the lookup card and the guide sit next to each other above it instead. */}
+      <div className="grid 2xl:grid-cols-12 gap-6">
+        {/* Khu vực Nhập mã Code */}
+        <div className="2xl:col-span-4 grid gap-6 md:grid-cols-2 2xl:grid-cols-1 content-start">
           <div className="rounded-2xl border border-border bg-card p-6 shadow-sm flex flex-col">
             <div className="space-y-4 py-2">
               <div className="text-center mb-6">
@@ -432,7 +434,7 @@ const CheckInPage: React.FC = () => {
                   <FiHash className="h-8 w-8" />
                 </div>
                 <h2 className="font-bold text-lg">Nhập mã đặt chỗ (Booking Code)</h2>
-                <p className="text-xs text-muted-foreground mt-1">Quét QR hoặc nhập mã 6 ký tự trên vé của khách</p>
+                <p className="text-xs text-muted-foreground mt-1">Quét QR hoặc nhập mã đặt chỗ trên vé của khách (dạng WH-76PDE8)</p>
               </div>
               
               <div className="relative">
@@ -506,8 +508,8 @@ const CheckInPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Khu vực Thẻ thông tin vé & Khách đang ngồi (Col 7) */}
-        <div className="lg:col-span-7 space-y-6">
+        {/* Khu vực Thẻ thông tin vé & Khách đang ngồi */}
+        <div className="2xl:col-span-8 space-y-6 min-w-0">
           {/* Thẻ thông tin vé tìm thấy (Ticket Preview) */}
           {searchedBooking && (() => {
             const pkg = getBookingPackageDisplay(searchedBooking.booking);
@@ -815,18 +817,19 @@ const CheckInPage: React.FC = () => {
                               )}
                             </td>
 
-                            {/* Thao tác Check-out */}
-                            <td className="py-4 text-right whitespace-nowrap">
+                            {/* Thao tác Check-out: stacked, so the table fits beside the lookup panel */}
+                            <td className="py-4 text-right">
+                              <div className="flex flex-col items-stretch gap-1.5 min-w-[9.5rem]">
                               <button
                                 onClick={() => setTabItem(ci)}
-                                className="btn btn-sm btn-outline border-border text-xs mr-2 shadow-sm"
+                                className="btn btn-sm btn-outline border-border text-xs shadow-sm justify-center"
                                 title="Gọi thêm dịch vụ / thu tiền dịch vụ"
                               >
                                 <FiCoffee className="h-3.5 w-3.5 mr-1" /> Dịch vụ
                               </button>
                               <button 
                                 onClick={() => openCheckoutModal(ci)} 
-                                className={`btn btn-sm transition shadow-sm ${
+                                className={`btn btn-sm transition shadow-sm justify-center ${
                                   ci.meta.timeStatus === 'overdue'
                                     ? 'btn-destructive text-xs font-bold shadow-red-500/20'
                                     : 'btn-outline border-border hover:bg-destructive hover:text-destructive-foreground hover:border-destructive text-xs'
@@ -842,11 +845,12 @@ const CheckInPage: React.FC = () => {
                                   customerName: ci.customer?.fullName,
                                   workspaceName: ci.workspace?.name,
                                 })}
-                                className="btn btn-sm btn-ghost text-xs ml-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
+                                className="btn btn-sm btn-ghost text-xs justify-center text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
                                 title="Kết thúc sớm vì sự cố / lý do khác và hoàn tiền"
                               >
                                 Kết thúc sớm
                               </button>
+                              </div>
                             </td>
                           </tr>
                         ))}

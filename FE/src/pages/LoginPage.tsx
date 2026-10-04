@@ -1,9 +1,11 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { Button } from "../components/ui/button";
 import { Logo } from "../components/ui/Logo";
 import { useSEO } from "../hooks/useSEO";
+import { requestPasswordReset } from "../api/passwordResetApi";
+import { PASSWORD_HINT, isEmailLike, passwordProblem } from "../utils/passwordRules";
 import { 
   FiMail, 
   FiLock, 
@@ -49,10 +51,11 @@ const LoginPage: React.FC = () => {
     isLoading,
   } = useAuth();
 
-  const [view, setView] = useState<"login" | "register">("login");
+  const location = useLocation();
+  const [view, setView] = useState<"login" | "register" | "forgot">("login");
 
   useSEO({
-    title: view === "login" ? "Đăng Nhập" : "Đăng ký tài khoản",
+    title: view === "login" ? "Đăng Nhập" : view === "forgot" ? "Quên mật khẩu" : "Đăng ký tài khoản",
     description: "Đăng nhập hoặc tạo tài khoản CoSpace để đặt chỗ, thanh toán và theo dõi đơn của bạn.",
   });
   const [isSubmittingGoogle, setIsSubmittingGoogle] = useState(false);
@@ -61,7 +64,11 @@ const LoginPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  // ResetPasswordPage sends the customer back here with a confirmation to show.
+  const [successMessage, setSuccessMessage] = useState<string | null>(
+    (location.state as { notice?: string } | null)?.notice ?? null,
+  );
+  const [isSubmittingForgot, setIsSubmittingForgot] = useState(false);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -88,12 +95,17 @@ const LoginPage: React.FC = () => {
       setErrorMessage("Vui lòng điền đầy đủ thông tin."); 
       return; 
     }
+    if (!isEmailLike(cleanEmail)) {
+      setErrorMessage("Email không hợp lệ.");
+      return;
+    }
+    const problem = passwordProblem(password);
+    if (problem) {
+      setErrorMessage(problem);
+      return;
+    }
     if (password !== confirmPassword) { 
       setErrorMessage("Mật khẩu xác nhận không khớp."); 
-      return; 
-    }
-    if (password.length < 8) { 
-      setErrorMessage("Mật khẩu phải có ít nhất 8 ký tự."); 
       return; 
     }
     setErrorMessage(null); 
@@ -119,6 +131,10 @@ const LoginPage: React.FC = () => {
       setErrorMessage("Vui lòng nhập email và mật khẩu."); 
       return; 
     }
+    if (!isEmailLike(cleanEmail)) {
+      setErrorMessage("Email không hợp lệ.");
+      return;
+    }
     setErrorMessage(null); 
     setIsSubmittingEmail(true);
     try {
@@ -133,7 +149,27 @@ const LoginPage: React.FC = () => {
     }
   };
 
-  const switchView = (v: "login" | "register") => {
+  const handleForgotSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanEmail = email.trim();
+    if (!isEmailLike(cleanEmail)) {
+      setErrorMessage("Vui lòng nhập đúng email bạn dùng để đăng ký.");
+      return;
+    }
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    setIsSubmittingForgot(true);
+    try {
+      const message = await requestPasswordReset(cleanEmail);
+      setSuccessMessage(message || "Nếu email này đã đăng ký, chúng tôi đã gửi link đặt lại mật khẩu.");
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Không gửi được yêu cầu. Vui lòng thử lại sau.");
+    } finally {
+      setIsSubmittingForgot(false);
+    }
+  };
+
+  const switchView = (v: "login" | "register" | "forgot") => {
     setView(v); 
     setErrorMessage(null); 
     setSuccessMessage(null);
@@ -204,7 +240,12 @@ const LoginPage: React.FC = () => {
 
           {/* View Headers */}
           <div className="text-center md:text-left space-y-2">
-            {isRegisterView ? (
+            {view === "forgot" ? (
+              <>
+                <h2 className="text-3xl font-semibold tracking-tight text-foreground">Quên mật khẩu</h2>
+                <p className="text-muted-foreground">Nhập email đã đăng ký, chúng tôi sẽ gửi link để bạn đặt mật khẩu mới.</p>
+              </>
+            ) : isRegisterView ? (
               <>
                 <h2 className="text-3xl font-semibold tracking-tight text-foreground">Tạo tài khoản</h2>
                 <p className="text-muted-foreground">Đăng ký bằng email hoặc tài khoản Google.</p>
@@ -232,9 +273,51 @@ const LoginPage: React.FC = () => {
           )}
 
           {/* ── Form Views ── */}
-          {isRegisterView ? (
+          {view === "forgot" ? (
             <div className="space-y-6">
-              <form onSubmit={handleRegisterSubmit} className="space-y-4">
+              <form onSubmit={handleForgotSubmit} noValidate className="space-y-5">
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1.5" htmlFor="forgot-email">Địa chỉ Email</label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-muted-foreground">
+                      <FiMail className="w-5 h-5" aria-hidden="true" />
+                    </span>
+                    <input
+                      type="email"
+                      id="forgot-email"
+                      name="email"
+                      autoComplete="username"
+                      spellCheck={false}
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className={fieldClass}
+                      placeholder="ten@congty.com"
+                      required
+                    />
+                  </div>
+                </div>
+                <Button
+                  type="submit"
+                  disabled={isSubmittingForgot}
+                  className="w-full py-3.5 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-sm shadow-sm hover:shadow-md transition-[background-color,box-shadow] flex items-center justify-center gap-2"
+                >
+                  {isSubmittingForgot && <FiLoader className="w-5 h-5 animate-spin" aria-hidden="true" />}
+                  {isSubmittingForgot ? "Đang gửi…" : "Gửi link đặt lại mật khẩu"}
+                </Button>
+              </form>
+              <p className="text-xs text-muted-foreground text-center">
+                Tài khoản đăng ký bằng Google không cần mật khẩu, hãy chọn "Tiếp tục với Google" ở trang đăng nhập.
+              </p>
+              <div className="text-center text-sm text-muted-foreground">
+                Nhớ ra mật khẩu?{" "}
+                <button type="button" onClick={() => switchView("login")} className="font-medium text-foreground hover:underline">
+                  Quay lại đăng nhập
+                </button>
+              </div>
+            </div>
+          ) : isRegisterView ? (
+            <div className="space-y-6">
+              <form onSubmit={handleRegisterSubmit} noValidate className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-1.5" htmlFor="fullName">Họ và Tên</label>
                   <div className="relative">
@@ -294,8 +377,10 @@ const LoginPage: React.FC = () => {
                         placeholder="••••••••" 
                         required 
                         minLength={8}
+                        aria-describedby="reg-password-hint"
                       />
                     </div>
+                    <p id="reg-password-hint" className="mt-1.5 text-xs text-muted-foreground">{PASSWORD_HINT}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-1.5" htmlFor="confirm-password">Xác nhận</label>
@@ -354,7 +439,7 @@ const LoginPage: React.FC = () => {
             </div>
           ) : (
             <div className="space-y-6">
-              <form onSubmit={handleEmailLogin} className="space-y-5">
+              <form onSubmit={handleEmailLogin} noValidate className="space-y-5">
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-1.5" htmlFor="login-email">Địa chỉ Email</label>
                   <div className="relative">
@@ -377,7 +462,16 @@ const LoginPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-1.5" htmlFor="login-password">Mật khẩu</label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-sm font-medium text-foreground" htmlFor="login-password">Mật khẩu</label>
+                    <button
+                      type="button"
+                      onClick={() => switchView("forgot")}
+                      className="text-sm font-medium text-primary hover:underline"
+                    >
+                      Quên mật khẩu?
+                    </button>
+                  </div>
 
                   <div className="relative">
                     <span className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-muted-foreground">

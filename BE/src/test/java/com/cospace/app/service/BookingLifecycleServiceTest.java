@@ -19,6 +19,8 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -89,7 +91,41 @@ class BookingLifecycleServiceTest {
         assertThat(lifecycleService.closeEndedBooking(b.getId(), now)).isEqualTo(BookingStatus.NO_SHOW);
         assertThat(b.getStatus()).isEqualTo(BookingStatus.NO_SHOW);
         verify(bookingAddonService).voidUnpaid(b, null);
-        verify(reputationService).penalizeMissedCheckin(b);
+        verify(reputationService).penalizeMissedCheckin(b, true);
+    }
+
+    @Test
+    void noShowPenalizedAtCloseGetsOnlyThePenaltyNotification() {
+        Booking b = booking(BookingStatus.CONFIRMED, now.minusMinutes(1));
+        when(checkinLogRepository.existsByBookingId(b.getId())).thenReturn(false);
+        when(reputationService.penalizeMissedCheckin(b, true)).thenReturn(true);
+
+        lifecycleService.closeEndedBooking(b.getId(), now);
+
+        // The penalty notification already says the booking was missed.
+        verify(notificationService, never()).createNotification(any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void noShowAlreadyPenalizedAtDeadlineIsNotNotifiedAgain() {
+        Booking b = booking(BookingStatus.CONFIRMED, now.minusMinutes(1));
+        when(checkinLogRepository.existsByBookingId(b.getId())).thenReturn(false);
+        when(reputationService.hasMissedCheckinPenalty(b.getId())).thenReturn(true);
+
+        assertThat(lifecycleService.closeEndedBooking(b.getId(), now)).isEqualTo(BookingStatus.NO_SHOW);
+
+        verify(reputationService, never()).penalizeMissedCheckin(any(), anyBoolean());
+        verify(notificationService, never()).createNotification(any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void noShowWithoutPenaltyStillTellsTheCustomer() {
+        Booking b = booking(BookingStatus.CONFIRMED, now.minusMinutes(1));
+        when(checkinLogRepository.existsByBookingId(b.getId())).thenReturn(false);
+
+        lifecycleService.closeEndedBooking(b.getId(), now);
+
+        verify(notificationService).createNotification(eq(b.getUserId()), eq("Bạn đã bỏ lỡ lượt đặt chỗ"), any(), any(), eq(b.getId()), any());
     }
 
     @Test
@@ -99,7 +135,7 @@ class BookingLifecycleServiceTest {
 
         assertThat(lifecycleService.closeEndedBooking(b.getId(), now)).isEqualTo(BookingStatus.COMPLETED);
         verify(notificationService, never()).createNotification(any(), any(), any(), any(), any(), any());
-        verify(reputationService, never()).penalizeMissedCheckin(any());
+        verify(reputationService, never()).penalizeMissedCheckin(any(), anyBoolean());
     }
 
     private Booking startedBooking(BookingStatus status, OffsetDateTime startAt, DurationUnit unit) {

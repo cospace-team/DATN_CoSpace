@@ -6,6 +6,7 @@ import com.cospace.app.dto.api.WorkspaceMaintenanceStatusDto;
 import com.cospace.app.repository.WorkspaceEntityRepository;
 import com.cospace.app.repository.WorkspaceMaintenanceRepository;
 import com.cospace.app.security.BranchAccessGuard;
+import com.cospace.app.service.AuditLogService;
 import com.cospace.app.service.StaffMaintenanceService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +15,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -24,15 +26,18 @@ public class StaffMaintenanceController {
     private final BranchAccessGuard branchAccessGuard;
     private final WorkspaceEntityRepository workspaceEntityRepository;
     private final WorkspaceMaintenanceRepository maintenanceRepository;
+    private final AuditLogService auditLogService;
 
     public StaffMaintenanceController(StaffMaintenanceService maintenanceService,
                                        BranchAccessGuard branchAccessGuard,
                                        WorkspaceEntityRepository workspaceEntityRepository,
-                                       WorkspaceMaintenanceRepository maintenanceRepository) {
+                                       WorkspaceMaintenanceRepository maintenanceRepository,
+                                       AuditLogService auditLogService) {
         this.maintenanceService = maintenanceService;
         this.branchAccessGuard = branchAccessGuard;
         this.workspaceEntityRepository = workspaceEntityRepository;
         this.maintenanceRepository = maintenanceRepository;
+        this.auditLogService = auditLogService;
     }
 
     @GetMapping("/branches/{branchId}/maintenance")
@@ -74,7 +79,10 @@ public class StaffMaintenanceController {
         UUID maintenanceBranchId = maintenanceRepository.findBranchIdByMaintenanceId(maintenanceId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy lịch bảo trì."));
         branchAccessGuard.requireAccessToBranch(jwt, maintenanceBranchId);
-        return ResponseEntity.ok(maintenanceService.completeMaintenance(maintenanceId));
+        MaintenanceResponseDto completed = maintenanceService.completeMaintenance(maintenanceId);
+        auditLogService.record(requireSubject(jwt), "COMPLETE", "workspace_maintenance", maintenanceId,
+                AuditLogService.values("workspaceId", completed.getWorkspaceId()));
+        return ResponseEntity.ok(completed);
     }
 
     @DeleteMapping("/maintenance/{maintenanceId}")
@@ -85,6 +93,7 @@ public class StaffMaintenanceController {
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy lịch bảo trì."));
         branchAccessGuard.requireAccessToBranch(jwt, maintenanceBranchId);
         maintenanceService.deleteMaintenance(maintenanceId);
+        auditLogService.record(requireSubject(jwt), "DELETE", "workspace_maintenance", maintenanceId, Map.of());
         return ResponseEntity.noContent().build();
     }
 

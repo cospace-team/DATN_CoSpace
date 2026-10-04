@@ -21,6 +21,19 @@ import java.util.stream.Collectors;
 @Service
 public class CheckinService {
 
+    /**
+     * Optional so unit tests that build this service by hand need not supply it; always present in
+     * the running application.
+     */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private AuditLogService auditLogService;
+
+    private void audit(UUID actorId, String action, String entityName, UUID entityId, java.util.Map<String, Object> values) {
+        if (auditLogService != null) {
+            auditLogService.record(actorId, action, entityName, entityId, values);
+        }
+    }
+
     private final CheckinLogRepository checkinLogRepository;
     private final BookingRepository bookingRepository;
     private final BookingService bookingService;
@@ -88,6 +101,14 @@ public class CheckinService {
             throw new IllegalArgumentException("Vé đặt chỗ đã quá hạn giờ kết thúc. Không thể Check-in.");
         }
 
+        // 5. The seat must be empty: a previous guest who overstayed and was never checked out is
+        // still sitting there, and checking someone else in would put two guests on one seat.
+        List<Booking> inside = bookingRepository.findOtherGuestsInside(booking.getWorkspaceId(), bookingId);
+        if (!inside.isEmpty()) {
+            throw new IllegalArgumentException("Vị trí vẫn còn khách của đơn " + inside.get(0).getBookingCode()
+                    + " chưa check-out. Hãy check-out khách đó trước khi nhận khách mới.");
+        }
+
         CheckinLog checkinLog = CheckinLog.builder()
                 .id(UUID.randomUUID())
                 .bookingId(bookingId)
@@ -104,6 +125,8 @@ public class CheckinService {
         }
         bookingRepository.save(booking);
         reputationService.rewardOnTimeCheckin(booking, now);
+        audit(staffId, "CHECKIN", "bookings", booking.getId(), AuditLogService.values(
+                "bookingCode", booking.getBookingCode(), "workspaceId", booking.getWorkspaceId()));
 
         return toDto(checkinLog);
     }
@@ -163,6 +186,8 @@ public class CheckinService {
             }
         }
         bookingRepository.save(booking);
+        audit(staffId, "CHECKOUT", "bookings", booking.getId(), AuditLogService.values(
+                "bookingCode", booking.getBookingCode(), "workspaceId", booking.getWorkspaceId(), "note", note));
 
         return toDto(checkinLog);
     }

@@ -170,4 +170,33 @@ class RefundServiceTest {
                 .isInstanceOf(IllegalArgumentException.class);
         verify(refundRepository, never()).save(any());
     }
+
+    @Test
+    void customerCanTellWhereAPendingRefundShouldGo() {
+        UUID bookingId = UUID.randomUUID();
+        Refund pending = Refund.builder().id(UUID.randomUUID()).bookingId(bookingId).userId(userId)
+                .amount(85_500L).status(Refund.STATUS_PENDING).build();
+        when(refundRepository.findByBookingIdOrderByCreatedAtAsc(bookingId)).thenReturn(List.of(pending));
+
+        int updated = refundService.setReceivingAccount(userId, bookingId, " Vietcombank ", "0123 456 789", "le quoc cuong");
+
+        assertThat(updated).isEqualTo(1);
+        assertThat(pending.getReceivingBankName()).isEqualTo("Vietcombank");
+        assertThat(pending.getReceivingAccountNumber()).isEqualTo("0123456789");
+        assertThat(pending.getReceivingAccountName()).isEqualTo("LE QUOC CUONG");
+    }
+
+    @Test
+    void someoneElsesOrAnAlreadyPaidRefundCannotBeRedirected() {
+        UUID bookingId = UUID.randomUUID();
+        Refund othersPending = Refund.builder().id(UUID.randomUUID()).bookingId(bookingId).userId(UUID.randomUUID())
+                .amount(85_500L).status(Refund.STATUS_PENDING).build();
+        Refund minePaid = Refund.builder().id(UUID.randomUUID()).bookingId(bookingId).userId(userId)
+                .amount(85_500L).status(Refund.STATUS_PROCESSED).build();
+        when(refundRepository.findByBookingIdOrderByCreatedAtAsc(bookingId)).thenReturn(List.of(othersPending, minePaid));
+
+        assertThatThrownBy(() -> refundService.setReceivingAccount(userId, bookingId, "VCB", "0123456789", "A"))
+                .isInstanceOf(IllegalStateException.class);
+        assertThat(othersPending.getReceivingAccountNumber()).isNull();
+    }
 }

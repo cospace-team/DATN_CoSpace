@@ -90,7 +90,7 @@ export const ProfileSecurityTab: React.FC<ProfileSecurityTabProps> = ({
                   type={showNewPassword ? 'text' : 'password'}
                   value={passwordForm.newPassword}
                   onChange={e => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-                  placeholder="Ít nhất 6 ký tự"
+                  placeholder="8+ ký tự, có chữ hoa, chữ thường và số"
                   className="w-full px-4 py-2.5 bg-muted/40 border border-border rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/30 pr-10"
                   required
                 />
