@@ -52,6 +52,11 @@ public class CancellationPolicyController {
     public ResponseEntity<CancellationPolicy> createPolicy(
             @AuthenticationPrincipal Jwt jwt,
             @RequestBody CancellationPolicy policy) {
+        // The id has no @GeneratedValue, so save() of an entity bound straight from the request body
+        // would merge onto whatever row already has this id if the client supplies one — letting a
+        // branch admin overwrite an arbitrary policy, including the global defaults every branch
+        // falls back to, just by naming its id. This must always be a fresh row.
+        policy.setId(null);
         // A branch admin may only create a policy scoped to their own branch — never a global
         // one (branchId null) or one for another branch. super_admin may create either.
         if (!branchAccessGuard.isSuperAdmin(jwt)) {
