@@ -824,6 +824,7 @@ const ExplorePage: React.FC = () => {
       closeHour={closeHour}
       onClose={() => setSelectedWs(null)}
       onChangeStartHour={(h) => setSelectedHour(h)}
+      onChangeHours={(start, end) => { setSelectedHour(start); setSelectedEndHour(end); }}
       checkAvailability={(stH, endH, endD, unit) => availabilityFor(selectedWs, stH, endH, endD, unit)}
       availableServices={extraServices}
       candidateSeats={mappedWorkspaces}

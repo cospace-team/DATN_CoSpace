@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { FiX, FiCheck, FiPlus, FiUsers } from 'react-icons/fi';
+import { FiX, FiCheck, FiPlus, FiUsers, FiClock, FiChevronDown, FiChevronUp, FiAlertCircle } from 'react-icons/fi';
 import { WorkspaceAmenities } from '../../../components/WorkspaceAmenities';
 import { formatVND, durationUnitLabel, toDateInputValue } from '../../../utils/formatters';
 import { serviceLimitApi, type ExtraServiceDto, type ServiceAvailabilityDto } from '../../../api/addonApi';
@@ -70,6 +70,8 @@ interface BookingPanelProps {
   closeHour: number;
   onClose: () => void;
   onChangeStartHour: (hour: number) => void;
+  /** Moves both ends of an hourly booking at once (used by the "free slots" suggestions). */
+  onChangeHours?: (startHour: number, endHour: number) => void;
   checkAvailability?: (startHour: number, endHour: number, endDate: Date, unit: string) => string;
   availableServices?: ExtraServiceResponse[];
   /** Other seats of the floor that can be booked together with this one (same time). */
@@ -113,6 +115,7 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
   closeHour,
   onClose,
   onChangeStartHour,
+  onChangeHours,
   checkAvailability,
   availableServices = [],
   candidateSeats = [],
@@ -246,422 +249,369 @@ export const BookingPanel: React.FC<BookingPanelProps> = ({
     ? checkAvailability(selectedHour, endHour, endDate, durationUnit)
     : wsAvail;
 
+  const [showAllAddons, setShowAllAddons] = useState(false);
+  const isBooked = !!currentAvail?.startsWith('booked');
+  const isFree = currentAvail === 'available';
+
+  // When the chosen hours are taken, offer the nearest free slots of the same length.
+  const freeSlots = useMemo(() => {
+    if (!isBooked || durationUnit !== 'hour' || !checkAvailability || !onChangeHours) return [];
+    const len = Math.max(1, endHour - selectedHour);
+    const slots: number[] = [];
+    for (let h = firstBookableHour(selectedDate, openHour, closeHour); h + len <= closeHour; h++) {
+      if (h !== selectedHour && checkAvailability(h, h + len, endDate, 'hour') === 'available') slots.push(h);
+    }
+    return slots
+      .sort((a, b) => Math.abs(a - selectedHour) - Math.abs(b - selectedHour))
+      .slice(0, 3)
+      .sort((a, b) => a - b)
+      .map((h) => ({ start: h, end: h + len }));
+  }, [isBooked, durationUnit, checkAvailability, onChangeHours, endHour, selectedHour, selectedDate, openHour, closeHour, endDate]);
+
+  const hh = (h: number) => `${String(h).padStart(2, '0')}:00`;
+  const addonList = allAddons.filter((s: any) => s.isActive !== false);
+  const ADDON_PREVIEW = 5;
+  const visibleAddons = showAllAddons ? addonList : addonList.slice(0, ADDON_PREVIEW);
+  const unitName = durationUnitLabel[price?.duration_unit ?? durationUnit]?.toLowerCase();
+  const timeSummary =
+    durationUnit === 'hour'
+      ? `${hh(selectedHour)} – ${hh(endHour)} · ${Math.max(1, endHour - selectedHour)} giờ`
+      : durationUnit === 'day'
+      ? `${unitCount} ngày · ${hh(openHour)} – ${hh(closeHour)} mỗi ngày`
+      : `${unitCount} tuần (≈ ${unitCount * 7} ngày)`;
+
+  const card = 'rounded-2xl bg-[var(--bg-surface-hover)] p-3.5 border border-border';
+
   return (
     <div className="p-5 bg-inherit">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="font-medium text-lg text-foreground">{ws.name}</h3>
-        <button
-          onClick={onClose}
-          className="btn btn-ghost btn-sm cursor-pointer"
-          style={{ padding: '4px' }}
-          aria-label="Đóng chi tiết"
-        >
-          <FiX className="h-4 w-4" />
+      {/* Header: name, one status chip, close */}
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="min-w-0">
+          <h3 className="font-semibold text-lg leading-tight text-foreground">{ws.name}</h3>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span className={`badge ${isFree ? 'badge-success' : isBooked ? 'badge-danger' : 'badge-neutral'}`}>
+              <span className={`inline-block h-2 w-2 rounded-full mr-1.5 ${isFree ? 'bg-emerald-500' : isBooked ? 'bg-red-500' : 'bg-slate-400'}`} />
+              {isFree ? 'Còn trống' : isBooked ? 'Đã có người đặt' : 'Bảo trì'}
+            </span>
+            <span className="text-xs text-[var(--text-tertiary)] font-mono">{ws.code}</span>
+          </div>
+        </div>
+        <button onClick={onClose} className="btn btn-ghost btn-sm cursor-pointer shrink-0" style={{ padding: '4px' }} aria-label="Đóng chi tiết">
+          <FiX className="h-5 w-5" />
         </button>
       </div>
 
-      {/* Status badge */}
-      <span
-        className={`badge ${
-          currentAvail === 'available'
-            ? 'badge-success'
-            : currentAvail?.startsWith('booked')
-            ? 'badge-danger'
-            : 'badge-neutral'
-        }`}
-      >
-        {currentAvail === 'available' ? (
-          <>
-            <span className="inline-block h-2 w-2 rounded-full bg-emerald-50 dark:bg-emerald-950/30 mr-1" />{' '}
-            Trống
-          </>
-        ) : currentAvail?.startsWith('booked') ? (
-          <>
-            <span className="inline-block h-2 w-2 rounded-full bg-red-50 dark:bg-red-950/30 mr-1" />{' '}
-            Đã đặt{' '}
-            {currentAvail.split('|').length === 3
-              ? `(${currentAvail.split('|')[1]}h-${currentAvail.split('|')[2]}h)`
-              : ''}
-          </>
-        ) : (
-          <>
-            <span className="inline-block h-2 w-2 rounded-full bg-slate-400 mr-1" /> Bảo trì
-          </>
-        )}
-      </span>
-
-      {/* Info */}
-      <div className="mt-5 space-y-3">
+      <div className="space-y-3">
         <WorkspaceGallery images={ws.images || []} alt={ws.name} />
-        <div className="rounded-2xl bg-[var(--bg-surface-hover)] p-3 border border-border">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <p className="text-xs text-[var(--text-tertiary)]">Loại</p>
-              <p className="text-sm font-semibold">{wsType?.name}</p>
-            </div>
-            <div>
-              <p className="text-xs text-[var(--text-tertiary)]">Số chỗ ngồi</p>
-              <p className="text-sm font-semibold">
-                {ws.capacity} {ws.capacity > 1 ? 'chỗ · tối đa ' + ws.capacity + ' người' : 'chỗ (1 người)'}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-[var(--text-tertiary)]">Mã</p>
-              <p className="text-sm font-mono">{ws.code}</p>
-            </div>
-          </div>
+
+        {/* Info */}
+        <div className={card}>
+          <p className="text-sm font-semibold">{wsType?.name}</p>
+          <p className="text-xs text-[var(--text-secondary)] mt-0.5">
+            {ws.capacity > 1 ? `${ws.capacity} chỗ · tối đa ${ws.capacity} người` : '1 chỗ · 1 người'}
+          </p>
         </div>
 
-        <WorkspaceAmenities
-          workspaceTypeId={ws.workspace_type_id}
-          workspaceTypeCode={wsType?.code}
-        />
+        <WorkspaceAmenities workspaceTypeId={ws.workspace_type_id} workspaceTypeCode={wsType?.code} />
 
-        {/* Price */}
-        {price && (
-          <div className="rounded-2xl bg-[var(--brand-primary-light)] border border-[var(--brand-primary)] border-opacity-20 p-4">
-            <p className="text-xs text-[var(--text-secondary)]">Giá</p>
-            <p className="text-2xl font-medium text-[var(--brand-primary)]">
-              {formatVND(price.price)}
-            </p>
-            <p className="text-xs text-[var(--text-secondary)]">
-              /{durationUnitLabel[price.duration_unit]?.toLowerCase()}
-            </p>
-          </div>
-        )}
-
-        {!price && (
-          <p className="rounded-2xl bg-[var(--state-danger-bg)] border border-[var(--state-danger-border)] p-3 text-xs text-[var(--state-danger)]">
-            Chi nhánh chưa có giá cho loại thời gian này. Vui lòng chọn loại thời gian khác.
-          </p>
-        )}
-
-        {/* Duration unit toggle */}
-        <div className="rounded-2xl bg-[var(--bg-surface-hover)] p-3 border border-border">
-          <p className="text-xs text-[var(--text-tertiary)] mb-2">Loại thời gian đặt</p>
-          <div className="flex gap-1 bg-[var(--border-subtle)] rounded-xl p-0.5">
+        {/* When: unit, time and the price that applies — one card instead of three */}
+        <div className={card}>
+          <div className="flex gap-1 bg-[var(--border-subtle)] rounded-xl p-0.5" role="tablist" aria-label="Loại thời gian đặt">
             {(['hour', 'day', 'week'] as DurationUnitMode[]).map(u => (
               <button
                 key={u}
+                role="tab"
+                aria-selected={durationUnit === u}
                 onClick={() => setDurationUnit(u)}
-                className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition cursor-pointer ${
-                  durationUnit === u
-                    ? 'bg-card text-foreground shadow-sm'
-                    : 'text-[var(--text-tertiary)] hover:text-foreground'
+                className={`flex-1 py-2 text-sm font-medium rounded-lg transition cursor-pointer ${
+                  durationUnit === u ? 'bg-card text-foreground shadow-sm' : 'text-[var(--text-tertiary)] hover:text-foreground'
                 }`}
               >
                 {UNIT_LABELS[u]}
               </button>
             ))}
           </div>
-        </div>
 
-        {/* Time selection */}
-        <div className="rounded-2xl bg-[var(--bg-surface-hover)] p-3 border border-border">
-          <p className="text-xs text-[var(--text-tertiary)] mb-2">Thời gian</p>
+          <div className="mt-3">
+            {durationUnit === 'hour' ? (
+              <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-2">
+                <div>
+                  <label htmlFor={`start-time-${selectedWs}`} className="text-xs text-[var(--text-secondary)]">Bắt đầu</label>
+                  <select
+                    id={`start-time-${selectedWs}`}
+                    value={selectedHour}
+                    onChange={e => onChangeStartHour(Number(e.target.value))}
+                    className="input-field mt-1 text-sm w-full"
+                  >
+                    {Array.from({ length: Math.max(0, closeHour - openHour) }, (_, i) => i + openHour)
+                      .filter(h => h >= firstBookableHour(selectedDate, openHour, closeHour))
+                      .map(h => <option key={h} value={h}>{hh(h)}</option>)}
+                  </select>
+                </div>
+                <FiClock className="h-4 w-4 mb-3 text-[var(--text-tertiary)]" aria-hidden="true" />
+                <div>
+                  <label htmlFor={`end-time-${selectedWs}`} className="text-xs text-[var(--text-secondary)]">Kết thúc</label>
+                  <select
+                    id={`end-time-${selectedWs}`}
+                    value={endHour}
+                    onChange={e => setEndHour(Number(e.target.value))}
+                    className="input-field mt-1 text-sm w-full"
+                  >
+                    {Array.from({ length: Math.max(0, closeHour - selectedHour) }, (_, i) => selectedHour + i + 1)
+                      .map(h => <option key={h} value={h}>{hh(h)}</option>)}
+                  </select>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs text-[var(--text-secondary)]">Ngày bắt đầu</label>
+                  <input type="date" value={toDateInputValue(toMidnight(selectedDate))} className="input-field mt-1 text-sm w-full" readOnly />
+                </div>
+                <div>
+                  <label htmlFor={`end-date-${selectedWs}`} className="text-xs text-[var(--text-secondary)]">
+                    {durationUnit === 'day' ? 'Đến hết ngày' : 'Ngày kết thúc'}
+                  </label>
+                  {/* endDate is exclusive (the day after the last one). A day pass shows the last day
+                      it can be used instead, so a one-day pass reads "5/10 → 5/10", not "→ 6/10". */}
+                  <input
+                    id={`end-date-${selectedWs}`}
+                    type="date"
+                    value={toDateInputValue(durationUnit === 'day' ? addDays(endDate, -1) : endDate)}
+                    min={toDateInputValue(durationUnit === 'day' ? addDays(minEndDate, -1) : minEndDate)}
+                    onChange={e => {
+                      const d = new Date(e.target.value + 'T00:00:00');
+                      if (!isNaN(d.getTime())) setEndDate(durationUnit === 'day' ? addDays(d, 1) : d);
+                    }}
+                    className="input-field mt-1 text-sm w-full"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
 
-          {durationUnit === 'hour' ? (
-            /* ── Hour mode: same-day start/end hour ── */
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label
-                  htmlFor={`start-time-${selectedWs}`}
-                  className="text-xs text-[var(--text-secondary)]"
-                >
-                  Bắt đầu
-                </label>
-                <select
-                  id={`start-time-${selectedWs}`}
-                  value={selectedHour}
-                  onChange={e => onChangeStartHour(Number(e.target.value))}
-                  className="input-field mt-1 text-sm bg-transparent border-b border-border focus:outline-none w-full"
-                >
-                  {Array.from(
-                    { length: Math.max(0, closeHour - openHour) },
-                    (_, i) => i + openHour
-                  ).filter(h => h >= firstBookableHour(selectedDate, openHour, closeHour)).map(h => (
-                    <option key={h} value={h}>
-                      {String(h).padStart(2, '0')}:00
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label
-                  htmlFor={`end-time-${selectedWs}`}
-                  className="text-xs text-[var(--text-secondary)]"
-                >
-                  Kết thúc
-                </label>
-                <select
-                  id={`end-time-${selectedWs}`}
-                  value={endHour}
-                  onChange={e => setEndHour(Number(e.target.value))}
-                  className="input-field mt-1 text-sm bg-transparent border-b border-border focus:outline-none w-full"
-                >
-                  {Array.from(
-                    { length: Math.max(0, closeHour - selectedHour) },
-                    (_, i) => selectedHour + i + 1
-                  ).map(h => (
-                    <option key={h} value={h}>
-                      {String(h).padStart(2, '0')}:00
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          ) : (
-            /* ── Day / Week mode: date-range picker ── */
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="text-xs text-[var(--text-secondary)]">Ngày bắt đầu</label>
-                <input
-                  type="date"
-                  value={toDateInputValue(toMidnight(selectedDate))}
-                  className="input-field mt-1 text-sm w-full"
-                  readOnly
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor={`end-date-${selectedWs}`}
-                  className="text-xs text-[var(--text-secondary)]"
-                >
-                  {durationUnit === 'day' ? 'Đến hết ngày' : 'Ngày kết thúc'}
-                </label>
-                {/* endDate is exclusive (the day after the last one). A day pass shows the last day
-                    it can be used instead, so a one-day pass reads "5/10 → 5/10", not "→ 6/10". */}
-                <input
-                  id={`end-date-${selectedWs}`}
-                  type="date"
-                  value={toDateInputValue(durationUnit === 'day' ? addDays(endDate, -1) : endDate)}
-                  min={toDateInputValue(durationUnit === 'day' ? addDays(minEndDate, -1) : minEndDate)}
-                  onChange={e => {
-                    const d = new Date(e.target.value + 'T00:00:00');
-                    if (!isNaN(d.getTime())) setEndDate(durationUnit === 'day' ? addDays(d, 1) : d);
-                  }}
-                  className="input-field mt-1 text-sm w-full"
-                />
-              </div>
-            </div>
+          <div className="mt-3 pt-3 border-t border-[var(--border-subtle)] flex items-baseline justify-between gap-3 text-sm">
+            <span className="text-[var(--text-secondary)]">{timeSummary}</span>
+            {price && (
+              <span className="shrink-0 font-semibold text-[var(--brand-primary)]">
+                {formatVND(price.price)}<span className="font-normal text-xs text-[var(--text-secondary)]">/{unitName}</span>
+              </span>
+            )}
+          </div>
+
+          {!price && (
+            <p className="mt-3 flex items-start gap-2 rounded-xl bg-[var(--state-danger-bg)] border border-[var(--state-danger-border)] p-2.5 text-xs text-[var(--state-danger)]">
+              <FiAlertCircle className="h-4 w-4 shrink-0 mt-px" />
+              Chi nhánh chưa có giá cho loại thời gian này. Vui lòng chọn loại khác.
+            </p>
           )}
 
-          {/* Summary line */}
-          <p className="mt-2 text-xs text-[var(--text-tertiary)]">
-            {durationUnit === 'hour'
-              ? `${Math.max(1, endHour - selectedHour)} giờ`
-              : durationUnit === 'day'
-              ? `${unitCount} ngày · ${String(openHour).padStart(2, '0')}:00 – ${String(closeHour).padStart(2, '0')}:00 mỗi ngày`
-              : `${unitCount} tuần (≈ ${unitCount * 7} ngày)`}
-          </p>
+          {/* Taken: say it once, here, next to the hours the customer can change */}
+          {isBooked && (
+            <div className="mt-3 rounded-xl bg-[var(--state-danger-bg)] border border-[var(--state-danger-border)] p-2.5">
+              <p className="text-xs font-semibold text-[var(--state-danger)] flex items-start gap-2">
+                <FiAlertCircle className="h-4 w-4 shrink-0 mt-px" />
+                <span>
+                  Đã có người đặt{currentAvail!.split('|').length === 3 ? ` ${currentAvail!.split('|')[1]}h – ${currentAvail!.split('|')[2]}h` : ''}.
+                  {freeSlots.length > 0 ? ' Chọn khung giờ còn trống:' : ' Hãy thử khung giờ hoặc ngày khác.'}
+                </span>
+              </p>
+              {freeSlots.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {freeSlots.map((f) => (
+                    <button
+                      key={f.start}
+                      type="button"
+                      onClick={() => onChangeHours?.(f.start, f.end)}
+                      className="rounded-full border border-[var(--brand-primary)] bg-card px-3 py-1.5 text-xs font-semibold text-[var(--brand-primary)] cursor-pointer"
+                    >
+                      {hh(f.start)} – {hh(f.end)}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Book more seats at the same time */}
         {onToggleExtraSeat && (
-          <div className="rounded-2xl bg-[var(--bg-surface-hover)] p-3 border border-border">
-            <div className="flex items-center justify-between gap-2 mb-2">
-              <p className="text-xs text-[var(--text-tertiary)] flex items-center gap-1.5">
-                <FiUsers className="h-3.5 w-3.5" /> Đặt thêm chỗ cùng khung giờ
-              </p>
-              {onToggleMultiSelect && (
-                <label className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)] cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={multiSelect}
-                    onChange={(e) => onToggleMultiSelect(e.target.checked)}
-                    className="rounded accent-[var(--brand-primary)]"
-                  />
-                  Chọn trên sơ đồ
-                </label>
-              )}
-            </div>
+          <div className={card}>
+            <p className="text-sm font-semibold flex items-center gap-1.5">
+              <FiUsers className="h-4 w-4 text-[var(--text-tertiary)]" /> Đặt thêm chỗ cùng khung giờ
+            </p>
+            {onToggleMultiSelect && (
+              <label className="mt-2 flex items-center gap-2 text-xs text-[var(--text-secondary)] cursor-pointer">
+                <input type="checkbox" checked={multiSelect} onChange={(e) => onToggleMultiSelect(e.target.checked)} className="rounded accent-[var(--brand-primary)]" />
+                Chọn chỗ trực tiếp trên sơ đồ
+              </label>
+            )}
             {multiSelect && (
-              <p className="mb-2 text-[11px] text-[var(--text-secondary)]">
-                Bấm vào các chỗ còn trống trên sơ đồ để thêm hoặc bỏ khỏi đơn.
-              </p>
+              <p className="mt-1.5 text-[11px] text-[var(--text-secondary)]">Bấm vào các chỗ còn trống trên sơ đồ để thêm hoặc bỏ khỏi đơn.</p>
             )}
             {extraSeats.length > 0 && (
-              <ul className="space-y-1.5 mb-2">
+              <ul className="space-y-1.5 mt-3">
                 {extraSeats.map(({ seat, avail, price: seatPrice, subtotal: seatSubtotal }) => {
                   const ok = avail === 'available' && !!seatPrice;
                   return (
-                    <li key={seat.id} className={`flex items-center gap-2 text-sm rounded-lg px-2 py-1.5 ${ok ? 'bg-card' : 'bg-[var(--state-danger-bg)]'}`}>
+                    <li key={seat.id} className={`flex items-center gap-2 text-sm rounded-xl px-3 py-2 ${ok ? 'bg-card' : 'bg-[var(--state-danger-bg)]'}`}>
                       <span className="min-w-0 flex-1">
-                        <span className="font-medium truncate block">{seat.name}</span>
+                        <span className="font-medium block">{seat.name}</span>
                         <span className={`text-[11px] ${ok ? 'text-[var(--text-tertiary)]' : 'text-[var(--state-danger)]'}`}>
-                          {!seatPrice
-                            ? 'Chưa có giá cho loại thời gian này'
-                            : avail !== 'available'
-                              ? 'Đã có người đặt khung giờ này'
-                              : `${seat.workspaceTypeName} · ${seat.capacity} chỗ`}
+                          {!seatPrice ? 'Chưa có giá cho loại thời gian này' : avail !== 'available' ? 'Đã có người đặt khung giờ này' : `${seat.workspaceTypeName} · ${seat.capacity} chỗ`}
                         </span>
                       </span>
-                      <span className="text-xs shrink-0">{seatPrice ? formatVND(seatSubtotal) : '—'}</span>
-                      <button
-                        type="button"
-                        onClick={() => onToggleExtraSeat(seat.id)}
-                        className="p-1 rounded hover:bg-[var(--border-subtle)] cursor-pointer"
-                        aria-label={`Bỏ ${seat.name}`}
-                      >
-                        <FiX className="h-3.5 w-3.5" />
+                      <span className="text-xs font-medium shrink-0">{seatPrice ? formatVND(seatSubtotal) : '—'}</span>
+                      <button type="button" onClick={() => onToggleExtraSeat(seat.id)} className="p-2 -mr-1 rounded-lg hover:bg-[var(--border-subtle)] cursor-pointer" aria-label={`Bỏ ${seat.name}`}>
+                        <FiX className="h-4 w-4" />
                       </button>
                     </li>
                   );
                 })}
               </ul>
             )}
-            {(() => {
-              const addable = candidateSeats.filter(
-                (c) =>
-                  c.id !== ws.id &&
-                  !extraSeatIds.includes(c.id) &&
-                  (checkSeatAvailability ? checkSeatAvailability(c.id, selectedHour, endHour, endDate, durationUnit) : 'available') === 'available' &&
-                  !!getSeatPrice?.(c.workspace_type_id, durationUnit),
-              );
-              if (seatCount >= maxSeats) {
-                return <p className="text-[11px] text-[var(--text-tertiary)]">Đã đạt tối đa {maxSeats} chỗ cho một lần đặt.</p>;
-              }
-              if (addable.length === 0) {
-                return <p className="text-[11px] text-[var(--text-tertiary)] italic">Không còn chỗ trống nào khác cho khung giờ đã chọn.</p>;
-              }
-              return (
-                <select
-                  value=""
-                  onChange={(e) => e.target.value && onToggleExtraSeat(e.target.value)}
-                  className="input-field text-sm w-full"
-                  aria-label="Thêm chỗ"
-                >
-                  <option value="">+ Thêm chỗ trống ({addable.length})</option>
-                  {/* Same kind of space first (another desk for a desk), other kinds apart, smallest first. */}
-                  {[
-                    { label: 'Cùng loại chỗ', items: addable.filter((c) => c.workspace_type_id === ws.workspace_type_id) },
-                    { label: 'Loại khác', items: addable.filter((c) => c.workspace_type_id !== ws.workspace_type_id) },
-                  ].filter((g) => g.items.length > 0).map((g) => (
-                    <optgroup key={g.label} label={g.label}>
-                      {[...g.items].sort((a, b) => a.capacity - b.capacity).map((c) => {
-                        const p = getSeatPrice?.(c.workspace_type_id, durationUnit);
-                        return (
-                          <option key={c.id} value={c.id}>
-                            {c.name}{floorNameOf && c.floor_id !== ws.floor_id ? ` (${floorNameOf(c.floor_id)})` : ''} · {c.capacity} chỗ{p ? ` · ${formatVND(p.price)}/${durationUnitLabel[p.duration_unit]?.toLowerCase()}` : ''}
-                          </option>
-                        );
-                      })}
-                    </optgroup>
-                  ))}
-                </select>
-              );
-            })()}
+            <div className="mt-3">
+              {(() => {
+                const addable = candidateSeats.filter(
+                  (c) =>
+                    c.id !== ws.id &&
+                    !extraSeatIds.includes(c.id) &&
+                    (checkSeatAvailability ? checkSeatAvailability(c.id, selectedHour, endHour, endDate, durationUnit) : 'available') === 'available' &&
+                    !!getSeatPrice?.(c.workspace_type_id, durationUnit),
+                );
+                if (seatCount >= maxSeats) {
+                  return <p className="text-[11px] text-[var(--text-tertiary)]">Đã đạt tối đa {maxSeats} chỗ cho một lần đặt.</p>;
+                }
+                if (addable.length === 0) {
+                  return <p className="text-[11px] text-[var(--text-tertiary)] italic">Không còn chỗ trống nào khác cho khung giờ đã chọn.</p>;
+                }
+                return (
+                  <select
+                    value=""
+                    onChange={(e) => e.target.value && onToggleExtraSeat(e.target.value)}
+                    className="input-field text-sm w-full"
+                    aria-label="Thêm chỗ"
+                  >
+                    <option value="">+ Thêm chỗ trống ({addable.length})</option>
+                    {/* Same kind of space first (another desk for a desk), other kinds apart, smallest first. */}
+                    {[
+                      { label: 'Cùng loại chỗ', items: addable.filter((c) => c.workspace_type_id === ws.workspace_type_id) },
+                      { label: 'Loại khác', items: addable.filter((c) => c.workspace_type_id !== ws.workspace_type_id) },
+                    ].filter((g) => g.items.length > 0).map((g) => (
+                      <optgroup key={g.label} label={g.label}>
+                        {[...g.items].sort((a, b) => a.capacity - b.capacity).map((c) => {
+                          const p = getSeatPrice?.(c.workspace_type_id, durationUnit);
+                          return (
+                            <option key={c.id} value={c.id}>
+                              {c.name}{floorNameOf && c.floor_id !== ws.floor_id ? ` (${floorNameOf(c.floor_id)})` : ''} · {c.capacity} chỗ{p ? ` · ${formatVND(p.price)}/${durationUnitLabel[p.duration_unit]?.toLowerCase()}` : ''}
+                            </option>
+                          );
+                        })}
+                      </optgroup>
+                    ))}
+                  </select>
+                );
+              })()}
+            </div>
           </div>
         )}
 
-        {/* Add-on services */}
-        <div className="rounded-2xl bg-[var(--bg-surface-hover)] p-3 border border-border">
-          <p className="text-xs text-[var(--text-tertiary)] mb-2">Dịch vụ thêm</p>
-          <div className="space-y-2">
-            {allAddons.length === 0 ? (
-              <p className="text-xs text-[var(--text-tertiary)] italic">
-                Chi nhánh chưa có dịch vụ thêm.
-              </p>
-            ) : (
-              allAddons
-                .filter((s: any) => s.isActive !== false)
-                .map((s: any) => {
-                  const stock = serviceStock[s.id];
-                  const soldOut = !!stock && stock.remaining <= 0;
-                  return (
-                  <div key={s.id} className={`flex items-center gap-3 text-sm ${soldOut ? 'opacity-60' : ''}`}>
-                    <label
-                      htmlFor={`addon-${s.id}-${selectedWs}`}
-                      className="flex items-center gap-3 cursor-pointer min-w-0 flex-1"
-                    >
+        {/* Add-on services: names wrap instead of being cut, price sits under the name */}
+        <div className={card}>
+          <p className="text-sm font-semibold mb-2">Dịch vụ thêm</p>
+          {addonList.length === 0 ? (
+            <p className="text-xs text-[var(--text-tertiary)] italic">Chi nhánh chưa có dịch vụ thêm.</p>
+          ) : (
+            <ul className="space-y-1.5">
+              {visibleAddons.map((s: any) => {
+                const stock = serviceStock[s.id];
+                const soldOut = !!stock && stock.remaining <= 0;
+                const picked = !!services[s.id];
+                return (
+                  <li
+                    key={s.id}
+                    className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 transition ${
+                      picked ? 'border-[var(--brand-primary)] bg-[var(--brand-primary-light)]' : 'border-transparent bg-card'
+                    } ${soldOut ? 'opacity-60' : ''}`}
+                  >
+                    <label htmlFor={`addon-${s.id}-${selectedWs}`} className="flex items-center gap-3 cursor-pointer min-w-0 flex-1">
                       <input
                         id={`addon-${s.id}-${selectedWs}`}
                         type="checkbox"
-                        checked={!!services[s.id]}
+                        checked={picked}
                         disabled={soldOut}
                         onChange={e => handleServiceChange(s.id, e.target.checked)}
-                        className="rounded accent-[var(--brand-primary)]"
+                        className="h-4 w-4 shrink-0 rounded accent-[var(--brand-primary)]"
                       />
-                      <span className="flex items-center gap-1.5 min-w-0">
-                        <ServiceIcon type={s.serviceType} name={s.name} className="h-4 w-4 shrink-0 text-muted-foreground" />
-                        <span className="truncate">{s.name}</span>
-                        {stock && (
-                          <span
-                            className={`shrink-0 rounded-full px-1.5 text-[10px] font-semibold ${
-                              soldOut ? 'bg-[var(--state-danger-bg)] text-[var(--state-danger)]' : 'bg-[var(--border-subtle)] text-[var(--text-secondary)]'
-                            }`}
-                            title={`Cơ sở có ${stock.maxConcurrent}, đang được đặt ${stock.inUse} trong khung giờ này`}
-                          >
-                            {soldOut ? 'Hết' : `Còn ${stock.remaining}/${stock.maxConcurrent}`}
-                          </span>
-                        )}
+                      <ServiceIcon type={s.serviceType} name={s.name} className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <span className="min-w-0">
+                        <span className="block text-sm font-medium leading-snug break-words">{s.name}</span>
+                        <span className="block text-xs text-[var(--text-tertiary)]">
+                          {formatVND(s.price)}{s.unit ? `/${s.unit}` : ''}
+                          {stock && (
+                            <span className={`ml-2 font-semibold ${soldOut ? 'text-[var(--state-danger)]' : ''}`} title={`Cơ sở có ${stock.maxConcurrent}, đang được đặt ${stock.inUse} trong khung giờ này`}>
+                              {soldOut ? 'Hết' : `Còn ${stock.remaining}/${stock.maxConcurrent}`}
+                            </span>
+                          )}
+                        </span>
                       </span>
                     </label>
-                    {services[s.id] ? (
-                      <QuantityStepper
-                        value={services[s.id]}
-                        onChange={q => handleQuantityChange(s.id, q)}
-                        max={stock ? Math.max(1, stock.remaining) : undefined}
-                        label={`Số lượng ${s.name}`}
-                      />
-                    ) : null}
-                    <span className="ml-auto shrink-0 text-xs text-[var(--text-tertiary)] text-right">
-                      {services[s.id]
-                        ? formatVND(s.price * services[s.id])
-                        : `+${formatVND(s.price)}${s.unit ? `/${s.unit}` : ''}`}
-                    </span>
-                  </div>
-                  );
-                })
-            )}
-          </div>
+                    {picked && (
+                      <div className="flex flex-col items-end gap-1 shrink-0">
+                        <QuantityStepper
+                          value={services[s.id]}
+                          onChange={q => handleQuantityChange(s.id, q)}
+                          max={stock ? Math.max(1, stock.remaining) : undefined}
+                          label={`Số lượng ${s.name}`}
+                        />
+                        <span className="text-xs font-semibold text-[var(--brand-primary)]">{formatVND(s.price * services[s.id])}</span>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          {addonList.length > ADDON_PREVIEW && (
+            <button
+              type="button"
+              onClick={() => setShowAllAddons(v => !v)}
+              className="mt-2 w-full flex items-center justify-center gap-1 py-2 text-xs font-semibold text-[var(--brand-primary)] cursor-pointer"
+            >
+              {showAllAddons ? <>Thu gọn <FiChevronUp className="h-3.5 w-3.5" /></> : <>Xem thêm {addonList.length - ADDON_PREVIEW} dịch vụ <FiChevronDown className="h-3.5 w-3.5" /></>}
+            </button>
+          )}
         </div>
-
       </div>
 
-      {/* Total + book button stay pinned to the bottom of the panel, so on a phone the customer
-          does not have to scroll past the photos and every add-on to find them. */}
-      <div className="sticky bottom-0 z-10 -mx-5 -mb-5 mt-4 px-5 pt-3 pb-5 bg-inherit border-t border-[var(--border-subtle)]">
-        <div className="flex justify-between items-center">
-          <span className="text-sm font-semibold">
-            Tổng cộng{seatCount > 1 && <span className="font-normal text-[var(--text-tertiary)]"> · {seatCount} chỗ</span>}
-          </span>
-          <span className="text-lg font-medium text-[var(--brand-primary)]">
-            {formatVND(total)}
-          </span>
-        </div>
-
-      {/* Book button */}
-      {currentAvail === 'available' && price && (
-        <>
-          {blockedExtras.length > 0 && (
-            <p className="mt-3 text-xs text-[var(--state-danger)]">
-              Bỏ {blockedExtras.length === 1 ? 'chỗ' : `${blockedExtras.length} chỗ`} không đặt được ở trên để tiếp tục.
+      {/* Total and the action share one compact row pinned to the bottom, so a phone never has to
+          scroll past the photos and every add-on to find them (and no banner eats the screen). */}
+      <div className="sticky bottom-0 z-10 -mx-5 -mb-5 mt-4 px-5 pt-3 pb-4 bg-inherit border-t border-[var(--border-subtle)]">
+        {blockedExtras.length > 0 && isFree && (
+          <p className="mb-2 text-xs text-[var(--state-danger)]">
+            Bỏ {blockedExtras.length === 1 ? 'chỗ' : `${blockedExtras.length} chỗ`} không đặt được ở trên để tiếp tục.
+          </p>
+        )}
+        <div className="flex items-center gap-3">
+          <div className="min-w-0">
+            <p className="text-xs text-[var(--text-secondary)]">
+              Tổng cộng{seatCount > 1 && <> · {seatCount} chỗ</>}
             </p>
-          )}
+            <p className="text-xl font-semibold leading-tight text-[var(--brand-primary)]">{formatVND(total)}</p>
+          </div>
           <button
-            className="btn btn-primary w-full mt-3 cursor-pointer disabled:opacity-50"
-            disabled={blockedExtras.length > 0}
+            className="btn btn-primary flex-1 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={!isFree || !price || blockedExtras.length > 0}
             onClick={() => onBookNow(endHour, services, subtotal, addonTotal, endDate, durationUnit, extraSeats.map((e) => e.seat.id))}
           >
-            {seatCount > 1 ? <FiPlus className="h-4 w-4" /> : <FiCheck className="h-4 w-4" />}
-            {seatCount > 1 ? `Đặt ${seatCount} chỗ cùng lúc` : 'Đặt chỗ ngay'}
+            {isFree && price ? (
+              <>
+                {seatCount > 1 ? <FiPlus className="h-4 w-4" /> : <FiCheck className="h-4 w-4" />}
+                {seatCount > 1 ? `Đặt ${seatCount} chỗ` : 'Đặt chỗ ngay'}
+              </>
+            ) : isBooked ? 'Khung giờ đã kín' : !price ? 'Chưa có giá' : 'Không thể đặt'}
           </button>
-        </>
-      )}
-      {currentAvail?.startsWith('booked') && (
-        <div className="mt-3 rounded-2xl bg-[var(--state-danger-bg)] border border-[var(--state-danger-border)] p-3 text-center">
-          <p className="text-sm font-semibold text-[var(--state-danger)]">
-            Đã được đặt{' '}
-            {currentAvail.split('|').length === 3
-              ? `từ ${currentAvail.split('|')[1]}h đến ${currentAvail.split('|')[2]}h`
-              : ''}
-          </p>
-          <p className="text-xs text-[var(--text-secondary)] mt-1">
-            Thử chọn khung giờ hoặc ngày khác
-          </p>
         </div>
-      )}
       </div>
     </div>
   );
