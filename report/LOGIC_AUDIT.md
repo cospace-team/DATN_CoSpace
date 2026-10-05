@@ -58,7 +58,7 @@ Tiếp theo top 5 là **PAY-03**: khách chọn "Tiền mặt tại quầy" thì
 | CHK-02 | ✅ Đã sửa (tài liệu) | Cửa sổ check-in kết thúc ở end_at; sửa §7.9 và glossary (Q14). |
 | — | ✅ Mới thêm | API nhân viên hủy thay khách (§7.49): bắt buộc lý do, có ghi audit, tùy chọn miễn phạt (Q13). |
 | CAN-02 | ⏳ Chưa | Lọc theo `workspace_type_id` và `effective_from/to` — chưa làm. |
-| CAN-03 | ⏳ Chưa | Mass assignment khi tạo policy — chưa làm. |
+| CAN-03 | ✅ Đã sửa (05/10/2026) | `createPolicy` gọi `policy.setId(null)` trước `save()`, nên POST luôn tạo bản ghi mới, không còn merge đè lên policy có sẵn theo `id` client gửi. Xác nhận lại bằng cách tấn công policy toàn cục qua API thật trên dữ liệu demo (ghi đè thành công trước khi sửa, không còn ghi đè được sau khi sửa) — không chạy trên database thật. Test: `CancellationPolicyControllerTest`. |
 | PAY-01 | ⏳ Chưa | Khóa MoMo sandbox — chờ quyết định về cấu hình môi trường. |
 | X-02 | ✅ Đã sửa | Flyway 9.16.3: `V1__baseline.sql` (schema đang chạy) + `V2__constraints.sql` (ràng buộc còn thiếu, dạng `NOT VALID`), bật `baseline-on-migrate`; migration cũ chuyển sang `database/archive/migrations-legacy/` (Q15). **Chưa chạy thử với PostgreSQL thật.** |
 | X-03 | ⚠️ Một nửa | Đã bỏ giá trị mặc định: `password: ${SUPABASE_DB_PASSWORD}` không còn fallback, thiếu biến thì app dừng khởi động. **Chủ dự án vẫn phải đổi mật khẩu trên Supabase**: repo `cospace-team/DATN_CoSpace` đang public và mật khẩu cũ nằm trong lịch sử git, xóa khỏi file không thu hồi được. |
