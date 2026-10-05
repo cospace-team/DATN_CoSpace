@@ -1,0 +1,127 @@
+name: CD - Deploy to Production
+
+on:
+  workflow_run:
+    workflows: ["CI - Test & Build"]
+    branches: [ main ]
+    types: [ completed ]
+  workflow_dispatch:
+    inputs:
+      target_env:
+        description: 'Target Environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+      skip_health_check:
+        description: 'Skip Post-Deploy Health Check'
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: cd-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to Cloud (Render & Vercel)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Run only if triggered manually OR if triggered by workflow_run and CI succeeded
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ─── Deploy Backend to Render ──────────────────────────────────────────
+      - name: Deploy Backend to Render Cloud
+        id: deploy_be
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo "⚠️ Secret RENDER_DEPLOY_HOOK_URL is not set in GitHub Secrets."
+            echo "- **Backend (Render)**: ⚠️ Skipped — \`RENDER_DEPLOY_HOOK_URL\` not configured in repository secrets." >> $GITHUB_STEP_SUMMARY
+            echo "be_triggered=false" >> $GITHUB_OUTPUT
+          else
+            echo "Calling Render Deploy Hook..."
+            RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -X POST "$RENDER_DEPLOY_HOOK_URL")
+            HTTP_STATUS=$(echo "$RESPONSE" | grep "HTTP_STATUS" | cut -d: -f2)
+            if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
+              echo "✅ Successfully triggered Render deploy hook (HTTP $HTTP_STATUS)."
+              echo "- **Backend (Render)**: ✅ Deploy triggered successfully (HTTP $HTTP_STATUS)" >> $GITHUB_STEP_SUMMARY
+              echo "be_triggered=true" >> $GITHUB_OUTPUT
+            else
+              echo "❌ Failed to trigger Render deploy hook. Response: $RESPONSE"
+              echo "- **Backend (Render)**: ❌ Trigger failed (HTTP $HTTP_STATUS)" >> $GITHUB_STEP_SUMMARY
+              exit 1
+            fi
+          fi
+
+      # ─── Deploy Frontend to Vercel ─────────────────────────────────────────
+      - name: Deploy Frontend to Vercel Edge
+        id: deploy_fe
+        env:
+          VERCEL_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$VERCEL_DEPLOY_HOOK_URL" ]; then
+            echo "ℹ️ VERCEL_DEPLOY_HOOK_URL is not set."
+            echo "- **Frontend (Vercel)**: ℹ️ Automatic Git integration active (or configure \`VERCEL_DEPLOY_HOOK_URL\` for hook trigger)." >> $GITHUB_STEP_SUMMARY
+            echo "fe_triggered=false" >> $GITHUB_OUTPUT
+          else
+            echo "Calling Vercel Deploy Hook..."
+            RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -X POST "$VERCEL_DEPLOY_HOOK_URL")
+            HTTP_STATUS=$(echo "$RESPONSE" | grep "HTTP_STATUS" | cut -d: -f2)
+            if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
+              echo "✅ Successfully triggered Vercel deploy hook (HTTP $HTTP_STATUS)."
+              echo "- **Frontend (Vercel)**: ✅ Deploy triggered successfully (HTTP $HTTP_STATUS)" >> $GITHUB_STEP_SUMMARY
+              echo "fe_triggered=true" >> $GITHUB_OUTPUT
+            else
+              echo "❌ Failed to trigger Vercel deploy hook. Response: $RESPONSE"
+              echo "- **Frontend (Vercel)**: ❌ Trigger failed (HTTP $HTTP_STATUS)" >> $GITHUB_STEP_SUMMARY
+              exit 1
+            fi
+          fi
+
+      # ─── Production Health Check ───────────────────────────────────────────
+      - name: Verify Backend API Health
+        if: ${{ inputs.skip_health_check != true }}
+        env:
+          APP_BACKEND_URL: ${{ secrets.APP_BACKEND_URL || 'https://datn-cospace.onrender.com' }}
+        run: |
+          HEALTH_URL="${APP_BACKEND_URL}/api/health"
+          echo "Health check endpoint: $HEALTH_URL"
+          echo "Waiting 30 seconds for initial container boot/rollout..."
+          sleep 30
+
+          MAX_RETRIES=10
+          RETRY_COUNT=0
+          SUCCESS=0
+
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            RETRY_COUNT=$((RETRY_COUNT+1))
+            echo "Polling Health Check (Attempt $RETRY_COUNT of $MAX_RETRIES)..."
+
+            HTTP_CODE=$(curl -s -o /tmp/health_response.json -w "%{http_code}" "$HEALTH_URL" || true)
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "✅ Health check returned 200 OK!"
+              cat /tmp/health_response.json
+              echo ""
+              echo "- **Health Check**: ✅ Verified 200 OK (\`$HEALTH_URL\`)" >> $GITHUB_STEP_SUMMARY
+              SUCCESS=1
+              break
+            else
+              echo "Received HTTP $HTTP_CODE (waiting for service ready). Retrying in 15 seconds..."
+              sleep 15
+            fi
+          done
+
+          if [ $SUCCESS -ne 1 ]; then
+            echo "⚠️ Health check polling reached maximum attempts ($MAX_RETRIES)."
+            echo "- **Health Check**: ⚠️ Polling timed out (Render free instances may require longer to wake up)" >> $GITHUB_STEP_SUMMARY
+          fi

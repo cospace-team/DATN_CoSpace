@@ -1,4 +1,11 @@
 {
+  "name": "cospace-root",
+  "private": true,
+  "scripts": {
+    "test:load": "python tests/load/concurrent_simulation.py --url https://datn-cospace.onrender.com --users 30 --requests 100",
+    "test:load:local": "python tests/load/concurrent_simulation.py --url http://localhost:8080 --users 20 --requests 100",
+    "test:k6": "k6 run tests/load/k6-concurrency-simulation.js"
+  },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.111.0",

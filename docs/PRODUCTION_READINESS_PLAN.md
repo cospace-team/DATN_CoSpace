@@ -138,11 +138,11 @@ Chạy trên môi trường **staging** giống production (build prod, HTTPS, D
 
 ## Giai đoạn 7 — Hạ tầng deploy
 
-- [ ] **BE**: viết `BE/Dockerfile` multi-stage (Maven build → `eclipse-temurin:17-jre`), chạy user non-root, `-XX:MaxRAMPercentage=75`. Host gợi ý: Render / Railway / Fly.io / VPS.
-- [ ] **FE**: deploy static (Vercel / Netlify / Cloudflare Pages) với **SPA rewrite** mọi route về `index.html`; set `VITE_*` lúc build.
+- [x] **BE**: viết `BE/Dockerfile` multi-stage (Maven build → `eclipse-temurin:21-jre-alpine`), chạy user non-root, `-XX:MaxRAMPercentage=70`. Triển khai Render Web Service.
+- [x] **FE**: deploy static (Vercel) với **SPA rewrite** mọi route về `index.html` trong `FE/vercel.json`; tối ưu chunking và set `VITE_*` lúc build.
 - [ ] Domain + HTTPS cho cả FE và BE; cập nhật CORS, redirect URL thanh toán, Site URL / Redirect URLs trong Supabase Auth.
 - [ ] Đăng ký webhook URL production với PayOS/MoMo; đổi từ sandbox sang credential thật (nếu thanh toán thật).
-- [ ] CI (GitHub Actions): `mvn verify` + `npm ci && npm run build` trên mỗi PR vào `main`.
+- [x] CI/CD (GitHub Actions): `.github/workflows/ci.yml` (`./mvnw clean test` + `npm ci && npm run build` + Docker validation) & `.github/workflows/cd.yml` (Render & Vercel deploy hooks + health check).
 - [ ] Giám sát: log tập trung của nền tảng host, uptime check `/api/health` (UptimeRobot), cảnh báo lỗi 5xx.
 - [ ] Load test nhẹ (k6): 50–100 user đồng thời trên API tìm chỗ + tạo booking; theo dõi pool kết nối Supabase.
 

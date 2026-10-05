@@ -191,3 +191,22 @@ Sử dụng ký hiệu: `[ ]` Chưa làm | `[/]` Đang làm | `[x]` Đã xong.
 - [x] **Hủy đơn chưa sử dụng thay khách** (API có sẵn) nay có giao diện: "Lỗi do cơ sở – hoàn 100%" hoặc "Theo chính sách hủy". Xem trước số tiền hoàn qua `GET /api/staff/bookings/{id}/refund-preview`.
 - [x] **Trang "Đơn đặt chỗ"** cho Super Admin (chọn chi nhánh) và Branch Admin: xem đơn theo ngày, lọc trạng thái, tìm theo mã/khách/SĐT; nút hủy/kết thúc sớm ngay trên từng đơn (`GET /api/staff/bookings?branchId&from&to`). Màn Check-in của nhân viên cũng có nút này.
 - [x] **Kiểm thử**: 356/356 unit test BE pass (thêm 5 test kết thúc sớm); chạy thật trên Postgres 16: kết thúc sớm qua giao diện admin (đơn → Hoàn thành, khách được check-out, khoản hoàn vào hàng đợi, có nhật ký và thông báo), hủy hoàn 100%, hoàn số tiền tự nhập, chặn kết thúc sớm đơn đã hủy.
+
+## 🚀 20. Tự động hóa CI/CD (GitHub Actions)
+- [x] **Luồng Kiểm thử & Build tự động (Continuous Integration - `.github/workflows/ci.yml`)**:
+  - **Backend**: Cài đặt JDK 17 (Eclipse Temurin), cache Maven, chạy toàn bộ 427+ bài kiểm thử đơn vị & phân quyền (`./mvnw clean test`), cấp quyền thực thi `100755` cho `mvnw`.
+  - **Docker Build Validation**: Xác thực khả năng đóng gói container production đa tầng (`BE/Dockerfile`) với Docker Buildx và GitHub Actions cache.
+  - **Frontend**: Cài đặt Node.js 20.x, cài đặt sạch `npm ci`, kiểm tra nghiêm ngặt kiểu dữ liệu TypeScript kết hợp build gói tĩnh Vite (`tsc && vite build`).
+  - **Gatekeeper Status Check**: Job `ci-status` tổng hợp kết quả của cả hai nền tảng, làm chốt chặn bảo vệ nhánh `main` khi tạo Pull Request.
+- [x] **Luồng Triển khai Đám mây tự động (Continuous Deployment - `.github/workflows/cd.yml`)**:
+  - Kích hoạt tự động khi CI trên `main` thành công (qua `workflow_run`) hoặc chạy thủ công có tham số (`workflow_dispatch`).
+  - **Backend**: Gọi Deploy Hook của Render Cloud để cập nhật Web Service containerized zero-downtime.
+  - **Frontend**: Kích hoạt Vercel Deploy Hook cập nhật bản build lên Vercel Edge CDN.
+  - **Smoke Test & Health Check**: Thăm dò tự động endpoint `/api/health` sau khi kích hoạt deploy, ghi nhận kết quả chi tiết vào GitHub Actions Step Summary.
+- [x] **Giả lập Người dùng Đồng thời & Kiểm thử Tải (Concurrency Load Testing - `.github/workflows/concurrency-test.yml`)**:
+  - Tích hợp **Grafana k6** giả lập từ 10 đến 100 người dùng ảo đồng thời (VUs), đo đạc SLA (P95 < 1000ms, Error rate < 1%), xuất báo cáo Step Summary trực quan và lưu trữ artifacts.
+  - Cung cấp script runner Python độc lập (`tests/load/concurrent_simulation.py`) và npm script `npm run test:load` phục vụ đo đạc nhanh cục bộ hoặc kiểm thử trực tiếp máy chủ đám mây.
+- [x] **Tài liệu & Cấu hình Secrets (`docs/DEPLOYMENT.md`)**:
+  - Bổ sung mục 5 hướng dẫn chi tiết quy trình CI/CD, cách thiết lập các secrets (`RENDER_DEPLOY_HOOK_URL`, `VERCEL_DEPLOY_HOOK_URL`, `APP_BACKEND_URL`) trên GitHub Repository Settings, kèm hướng dẫn chạy giả lập tải đồng thời.
+
+

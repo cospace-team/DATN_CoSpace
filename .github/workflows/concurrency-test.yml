@@ -1,0 +1,88 @@
+name: Concurrency & Load Testing (k6)
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: 'Target API Base URL'
+        required: true
+        default: 'https://datn-cospace.onrender.com'
+        type: string
+      concurrency_vus:
+        description: 'Number of Concurrent Virtual Users (VUs)'
+        required: true
+        default: '50'
+        type: choice
+        options:
+          - '10'
+          - '25'
+          - '50'
+          - '100'
+      duration:
+        description: 'Test Duration'
+        required: true
+        default: '1m'
+        type: choice
+        options:
+          - '30s'
+          - '1m'
+          - '2m'
+          - '3m'
+      test_mode:
+        description: 'Simulation Profile'
+        required: true
+        default: 'read-heavy'
+        type: choice
+        options:
+          - 'read-heavy'
+          - 'full-journey'
+
+  # Optional weekly scheduled run to monitor cloud performance degradation
+  schedule:
+    - cron: '0 2 * * 1'
+
+concurrency:
+  group: load-test-${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  k6-load-test:
+    name: Simulate Concurrent Users
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Grafana k6
+        uses: grafana/setup-k6-action@v1
+
+      - name: Run k6 Concurrency Simulation
+        env:
+          BASE_URL: ${{ inputs.target_url || 'https://datn-cospace.onrender.com' }}
+          VUS: ${{ inputs.concurrency_vus || '50' }}
+          DURATION: ${{ inputs.duration || '1m' }}
+          TEST_MODE: ${{ inputs.test_mode || 'read-heavy' }}
+        run: |
+          echo "Starting k6 simulation against $BASE_URL with $VUS concurrent users for $DURATION..."
+          k6 run tests/load/k6-concurrency-simulation.js
+
+      - name: Publish Load Test Results to GitHub Step Summary
+        if: always()
+        run: |
+          if [ -f tests/load/summary.md ]; then
+            cat tests/load/summary.md >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### ⚠️ No k6 summary report generated" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload Test Report Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-concurrency-report-${{ github.run_number }}
+          path: |
+            tests/load/summary.md
+            tests/load/summary.json
+          retention-days: 14

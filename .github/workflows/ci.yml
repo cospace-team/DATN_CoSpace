@@ -1,0 +1,94 @@
+name: CI - Test & Build
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  # ─── BACKEND CI: Java 17, Spring Boot, JUnit 5 & Docker Build ──────────────
+  backend-ci:
+    name: Backend (Java 17 / Spring Boot)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17 (Eclipse Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'maven'
+
+      - name: Ensure Maven wrapper is executable
+        run: chmod +x BE/mvnw
+
+      - name: Run Backend Unit & Security Tests
+        working-directory: BE
+        run: ./mvnw clean test --no-transfer-progress
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Validate Backend Docker Build
+        uses: docker/build-push-action@v5
+        with:
+          context: ./BE
+          file: ./BE/Dockerfile
+          push: false
+          tags: cospace-api:ci-test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ─── FRONTEND CI: Node 20, TypeScript Typecheck & Vite Build ───────────────
+  frontend-ci:
+    name: Frontend (React 18 / Vite / TypeScript)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: FE/package-lock.json
+
+      - name: Install dependencies
+        working-directory: FE
+        run: npm ci
+
+      - name: Run Typecheck and Vite Production Build
+        working-directory: FE
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://ozaiknomajljfqiepels.supabase.co' }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'ci-anon-key-placeholder' }}
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL || 'https://datn-cospace.onrender.com' }}
+        run: npm run build
+
+  # ─── CI GATEWAY: Aggregated Status Check for Branch Protection ────────────
+  ci-status:
+    name: CI Status Gate
+    needs: [backend-ci, frontend-ci]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Verify All CI Jobs Succeeded
+        run: |
+          if [ "${{ needs.backend-ci.result }}" != "success" ] || [ "${{ needs.frontend-ci.result }}" != "success" ]; then
+            echo "::error::One or more CI checks failed. Backend: ${{ needs.backend-ci.result }}, Frontend: ${{ needs.frontend-ci.result }}"
+            exit 1
+          fi
+          echo "All Backend and Frontend CI checks completed successfully!"

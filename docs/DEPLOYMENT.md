@@ -55,3 +55,61 @@ PAYOS_CLIENT_ID=x PAYOS_API_KEY=x PAYOS_CHECKSUM_KEY=x PAYOS_RETURN_URL=http://l
 java -jar target/cospace-api-1.0.0.jar
 curl localhost:18080/api/health
 ```
+
+## 5. Quy trình CI/CD (GitHub Actions)
+
+Dự án thiết lập 2 luồng tự động hóa chuyên biệt tại `.github/workflows/`:
+
+### A. Continuous Integration (`ci.yml`)
+- **Trigger**: Mọi `pull_request` và `push` vào nhánh `main`, `develop`.
+- **Backend CI (`backend-ci`)**:
+  - Chạy trên `ubuntu-latest` với JDK 17 (Eclipse Temurin) + cache Maven.
+  - Chạy toàn bộ 427+ bộ kiểm thử đơn vị & kiểm tra bảo mật (`./mvnw clean test`).
+  - Kiểm tra tính toàn vẹn của container đóng gói bằng Docker Buildx (`BE/Dockerfile`).
+- **Frontend CI (`frontend-ci`)**:
+  - Chạy trên Node.js 20.x + cache npm (`FE/package-lock.json`).
+  - Cài đặt sạch (`npm ci`) và kiểm tra nghiêm ngặt kiểu dữ liệu TypeScript kết hợp build gói tĩnh Vite (`tsc && vite build`).
+- **CI Status Gate (`ci-status`)**:
+  - Tổng hợp trạng thái của 2 job; đóng vai trò là Required Status Check bắt buộc pass trước khi merge PR.
+
+### B. Continuous Deployment (`cd.yml`)
+- **Trigger**: Tự động kích hoạt khi workflow `CI - Test & Build` hoàn thành thành công trên nhánh `main`, hoặc chạy thủ công bằng `workflow_dispatch`.
+- **Triển khai Backend (Render)**: Gửi request POST kích hoạt Deploy Hook URL của Render Web Service (Zero-downtime Rolling Update).
+- **Triển khai Frontend (Vercel)**: Kích hoạt Deploy Hook URL của Vercel (hoặc tự động thông qua GitHub Vercel App).
+- **Health Check & Verification**: Thăm dò tự động endpoint `/api/health` sau khi deploy (tối đa 10 lần với chu kỳ 15s) và xuất báo cáo trạng thái vào `GitHub Step Summary`.
+
+### C. Cấu hình GitHub Secrets (Khoá triển khai)
+Vào **GitHub Repository → Settings → Secrets and variables → Actions** và thêm các biến:
+
+| Secret Name | Bắt buộc | Mô tả & Cách lấy |
+|---|---|---|
+| `RENDER_DEPLOY_HOOK_URL` | Khuyên dùng cho CD | Render Dashboard → Chọn Web Service `cospace-api` → **Settings** → **Deploy Hook** → Sao chép URL (`https://api.render.com/deploy/srv-xxx?key=yyy`). |
+| `VERCEL_DEPLOY_HOOK_URL` | Tuỳ chọn | Vercel Dashboard → Chọn Project → **Settings** → **Git** → **Deploy Hooks** → Tạo hook cho nhánh `main`. *(Bỏ qua nếu đã liên kết GitHub App trực tiếp)*. |
+| `APP_BACKEND_URL` | Tuỳ chọn | Mặc định: `https://datn-cospace.onrender.com` dùng để thăm dò Health Check. |
+
+### D. Kiểm thử tải & Giả lập người dùng đồng thời (Concurrency Testing)
+
+Hệ thống cung cấp 2 giải pháp giả lập người dùng đồng thời:
+
+1. **Trên GitHub Actions (`.github/workflows/concurrency-test.yml`)**:
+   - Dùng **Grafana k6** để tạo sóng tải (Ramp-up → Peak → Ramp-down) với 10 đến 100 người dùng ảo đồng thời (VUs).
+   - Kích hoạt chủ động qua **Actions → Concurrency & Load Testing (k6) → Run workflow**:
+     - `target_url`: Mặc định `https://datn-cospace.onrender.com`.
+     - `concurrency_vus`: Chọn `10`, `25`, `50`, hoặc `100` VUs.
+     - `duration`: `30s`, `1m`, `2m`, hoặc `3m`.
+     - `test_mode`: `read-heavy` (duyệt chi nhánh, bảng giá, sức khỏe) hoặc `full-journey` (kèm đăng nhập xác thực).
+   - Tự động xuất biểu đồ và bảng phân phối độ trễ (Avg, P50, P90, P95, P99, Max, Throughput req/s, Error rate) vào **GitHub Step Summary**.
+
+2. **Chạy cục bộ / CLI (Zero-dependency Python Runner)**:
+   ```bash
+   # Chạy test tải 30 người dùng đồng thời, 100 requests tới Render:
+   npm run test:load
+
+   # Hoặc gọi trực tiếp Python:
+   python tests/load/concurrent_simulation.py --url https://datn-cospace.onrender.com --users 50 --requests 200
+
+   # Kiểm thử API cục bộ (Localhost:8080):
+   python tests/load/concurrent_simulation.py --url http://localhost:8080 --users 30 --requests 100
+   ```
+
+
