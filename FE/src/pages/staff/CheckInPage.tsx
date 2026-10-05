@@ -3,11 +3,11 @@ import {
   FiHash, FiCheckCircle, FiAlertCircle, FiLogOut, FiClock, 
   FiInbox, FiSearch, FiUser, FiMapPin, FiCalendar, FiDollarSign, 
   FiCheck, FiAlertTriangle, FiRefreshCw, FiX, FiTag, FiPhone, FiInfo,
-  FiCamera, FiUsers, FiArrowRight, FiCoffee
+  FiCamera, FiUsers, FiArrowRight, FiCoffee, FiRepeat, FiFileText
 } from 'react-icons/fi';
 import { formatTime, formatDate, bookingStatusLabel, bookingStatusColor } from '../../utils/formatters';
 import { EmptyState } from '../../components/ui/EmptyState';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { staffApi, BookingWithDetailsDto, BranchTodayBookingDto } from '../../api/staffApi';
 import { useAuth } from '../../context/AuthContext';
 import BookingTabPanel from '../../components/staff/BookingTabPanel';
@@ -18,6 +18,9 @@ import { TodayScheduleTab } from './checkin/TodayScheduleTab';
 import { ReputationBadge } from '../../components/reputation/ReputationBadge';
 import { CustomerReputationModal } from '../../components/reputation/CustomerReputationModal';
 import { StaffBookingActionModal } from '../../components/staff/StaffBookingActionModal';
+import { StaffMoveModal, type MoveTarget } from '../../components/staff/StaffMoveModal';
+import { StaffReasonModal } from '../../components/staff/StaffReasonModal';
+import { staffOpsApi, type StaffNoteDto } from '../../api/staffOpsApi';
 
 import { BookingPackageDisplay, getBookingPackageDisplay } from '../../utils/bookingPackage';
 
@@ -44,6 +47,7 @@ export type BookingWithMeta = BookingWithDetailsDto & {
 
 const CheckInPage: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const branchId = user?.branchId || '';
   const branchName = user?.branchName || '';
@@ -62,7 +66,13 @@ const CheckInPage: React.FC = () => {
   // Chế độ xem: Khách đang ngồi vs Lịch trình khách hôm nay
   const [activeView, setActiveView] = useState<'seated' | 'today_schedule'>('seated');
   const [branchBookingsToday, setBranchBookingsToday] = useState<BranchTodayBookingDto[]>([]);
-  const [scheduleTab, setScheduleTab] = useState<'all' | 'incoming' | 'seated' | 'completed'>('all');
+  const [scheduleTab, setScheduleTab] = useState<'all' | 'incoming' | 'seated' | 'completed' | 'no_show'>('all');
+  /** Booking being moved to another seat / time. */
+  const [moveTarget, setMoveTarget] = useState<MoveTarget | null>(null);
+  /** Booking being marked as no-show, or whose no-show is being undone. */
+  const [noShowTarget, setNoShowTarget] = useState<{ booking: BranchTodayBookingDto; undo: boolean } | null>(null);
+  /** Open notes about this branch's customers, by customer id. */
+  const [customerNotes, setCustomerNotes] = useState<Record<string, StaffNoteDto[]>>({});
   const [scheduleSearch, setScheduleSearch] = useState('');
 
   const [activeCheckins, setActiveCheckins] = useState<BookingWithDetailsDto[]>([]);
@@ -97,12 +107,17 @@ const CheckInPage: React.FC = () => {
     if (!branchId) return;
     try {
       setRefreshing(true);
-      const [checkins, todayBookings] = await Promise.all([
+      const [checkins, todayBookings, notes] = await Promise.all([
         staffApi.getActiveCheckins(branchId),
-        staffApi.getBranchTodayBookings(branchId)
+        staffApi.getBranchTodayBookings(branchId),
+        // The counter still works if the notes cannot be loaded.
+        staffOpsApi.listNotes({ kind: 'customer', status: 'open' }).catch(() => [] as StaffNoteDto[]),
       ]);
       setActiveCheckins(checkins);
       setBranchBookingsToday(todayBookings);
+      const byCustomer: Record<string, StaffNoteDto[]> = {};
+      notes.forEach((n) => { if (n.customerId) (byCustomer[n.customerId] ||= []).push(n); });
+      setCustomerNotes(byCustomer);
     } catch (error) {
       console.error('Failed to fetch checkin/schedule data', error);
     } finally {
@@ -135,6 +150,7 @@ const CheckInPage: React.FC = () => {
       incoming: branchBookingsToday.filter(b => b.status === 'CONFIRMED').length,
       seated: branchBookingsToday.filter(b => b.status === 'CHECKED_IN').length,
       completed: branchBookingsToday.filter(b => b.status === 'COMPLETED').length,
+      noShow: branchBookingsToday.filter(b => b.status === 'NO_SHOW').length,
     };
   }, [branchBookingsToday]);
 
@@ -146,6 +162,7 @@ const CheckInPage: React.FC = () => {
       if (scheduleTab === 'incoming' && b.status !== 'CONFIRMED') return false;
       if (scheduleTab === 'seated' && b.status !== 'CHECKED_IN') return false;
       if (scheduleTab === 'completed' && b.status !== 'COMPLETED') return false;
+      if (scheduleTab === 'no_show' && b.status !== 'NO_SHOW') return false;
 
       if (scheduleSearch.trim()) {
         const q = scheduleSearch.toLowerCase().trim();
@@ -587,6 +604,56 @@ const CheckInPage: React.FC = () => {
                     </p>
                   </div>
                 )}
+                {(customerNotes[searchedBooking.customer?.id] ?? []).length > 0 && (
+                  <div className="mt-3 rounded-xl border border-sky-500/30 bg-sky-500/5 p-3 text-xs space-y-1">
+                    <p className="font-semibold text-sky-700 dark:text-sky-300 flex items-center gap-1.5">
+                      <FiFileText className="h-3.5 w-3.5" /> Ghi chú về khách này
+                    </p>
+                    {(customerNotes[searchedBooking.customer?.id] ?? []).map((n) => (
+                      <p key={n.id} className="text-foreground">
+                        <span className="font-medium">{n.title}</span>
+                        {n.body ? <span className="text-muted-foreground"> — {n.body}</span> : null}
+                      </p>
+                    ))}
+                  </div>
+                )}
+                {searchedBooking.booking?.status === 'CONFIRMED' && (
+                  <button
+                    type="button"
+                    onClick={() => setMoveTarget({
+                      id: searchedBooking.booking.id,
+                      bookingCode: searchedBooking.booking.bookingCode,
+                      customerName: searchedBooking.customer?.fullName,
+                      workspaceId: searchedBooking.booking.workspaceId,
+                      workspaceName: searchedBooking.workspace?.name,
+                      startAt: searchedBooking.booking.startAt,
+                      endAt: searchedBooking.booking.endAt,
+                      status: searchedBooking.booking.status,
+                      isMultiDay: getBookingPackageDisplay(searchedBooking.booking).isMultiDay,
+                    })}
+                    className="mt-3 w-full text-sm font-medium text-primary hover:underline cursor-pointer"
+                  >
+                    Đổi chỗ / đổi giờ
+                  </button>
+                )}
+                {searchedBooking.customer?.id && (
+                  <button
+                    type="button"
+                    onClick={() => navigate('/staff/notes', {
+                      state: {
+                        kind: 'customer',
+                        customer: {
+                          id: searchedBooking.customer.id,
+                          name: searchedBooking.customer.fullName || 'Khách',
+                          phone: searchedBooking.customer.phone,
+                        },
+                      },
+                    })}
+                    className="mt-2 w-full text-sm font-medium text-muted-foreground hover:text-foreground hover:underline cursor-pointer"
+                  >
+                    Ghi chú về khách này
+                  </button>
+                )}
                 {['CONFIRMED', 'PENDING_PAYMENT', 'CHECKED_IN'].includes(searchedBooking.booking?.status) && (
                   <button
                     type="button"
@@ -840,6 +907,23 @@ const CheckInPage: React.FC = () => {
                                 {ci.meta.pkg?.isMultiDay ? 'Check-out hôm nay' : 'Ra về (Check-out)'}
                               </button>
                               <button
+                                onClick={() => setMoveTarget({
+                                  id: ci.booking.id,
+                                  bookingCode: ci.booking.bookingCode,
+                                  customerName: ci.customer?.fullName,
+                                  workspaceId: ci.booking.workspaceId,
+                                  workspaceName: ci.workspace?.name,
+                                  startAt: ci.booking.startAt,
+                                  endAt: ci.booking.endAt,
+                                  status: ci.booking.status,
+                                  isMultiDay: !!ci.meta.pkg?.isMultiDay,
+                                })}
+                                className="btn btn-sm btn-ghost text-xs justify-center"
+                                title="Chuyển khách sang chỗ khác (chỗ hỏng giữa chừng)"
+                              >
+                                <FiRepeat className="h-3.5 w-3.5 mr-1" /> Đổi chỗ
+                              </button>
+                              <button
                                 onClick={() => setActionTarget({
                                   id: ci.booking.id,
                                   customerName: ci.customer?.fullName,
@@ -869,6 +953,15 @@ const CheckInPage: React.FC = () => {
                 filteredTodayBookings={filteredTodayBookings}
                 branchBookingsTodayLength={branchBookingsToday.length}
                 onSelectBookingForCheckin={handleSelectBookingForCheckin}
+                customerNotes={customerNotes}
+                onMove={(b) => setMoveTarget({
+                  id: b.id, bookingCode: b.bookingCode, customerName: b.customerName,
+                  workspaceId: b.workspaceId, workspaceName: b.workspaceName,
+                  startAt: b.startAt, endAt: b.endAt, status: b.status,
+                  isMultiDay: getBookingPackageDisplay(b).isMultiDay,
+                })}
+                onNoShow={(b) => setNoShowTarget({ booking: b, undo: false })}
+                onUndoNoShow={(b) => setNoShowTarget({ booking: b, undo: true })}
               />
             )}
           </div>
@@ -920,6 +1013,38 @@ const CheckInPage: React.FC = () => {
             )}
           </div>
         </div>
+      )}
+
+      {moveTarget && (
+        <StaffMoveModal
+          booking={moveTarget}
+          branchId={branchId}
+          onClose={() => setMoveTarget(null)}
+          onDone={() => {
+            setSearchedBooking(null);
+            fetchDashboardData();
+          }}
+        />
+      )}
+
+      {noShowTarget && (
+        <StaffReasonModal
+          title={noShowTarget.undo ? `Hoàn tác không đến · ${noShowTarget.booking.bookingCode}` : `Đánh dấu không đến · ${noShowTarget.booking.bookingCode}`}
+          description={noShowTarget.undo
+            ? 'Khôi phục đơn để khách check-in như bình thường; điểm uy tín bị trừ (nếu có) sẽ được hoàn lại. Chỉ làm được khi đơn chưa hết giờ và chỗ còn trống.'
+            : 'Khách không đến: chỗ được nhả cho người khác, đơn không được hoàn tiền và khách bị trừ điểm uy tín. Chỉ làm được sau hạn check-in; có thể hoàn tác nếu khách đến sau.'}
+          confirmLabel={noShowTarget.undo ? 'Khôi phục đơn' : 'Đánh dấu không đến'}
+          danger={!noShowTarget.undo}
+          quickReasons={noShowTarget.undo
+            ? ['Khách có đến nhưng quên check-in', 'Đánh dấu nhầm đơn']
+            : ['Đã gọi điện, khách không nghe máy', 'Khách báo không đến được', 'Quá giờ, không thấy khách']}
+          onClose={() => setNoShowTarget(null)}
+          onSubmit={async (reason) => {
+            if (noShowTarget.undo) await staffOpsApi.undoNoShow(noShowTarget.booking.id, reason);
+            else await staffOpsApi.markNoShow(noShowTarget.booking.id, reason);
+            await fetchDashboardData();
+          }}
+        />
       )}
 
       {actionTarget && (

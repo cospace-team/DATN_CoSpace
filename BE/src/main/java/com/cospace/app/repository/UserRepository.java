@@ -20,8 +20,11 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     @org.springframework.data.jpa.repository.Query(value = "UPDATE users SET id = :newId WHERE id = :oldId", nativeQuery = true)
     void updateUserId(@org.springframework.data.repository.query.Param("oldId") UUID oldId, @org.springframework.data.repository.query.Param("newId") UUID newId);
 
-    @org.springframework.data.jpa.repository.Query("SELECT u FROM User u WHERE lower(u.fullName) LIKE lower(concat('%',:query,'%')) OR lower(u.email) LIKE lower(concat('%',:query,'%')) OR u.phone LIKE concat('%',:query,'%')")
-    java.util.List<User> searchUsers(@org.springframework.data.repository.query.Param("query") String query);
+    /** Accounts of the given role (customers, for the counter lookup) whose name or phone contains the text. */
+    @org.springframework.data.jpa.repository.Query("SELECT u FROM User u WHERE u.role = :role AND (lower(u.fullName) LIKE lower(concat('%',:query,'%')) OR u.phone LIKE concat('%',:query,'%')) ORDER BY u.fullName")
+    java.util.List<User> searchByRole(@org.springframework.data.repository.query.Param("role") User.Role role,
+                                      @org.springframework.data.repository.query.Param("query") String query,
+                                      org.springframework.data.domain.Pageable pageable);
 
     java.util.List<User> findByBranchIdAndRole(UUID branchId, User.Role role);
 

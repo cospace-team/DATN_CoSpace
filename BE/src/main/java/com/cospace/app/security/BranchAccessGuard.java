@@ -57,6 +57,11 @@ public class BranchAccessGuard {
         return requireOwnBranch(loadCaller(jwt));
     }
 
+    /** True if the caller is front-desk staff (not a manager): they see operations, not the branch's finances. */
+    public boolean isStaffRole(Jwt jwt) {
+        return loadCaller(jwt).getRole() == User.Role.staff;
+    }
+
     /** True if the caller's actual DB role is {@code super_admin} (unrestricted, cross-branch). */
     public boolean isSuperAdmin(Jwt jwt) {
         return loadCaller(jwt).getRole() == User.Role.super_admin;

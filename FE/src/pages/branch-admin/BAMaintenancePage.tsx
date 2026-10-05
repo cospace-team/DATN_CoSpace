@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { FiTool, FiPlus, FiX, FiCheck, FiAlertCircle } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
-import { staffApi, MaintenanceImpactError, type MaintenanceImpact, type MaintenanceResponseDto, type WorkspaceMaintenanceStatusDto } from '../../api/staffApi';
+import { staffApi, MaintenanceImpactError, MAINTENANCE_PRIORITY_LABEL, type MaintenanceImpact, type MaintenancePriority, type MaintenanceResponseDto, type WorkspaceMaintenanceStatusDto } from '../../api/staffApi';
+import { staffOpsApi } from '../../api/staffOpsApi';
 import AffectedBookingsDialog from '../../components/AffectedBookingsDialog';
 import { Modal } from '../../components/ui/Modal';
 
@@ -43,7 +44,10 @@ const BAMaintenancePage: React.FC = () => {
     startAt: '',
     endAt: '',
     reason: '',
+    priority: 'normal' as MaintenancePriority,
+    photoUrl: '',
   });
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [formError, setFormError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
@@ -76,7 +80,7 @@ const BAMaintenancePage: React.FC = () => {
   const getWsName = (wsId: string) => workspaces.find((w) => w.workspaceId === wsId)?.name ?? wsId;
 
   const openAdd = () => {
-    setForm({ workspaceId: workspaces[0]?.workspaceId ?? '', startAt: '', endAt: '', reason: '' });
+    setForm({ workspaceId: workspaces[0]?.workspaceId ?? '', startAt: '', endAt: '', reason: '', priority: 'normal', photoUrl: '' });
     setFormError('');
     setModalOpen(true);
   };
@@ -99,6 +103,8 @@ const BAMaintenancePage: React.FC = () => {
         startAt: new Date(form.startAt).toISOString(),
         endAt: new Date(form.endAt).toISOString(),
         reason: form.reason,
+        priority: form.priority,
+        photoUrl: form.photoUrl || undefined,
         confirmAffectedBookings,
       });
       setImpact(null);
@@ -146,7 +152,18 @@ const BAMaintenancePage: React.FC = () => {
   const renderRow = (m: MaintenanceResponseDto) => (
     <tr key={m.id} className="border-b border-border hover:bg-muted/50 transition-colors bg-card">
       <td className="px-4 py-3 align-middle font-medium">{getWsName(m.workspaceId)}</td>
-      <td className="px-4 py-3 align-middle text-sm text-muted-foreground">{m.reason || '—'}</td>
+      <td className="px-4 py-3 align-middle text-sm text-muted-foreground">
+        <p>{m.reason || '—'}</p>
+        <p className="text-[11px] mt-0.5">
+          {m.priority && m.priority !== 'normal' && (
+            <span className={`font-semibold mr-2 ${m.priority === 'urgent' ? 'text-destructive' : m.priority === 'high' ? 'text-amber-600' : ''}`}>
+              {MAINTENANCE_PRIORITY_LABEL[m.priority]}
+            </span>
+          )}
+          {m.createdByName && <span className="mr-2">Báo bởi {m.createdByName}</span>}
+          {m.photoUrl && <a href={m.photoUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline">Xem ảnh</a>}
+        </p>
+      </td>
       <td className="px-4 py-3 align-middle font-mono text-xs">{new Date(m.startAt).toLocaleString('vi-VN')}</td>
       <td className="px-4 py-3 align-middle font-mono text-xs">{new Date(m.endAt).toLocaleString('vi-VN')}</td>
       <td className="px-4 py-3 align-middle text-center">
@@ -340,11 +357,55 @@ const BAMaintenancePage: React.FC = () => {
               />
             </div>
             
+            <div className="space-y-2">
+              <label htmlFor="priority" className="block text-sm font-medium">Mức ưu tiên</label>
+              <select
+                id="priority"
+                className="input-field"
+                value={form.priority}
+                onChange={(e) => setForm((p) => ({ ...p, priority: e.target.value as MaintenancePriority }))}
+              >
+                {(Object.keys(MAINTENANCE_PRIORITY_LABEL) as MaintenancePriority[]).map((pr) => (
+                  <option key={pr} value={pr}>{MAINTENANCE_PRIORITY_LABEL[pr]}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <span className="block text-sm font-medium">Ảnh hiện trường (không bắt buộc)</span>
+              <label className="inline-flex items-center gap-3">
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setUploadingPhoto(true);
+                    setFormError('');
+                    try {
+                      const url = await staffOpsApi.uploadPhoto(file, branchId);
+                      setForm((p) => ({ ...p, photoUrl: url }));
+                    } catch (err) {
+                      setFormError((err as Error).message);
+                    } finally {
+                      setUploadingPhoto(false);
+                    }
+                  }}
+                />
+                {form.photoUrl ? (
+                  <img src={form.photoUrl} alt="Ảnh hiện trường" className="h-14 w-14 rounded-lg object-cover border border-border" />
+                ) : (
+                  <span className="btn btn-outline btn-sm cursor-pointer">{uploadingPhoto ? 'Đang tải ảnh…' : 'Chọn ảnh'}</span>
+                )}
+              </label>
+            </div>
+
             <div className="flex gap-3 justify-end pt-4 border-t border-border mt-6">
               <button className="btn btn-secondary btn-sm" onClick={() => setModalOpen(false)} disabled={isSubmitting}>
                 Hủy
               </button>
-              <button className="btn btn-primary btn-sm" onClick={() => void saveMaintenance()} disabled={isSubmitting}>
+              <button className="btn btn-primary btn-sm" onClick={() => void saveMaintenance()} disabled={isSubmitting || uploadingPhoto}>
                 {isSubmitting ? (
                   <span className="animate-spin h-4 w-4 mr-2 border-2 border-primary-foreground border-t-transparent rounded-full" />
                 ) : (

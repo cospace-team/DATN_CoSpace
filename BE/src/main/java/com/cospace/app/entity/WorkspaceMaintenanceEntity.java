@@ -36,6 +36,14 @@ public class WorkspaceMaintenanceEntity {
     @Column(name = "status", nullable = false, columnDefinition = "maintenance_status")
     private MaintenanceStatus status = MaintenanceStatus.scheduled;
 
+    /** low, normal, high or urgent: how soon the seat needs attention. */
+    @Column(name = "priority", nullable = false, length = 12)
+    private String priority = "normal";
+
+    /** Photo of the problem, taken by the staff who reported it. */
+    @Column(name = "photo_url", columnDefinition = "text")
+    private String photoUrl;
+
     @Column(name = "created_by", nullable = false)
     private UUID createdBy;
 

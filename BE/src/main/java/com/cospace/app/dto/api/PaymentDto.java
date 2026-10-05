@@ -6,7 +6,7 @@ import lombok.Data;
 import java.util.UUID;
 
 @Data
-@Builder
+@Builder(toBuilder = true)
 public class PaymentDto {
 
     private UUID id;

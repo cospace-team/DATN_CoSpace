@@ -126,7 +126,7 @@ public class WorkspaceImageService {
         return null;
     }
 
-    private static String contentTypeFor(String extension) {
+    static String contentTypeFor(String extension) {
         return switch (extension) {
             case "jpg" -> "image/jpeg";
             case "png" -> "image/png";

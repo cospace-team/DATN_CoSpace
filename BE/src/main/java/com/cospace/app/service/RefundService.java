@@ -113,6 +113,29 @@ public class RefundService {
 
     /* ─────────────── Staff workflow ─────────────── */
 
+    /**
+     * What the counter needs to answer "has my refund been paid?": the amount, how and when it was
+     * settled, and the reason. The customer's e-mail, the bank account a refund goes to and the
+     * voucher code (which works like cash for its owner) stay with the people who process refunds.
+     * Limited to the last 60 days, newest first.
+     */
+    @Transactional(readOnly = true)
+    public List<RefundResponse> listForStaff(UUID branchId, String status) {
+        OffsetDateTime since = OffsetDateTime.now(java.time.ZoneOffset.UTC).minusDays(60);
+        return list(branchId, status).stream()
+                .filter(r -> r.getCreatedAt() == null || r.getCreatedAt().isAfter(since))
+                .limit(200)
+                .peek(r -> {
+                    r.setCustomerEmail(null);
+                    r.setReceivingBankName(null);
+                    r.setReceivingAccountNumber(null);
+                    r.setReceivingAccountName(null);
+                    r.setVoucherCode(null);
+                    r.setPaymentId(null);
+                })
+                .toList();
+    }
+
     @Transactional(readOnly = true)
     public List<RefundResponse> list(UUID branchId, String status) {
         String normalized = status == null || status.isBlank() || "all".equalsIgnoreCase(status)

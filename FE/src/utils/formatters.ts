@@ -49,6 +49,7 @@ export const bookingStatusLabel: Record<string, string> = {
   checked_in: 'Đã check-in',
   completed: 'Hoàn thành',
   canceled: 'Đã hủy',
+  cancelled: 'Đã hủy',
   expired: 'Hết hạn',
   no_show: 'Không đến',
 };
@@ -69,6 +70,7 @@ export const paymentStatusLabel: Record<string, string> = {
   failed: 'Thất bại',
   expired: 'Hết hạn',
   canceled: 'Đã hủy',
+  cancelled: 'Đã hủy',
   refunded: 'Đã hoàn tiền',
 };
 
@@ -95,4 +97,5 @@ export const maintenanceStatusLabel: Record<string, string> = {
   done: 'Hoàn tất',
   completed: 'Hoàn tất',
   canceled: 'Đã hủy',
+  cancelled: 'Đã hủy',
 };

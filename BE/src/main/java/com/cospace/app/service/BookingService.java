@@ -709,19 +709,28 @@ public class BookingService {
     public BookingDto getMyBooking(UUID userId, UUID bookingId) {
         Booking booking = bookingRepository.findByIdAndUserId(bookingId, userId).orElse(null);
         if (booking == null) {
-            boolean isStaffOrAdmin = userRepository.findById(userId)
-                    .map(u -> u.getRole() == com.cospace.app.entity.User.Role.staff 
-                            || u.getRole() == com.cospace.app.entity.User.Role.branch_admin 
-                            || u.getRole() == com.cospace.app.entity.User.Role.super_admin)
-                    .orElse(false);
-            if (isStaffOrAdmin) {
-                booking = bookingRepository.findById(bookingId).orElse(null);
+            // Not the customer's own booking: staff-tier callers may open it, but only inside their own
+            // branch (a super admin, or an admin without a branch, anywhere). Anyone else, or a booking
+            // of another branch, reads as "not found" so its existence is not revealed.
+            com.cospace.app.entity.User caller = userRepository.findById(userId).orElse(null);
+            Booking found = caller == null ? null : bookingRepository.findById(bookingId).orElse(null);
+            if (found != null && mayOpenBookingOf(caller, found)) {
+                booking = found;
             }
         }
         if (booking == null) {
             throw new IllegalArgumentException("Booking not found");
         }
         return toDto(booking);
+    }
+
+    private static boolean mayOpenBookingOf(com.cospace.app.entity.User caller, Booking booking) {
+        return switch (caller.getRole()) {
+            case super_admin -> true;
+            case admin -> caller.getBranchId() == null || caller.getBranchId().equals(booking.getBranchId());
+            case staff, branch_admin -> caller.getBranchId() != null && caller.getBranchId().equals(booking.getBranchId());
+            default -> false;
+        };
     }
 
     @Transactional(readOnly = true)
@@ -892,7 +901,6 @@ public class BookingService {
         com.cospace.app.dto.api.UserProfileDto customer = userRepository.findById(b.getUserId())
                 .map(u -> com.cospace.app.dto.api.UserProfileDto.builder()
                         .id(u.getId())
-                        .email(u.getEmail())
                         .fullName(u.getFullName())
                         .phone(u.getPhone())
                         .reputationScore(u.getRole() == com.cospace.app.entity.User.Role.customer ? u.getReputationScore() : null)
@@ -945,7 +953,6 @@ public class BookingService {
         java.util.Map<UUID, com.cospace.app.dto.api.UserProfileDto> customerMap = userRepository.findAllById(userIds).stream()
                 .collect(java.util.stream.Collectors.toMap(com.cospace.app.entity.User::getId, u -> com.cospace.app.dto.api.UserProfileDto.builder()
                         .id(u.getId())
-                        .email(u.getEmail())
                         .fullName(u.getFullName())
                         .phone(u.getPhone())
                         .reputationScore(u.getRole() == com.cospace.app.entity.User.Role.customer ? u.getReputationScore() : null)

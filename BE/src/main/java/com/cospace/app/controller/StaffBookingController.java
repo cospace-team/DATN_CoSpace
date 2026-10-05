@@ -29,6 +29,7 @@ public class StaffBookingController {
     private final com.cospace.app.service.CancellationService cancellationService;
     private final com.cospace.app.service.BookingAddonService bookingAddonService;
     private final com.cospace.app.service.AuditLogService auditLogService;
+    private final com.cospace.app.service.StaffBookingOpsService opsService;
     private final jakarta.servlet.http.HttpServletRequest httpServletRequest;
 
     public StaffBookingController(BookingService bookingService, com.cospace.app.service.UserService userService,
@@ -36,6 +37,7 @@ public class StaffBookingController {
                                   com.cospace.app.service.CancellationService cancellationService,
                                   com.cospace.app.service.BookingAddonService bookingAddonService,
                                   com.cospace.app.service.AuditLogService auditLogService,
+                                  com.cospace.app.service.StaffBookingOpsService opsService,
                                   jakarta.servlet.http.HttpServletRequest httpServletRequest) {
         this.bookingService = bookingService;
         this.userService = userService;
@@ -43,6 +45,7 @@ public class StaffBookingController {
         this.cancellationService = cancellationService;
         this.bookingAddonService = bookingAddonService;
         this.auditLogService = auditLogService;
+        this.opsService = opsService;
         this.httpServletRequest = httpServletRequest;
     }
 
@@ -73,6 +76,57 @@ public class StaffBookingController {
         auditLogService.log(httpServletRequest, staffId, "CANCEL_FOR_CUSTOMER", "bookings", bookingId, null, values);
 
         return cancellation;
+    }
+
+    private static final String STAFF_ROLES =
+            "hasAnyRole('staff', 'branch_admin', 'super_admin', 'admin', 'STAFF', 'BRANCH_ADMIN', 'SUPER_ADMIN', 'ADMIN')";
+
+    /** Marks a guest who never came as a no-show once the check-in deadline has passed, freeing the seat. */
+    @PostMapping("/{bookingId}/no-show")
+    @PreAuthorize(STAFF_ROLES)
+    public BookingDto markNoShow(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID bookingId,
+                                 @Valid @RequestBody com.cospace.app.dto.api.StaffReasonRequest req) {
+        UUID staffId = requireSubject(jwt);
+        branchAccessGuard.requireAccessToBranch(jwt, opsService.branchOf(bookingId));
+        com.cospace.app.entity.Booking booking = opsService.markNoShow(staffId, bookingId, req.getReason());
+        auditLogService.log(httpServletRequest, staffId, "MARK_NO_SHOW", "bookings", bookingId,
+                com.cospace.app.service.AuditLogService.values("status", "CONFIRMED"),
+                com.cospace.app.service.AuditLogService.values("status", "NO_SHOW", "bookingCode", booking.getBookingCode(),
+                        "reason", req.getReason().trim()));
+        return bookingService.toDto(booking);
+    }
+
+    /** Reopens a no-show while its booked time has not run out (the guest did come after all). */
+    @PostMapping("/{bookingId}/undo-no-show")
+    @PreAuthorize(STAFF_ROLES)
+    public BookingDto undoNoShow(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID bookingId,
+                                 @Valid @RequestBody com.cospace.app.dto.api.StaffReasonRequest req) {
+        UUID staffId = requireSubject(jwt);
+        branchAccessGuard.requireAccessToBranch(jwt, opsService.branchOf(bookingId));
+        com.cospace.app.entity.Booking booking = opsService.undoNoShow(staffId, bookingId, req.getReason());
+        auditLogService.log(httpServletRequest, staffId, "UNDO_NO_SHOW", "bookings", bookingId,
+                com.cospace.app.service.AuditLogService.values("status", "NO_SHOW"),
+                com.cospace.app.service.AuditLogService.values("status", "CONFIRMED", "bookingCode", booking.getBookingCode(),
+                        "reason", req.getReason().trim()));
+        return bookingService.toDto(booking);
+    }
+
+    /** Moves a paid booking to another seat and/or start time (same length, same price). */
+    @PostMapping("/{bookingId}/move")
+    @PreAuthorize(STAFF_ROLES)
+    public BookingDto move(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID bookingId,
+                           @Valid @RequestBody com.cospace.app.dto.api.StaffMoveRequest req) {
+        UUID staffId = requireSubject(jwt);
+        branchAccessGuard.requireAccessToBranch(jwt, opsService.branchOf(bookingId));
+        com.cospace.app.service.StaffBookingOpsService.MoveResult result =
+                opsService.moveBooking(staffId, bookingId, req.getWorkspaceId(), req.getStartAt(), req.getReason());
+        com.cospace.app.entity.Booking b = result.booking();
+        java.util.Map<String, Object> after = new java.util.HashMap<>(com.cospace.app.service.AuditLogService.values(
+                "workspaceId", b.getWorkspaceId(), "workspaceName", result.toWorkspaceName(),
+                "startAt", b.getStartAt(), "endAt", b.getEndAt(), "bookingCode", b.getBookingCode()));
+        after.put("reason", req.getReason().trim());
+        auditLogService.log(httpServletRequest, staffId, "MOVE_BOOKING", "bookings", bookingId, result.oldValues(), after);
+        return bookingService.toDto(b);
     }
 
     /** Bookings of a branch overlapping a time range, for the booking management pages. */

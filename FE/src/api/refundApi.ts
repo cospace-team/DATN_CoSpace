@@ -73,6 +73,12 @@ export const refundApi = {
     if (params.branchId) q.append('branchId', params.branchId);
     return request<RefundDto[]>(`/api/refunds?${q}`, {}, 'Không thể tải danh sách hoàn tiền');
   },
+  /** Read-only list for the counter (own branch, last 60 days): no bank account, e-mail or voucher code. */
+  listForStaff: (status?: RefundStatus | 'all') => {
+    const q = new URLSearchParams();
+    if (status && status !== 'all') q.append('status', status);
+    return request<RefundDto[]>(`/api/staff/refunds?${q}`, {}, 'Không thể tải danh sách hoàn tiền');
+  },
   process: (id: string, note: string, method: RefundMethod = 'bank_transfer', voucherValidDays?: number) =>
     request<{ message: string }>(`/api/refunds/${id}/process`, {
       method: 'POST',

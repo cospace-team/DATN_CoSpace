@@ -399,8 +399,13 @@ public class CancellationService {
                 .processedAt(refundAmount == 0 ? now : null)
                 .build());
 
+        // A cancellation made at the counter keeps the reason it was given, so whoever pays the refund
+        // (and the counter answering the customer) sees why, not just the percentage.
+        boolean byStaff = actorId != null && !actorId.equals(booking.getUserId());
         refundService.requestRefund(booking, null, refundAmount, Refund.REASON_CANCELLATION,
-                "Hủy đơn theo chính sách (" + refundPercent + "%).");
+                byStaff
+                        ? "Quầy hủy đơn (hoàn " + refundPercent + "%): " + cancelReason
+                        : "Hủy đơn theo chính sách (" + refundPercent + "%).");
 
         // Rule #20: Send in-app notification
         String notiContent = String.format("Đơn đặt chỗ %s đã được hủy thành công. Tỷ lệ hoàn tiền: %d%% (%d VNĐ).",

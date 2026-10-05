@@ -1,24 +1,34 @@
 import React from 'react';
-import { FiSearch, FiX, FiClock, FiMapPin, FiCalendar, FiPhone, FiCheckCircle } from 'react-icons/fi';
+import { FiSearch, FiX, FiClock, FiMapPin, FiCalendar, FiPhone, FiCheckCircle, FiRepeat, FiUserX, FiRotateCcw, FiFileText } from 'react-icons/fi';
 import { bookingStatusLabel } from '../../../utils/formatters';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { getBookingPackageDisplay } from '../../../utils/bookingPackage';
 import type { BranchTodayBookingDto } from '../../../api/staffApi';
+import type { StaffNoteDto } from '../../../api/staffOpsApi';
 
 interface TodayScheduleTabProps {
-  scheduleTab: 'all' | 'incoming' | 'seated' | 'completed';
-  setScheduleTab: (tab: 'all' | 'incoming' | 'seated' | 'completed') => void;
+  scheduleTab: 'all' | 'incoming' | 'seated' | 'completed' | 'no_show';
+  setScheduleTab: (tab: 'all' | 'incoming' | 'seated' | 'completed' | 'no_show') => void;
   todayCounts: {
     all: number;
     incoming: number;
     seated: number;
     completed: number;
+    noShow: number;
   };
   scheduleSearch: string;
   setScheduleSearch: (s: string) => void;
   filteredTodayBookings: BranchTodayBookingDto[];
   branchBookingsTodayLength: number;
   onSelectBookingForCheckin: (bookingCode: string) => void;
+  /** Minutes after the start time until a guest who has not checked in counts as missed. */
+  checkinDeadlineMinutes?: number;
+  /** Moves the booking to another seat or start time. */
+  onMove?: (booking: BranchTodayBookingDto) => void;
+  onNoShow?: (booking: BranchTodayBookingDto) => void;
+  onUndoNoShow?: (booking: BranchTodayBookingDto) => void;
+  /** Open notes about customers of this branch, by customer id. */
+  customerNotes?: Record<string, StaffNoteDto[]>;
 }
 
 export const TodayScheduleTab: React.FC<TodayScheduleTabProps> = ({
@@ -30,7 +40,13 @@ export const TodayScheduleTab: React.FC<TodayScheduleTabProps> = ({
   filteredTodayBookings,
   branchBookingsTodayLength,
   onSelectBookingForCheckin,
+  checkinDeadlineMinutes = 30,
+  onMove,
+  onNoShow,
+  onUndoNoShow,
+  customerNotes = {},
 }) => {
+  const now = Date.now();
   return (
     <div className="space-y-4 animate-fade-in">
       {/* Header Tabs & Search */}
@@ -88,6 +104,21 @@ export const TodayScheduleTab: React.FC<TodayScheduleTabProps> = ({
               {todayCounts.completed}
             </span>
           </button>
+          {todayCounts.noShow > 0 && (
+            <button
+              onClick={() => setScheduleTab('no_show')}
+              className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                scheduleTab === 'no_show'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <span>Không đến</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-rose-500/15 text-rose-600 dark:text-rose-400 font-mono font-bold">
+                {todayCounts.noShow}
+              </span>
+            </button>
+          )}
         </div>
 
         <div className="relative w-full sm:w-64">
@@ -184,6 +215,14 @@ export const TodayScheduleTab: React.FC<TodayScheduleTabProps> = ({
                       >
                         {bookingStatusLabel[b.status?.toLowerCase()] || b.status}
                       </span>
+                      {(customerNotes[b.userId] ?? []).length > 0 && (
+                        <span
+                          className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-sky-500/15 text-sky-700 dark:text-sky-300 flex items-center gap-1"
+                          title={(customerNotes[b.userId] ?? []).map((n) => n.title).join(' · ')}
+                        >
+                          <FiFileText className="w-3 h-3" /> Có ghi chú
+                        </span>
+                      )}
                       <span
                         className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${pkg.badgeClass}`}
                       >
@@ -223,24 +262,74 @@ export const TodayScheduleTab: React.FC<TodayScheduleTabProps> = ({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                <div className="flex flex-wrap items-center justify-end gap-2 self-end sm:self-auto shrink-0">
                   {b.status === 'CONFIRMED' ? (
-                    <button
-                      onClick={() => onSelectBookingForCheckin(b.bookingCode)}
-                      className="btn btn-primary btn-sm rounded-xl px-3.5 py-1.5 text-xs font-bold shadow-sm flex items-center gap-1.5  transition-transform cursor-pointer"
-                      title="Điền mã và chuẩn bị Check-in"
-                    >
-                      <FiCheckCircle className="w-3.5 h-3.5" />
-                      <span>{pkg.isMultiDay ? 'Check-in hôm nay' : 'Check-in ngay'}</span>
-                    </button>
+                    <>
+                      {onMove && (
+                        <button
+                          onClick={() => onMove(b)}
+                          className="btn btn-outline btn-sm rounded-xl px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+                          title="Đổi sang chỗ khác hoặc dời giờ bắt đầu"
+                        >
+                          <FiRepeat className="w-3.5 h-3.5" />
+                          <span>Đổi chỗ/giờ</span>
+                        </button>
+                      )}
+                      {onNoShow && !pkg.isMultiDay && now >= new Date(b.startAt).getTime() + checkinDeadlineMinutes * 60000 && (
+                        <button
+                          onClick={() => onNoShow(b)}
+                          className="btn btn-ghost btn-sm rounded-xl px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 cursor-pointer"
+                          title="Khách không đến: nhả chỗ cho người khác"
+                        >
+                          <FiUserX className="w-3.5 h-3.5" />
+                          <span>Không đến</span>
+                        </button>
+                      )}
+                      <button
+                        onClick={() => onSelectBookingForCheckin(b.bookingCode)}
+                        className="btn btn-primary btn-sm rounded-xl px-3.5 py-1.5 text-xs font-bold shadow-sm flex items-center gap-1.5  transition-transform cursor-pointer"
+                        title="Điền mã và chuẩn bị Check-in"
+                      >
+                        <FiCheckCircle className="w-3.5 h-3.5" />
+                        <span>{pkg.isMultiDay ? 'Check-in hôm nay' : 'Check-in ngay'}</span>
+                      </button>
+                    </>
                   ) : b.status === 'CHECKED_IN' ? (
-                    <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500" /> Đang
-                      ngồi
-                    </span>
+                    <>
+                      {onMove && (
+                        <button
+                          onClick={() => onMove(b)}
+                          className="btn btn-outline btn-sm rounded-xl px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+                          title="Chuyển khách sang chỗ khác (chỗ hỏng giữa chừng)"
+                        >
+                          <FiRepeat className="w-3.5 h-3.5" />
+                          <span>Đổi chỗ</span>
+                        </button>
+                      )}
+                      <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500" /> Đang
+                        ngồi
+                      </span>
+                    </>
+                  ) : b.status === 'NO_SHOW' ? (
+                    <>
+                      {onUndoNoShow && new Date(b.endAt).getTime() > now && (
+                        <button
+                          onClick={() => onUndoNoShow(b)}
+                          className="btn btn-outline btn-sm rounded-xl px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+                          title="Khách thực ra có đến: khôi phục đơn và hoàn điểm uy tín"
+                        >
+                          <FiRotateCcw className="w-3.5 h-3.5" />
+                          <span>Hoàn tác</span>
+                        </button>
+                      )}
+                      <span className="text-xs font-medium text-rose-600 dark:text-rose-400 px-3 py-1 bg-rose-500/10 rounded-xl">
+                        Không đến
+                      </span>
+                    </>
                   ) : (
                     <span className="text-xs font-medium text-muted-foreground px-3 py-1 bg-muted rounded-xl">
-                      Đã hoàn tất
+                      {b.status === 'COMPLETED' ? 'Đã hoàn tất' : bookingStatusLabel[b.status?.toLowerCase()] || b.status}
                     </span>
                   )}
                 </div>

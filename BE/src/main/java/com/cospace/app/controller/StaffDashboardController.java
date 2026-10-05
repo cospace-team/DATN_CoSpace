@@ -30,6 +30,10 @@ public class StaffDashboardController {
             @RequestParam("branchId") UUID branchId,
             @RequestParam(value = "filter", defaultValue = "day") String filter) {
         UUID verifiedBranchId = branchAccessGuard.requireBranchAccess(jwt, branchId);
-        return staffDashboardService.getDashboardStats(verifiedBranchId, filter);
+        StaffDashboardStatsDto stats = staffDashboardService.getDashboardStats(verifiedBranchId, filter);
+        // Front-desk staff see today's takings (an estimate: bookings of the day, paid or not yet used),
+        // not the week, month or year: those are the branch manager's figures.
+        boolean today = filter == null || "day".equalsIgnoreCase(filter);
+        return branchAccessGuard.isStaffRole(jwt) && !today ? stats.withoutRevenue() : stats;
     }
 }

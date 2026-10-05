@@ -26,7 +26,12 @@ public class StaffReputationController {
     private final BranchAccessGuard branchAccessGuard;
 
     @GetMapping("/customers/{userId}")
-    public MyReputationResponse customerReputation(@PathVariable UUID userId) {
+    public MyReputationResponse customerReputation(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID userId) {
+        // null = a super admin, who may look anyone up; everyone else only customers of their own branch.
+        UUID branchId = branchAccessGuard.resolveReportBranchId(jwt, null);
+        if (branchId != null) {
+            reputationService.requireCustomerOfBranch(branchId, userId);
+        }
         return reputationService.getReputation(userId);
     }
 

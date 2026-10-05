@@ -23,6 +23,7 @@ import static com.cospace.app.entity.BookingStatus.*;
  *       ├─► EXPIRED     ├─► CANCELLED
  *       └─► CANCELLED   ├─► COMPLETED  (multi-day pass ended after being used)
  *                       └─► NO_SHOW    (ended without ever being checked in)
+ *                              └─► CONFIRMED  (staff undo: the guest did come, time is left)
  * </pre>
  */
 public final class BookingStateMachine {
@@ -37,7 +38,7 @@ public final class BookingStateMachine {
         ALLOWED.put(COMPLETED, EnumSet.noneOf(BookingStatus.class));
         ALLOWED.put(CANCELLED, EnumSet.noneOf(BookingStatus.class));
         ALLOWED.put(EXPIRED, EnumSet.noneOf(BookingStatus.class));
-        ALLOWED.put(NO_SHOW, EnumSet.noneOf(BookingStatus.class));
+        ALLOWED.put(NO_SHOW, EnumSet.of(CONFIRMED)); // staff undo only, see StaffBookingOpsService
     }
 
     private BookingStateMachine() {

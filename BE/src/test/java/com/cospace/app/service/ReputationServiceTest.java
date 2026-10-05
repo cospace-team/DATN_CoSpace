@@ -55,6 +55,19 @@ class ReputationServiceTest {
     }
 
     @Test
+    void staffMayOnlyLookUpCustomersOfTheirOwnBranch() {
+        UUID branchId = UUID.randomUUID();
+        UUID known = UUID.randomUUID();
+        UUID stranger = UUID.randomUUID();
+        when(bookingRepository.existsByUserIdAndBranchId(known, branchId)).thenReturn(true);
+        when(bookingRepository.existsByUserIdAndBranchId(stranger, branchId)).thenReturn(false);
+
+        reputationService.requireCustomerOfBranch(branchId, known);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> reputationService.requireCustomerOfBranch(branchId, stranger))
+                .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
+    }
+
+    @Test
     void missedCheckinDeductsPointsAndLogsEvent() {
         User u = customer(100);
         Booking b = bookingOf(u);

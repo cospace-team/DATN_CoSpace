@@ -82,6 +82,16 @@ public class StaffMaintenanceService {
                     "Không thể tạo lịch bảo trì cho thời gian đã qua. Vui lòng chọn thời điểm từ hiện tại trở đi.");
         }
 
+        String priority = request.getPriority() == null || request.getPriority().isBlank()
+                ? "normal" : request.getPriority().trim().toLowerCase();
+        if (!java.util.Set.of("low", "normal", "high", "urgent").contains(priority)) {
+            throw new IllegalArgumentException("Mức ưu tiên không hợp lệ (thấp, bình thường, cao hoặc khẩn cấp).");
+        }
+        String photoUrl = request.getPhotoUrl() == null || request.getPhotoUrl().isBlank() ? null : request.getPhotoUrl().trim();
+        if (photoUrl != null && (!photoUrl.startsWith("http") || photoUrl.length() > 500)) {
+            throw new IllegalArgumentException("Đường dẫn ảnh không hợp lệ.");
+        }
+
         // 1. Acquire Advisory Lock for this workspace (same mechanism as booking creation to prevent race condition)
         String lockKeyStr = "booking:" + request.getWorkspaceId().toString();
         entityManager.createNativeQuery("SELECT pg_advisory_xact_lock(hashtext(:key))")
@@ -148,6 +158,8 @@ public class StaffMaintenanceService {
         maintenance.setStartAt(request.getStartAt());
         maintenance.setEndAt(request.getEndAt());
         maintenance.setReason(request.getReason());
+        maintenance.setPriority(priority);
+        maintenance.setPhotoUrl(photoUrl);
         // A window that has not started yet is scheduled, not active: marking it active would make
         // the floor plan show a seat as under repair days before anyone touches it.
         maintenance.setStatus(!request.getStartAt().toInstant().isAfter(java.time.Instant.now())
@@ -157,11 +169,30 @@ public class StaffMaintenanceService {
         
         maintenanceRepository.save(maintenance);
         audit(staffId, "CREATE", "workspace_maintenance", maintenance.getId(), AuditLogService.values(
-                "workspaceId", maintenance.getWorkspaceId(), "reason", maintenance.getReason(),
+                "workspaceId", maintenance.getWorkspaceId(), "reason", maintenance.getReason(), "priority", maintenance.getPriority(),
                 "startAt", startOffset, "endAt", endOffset,
                 "affectedBookings", overlappingBookings.stream().map(Booking::getBookingCode).collect(Collectors.toList())));
 
+        notifyBranchAdmins(maintenance, staffId);
         return mapToDto(maintenance, overlappingBookings.size());
+    }
+
+    /** The branch manager hears about a seat going out of service without having to open the maintenance page. */
+    private void notifyBranchAdmins(WorkspaceMaintenanceEntity m, UUID staffId) {
+        UUID branchId = workspaceEntityRepository.findBranchIdByWorkspaceId(m.getWorkspaceId()).orElse(null);
+        if (branchId == null) return;
+        String seat = workspaceEntityRepository.findById(m.getWorkspaceId()).map(WorkspaceEntity::getName).orElse("một chỗ ngồi");
+        String reporter = userRepository.findById(staffId).map(com.cospace.app.entity.User::getFullName).orElse("Nhân viên");
+        java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter.ofPattern("dd/MM HH:mm");
+        java.time.ZoneId vn = java.time.ZoneId.of("Asia/Ho_Chi_Minh");
+        String content = reporter + " báo bảo trì \"" + seat + "\"" + (m.getReason() != null ? " (" + m.getReason() + ")" : "")
+                + ", dự kiến xong " + m.getEndAt().withZoneSameInstant(vn).format(fmt) + ".";
+        String title = ("urgent".equals(m.getPriority()) ? "[Khẩn cấp] " : "high".equals(m.getPriority()) ? "[Ưu tiên cao] " : "")
+                + "Bảo trì mới tại chi nhánh";
+        for (com.cospace.app.entity.User admin : userRepository.findByBranchIdAndRole(branchId, com.cospace.app.entity.User.Role.branch_admin)) {
+            if (admin.getId().equals(staffId)) continue;
+            notificationService.createNotification(admin.getId(), title, content, "MAINTENANCE", m.getId(), "MAINTENANCE");
+        }
     }
 
     /** Mirrors the loop in createMaintenance: what each booking would go through. */
@@ -320,6 +351,13 @@ public class StaffMaintenanceService {
         dto.setStartAt(entity.getStartAt());
         dto.setEndAt(entity.getEndAt());
         dto.setReason(entity.getReason());
+        dto.setPriority(entity.getPriority());
+        dto.setPhotoUrl(entity.getPhotoUrl());
+        dto.setCreatedAt(entity.getCreatedAt());
+        if (entity.getCreatedBy() != null) {
+            dto.setCreatedByName(userRepository.findById(entity.getCreatedBy())
+                    .map(com.cospace.app.entity.User::getFullName).orElse(null));
+        }
         dto.setStatus(entity.getStatus());
         dto.setImpactedBookingsCount(impactedCount);
         return dto;
