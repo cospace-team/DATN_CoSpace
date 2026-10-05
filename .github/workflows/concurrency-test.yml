@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       target_url:
-        description: 'Target API Base URL'
+        description: 'Backend API Base URL (Render: https://datn-cospace.onrender.com — Không dùng URL Vercel Frontend)'
         required: true
         default: 'https://datn-cospace.onrender.com'
         type: string
@@ -54,6 +54,19 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Validate Target API Endpoint
+        env:
+          BASE_URL: ${{ inputs.target_url || 'https://datn-cospace.onrender.com' }}
+        run: |
+          echo "Checking target endpoint connectivity: $BASE_URL/api/health..."
+          HEADER_CHECK=$(curl -s -L -i "$BASE_URL/api/health" | head -n 20)
+          echo "$HEADER_CHECK"
+
+          if echo "$HEADER_CHECK" | grep -iq "<!DOCTYPE html>"; then
+            echo "::error::Target URL returned an HTML page instead of JSON API response. This indicates you provided the Frontend (Vercel) URL instead of the Backend (Render) API. Please run again using 'https://datn-cospace.onrender.com'."
+            exit 1
+          fi
 
       - name: Setup Grafana k6
         uses: grafana/setup-k6-action@v1
