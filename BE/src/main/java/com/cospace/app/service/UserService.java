@@ -116,30 +116,30 @@ public class UserService {
         userRepository.save(user);
     }
 
+    /** The most a customer lookup returns, and the shortest text it accepts. */
+    static final int LOOKUP_LIMIT = 10;
+    static final int LOOKUP_MIN_CHARS = 3;
+
+    /**
+     * Customer lookup for the counter (booking on someone's behalf): by name or phone, customers
+     * only, a few at a time, and only what is needed to pick the right person. A short or empty text
+     * returns nothing, so the counter cannot browse the customer base.
+     */
     @Transactional(readOnly = true)
-    public java.util.List<UserProfileDto> searchUsers(String query) {
-        if (query == null || query.trim().isEmpty()) {
+    public java.util.List<com.cospace.app.dto.api.CustomerLookupDto> searchCustomers(String query) {
+        String text = query == null ? "" : query.trim();
+        if (text.length() < LOOKUP_MIN_CHARS) {
             return java.util.Collections.emptyList();
         }
-        List<User> users = userRepository.searchUsers(query.trim());
-        if (users.isEmpty()) return java.util.Collections.emptyList();
-
-        java.util.Set<UUID> userIds = users.stream().map(User::getId).collect(java.util.stream.Collectors.toSet());
-        java.util.Map<UUID, Profile> profileMap = profileRepository.findAllById(userIds).stream()
-                .collect(java.util.stream.Collectors.toMap(Profile::getUserId, java.util.function.Function.identity()));
-
-        java.util.Set<UUID> branchIds = users.stream().map(User::getBranchId).filter(java.util.Objects::nonNull).collect(java.util.stream.Collectors.toSet());
-        java.util.Map<UUID, String> branchMap = branchEntityRepository.findAllById(branchIds).stream()
-                .collect(java.util.stream.Collectors.toMap(com.cospace.app.entity.BranchEntity::getId, com.cospace.app.entity.BranchEntity::getName));
-
-        return users.stream().map(user -> {
-            Profile profile = profileMap.get(user.getId());
-            if (profile == null) {
-                profile = Profile.builder().userId(user.getId()).contactPublic(false).build();
-            }
-            String branchName = user.getBranchId() != null ? branchMap.get(user.getBranchId()) : null;
-            return convertToDto(user, profile, branchName);
-        }).collect(java.util.stream.Collectors.toList());
+        return userRepository.searchByRole(User.Role.customer, text, org.springframework.data.domain.PageRequest.of(0, LOOKUP_LIMIT)).stream()
+                .map(u -> com.cospace.app.dto.api.CustomerLookupDto.builder()
+                        .id(u.getId())
+                        .fullName(u.getFullName())
+                        .phone(u.getPhone())
+                        .membershipTier(u.getMembershipTier())
+                        .reputationScore(u.getReputationScore())
+                        .build())
+                .collect(java.util.stream.Collectors.toList());
     }
 
     @Transactional

@@ -107,6 +107,54 @@ class PaymentServiceTest {
     }
 
     @Nested
+    class PaymentListing {
+
+        private Payment withGatewayDetails(Booking booking) {
+            Payment p = payment(booking, "PAYOS-123", PaymentStatus.PAID);
+            p.setRequestId("req-1");
+            p.setPayUrl("https://pay.example/x");
+            p.setGatewayTransactionId("FT123");
+            p.setCreatedAt(OffsetDateTime.now(ZoneOffset.UTC));
+            return p;
+        }
+
+        @Test
+        void theOwnerSeesTheGatewayDetails() {
+            Booking booking = booking(BookingStatus.CONFIRMED);
+            BookingDto dto = payableDto(booking.getId(), 150_000L);
+            dto.setUserId(userId);
+            when(bookingService.getMyBooking(userId, booking.getId())).thenReturn(dto);
+            when(paymentRepository.findByBookingIdOrderByCreatedAtDesc(booking.getId())).thenReturn(List.of(withGatewayDetails(booking)));
+
+            var payments = paymentService.listPaymentsByBooking(userId, booking.getId());
+
+            assertThat(payments).hasSize(1);
+            assertThat(payments.get(0).getOrderId()).isEqualTo("PAYOS-123");
+            assertThat(payments.get(0).getPayUrl()).isNotNull();
+        }
+
+        @Test
+        void staffSeeWhatWasPaidButNotTheGatewayDetails() {
+            Booking booking = booking(BookingStatus.CONFIRMED);
+            UUID staffId = UUID.randomUUID();
+            BookingDto dto = payableDto(booking.getId(), 150_000L);
+            dto.setUserId(userId); // the customer's booking, opened by someone else
+            when(bookingService.getMyBooking(staffId, booking.getId())).thenReturn(dto);
+            when(paymentRepository.findByBookingIdOrderByCreatedAtDesc(booking.getId())).thenReturn(List.of(withGatewayDetails(booking)));
+
+            var payments = paymentService.listPaymentsByBooking(staffId, booking.getId());
+
+            assertThat(payments).hasSize(1);
+            assertThat(payments.get(0).getAmount()).isEqualTo(150_000L);
+            assertThat(payments.get(0).getStatus()).isEqualTo(PaymentStatus.PAID);
+            assertThat(payments.get(0).getOrderId()).isNull();
+            assertThat(payments.get(0).getRequestId()).isNull();
+            assertThat(payments.get(0).getPayUrl()).isNull();
+            assertThat(payments.get(0).getGatewayTransactionId()).isNull();
+        }
+    }
+
+    @Nested
     class PayosWebhook {
 
         @Test

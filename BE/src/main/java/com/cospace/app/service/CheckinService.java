@@ -131,6 +131,16 @@ public class CheckinService {
         return toDto(checkinLog);
     }
 
+    /** Branch a check-in belongs to, for the caller's access check. */
+    @Transactional(readOnly = true)
+    public UUID branchOfCheckin(UUID checkinId) {
+        CheckinLog checkinLog = checkinLogRepository.findById(checkinId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy lượt Check-in"));
+        return bookingRepository.findById(checkinLog.getBookingId())
+                .map(Booking::getBranchId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thông tin đặt chỗ"));
+    }
+
     @Transactional
     public CheckinLogDto checkout(UUID staffId, UUID checkinId, String note) {
         CheckinLog checkinLog = checkinLogRepository.findById(checkinId)

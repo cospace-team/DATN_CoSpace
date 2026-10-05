@@ -199,6 +199,15 @@ public class ReputationService {
         return user.getId();
     }
 
+    /** Staff may look up a customer's reputation only when that customer has booked at their branch. */
+    @Transactional(readOnly = true)
+    public void requireCustomerOfBranch(UUID branchId, UUID userId) {
+        if (!bookingRepository.existsByUserIdAndBranchId(userId, branchId)) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "Khách hàng này chưa có đơn nào tại chi nhánh của bạn.");
+        }
+    }
+
     @Transactional(readOnly = true)
     public UUID bookingBranchId(UUID bookingId) {
         return bookingRepository.findById(bookingId)

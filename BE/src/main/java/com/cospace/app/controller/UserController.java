@@ -74,14 +74,16 @@ public class UserController {
         }
     }
 
+    /** Customer lookup for the counter: name or phone, customers only, minimal fields. */
     @GetMapping("/search")
-    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('staff', 'branch_admin', 'super_admin')")
-    public ResponseEntity<List<UserProfileDto>> searchUsers(@RequestParam("q") String query) {
-        return ResponseEntity.ok(userService.searchUsers(query));
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('staff', 'branch_admin', 'super_admin', 'admin')")
+    public ResponseEntity<List<com.cospace.app.dto.api.CustomerLookupDto>> searchCustomers(@RequestParam("q") String query) {
+        return ResponseEntity.ok(userService.searchCustomers(query));
     }
 
+    /** The full user list is for system administrators; branch staff only get the customer lookup above. */
     @GetMapping
-    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('staff', 'branch_admin', 'super_admin', 'admin')")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('super_admin', 'admin')")
     public ResponseEntity<?> getUsers(
             @RequestParam(name = "role", required = false) String role,
             @RequestParam(name = "branchId", required = false) UUID branchId,

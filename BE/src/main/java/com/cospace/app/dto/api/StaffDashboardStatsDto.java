@@ -22,6 +22,18 @@ public class StaffDashboardStatsDto {
     private int occupiedSeats;
     private int totalWs;
     private java.util.List<ChartDataPoint> chartData;
+    /** True when the revenue figures were left out because the caller may not see them for this period. */
+    private boolean revenueHidden;
+
+    /** The same counts with every revenue figure removed. */
+    public StaffDashboardStatsDto withoutRevenue() {
+        revenue = 0;
+        revenueHidden = true;
+        if (chartData != null) {
+            chartData.forEach(p -> p.setRevenue(0));
+        }
+        return this;
+    }
 
     @Data
     @Builder

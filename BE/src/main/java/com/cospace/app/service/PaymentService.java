@@ -677,11 +677,16 @@ public class PaymentService {
     
     @Transactional(readOnly = true)
     public List<PaymentDto> listPaymentsByBooking(UUID userId, UUID bookingId) {
-        // Ensure user has access to this booking
-        bookingService.getMyBooking(userId, bookingId);
+        // Ensure the user has access to this booking (the owner, or staff of its branch)
+        BookingDto booking = bookingService.getMyBooking(userId, bookingId);
+        boolean owner = String.valueOf(booking.getUserId()).equals(userId.toString());
         return paymentRepository.findByBookingIdOrderByCreatedAtDesc(bookingId)
                 .stream()
                 .map(this::toDto)
+                // Whoever pays needs the payment link and gateway references; the counter only needs to know
+                // what was paid and how. The order id is what a payment notification is signed over.
+                .map(dto -> owner ? dto : dto.toBuilder()
+                        .orderId(null).requestId(null).payUrl(null).gatewayTransactionId(null).build())
                 .collect(Collectors.toList());
     }
 

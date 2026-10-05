@@ -580,6 +580,55 @@ class BookingServiceTest {
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
+        private com.cospace.app.entity.User caller(com.cospace.app.entity.User.Role role, UUID branchId) {
+            com.cospace.app.entity.User u = com.cospace.app.entity.User.builder().id(userId).role(role).branchId(branchId).build();
+            when(userRepository.findById(userId)).thenReturn(Optional.of(u));
+            return u;
+        }
+
+        private Booking someoneElsesBooking(UUID branchId) {
+            Booking booking = Booking.builder().id(UUID.randomUUID()).userId(UUID.randomUUID()).branchId(branchId).build();
+            when(bookingRepository.findByIdAndUserId(booking.getId(), userId)).thenReturn(Optional.empty());
+            when(bookingRepository.findById(booking.getId())).thenReturn(Optional.of(booking));
+            return booking;
+        }
+
+        @Test
+        void staffCannotOpenABookingOfAnotherBranch() {
+            caller(com.cospace.app.entity.User.Role.staff, UUID.randomUUID());
+            Booking other = someoneElsesBooking(realBranchId);
+
+            assertThatThrownBy(() -> bookingService.getMyBooking(userId, other.getId()))
+                    .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("not found");
+        }
+
+        @Test
+        void branchAdminCannotOpenABookingOfAnotherBranch() {
+            caller(com.cospace.app.entity.User.Role.branch_admin, UUID.randomUUID());
+            Booking other = someoneElsesBooking(realBranchId);
+
+            assertThatThrownBy(() -> bookingService.getMyBooking(userId, other.getId()))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @Test
+        void aCustomerCannotOpenSomeoneElsesBooking() {
+            caller(com.cospace.app.entity.User.Role.customer, null);
+            Booking other = someoneElsesBooking(realBranchId);
+
+            assertThatThrownBy(() -> bookingService.getMyBooking(userId, other.getId()))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @Test
+        void staffWithoutABranchSeesNothingOfOthers() {
+            caller(com.cospace.app.entity.User.Role.staff, null);
+            Booking other = someoneElsesBooking(realBranchId);
+
+            assertThatThrownBy(() -> bookingService.getMyBooking(userId, other.getId()))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+
         @Test
         void bookingCodeLookupRejectsOtherBranch() {
             Booking booking = Booking.builder().id(UUID.randomUUID()).branchId(realBranchId).build();

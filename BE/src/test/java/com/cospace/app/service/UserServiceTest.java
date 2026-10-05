@@ -20,6 +20,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -107,5 +108,28 @@ class UserServiceTest {
 
         assertThat(dto.getId()).isNotEqualTo(suspended.getId());
         assertThat(dto.getEmail()).endsWith(UserService.WALKIN_EMAIL_DOMAIN);
+    }
+
+    @org.junit.jupiter.api.Test
+    void customerLookupNeedsAtLeastThreeCharactersAndReadsNothingOtherwise() {
+        assertThat(userService.searchCustomers(null)).isEmpty();
+        assertThat(userService.searchCustomers("  ")).isEmpty();
+        assertThat(userService.searchCustomers("09")).isEmpty();
+        org.mockito.Mockito.verifyNoInteractions(userRepository);
+    }
+
+    @org.junit.jupiter.api.Test
+    void customerLookupReturnsOnlyWhatIsNeededToPickTheRightPerson() {
+        User customer = User.builder().id(UUID.randomUUID()).email("secret@example.com").fullName("Nguyễn An")
+                .phone("0912345678").role(User.Role.customer).membershipTier("gold").reputationScore(90).build();
+        when(userRepository.searchByRole(eq(User.Role.customer), eq("0912"), any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(java.util.List.of(customer));
+
+        var found = userService.searchCustomers(" 0912 ");
+
+        assertThat(found).hasSize(1);
+        assertThat(found.get(0).getFullName()).isEqualTo("Nguyễn An");
+        assertThat(found.get(0).getPhone()).isEqualTo("0912345678");
+        assertThat(found.get(0).toString()).doesNotContain("secret@example.com");
     }
 }

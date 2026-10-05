@@ -43,6 +43,7 @@ public class CheckinController {
             @PathVariable("id") UUID checkinId,
             @RequestParam(value = "note", required = false) String note) {
         UUID staffId = requireSubject(jwt);
+        branchAccessGuard.requireAccessToBranch(jwt, checkinService.branchOfCheckin(checkinId));
         return checkinService.checkout(staffId, checkinId, note);
     }
 

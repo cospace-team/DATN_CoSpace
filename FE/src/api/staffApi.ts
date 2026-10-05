@@ -46,6 +46,8 @@ export interface StaffDashboardStatsDto {
   activeGuests: number;
   occupiedSeats?: number;
   totalWs: number;
+  /** The caller may not see revenue for this period (week, month, year are for managers). */
+  revenueHidden?: boolean;
   chartData: {
     label: string;
     guests: number;

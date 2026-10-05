@@ -133,7 +133,7 @@ const OperationsDashboardPage: React.FC = () => {
               {branchName}
             </span>
           </div>
-          <p className="text-xs text-muted-foreground">Khách đến hôm nay, chỗ trống và doanh thu của chi nhánh</p>
+          <p className="text-xs text-muted-foreground">Khách đến hôm nay, chỗ trống và doanh thu dự kiến trong ngày</p>
         </div>
         
         <div className="flex items-center gap-2 bg-muted/60 p-1.5 rounded-xl border border-border/50">
@@ -166,7 +166,12 @@ const OperationsDashboardPage: React.FC = () => {
       </div>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard icon={FiDollarSign} label={`Doanh thu ${timeLabel}`} value={formatVND(stats?.revenue || 0)} sub="Đã gồm dịch vụ thêm" />
+        <StatCard
+          icon={FiDollarSign}
+          label={stats?.revenueHidden ? `Doanh thu ${timeLabel}` : `Doanh thu dự kiến ${timeLabel}`}
+          value={stats?.revenueHidden ? '—' : formatVND(stats?.revenue || 0)}
+          sub={stats?.revenueHidden ? 'Chỉ quản lý chi nhánh xem được' : 'Giá trị các đơn trong ngày, gồm dịch vụ thêm'}
+        />
         <StatCard icon={FiTrendingUp} label="Tỷ lệ lấp đầy" value={`${stats?.occupancyRate || 0}%`}>
           <div className="w-full bg-muted rounded-full h-1.5 mt-2 overflow-hidden">
             <div className="bg-primary h-1.5 rounded-full transition-[width] duration-500" style={{ width: `${Math.min(stats?.occupancyRate || 0, 100)}%` }} />
@@ -228,9 +233,11 @@ const OperationsDashboardPage: React.FC = () => {
                               <span className="w-2 h-2 rounded-full bg-primary inline-block" />
                               Lượng khách: <span className="font-bold text-foreground">{data.guests} khách</span>
                             </p>
-                            <p className="text-muted-foreground">
-                              Doanh thu: <span className="font-semibold text-foreground">{formatVND(data.revenue || 0)}</span>
-                            </p>
+                            {!stats?.revenueHidden && (
+                              <p className="text-muted-foreground">
+                                Doanh thu dự kiến: <span className="font-semibold text-foreground">{formatVND(data.revenue || 0)}</span>
+                              </p>
+                            )}
                           </div>
                         );
                       }
