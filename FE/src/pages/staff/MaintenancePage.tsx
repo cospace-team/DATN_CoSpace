@@ -2,10 +2,11 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   FiCheck, FiTool, FiAlertTriangle, FiTrash2,
   FiSearch, FiMap, FiList, FiRefreshCw, FiMapPin,
-  FiChevronDown, FiAlertCircle, FiInfo
+  FiChevronDown, FiAlertCircle, FiInfo, FiCamera
 } from 'react-icons/fi';
 import { formatDateTime } from '../../utils/formatters';
-import { staffApi, WorkspaceMaintenanceStatusDto, MaintenanceImpactError, type MaintenanceImpact } from '../../api/staffApi';
+import { staffApi, WorkspaceMaintenanceStatusDto, MaintenanceImpactError, MAINTENANCE_PRIORITY_LABEL, type MaintenanceImpact, type MaintenancePriority } from '../../api/staffApi';
+import { staffOpsApi } from '../../api/staffOpsApi';
 import AffectedBookingsDialog from '../../components/AffectedBookingsDialog';
 import { customerSpaceApi, BranchResponse, FloorResponse } from '../../lib/spaceApi';
 import FloorPlanViewer, { WorkspaceMapInfo } from '../../components/floor-plan/FloorPlanViewer';
@@ -46,6 +47,27 @@ const MaintenancePage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedWs, setSelectedWs] = useState<WorkspaceMaintenanceStatusDto | null>(null);
   const [reason, setReason] = useState('');
+  const [priority, setPriority] = useState<MaintenancePriority>('normal');
+  /** How long the seat is expected to be out of service, in hours. */
+  const [expectedHours, setExpectedHours] = useState(24);
+  const [photoUrl, setPhotoUrl] = useState('');
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [photoError, setPhotoError] = useState('');
+  const resetLockForm = () => {
+    setReason(''); setPriority('normal'); setExpectedHours(24); setPhotoUrl(''); setPhotoError('');
+  };
+  const uploadPhoto = async (file: File | undefined) => {
+    if (!file) return;
+    setUploadingPhoto(true);
+    setPhotoError('');
+    try {
+      setPhotoUrl(await staffOpsApi.uploadPhoto(file));
+    } catch (e) {
+      setPhotoError((e as Error).message);
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
   const [unlockModalWs, setUnlockModalWs] = useState<WorkspaceMaintenanceStatusDto | null>(null);
 
   // 1. Fetch branches on mount
@@ -156,7 +178,7 @@ const MaintenancePage: React.FC = () => {
         setUnlockModalWs(ws);
       } else if (ws.workspaceStatus !== 'inactive') {
         setSelectedWs(ws);
-        setReason('');
+        resetLockForm();
         setIsModalOpen(true);
       }
     },
@@ -170,7 +192,7 @@ const MaintenancePage: React.FC = () => {
 
   const handleOpenLockModal = (ws: WorkspaceMaintenanceStatusDto) => {
     setSelectedWs(ws);
-    setReason('');
+    resetLockForm();
     setIsModalOpen(true);
   };
 
@@ -184,7 +206,7 @@ const MaintenancePage: React.FC = () => {
     if (!selectedWs || !reason.trim()) return;
 
     const now = new Date();
-    const end = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours window default
+    const end = new Date(now.getTime() + expectedHours * 60 * 60 * 1000);
 
     try {
       setIsSubmitting(true);
@@ -192,12 +214,14 @@ const MaintenancePage: React.FC = () => {
         startAt: now.toISOString(),
         endAt: end.toISOString(),
         reason: reason.trim(),
+        priority,
+        photoUrl: photoUrl || undefined,
         confirmAffectedBookings,
       });
       setImpact(null);
       setIsModalOpen(false);
       setSelectedWs(null);
-      setReason('');
+      resetLockForm();
       showToast(`Đã khóa và tạo lịch bảo trì cho "${selectedWs.name}"!`, 'success');
       fetchData();
     } catch (error: any) {
@@ -610,6 +634,17 @@ const MaintenancePage: React.FC = () => {
                                 <p className="text-[11px] text-muted-foreground mt-0.5">
                                   Khóa: {formatDateTime(ws.activeMaintenance.startAt)}
                                 </p>
+                                <p className="text-[11px] text-muted-foreground mt-0.5">
+                                  Dự kiến xong: {formatDateTime(ws.activeMaintenance.endAt)}
+                                  {ws.activeMaintenance.priority && ws.activeMaintenance.priority !== 'normal' && (
+                                    <span className={`ml-1.5 font-semibold ${ws.activeMaintenance.priority === 'urgent' ? 'text-destructive' : ws.activeMaintenance.priority === 'high' ? 'text-amber-600' : ''}`}>
+                                      · {MAINTENANCE_PRIORITY_LABEL[ws.activeMaintenance.priority]}
+                                    </span>
+                                  )}
+                                  {ws.activeMaintenance.photoUrl && (
+                                    <a href={ws.activeMaintenance.photoUrl} target="_blank" rel="noreferrer" className="ml-1.5 text-primary hover:underline">· Xem ảnh</a>
+                                  )}
+                                </p>
                               </div>
                             ) : (
                               <span className="text-muted-foreground italic">—</span>
@@ -676,7 +711,7 @@ const MaintenancePage: React.FC = () => {
           bookings={impact}
           submitting={isSubmitting}
           onConfirm={() => void submitLock(true)}
-          onCancel={() => { setImpact(null); setIsModalOpen(false); setSelectedWs(null); setReason(''); }}
+          onCancel={() => { setImpact(null); setIsModalOpen(false); setSelectedWs(null); resetLockForm(); }}
         />
       )}
 
@@ -722,6 +757,46 @@ const MaintenancePage: React.FC = () => {
                 />
               </div>
 
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label htmlFor="mt-priority" className="text-xs font-semibold text-muted-foreground mb-1 block">Mức ưu tiên</label>
+                  <select id="mt-priority" value={priority} onChange={(e) => setPriority(e.target.value as MaintenancePriority)} className="input-field w-full text-xs">
+                    {(Object.keys(MAINTENANCE_PRIORITY_LABEL) as MaintenancePriority[]).map((p) => (
+                      <option key={p} value={p}>{MAINTENANCE_PRIORITY_LABEL[p]}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="mt-hours" className="text-xs font-semibold text-muted-foreground mb-1 block">Dự kiến xong sau</label>
+                  <select id="mt-hours" value={expectedHours} onChange={(e) => setExpectedHours(Number(e.target.value))} className="input-field w-full text-xs">
+                    <option value={2}>2 giờ</option>
+                    <option value={4}>4 giờ</option>
+                    <option value={8}>8 giờ</option>
+                    <option value={24}>1 ngày</option>
+                    <option value={72}>3 ngày</option>
+                    <option value={168}>1 tuần</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <span className="text-xs font-semibold text-muted-foreground mb-1 block">Ảnh hiện trường (không bắt buộc)</span>
+                <label className="inline-flex items-center gap-2">
+                  <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => void uploadPhoto(e.target.files?.[0])} />
+                  {photoUrl ? (
+                    <span className="flex items-center gap-3">
+                      <img src={photoUrl} alt="Ảnh hiện trường" className="h-14 w-14 rounded-lg object-cover border border-border" />
+                      <button type="button" onClick={(ev) => { ev.preventDefault(); setPhotoUrl(''); }} className="text-xs text-destructive cursor-pointer">Bỏ ảnh</button>
+                    </span>
+                  ) : (
+                    <span className="btn btn-outline btn-sm cursor-pointer text-xs">
+                      <FiCamera className="h-4 w-4" /> {uploadingPhoto ? 'Đang tải ảnh…' : 'Chụp / chọn ảnh'}
+                    </span>
+                  )}
+                </label>
+                {photoError && <p className="text-xs text-destructive mt-1">{photoError}</p>}
+              </div>
+
               <div className="pt-2 flex gap-3">
                 <button
                   type="button"
@@ -733,7 +808,7 @@ const MaintenancePage: React.FC = () => {
                 <button
                   type="submit"
                   className="btn btn-destructive flex-1 text-xs gap-1.5"
-                  disabled={isSubmitting || !reason.trim()}
+                  disabled={isSubmitting || uploadingPhoto || !reason.trim()}
                 >
                   <FiAlertTriangle className="h-4 w-4" />
                   {isSubmitting ? 'Đang khóa…' : 'Xác nhận Khóa'}

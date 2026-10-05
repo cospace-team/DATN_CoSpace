@@ -76,6 +76,8 @@ const BookingManagementPage = React.lazy(() => import("./pages/admin/BookingMana
 const RefundsPage = React.lazy(() => import("./pages/admin/RefundsPage"));
 const AuditLogPage = React.lazy(() => import("./pages/admin/AuditLogPage"));
 const ReportsPage = React.lazy(() => import("./pages/admin/ReportsPage"));
+const StaffNotesPage = React.lazy(() => import("./pages/staff/StaffNotesPage"));
+const StaffRefundsPage = React.lazy(() => import("./pages/staff/StaffRefundsPage"));
 const BADashboardPage = React.lazy(() => import("./pages/branch-admin/BADashboardPage"));
 const BAWorkspacePage = React.lazy(() => import("./pages/branch-admin/BAWorkspacePage"));
 const BAPricingPage = React.lazy(() => import("./pages/branch-admin/BAPricingPage"));
@@ -103,6 +105,8 @@ const staffNav: NavItem[] = [
   { to: "/staff/booking/new", label: "Đặt chỗ", icon: <FiCalendar className="h-4 w-4" /> },
   { to: "/staff/checkin", label: "Check-in", icon: <FiCheckCircle className="h-4 w-4" /> },
   { to: "/staff/maintenance", label: "Bảo trì", icon: <FiTool className="h-4 w-4" /> },
+  { to: "/staff/notes", label: "Sổ ghi chú", icon: <FiFileText className="h-4 w-4" /> },
+  { to: "/staff/refunds", label: "Hoàn tiền", icon: <FiRotateCcw className="h-4 w-4" /> },
 ];
 
 const branchAdminNav: NavItem[] = [
@@ -114,6 +118,7 @@ const branchAdminNav: NavItem[] = [
   { to: "/branch-admin/maintenance", label: "Bảo trì",        icon: <FiTool className="h-4 w-4" />    },
   { to: "/branch-admin/services",    label: "Dịch vụ thêm",   icon: <FiCoffee className="h-4 w-4" />  },
   { to: "/branch-admin/bookings",    label: "Đơn đặt chỗ",    icon: <FiCalendar className="h-4 w-4" /> },
+  { to: "/branch-admin/notes",       label: "Sổ ghi chú",     icon: <FiFileText className="h-4 w-4" /> },
   { to: "/branch-admin/refunds",     label: "Hoàn tiền",      icon: <FiRotateCcw className="h-4 w-4" /> },
 ];
 
@@ -175,6 +180,8 @@ const AppRoutes = React.memo<{ role: UserRole }>(({ role }) => (
         <Route path="/staff/checkin" element={<CheckInPage />} />
         <Route path="/staff/maintenance" element={<MaintenancePage />} />
         <Route path="/staff/booking/new" element={<WalkinBookingPage />} />
+        <Route path="/staff/notes" element={<StaffNotesPage />} />
+        <Route path="/staff/refunds" element={<StaffRefundsPage />} />
       </>
     )}
 
@@ -209,6 +216,7 @@ const AppRoutes = React.memo<{ role: UserRole }>(({ role }) => (
         <Route path="/branch-admin/maintenance" element={<BAMaintenancePage />} />
         <Route path="/branch-admin/services"    element={<BAServicesPage />} />
         <Route path="/branch-admin/bookings"    element={<BookingManagementPage scope="branch" />} />
+        <Route path="/branch-admin/notes"       element={<StaffNotesPage />} />
         <Route path="/branch-admin/refunds"     element={<RefundsPage scope="branch" />} />
       </>
     )}

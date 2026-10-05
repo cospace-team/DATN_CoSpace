@@ -23,6 +23,7 @@ class BookingStateMachineTest {
             "CONFIRMED, COMPLETED",
             "CHECKED_IN, COMPLETED",
             "CHECKED_IN, CONFIRMED",
+            "NO_SHOW, CONFIRMED",       // staff undo
     })
     void allowsLegitimateMoves(BookingStatus from, BookingStatus to) {
         assertThat(BookingStateMachine.canTransition(from, to)).isTrue();
@@ -36,6 +37,7 @@ class BookingStateMachineTest {
             "COMPLETED, CHECKED_IN",
             "PENDING_PAYMENT, CHECKED_IN", // unpaid bookings can't be used
             "NO_SHOW, COMPLETED",
+            "NO_SHOW, CHECKED_IN",      // undo first, then check in
             "CONFIRMED, CONFIRMED",
     })
     void rejectsIllegalMoves(BookingStatus from, BookingStatus to) {
@@ -58,7 +60,7 @@ class BookingStateMachineTest {
         assertThat(BookingStateMachine.isTerminal(COMPLETED)).isTrue();
         assertThat(BookingStateMachine.isTerminal(CANCELLED)).isTrue();
         assertThat(BookingStateMachine.isTerminal(EXPIRED)).isTrue();
-        assertThat(BookingStateMachine.isTerminal(NO_SHOW)).isTrue();
+        assertThat(BookingStateMachine.isTerminal(NO_SHOW)).isFalse(); // staff can undo it
         assertThat(BookingStateMachine.isTerminal(CONFIRMED)).isFalse();
     }
 }

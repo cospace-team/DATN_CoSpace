@@ -59,9 +59,22 @@ export interface MaintenanceResponseDto {
   startAt: string;
   endAt: string;
   reason: string;
+  priority?: MaintenancePriority;
+  photoUrl?: string | null;
+  createdAt?: string;
+  createdByName?: string | null;
   status: 'scheduled' | 'active' | 'in_progress' | 'done' | 'completed' | 'canceled';
   impactedBookingsCount?: number;
 }
+
+export type MaintenancePriority = 'low' | 'normal' | 'high' | 'urgent';
+
+export const MAINTENANCE_PRIORITY_LABEL: Record<MaintenancePriority, string> = {
+  low: 'Thấp',
+  normal: 'Bình thường',
+  high: 'Cao',
+  urgent: 'Khẩn cấp',
+};
 
 export interface WorkspaceMaintenanceStatusDto {
   workspaceId: string;
@@ -349,7 +362,14 @@ export const staffApi = {
    */
   createMaintenance: async (
     workspaceId: string,
-    payload: { startAt: string; endAt: string; reason: string; confirmAffectedBookings?: boolean },
+    payload: {
+      startAt: string;
+      endAt: string;
+      reason: string;
+      priority?: MaintenancePriority;
+      photoUrl?: string;
+      confirmAffectedBookings?: boolean;
+    },
   ): Promise<MaintenanceResponseDto> => {
     const res = await fetch(`${API_BASE_URL}/api/staff/workspaces/${workspaceId}/maintenance`, {
       method: 'POST',

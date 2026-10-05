@@ -13,6 +13,10 @@ public class MaintenanceResponseDto {
     private ZonedDateTime startAt;
     private ZonedDateTime endAt;
     private String reason;
+    private String priority;
+    private String photoUrl;
+    private ZonedDateTime createdAt;
+    private String createdByName;
     private MaintenanceStatus status;
     private int impactedBookingsCount;
 }

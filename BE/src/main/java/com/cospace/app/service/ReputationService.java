@@ -128,6 +128,11 @@ public class ReputationService {
         return true;
     }
 
+    /** Whether the missed check-in penalty of this booking was already given back. */
+    public boolean hasRevertedMissedCheckinPenalty(UUID bookingId) {
+        return reputationEventRepository.existsByBookingIdAndReason(bookingId, ReputationEvent.REASON_PENALTY_REVERTED);
+    }
+
     /** Whether this booking has already cost its customer the missed check-in penalty (and its notification). */
     public boolean hasMissedCheckinPenalty(UUID bookingId) {
         return reputationEventRepository.existsByBookingIdAndReason(bookingId, ReputationEvent.REASON_MISSED_CHECKIN);
